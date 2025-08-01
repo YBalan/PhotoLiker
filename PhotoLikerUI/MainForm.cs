@@ -92,14 +92,15 @@ namespace PhotoLikerUI
 
         private void Panel2_MouseWheel(object? sender, MouseEventArgs e)
         {
-            //pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
-            float zoomStep = 0.1f;
+            if(pictureBox1.Image is null) return;
+
+            const float zoomStep = 0.01f;
             float oldZoom = zoomFactor;
 
             if (e.Delta > 0)
                 zoomFactor += zoomStep;
             else if (e.Delta < 0)
-                zoomFactor = Math.Max(zoomFactor - zoomStep, 0.1f);
+                zoomFactor = Math.Max(zoomFactor - zoomStep, zoomStep);
 
             var mousePosInImage = pictureBox1.PointToClient(Cursor.Position);
 
@@ -107,19 +108,21 @@ namespace PhotoLikerUI
             float relY = (float)mousePosInImage.Y / pictureBox1.Height;
 
             int newWidth = (int)(pictureBox1.Image.Width * zoomFactor);
-            int newHeight = (int)(pictureBox1.Image.Height * zoomFactor);
+            int newHeight = (int)(pictureBox1.Image.Height * zoomFactor);            
 
-            pictureBox1.Width = newWidth;
-            pictureBox1.Height = newHeight;
+            pictureBox1.Size = new Size(newWidth, newHeight);            
 
-            //scrollPanel.Height = newHeight;
-            //scrollPanel.Width = newWidth;
-
+            pictureBox1.Dock = DockStyle.None; // Reset dock to allow manual resizing
+            
             // adjust scroll to keep zoom centered around mouse
             scrollPanel.AutoScrollPosition = new Point(
                 (int)(newWidth * relX - scrollPanel.ClientSize.Width / 2),
                 (int)(newHeight * relY - scrollPanel.ClientSize.Height / 2)
                 );
+
+            //pictureBox1.Location = new Point((scrollPanel.ClientSize.Width - pictureBox1.Width) / 2, (scrollPanel.ClientSize.Height - pictureBox1.Height) / 2);
+
+            pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
         }
 
         private void openToolStripButton_Click(object sender, EventArgs e)
@@ -172,7 +175,7 @@ namespace PhotoLikerUI
                         var likedFolder = settings.LikedFolder;
                         if (string.IsNullOrWhiteSpace(likedFolder))
                         {
-                            settings.LikedFolder = LikedFolderSelectFolderDialog();
+                            likedFolder = settings.LikedFolder = LikedFolderSelectFolderDialog();
                         }
 
                         if (!Directory.Exists(likedFolder))
@@ -302,12 +305,7 @@ namespace PhotoLikerUI
                 return null!;
             }
         }
-
-        protected override void OnKeyDown(KeyEventArgs e)
-        {
-            base.OnKeyDown(e);
-        }
-
+        
         private void LoadFirstPhoto(string currentFile)
         {
             var file = settings.Files.FirstOrDefault(f => string.Equals(f.OriginalFilePath, currentFile, StringComparison.Ordinal)) ?? settings.Files.FirstOrDefault();
@@ -388,27 +386,6 @@ namespace PhotoLikerUI
                         SetStatus($"Error loading image {file}: {ex.Message}");
                     }
                 }
-            }
-        }
-
-        protected override void OnMouseWheel(MouseEventArgs e)
-        {
-            base.OnMouseWheel(e);
-            //ZoomPhoto(pictureBox1, e.Delta > 0 ? 1.1f : 0.9f);
-        }
-
-        private void ZoomPhoto(PictureBox pBox, float mouseWheelDelta)
-        {
-
-            if (pBox.Image is not null)
-            {
-                // Calculate the new size based on the mouse wheel delta
-                var newWidth = (int)(pBox.Image.Width * mouseWheelDelta);
-                var newHeight = (int)(pBox.Image.Height * mouseWheelDelta);
-                // Set the new size to the PictureBox
-                pBox.Size = new Size(newWidth, newHeight);
-                // Optionally, you can also adjust the location to keep it centered
-                pBox.Location = new Point((this.ClientSize.Width - pBox.Width) / 2, (this.ClientSize.Height - pBox.Height) / 2);
             }
         }
 
