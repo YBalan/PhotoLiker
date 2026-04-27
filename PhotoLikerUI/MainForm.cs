@@ -1,5 +1,4 @@
-﻿
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 
 namespace PhotoLikerUI
 {
@@ -8,7 +7,25 @@ namespace PhotoLikerUI
         private Settings settings = new();
 
         private readonly ConcurrentDictionary<string, Image> imageCache = [];
-        public MainForm()
+        private readonly ConcurrentDictionary<string, Image> _thumbCache = [];
+        private CancellationTokenSource _fillCts = new();
+        private CancellationTokenSource _thumbCts = new();
+
+        // Zoom / pan
+        private float zoomFactor = 1.0f;
+        private bool _panning;
+        private Point _panStart;    // mouse position when drag started (screen coords)
+        private Point _scrollStart; // AutoScrollPosition when drag started
+
+        // Thumbnail strip
+        private const int PreviewThumbSize = 110;
+        private const int PreviewSiblingCount = 10; // siblings on each side
+        private readonly Dictionary<string, (PictureBox Thumb, Label Label)> _thumbControls = [];
+
+        // JSON serialization options
+        private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+
+        public MainForm(string? initialFolder = null)
         {
             InitializeComponent();
 
@@ -18,41 +35,70 @@ namespace PhotoLikerUI
             pictureBox1.MouseWheel += Panel2_MouseWheel;
 
             pictureBox1.Paint += PictureBox1_Paint;
+            pictureBox1.MouseDown += PictureBox1_MouseDown;
+            pictureBox1.MouseMove += PictureBox1_MouseMove;
+            pictureBox1.MouseUp   += PictureBox1_MouseUp;
+            splitContainer3.Resize += (_, _) => AdjustRulerWidth();
 
             LoadSettingsFromJson();
+
+            if (!string.IsNullOrWhiteSpace(initialFolder))
+                settings.CurrentFolder = initialFolder;
+
+            RestoreWindowPosition();
             LoadFolder();
 
             settingsPropertyGrid.SelectedObject = settings;
+            UpdateContextMenuButton();
+
+            // Recalculate ruler width once the form layout is finalised
+            Load += (_, _) =>
+            {
+                AdjustRulerWidth();
+                ApplyTheme(settings.IsDarkTheme);
+            };
         }
 
         private void PictureBox1_Paint(object? sender, PaintEventArgs e)
         {
             //Draw the start at left corner if file alrady copied to liked folder
-            if (pictureBox1.Tag is string && File.Exists(settings.CopiedFile))
+            if (pictureBox1.Tag is string && File.Exists(settings.LikedFile))
             {
-                var startBrush = new SolidBrush(Color.FromArgb(128, Color.Green));
-                var font = new Font(this.Font.FontFamily, 25, FontStyle.Bold);
-                var msg = "✓";
+                using var startBrush = new SolidBrush(Color.FromArgb(MainFormConstants.LikedOverlayAlpha, Color.Green));
+                using var font = new Font(this.Font.FontFamily, MainFormConstants.LikedCheckmarkFontSize, FontStyle.Bold);
+                var msg = MainFormConstants.LikedCheckmark;
 
                 var msgSize = e.Graphics.MeasureString(msg, font);
 
                 e.Graphics.FillRectangle(startBrush, 0, 0, msgSize.Width, msgSize.Height);
-                
-                e.Graphics.DrawString(msg, font, Brushes.White, 2, 2);
+                e.Graphics.DrawString(msg, font, Brushes.White, MainFormConstants.LikedCheckmarkOffset, MainFormConstants.LikedCheckmarkOffset);
             }
         }
 
         protected override void OnClosed(EventArgs e)
         {
+            SaveWindowPosition();
             SaveSettingsToJson();
             base.OnClosed(e);
+        }
+
+        private void ThemeToggleToolStripButton_Click(object? sender, EventArgs e)
+        {
+            settings.IsDarkTheme = !settings.IsDarkTheme;
+            ApplyTheme(settings.IsDarkTheme);
+        }
+
+        private void ApplyTheme(bool dark)
+        {
+            ThemeManager.Apply(this, dark);
+            themeToggleToolStripButton.Text = dark ? MainFormStrings.ThemeLightLabel : MainFormStrings.ThemeDarkLabel;
         }
 
         private void LoadSettingsFromJson()
         {
             
             // Implement loading settings from JSON file if needed
-            var settingsFilePath = Path.Combine(Environment.CurrentDirectory, "settings.json");
+            var settingsFilePath = Path.Combine(Environment.CurrentDirectory, MainFormStrings.SettingsFileName);
             if (File.Exists(settingsFilePath))
             {
                 try
@@ -62,12 +108,12 @@ namespace PhotoLikerUI
                     if (loadedSettings is not null)
                     {
                         settings = loadedSettings;
-                        SetStatus($"Settings loaded from {settingsFilePath}");
+                        SetStatus(string.Format(MainFormStrings.SettingsLoaded, settingsFilePath));
                     }
                 }
                 catch (Exception ex)
                 {
-                    SetStatus($"Error loading settings: {ex.Message}");
+                    SetStatus(string.Format(MainFormStrings.SettingsLoadError, ex.Message));
                 }
             }
         }
@@ -75,24 +121,72 @@ namespace PhotoLikerUI
         private void SaveSettingsToJson()
         {            
             // Implement saving settings to JSON file if needed
-            var settingsFilePath = Path.Combine(Environment.CurrentDirectory, "settings.json");
+            var settingsFilePath = Path.Combine(Environment.CurrentDirectory, MainFormStrings.SettingsFileName);
             try
             {
-                var json = System.Text.Json.JsonSerializer.Serialize(settings, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                var json = System.Text.Json.JsonSerializer.Serialize(settings, _jsonOptions);
                 File.WriteAllText(settingsFilePath, json);
-                SetStatus($"Settings saved to {settingsFilePath}");
+                SetStatus(string.Format(MainFormStrings.SettingsSaved, settingsFilePath));
             }
             catch (Exception ex)
             {
-                SetStatus($"Error saving settings: {ex.Message}");
+                SetStatus(string.Format(MainFormStrings.SettingsSaveError, ex.Message));
             }
         }
 
-        private float zoomFactor = 1.0f;
+        private void SaveWindowPosition()
+        {
+            if (WindowState == FormWindowState.Normal)
+            {
+                settings.WindowLeft   = Left;
+                settings.WindowTop    = Top;
+                settings.WindowWidth  = Width;
+                settings.WindowHeight = Height;
+            }
+            else
+            {
+                settings.WindowLeft   = RestoreBounds.Left;
+                settings.WindowTop    = RestoreBounds.Top;
+                settings.WindowWidth  = RestoreBounds.Width;
+                settings.WindowHeight = RestoreBounds.Height;
+            }
+            settings.WindowState  = WindowState == FormWindowState.Minimized
+                ? FormWindowState.Normal
+                : WindowState;
+            settings.ScreenIndex  = Array.IndexOf(Screen.AllScreens, Screen.FromControl(this));
+        }
+
+        private void RestoreWindowPosition()
+        {
+            var screens = Screen.AllScreens;
+            var screen  = settings.ScreenIndex >= 0 && settings.ScreenIndex < screens.Length
+                ? screens[settings.ScreenIndex]
+                : Screen.PrimaryScreen!;
+
+            var bounds = new Rectangle(
+                settings.WindowLeft, settings.WindowTop,
+                Math.Max(MainFormConstants.MinWindowWidth, settings.WindowWidth),
+                Math.Max(MainFormConstants.MinWindowHeight, settings.WindowHeight));
+
+            // Make sure the window is actually visible on the target screen
+            if (!screen.WorkingArea.IntersectsWith(bounds))
+            {
+                bounds.Location = new Point(
+                    screen.WorkingArea.Left + MainFormConstants.WindowOffScreenOffset,
+                    screen.WorkingArea.Top  + MainFormConstants.WindowOffScreenOffset);
+            }
+
+            StartPosition   = FormStartPosition.Manual;
+            Bounds          = bounds;
+            WindowState     = settings.WindowState;
+        }
 
         private void Panel2_MouseWheel(object? sender, MouseEventArgs e)
         {
             if(pictureBox1.Image is null) return;
+
+            if ((ModifierKeys & Keys.Control) == 0)
+                return; // zoom only when Ctrl is held; let the panel scroll normally otherwise
 
             const float zoomStep = 0.01f;
             float oldZoom = zoomFactor;
@@ -128,7 +222,7 @@ namespace PhotoLikerUI
         private void openToolStripButton_Click(object sender, EventArgs e)
         {
             using var folderBrowserDialog = new FolderBrowserDialog();
-            folderBrowserDialog.Description = "Select a folder containing photos";
+            folderBrowserDialog.Description = MainFormStrings.FolderBrowserSelectPhotos;
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
                 settings.CurrentFolder = folderBrowserDialog.SelectedPath;
@@ -136,11 +230,32 @@ namespace PhotoLikerUI
             }
         }
 
+        private void ClearThumbnailControls()
+        {
+            previewFlowPanel.SuspendLayout();
+            foreach (var (thumb, label) in _thumbControls.Values)
+            {
+                previewFlowPanel.Controls.Remove(thumb);
+                previewFlowPanel.Controls.Remove(label);
+                thumb.Image = null;
+                thumb.Dispose();
+                label.Dispose();
+            }
+            _thumbControls.Clear();
+            previewFlowPanel.ResumeLayout();
+        }
+
         private void LoadFolder()
         {
             try
             {
-                settings.LikedFolder = Directory.Exists(settings.LikedFolder) ? settings.LikedFolder : Path.Combine(settings.CurrentFolder, "Liked");
+                ClearThumbnailControls();
+
+                var isAutoLiked = string.IsNullOrWhiteSpace(settings.LikedFolder) ||
+                    string.Equals(Path.GetFileName(settings.LikedFolder), MainFormStrings.DefaultLikedFolderName, StringComparison.OrdinalIgnoreCase);
+                settings.LikedFolder = isAutoLiked
+                    ? Path.Combine(settings.CurrentFolder, MainFormStrings.DefaultLikedFolderName)
+                    : settings.LikedFolder;
                 settings.Files = GetAllFiles(settings.CurrentFolder, settings.GoThroughtSubFolders)
                     .Select(f => new PhotoFile(f, string.Empty))
                     .ToList();
@@ -148,12 +263,13 @@ namespace PhotoLikerUI
             }
             catch (Exception ex)
             {
-                SetStatus($"Error loading folder: {ex.Message}");
+                SetStatus(string.Format(MainFormStrings.StatusFolderLoadError, ex.Message));
             }
             finally
             {
                 settingsPropertyGrid.Refresh();
-                SetStatus($"Loaded {settings.TotalFiles} photos from '{settings.CurrentFolder}'");
+                SetStatus(string.Format(MainFormStrings.StatusFolderLoaded, settings.TotalFiles, settings.CurrentFolder));
+                Text = string.Format(MainFormStrings.TitleFormat, settings.CurrentFolder);
             }
         }
 
@@ -164,94 +280,12 @@ namespace PhotoLikerUI
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            SetStatus($"Key pressed: {keyData}");
-            if (keyData == Keys.Space) // like and move to liked folder
+            SetStatus(string.Format(MainFormStrings.StatusKeyPressed, keyData));
+            if (keyData == Keys.Space)
             {
                 var currentFile = pictureBox1.Tag as string;
                 if (currentFile is not null)
-                {
-                    try
-                    {
-                        var likedFolder = settings.LikedFolder;
-                        if (string.IsNullOrWhiteSpace(likedFolder))
-                        {
-                            likedFolder = settings.LikedFolder = LikedFolderSelectFolderDialog();
-                        }
-
-                        if (!Directory.Exists(likedFolder))
-                        {
-                            try
-                            {
-                                Directory.CreateDirectory(likedFolder);
-                            }
-                            catch (Exception ex)
-                            {
-                                SetStatus($"Error creating liked folder: {ex.Message}");
-                                likedFolder = settings.LikedFolder = LikedFolderSelectFolderDialog();
-                            }
-                        }
-
-                        var fileName = Path.GetFileName(currentFile);
-                        var destinationPath = Path.Combine(likedFolder, fileName);
-                        if (File.Exists(destinationPath))
-                        {
-                            var dlgRes = MessageBox.Show($"File '{fileName}' already exists in the liked folder. Do you want It will be overwritten?", "File Exists", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                            if (dlgRes == DialogResult.No)
-                            {
-                                var saveFileDialog = new SaveFileDialog
-                                {
-                                    FileName = fileName,
-                                    InitialDirectory = likedFolder,
-                                    Title = "Save Liked Photo",
-                                    DefaultExt = Path.GetExtension(fileName),
-                                    AddExtension = false,
-                                    CheckPathExists = true,
-                                    CheckWriteAccess = true,
-                                    OverwritePrompt = true,
-                                    ValidateNames = true,
-
-                                    Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.tiff;*.webp"
-                                };
-                                if (saveFileDialog.ShowDialog() == DialogResult.OK)
-                                {
-                                    destinationPath = saveFileDialog.FileName;
-                                    File.Copy(currentFile, destinationPath, false);
-                                    SetStatus($"File '{fileName}' has been saved to '{destinationPath}'.");
-                                }
-                                else
-                                {
-                                    SetStatus("No file selected for saving liked photo.");
-                                    destinationPath = string.Empty;
-                                }
-                            }
-                            else
-                            {
-                                File.Copy(currentFile, destinationPath, true);
-                                SetStatus($"File '{fileName}' has been overwritten in the liked folder.");
-                            }
-                        }
-                        else
-                        {
-                            File.Copy(currentFile, destinationPath, true);
-                            SetStatus($"File '{fileName}' has been copied to the liked folder.");
-                        }
-
-                        var currIdx = settings.Files.IndexOf(currentFile);
-                        if (currIdx >= 0)
-                        {
-                            settings.Files[currIdx].LikedFilePath = destinationPath;
-                        }
-
-                        settings.CopiedFile = destinationPath;
-
-                        settingsPropertyGrid.Refresh();
-                        pictureBox1.Invalidate(); // Redraw the PictureBox to show the new state
-                    }
-                    catch (Exception ex)
-                    {
-                        SetStatus($"Error liking photo: {ex.Message}");
-                    }
-                }
+                    ToggleLike(currentFile);
                 return true;
             }
             else
@@ -285,23 +319,225 @@ namespace PhotoLikerUI
                 }
                 return true;
             }
+            else if (keyData == Keys.O) // fit image to screen
+            {
+                FitImageToScreen();
+                return true;
+            }
             else
             {
                 return base.ProcessCmdKey(ref msg, keyData);
             }
         }
 
+        #region Panning
+
+        private bool IsEnlarged => pictureBox1.Dock != DockStyle.Fill;
+
+        private void PictureBox1_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left && IsEnlarged)
+            {
+                _panning = true;
+                _panStart = Cursor.Position;
+                _scrollStart = new Point(
+                    -scrollPanel.AutoScrollPosition.X,
+                    -scrollPanel.AutoScrollPosition.Y);
+                pictureBox1.Cursor = Cursors.SizeAll;
+            }
+        }
+
+        private void PictureBox1_MouseMove(object? sender, MouseEventArgs e)
+        {
+            if (!_panning) return;
+
+            var delta = new Point(
+                Cursor.Position.X - _panStart.X,
+                Cursor.Position.Y - _panStart.Y);
+
+            scrollPanel.AutoScrollPosition = new Point(
+                _scrollStart.X - delta.X,
+                _scrollStart.Y - delta.Y);
+        }
+
+        private void PictureBox1_MouseUp(object? sender, MouseEventArgs e)
+        {
+            if (_panning)
+            {
+                _panning = false;
+                pictureBox1.Cursor = Cursors.Default;
+            }
+        }
+
+        #endregion
+
+        private void FitImageToScreen()
+        {
+            if (pictureBox1.Image is null) return;
+
+            zoomFactor = 1.0f;
+            pictureBox1.Dock = DockStyle.Fill;
+            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+            scrollPanel.AutoScrollPosition = Point.Empty;
+            SetStatus(MainFormStrings.StatusImageFitted);
+        }
+
+        private void ToggleLike(string currentFile)
+        {
+            if (!string.IsNullOrEmpty(settings.LikedFile) && File.Exists(settings.LikedFile))
+                UnlikePhoto(currentFile);
+            else
+                LikePhoto(currentFile);
+        }
+
+        private void LikePhoto(string currentFile)
+        {
+            try
+            {
+                var likedFolder = settings.LikedFolder;
+                if (string.IsNullOrWhiteSpace(likedFolder))
+                    likedFolder = settings.LikedFolder = LikedFolderSelectFolderDialog();
+
+                if (!Directory.Exists(likedFolder))
+                {
+                    try
+                    {
+                        Directory.CreateDirectory(likedFolder);
+                    }
+                    catch (Exception ex)
+                    {
+                        SetStatus($"Error creating liked folder: {ex.Message}");
+                        likedFolder = settings.LikedFolder = LikedFolderSelectFolderDialog();
+                    }
+                }
+
+                var fileName = Path.GetFileName(currentFile);
+                var destinationPath = Path.Combine(likedFolder, fileName);
+
+                if (File.Exists(destinationPath))
+                {
+                    UnlikePhoto(currentFile);
+                    return;
+                    //HandledDuplicateLikedFile(currentFile, likedFolder, fileName, ref destinationPath);
+                    //return;
+                }
+                else
+                {
+                    File.Copy(currentFile, destinationPath, true);
+                    SetStatus(string.Format(MainFormStrings.StatusFileCopied, fileName));
+                }
+
+                var idx = settings.Files.IndexOf(currentFile);
+                if (idx >= 0)
+                    settings.Files[idx].LikedFilePath = destinationPath;
+
+                settings.LikedFile = destinationPath;
+                RefreshLikeState(currentFile);
+            }
+            catch (Exception ex)
+            {
+                SetStatus(string.Format(MainFormStrings.StatusLikeError, ex.Message));
+            }
+        }
+
+        private void HandledDuplicateLikedFile(string currentFile, string likedFolder, string fileName, ref string destinationPath)
+        {
+            var dlgRes = MessageBox.Show(
+                                    string.Format(MainFormStrings.DuplicateDialogText, fileName),
+                                    MainFormStrings.DuplicateDialogTitle, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
+
+            if (dlgRes == DialogResult.Yes)
+            {
+                using var saveFileDialog = new SaveFileDialog
+                {
+                    FileName = fileName,
+                    InitialDirectory = likedFolder,
+                    Title = MainFormStrings.SaveLikedPhotoDialogTitle,
+                    DefaultExt = Path.GetExtension(fileName),
+                    AddExtension = false,
+                    CheckPathExists = true,
+                    CheckWriteAccess = true,
+                    OverwritePrompt = true,
+                    ValidateNames = true,
+                    Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.tiff;*.webp"
+                };
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    destinationPath = saveFileDialog.FileName;
+                    File.Copy(currentFile, destinationPath, false);
+                    SetStatus(string.Format(MainFormStrings.StatusFileSaved, fileName, destinationPath));
+                }
+                else
+                {
+                    SetStatus(MainFormStrings.StatusLikeCancelled);
+                    return;
+                }
+            }
+            else if (dlgRes == DialogResult.No)
+            {
+                UnlikePhoto(currentFile);
+                return;
+            }
+            else // Cancel
+            {
+                SetStatus(MainFormStrings.StatusLikeCancelled);
+                return;
+            }
+        }
+
+        private void UnlikePhoto(string currentFile)
+        {
+            try
+            {
+                var likedPath = settings.LikedFile;
+                File.Delete(likedPath);
+                SetStatus(string.Format(MainFormStrings.StatusFileRemoved, Path.GetFileName(likedPath)));
+
+                var idx = settings.Files.IndexOf(currentFile);
+                if (idx >= 0)
+                    settings.Files[idx].LikedFilePath = string.Empty;
+
+                settings.LikedFile = string.Empty;
+                RefreshLikeState(currentFile);
+            }
+            catch (Exception ex)
+            {
+                SetStatus(string.Format(MainFormStrings.StatusUnlikeError, ex.Message));
+            }
+        }
+
+        private void RefreshLikeState(string currentFile)
+        {
+            // Invalidate thumb cache and control so the liked badge is redrawn correctly
+            if (_thumbCache.TryRemove(currentFile, out var old))
+                old.Dispose();
+
+            if (_thumbControls.TryGetValue(currentFile, out var pair))
+            {
+                previewFlowPanel.Controls.Remove(pair.Thumb);
+                previewFlowPanel.Controls.Remove(pair.Label);
+                pair.Thumb.Image = null;
+                pair.Thumb.Dispose();
+                pair.Label.Dispose();
+                _thumbControls.Remove(currentFile);
+            }
+
+            settingsPropertyGrid.Refresh();
+            pictureBox1.Invalidate();
+            UpdateSiblingPreviews(currentFile);
+        }
+
         private string LikedFolderSelectFolderDialog()
         {
             using var folderBrowserDialog = new FolderBrowserDialog();
-            folderBrowserDialog.Description = "Select a folder to save liked photos";
+            folderBrowserDialog.Description = MainFormStrings.FolderBrowserSelectLiked;
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
                 return folderBrowserDialog.SelectedPath;
             }
             else
             {
-                SetStatus("No folder selected for liked photos.");
+                SetStatus(MainFormStrings.StatusNoFolderSelected);
                 return null!;
             }
         }
@@ -315,7 +551,7 @@ namespace PhotoLikerUI
             }
             else
             {
-                SetStatus("No photos found in the selected folder.");
+                SetStatus(MainFormStrings.StatusNoPhotosFound);
             }
         }
 
@@ -323,7 +559,7 @@ namespace PhotoLikerUI
         {
             try
             {
-                pictureBox1.Image = imageCache.GetOrAdd(file, ImageHelper.LoadImageWithCorrectOrientation(file));
+                pictureBox1.Image = imageCache.GetOrAdd(file, f => ImageHelper.LoadImageWithCorrectOrientation(f));
                 pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; // Set the size mode to zoom
                 pictureBox1.Tag = file; // Store the file path in the Tag property
                 settings.CurrentFilePath = file;
@@ -333,17 +569,18 @@ namespace PhotoLikerUI
                 {
                     var photoFile = settings.Files[settings.CurrentIndex];
                     var suggestedLikedFilePath = Path.Combine(settings.LikedFolder, Path.GetFileName(photoFile.OriginalFilePath));
-                    settings.CopiedFile = File.Exists(photoFile.LikedFilePath)
+                    settings.LikedFile = File.Exists(photoFile.LikedFilePath)
                         ? photoFile.LikedFilePath
                         : File.Exists(suggestedLikedFilePath) ? suggestedLikedFilePath : string.Empty;
                 }
                 settingsPropertyGrid.Refresh(); // Refresh the property grid to show the new image properties
-                imageMetaPropertyGrid.SelectedObject = new MetadataWrapper(new FriendlyImageMetadata(pictureBox1.Image).Properties);
+                imageMetaPropertyGrid.SelectedObject = new MetadataWrapper(new FriendlyImageMetadata(pictureBox1.Image));
                 FillCacheAsync(file);
+                UpdateSiblingPreviews(file);
             }
             catch (Exception ex)
             {
-                SetStatus($"Error loading image: {ex.Message}");
+                SetStatus(string.Format(MainFormStrings.StatusImageLoadError, ex.Message));
             }
         }
 
@@ -353,37 +590,61 @@ namespace PhotoLikerUI
         /// <param name="currentFile">The path to the file whose data will be used to populate the cache. Cannot be null or empty.</param>
         private void FillCacheAsync(string currentFile)
         {
-            Task.Run(() => FillCache(currentFile));
+            _fillCts.Cancel();
+            _fillCts = new CancellationTokenSource();
+            var token = _fillCts.Token;
+            Task.Run(() => FillCache(currentFile, token), token);
         }
 
-        private void FillCache(string currentFile)
+        private void FillCache(string currentFile, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(currentFile))
-            {
-                throw new ArgumentException("Current file cannot be null or empty.", nameof(currentFile));
-            }
+                throw new ArgumentException(MainFormStrings.ExCurrentFileNullOrEmpty, nameof(currentFile));
+
             var files = settings.Files;
             int currentIndex = files.IndexOf(currentFile);
             if (currentIndex < 0)
+                throw new ArgumentException(MainFormStrings.ExCurrentFileNotInList, nameof(currentFile));
+
+            int from = Math.Max(0, currentIndex - settings.CacheSize);
+            int to   = Math.Min(files.Count - 1, currentIndex + settings.CacheSize);
+
+            var keepPaths = new HashSet<string>(
+                Enumerable.Range(from, to - from + 1).Select(i => files[i].OriginalFilePath));
+
+            // Evict and dispose entries that are no longer in the window
+            foreach (var key in imageCache.Keys.ToList())
             {
-                throw new ArgumentException("Current file is not in the list of files.", nameof(currentFile));
+                if (!keepPaths.Contains(key) && imageCache.TryRemove(key, out var evicted))
+                {
+                    evicted.Dispose();
+                    if (_thumbCache.TryRemove(key, out var evictedThumb))
+                        evictedThumb.Dispose();
+                }
             }
-            // Clear the cache
-            imageCache.Clear();
-            // Load images around the current file index
-            for (int i = Math.Max(0, currentIndex - settings.CacheSize); i <= Math.Min(files.Count - 1, currentIndex + settings.CacheSize); i++)
+
+            // Load missing entries within the window
+            for (int i = from; i <= to; i++)
             {
+                if (cancellationToken.IsCancellationRequested) return;
+
                 string file = files[i].OriginalFilePath;
                 if (!imageCache.ContainsKey(file))
                 {
                     try
                     {
                         var image = ImageHelper.LoadImageWithCorrectOrientation(file);
-                        imageCache[file] = image;
+                        if (!cancellationToken.IsCancellationRequested)
+                            imageCache[file] = image;
+                        else
+                        {
+                            image.Dispose();
+                            return;
+                        }
                     }
                     catch (Exception ex)
                     {
-                        SetStatus($"Error loading image {file}: {ex.Message}");
+                        SetStatus(string.Format(MainFormStrings.StatusCacheLoadError, file, ex.Message));
                     }
                 }
             }
@@ -393,9 +654,248 @@ namespace PhotoLikerUI
         {
             return new DirectoryInfo(currentFolder).GetFiles("*.*",
                 goSubFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
-                .Where(fi => settings.PhotoExts.Contains(fi.Extension.ToLowerInvariant()))
+                .Where(fi => settings.Extensions.Contains(fi.Extension.ToLowerInvariant()))
                 .Select(fi => fi.FullName);
+        }
 
+        private void AdjustRulerWidth()
+        {
+            int panelWidth = PreviewThumbSize
+                + previewFlowPanel.Padding.Horizontal
+                + SystemInformation.VerticalScrollBarWidth
+                + MainFormConstants.PreviewPanelBorderWidth;
+            int splitterDist = splitContainer3.Width - panelWidth - splitContainer3.SplitterWidth;
+            splitContainer3.SplitterDistance = Math.Max(splitContainer3.Panel1MinSize, splitterDist);
+        }
+
+        private void UpdateSiblingPreviews(string currentFile)
+        {
+            _thumbCts.Cancel();
+            _thumbCts = new CancellationTokenSource();
+            var token = _thumbCts.Token;
+
+            var files = settings.Files;
+            int idx = files.IndexOf(currentFile);
+            if (idx < 0) return;
+
+            int from = Math.Max(0, idx - PreviewSiblingCount);
+            int to   = Math.Min(files.Count - 1, idx + PreviewSiblingCount);
+
+            // Build set of file paths that should be visible now
+            var visiblePaths = new HashSet<string>();
+            for (int i = from; i <= to; i++)
+                visiblePaths.Add(files[i].OriginalFilePath);
+
+            previewFlowPanel.SuspendLayout();
+
+            // Remove controls that scrolled out of the visible window
+            var toRemove = _thumbControls.Keys.Where(p => !visiblePaths.Contains(p)).ToList();
+            foreach (var path in toRemove)
+            {
+                var (thumb, label) = _thumbControls[path];
+                previewFlowPanel.Controls.Remove(thumb);
+                previewFlowPanel.Controls.Remove(label);
+                thumb.Image = null; // don't dispose — image is owned by _thumbCache
+                thumb.Dispose();
+                label.Dispose();
+                _thumbControls.Remove(path);
+            }
+
+            var thumbsToLoad = new List<(PictureBox Thumb, string Path)>();
+
+            for (int i = from; i <= to; i++)
+            {
+                string filePath = files[i].OriginalFilePath;
+                bool isCurrent = i == idx;
+                string suggestedLiked = Path.Combine(settings.LikedFolder, Path.GetFileName(filePath));
+                bool isLiked = !string.IsNullOrEmpty(files[i].LikedFilePath)
+                                   ? File.Exists(files[i].LikedFilePath)
+                                   : File.Exists(suggestedLiked);
+
+                if (_thumbControls.TryGetValue(filePath, out var existing))
+                {
+                    // Reuse — just update selection highlight
+                    existing.Thumb.BackColor   = isCurrent ? Color.CornflowerBlue : MainFormConstants.ThumbBackColor;
+                    existing.Thumb.BorderStyle = isCurrent ? BorderStyle.Fixed3D : BorderStyle.None;
+                    existing.Label.ForeColor   = isCurrent ? Color.White : (isLiked ? Color.LightGreen : Color.LightGray);
+                    continue;
+                }
+
+                // New control needed
+                var thumb = new PictureBox
+                {
+                    Size        = new Size(PreviewThumbSize, PreviewThumbSize),
+                    SizeMode    = PictureBoxSizeMode.Zoom,
+                    BackColor   = isCurrent ? Color.CornflowerBlue : MainFormConstants.ThumbBackColor,
+                    Cursor      = Cursors.Hand,
+                    Margin      = new Padding(4, 4, 4, 0),
+                    Tag         = filePath,
+                    BorderStyle = isCurrent ? BorderStyle.Fixed3D : BorderStyle.None,
+                };
+
+                if (isLiked)
+                    thumb.Paint += ThumbPaint_LikedBadge;
+
+                var label = new Label
+                {
+                    Text      = Path.GetFileName(filePath),
+                    ForeColor = isCurrent ? Color.White : (isLiked ? Color.LightGreen : Color.LightGray),
+                    BackColor = Color.Transparent,
+                    AutoSize  = false,
+                    Width     = PreviewThumbSize,
+                    Height    = MainFormConstants.PreviewLabelHeight,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    Margin    = new Padding(4, 0, 4, 4),
+                    Cursor    = Cursors.Hand,
+                    Tag       = filePath,
+                };
+
+                thumb.Click += PreviewThumb_Click;
+                label.Click += PreviewThumb_Click;
+
+                if (_thumbCache.TryGetValue(filePath, out var cached))
+                    thumb.Image = cached;
+                else
+                    thumbsToLoad.Add((thumb, filePath));
+
+                _thumbControls[filePath] = (thumb, label);
+                previewFlowPanel.Controls.Add(thumb);
+                previewFlowPanel.Controls.Add(label);
+            }
+
+            // Re-sort controls so order matches the file list
+            int pos = 0;
+            for (int i = from; i <= to; i++)
+            {
+                string filePath = files[i].OriginalFilePath;
+                if (!_thumbControls.TryGetValue(filePath, out var pair)) continue;
+                previewFlowPanel.Controls.SetChildIndex(pair.Thumb,  pos++);
+                previewFlowPanel.Controls.SetChildIndex(pair.Label, pos++);
+            }
+
+            previewFlowPanel.ResumeLayout();
+            AdjustRulerWidth();
+
+            // Defer scroll until after layout is finalised so previewFlowPanel.Height is valid
+            void ScrollToCurrent()
+            {
+                int thumbHeight = PreviewThumbSize + MainFormConstants.PreviewLabelHeight + MainFormConstants.PreviewThumbTotalVerticalMargin;
+                int scrollY = (idx - from) * thumbHeight - previewFlowPanel.Height / 2 + thumbHeight / 2;
+                previewFlowPanel.AutoScrollPosition = new Point(0, Math.Max(0, scrollY));
+            }
+
+            if (IsHandleCreated)
+                BeginInvoke(ScrollToCurrent);
+            else
+                Load += (_, _) => ScrollToCurrent();
+
+            Task.Run(() => LoadThumbnailsAsync(thumbsToLoad, token), token);
+        }
+
+        private void LoadThumbnailsAsync(List<(PictureBox Thumb, string Path)> pairs, CancellationToken token)
+        {
+            foreach (var (thumb, path) in pairs)
+            {
+                if (token.IsCancellationRequested) return;
+                try
+                {
+                    // Generate and cache the thumbnail
+                    var thumbnail = _thumbCache.GetOrAdd(path, p =>
+                    {
+                        if (imageCache.TryGetValue(p, out var full))
+                            return CreateThumbnail(full, PreviewThumbSize);
+
+                        using var loaded = ImageHelper.LoadImageWithCorrectOrientation(p);
+                        return CreateThumbnail(loaded, PreviewThumbSize);
+                    });
+
+                    if (token.IsCancellationRequested) return;
+
+                    AssignThumbnailImage(thumb, thumbnail);
+                }
+                catch { /* skip broken images */ }
+            }
+        }
+
+        private static void AssignThumbnailImage(PictureBox thumb, Image img)
+        {
+            if (thumb.IsDisposed) return;
+
+            void Apply() { if (!thumb.IsDisposed) thumb.Image = img; }
+
+            if (thumb.IsHandleCreated)
+                thumb.BeginInvoke(Apply);
+            else
+                thumb.HandleCreated += (_, _) => Apply();
+        }
+
+        private static Bitmap CreateThumbnail(Image source, int size)
+        {
+            var bmp = new Bitmap(size, size);
+            using var g = Graphics.FromImage(bmp);
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode   = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
+            float scale = Math.Min((float)size / source.Width, (float)size / source.Height);
+            int w = (int)(source.Width  * scale);
+            int h = (int)(source.Height * scale);
+            g.DrawImage(source, (size - w) / 2, (size - h) / 2, w, h);
+            return bmp;
+        }
+
+        private static void ThumbPaint_LikedBadge(object? sender, PaintEventArgs e)
+        {
+            if (sender is not PictureBox pb) return;
+
+            var badge = MainFormConstants.LikedCheckmark;
+            using var font = new Font(SystemFonts.DefaultFont.FontFamily, MainFormConstants.LikedBadgeFontSize, FontStyle.Bold);
+            using var brush = new SolidBrush(Color.FromArgb(MainFormConstants.LikedBadgeBrushAlpha, Color.Green));
+
+            var size = e.Graphics.MeasureString(badge, font);
+            float x = pb.Width - size.Width - MainFormConstants.LikedBadgePadding;
+            float y = pb.Height - size.Height - MainFormConstants.LikedBadgePadding;
+
+            using var bg = new SolidBrush(Color.FromArgb(MainFormConstants.LikedBadgeBgAlpha, Color.Black));
+            e.Graphics.FillRectangle(bg, x - MainFormConstants.LikedBadgeBgPadding, y - MainFormConstants.LikedBadgeBgPadding, size.Width + MainFormConstants.LikedBadgeBgPadding * 2, size.Height + MainFormConstants.LikedBadgeBgPadding * 2);
+            e.Graphics.DrawString(badge, font, brush, x, y);
+        }
+
+        private void PreviewThumb_Click(object? sender, EventArgs e)
+        {
+            if (sender is Control c && c.Tag is string filePath)
+                LoadImage(filePath);
+        }
+
+        private void UpdateContextMenuButton()
+        {
+            bool registered = ContextMenuRegistry.IsRegistered();
+            contextMenuToolStripButton.Text = registered ? MainFormStrings.ContextMenuUnregister : MainFormStrings.ContextMenuRegister;
+            contextMenuToolStripButton.ToolTipText = registered
+                ? MainFormStrings.ContextMenuUnregisterTooltip
+                : MainFormStrings.ContextMenuRegisterTooltip;
+        }
+
+        private void contextMenuToolStripButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (ContextMenuRegistry.IsRegistered())
+                {
+                    ContextMenuRegistry.Unregister();
+                    SetStatus(MainFormStrings.StatusContextMenuRemoved);
+                }
+                else
+                {
+                    var exePath = Application.ExecutablePath;
+                    ContextMenuRegistry.Register(exePath);
+                    SetStatus(MainFormStrings.StatusContextMenuRegistered);
+                }
+                UpdateContextMenuButton();
+            }
+            catch (Exception ex)
+            {
+                SetStatus(string.Format(MainFormStrings.StatusContextMenuError, ex.Message));
+            }
         }
     }
 }

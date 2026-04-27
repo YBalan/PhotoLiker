@@ -41,11 +41,17 @@
             pasteToolStripButton = new ToolStripButton();
             toolStripSeparator1 = new ToolStripSeparator();
             helpToolStripButton = new ToolStripButton();
+            toolStripSeparator2 = new ToolStripSeparator();
+            contextMenuToolStripButton = new ToolStripButton();
+            toolStripSeparator3 = new ToolStripSeparator();
+            themeToggleToolStripButton = new ToolStripButton();
             splitContainer2 = new SplitContainer();
             settingsPropertyGrid = new PropertyGrid();
             imageMetaPropertyGrid = new PropertyGrid();
+            splitContainer3 = new SplitContainer();
             scrollPanel = new Panel();
             pictureBox1 = new PictureBox();
+            previewFlowPanel = new FlowLayoutPanel();
             statusStrip1 = new StatusStrip();
             toolStripStatusLabel1 = new ToolStripStatusLabel();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
@@ -57,6 +63,10 @@
             splitContainer2.Panel1.SuspendLayout();
             splitContainer2.Panel2.SuspendLayout();
             splitContainer2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainer3).BeginInit();
+            splitContainer3.Panel1.SuspendLayout();
+            splitContainer3.Panel2.SuspendLayout();
+            splitContainer3.SuspendLayout();
             scrollPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             statusStrip1.SuspendLayout();
@@ -75,14 +85,14 @@
             // 
             // splitContainer1.Panel2
             // 
-            splitContainer1.Panel2.Controls.Add(scrollPanel);
+            splitContainer1.Panel2.Controls.Add(splitContainer3);
             splitContainer1.Size = new Size(800, 450);
             splitContainer1.SplitterDistance = 178;
             splitContainer1.TabIndex = 0;
             // 
             // toolStrip1
             // 
-            toolStrip1.Items.AddRange(new ToolStripItem[] { newToolStripButton, openToolStripButton, saveToolStripButton, printToolStripButton, toolStripSeparator, cutToolStripButton, copyToolStripButton, pasteToolStripButton, toolStripSeparator1, helpToolStripButton });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { newToolStripButton, openToolStripButton, saveToolStripButton, printToolStripButton, toolStripSeparator, cutToolStripButton, copyToolStripButton, pasteToolStripButton, toolStripSeparator1, helpToolStripButton, toolStripSeparator2, contextMenuToolStripButton, toolStripSeparator3, themeToggleToolStripButton });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
             toolStrip1.Size = new Size(178, 25);
@@ -172,6 +182,33 @@
             helpToolStripButton.Size = new Size(23, 20);
             helpToolStripButton.Text = "He&lp";
             // 
+            // toolStripSeparator2
+            // 
+            toolStripSeparator2.Name = "toolStripSeparator2";
+            toolStripSeparator2.Size = new Size(6, 25);
+            // 
+            // contextMenuToolStripButton
+            // 
+            contextMenuToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            contextMenuToolStripButton.Name = "contextMenuToolStripButton";
+            contextMenuToolStripButton.Size = new Size(23, 22);
+            contextMenuToolStripButton.Text = "Register Context Menu";
+            contextMenuToolStripButton.Click += contextMenuToolStripButton_Click;
+            // 
+            // toolStripSeparator3
+            // 
+            toolStripSeparator3.Name = "toolStripSeparator3";
+            toolStripSeparator3.Size = new Size(6, 25);
+            // 
+            // themeToggleToolStripButton
+            // 
+            themeToggleToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            themeToggleToolStripButton.Name = "themeToggleToolStripButton";
+            themeToggleToolStripButton.Size = new Size(23, 22);
+            themeToggleToolStripButton.Text = "🌙 Dark";
+            themeToggleToolStripButton.ToolTipText = "Toggle dark / light theme";
+            themeToggleToolStripButton.Click += (s, e) => ThemeToggleToolStripButton_Click(s, e);
+            // 
             // splitContainer2
             // 
             splitContainer2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
@@ -208,6 +245,36 @@
             imageMetaPropertyGrid.Size = new Size(172, 240);
             imageMetaPropertyGrid.TabIndex = 0;
             // 
+            // splitContainer3
+            // 
+            splitContainer3.Dock = DockStyle.Fill;
+            splitContainer3.Location = new Point(0, 0);
+            splitContainer3.Name = "splitContainer3";
+            // 
+            // splitContainer3.Panel1
+            // 
+            splitContainer3.Panel1.Controls.Add(scrollPanel);
+            // 
+            // splitContainer3.Panel2
+            // 
+            splitContainer3.Panel2.Controls.Add(previewFlowPanel);
+            splitContainer3.Size = new Size(618, 450);
+            splitContainer3.SplitterDistance = 490;
+            splitContainer3.TabIndex = 0;
+            // 
+            // previewFlowPanel
+            // 
+            previewFlowPanel.AutoScroll = true;
+            previewFlowPanel.BackColor = SystemColors.ControlDark;
+            previewFlowPanel.Dock = DockStyle.Fill;
+            previewFlowPanel.FlowDirection = FlowDirection.TopDown;
+            previewFlowPanel.Location = new Point(0, 0);
+            previewFlowPanel.Name = "previewFlowPanel";
+            previewFlowPanel.Padding = new Padding(4);
+            previewFlowPanel.Size = new Size(124, 450);
+            previewFlowPanel.TabIndex = 0;
+            previewFlowPanel.WrapContents = false;
+            // 
             // scrollPanel
             // 
             scrollPanel.Controls.Add(pictureBox1);
@@ -215,7 +282,7 @@
             scrollPanel.Dock = DockStyle.Fill;
             scrollPanel.Location = new Point(0, 0);
             scrollPanel.Name = "scrollPanel";
-            scrollPanel.Size = new Size(618, 450);
+            scrollPanel.Size = new Size(490, 450);
             scrollPanel.TabIndex = 1;
             // 
             // pictureBox1
@@ -260,6 +327,10 @@
             splitContainer2.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)splitContainer2).EndInit();
             splitContainer2.ResumeLayout(false);
+            splitContainer3.Panel1.ResumeLayout(false);
+            splitContainer3.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainer3).EndInit();
+            splitContainer3.ResumeLayout(false);
             scrollPanel.ResumeLayout(false);
             scrollPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
@@ -283,11 +354,17 @@
         private ToolStripButton pasteToolStripButton;
         private ToolStripSeparator toolStripSeparator1;
         private ToolStripButton helpToolStripButton;
+        private ToolStripSeparator toolStripSeparator2;
+        private ToolStripButton contextMenuToolStripButton;
         private PictureBox pictureBox1;
         private Panel scrollPanel;
         private SplitContainer splitContainer2;
+        private SplitContainer splitContainer3;
+        private FlowLayoutPanel previewFlowPanel;
         private PropertyGrid imageMetaPropertyGrid;
         private StatusStrip statusStrip1;
         private ToolStripStatusLabel toolStripStatusLabel1;
+        private ToolStripSeparator toolStripSeparator3;
+        private ToolStripButton themeToggleToolStripButton;
     }
 }
