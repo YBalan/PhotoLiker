@@ -18,8 +18,8 @@ namespace PhotoLikerUI
         private Point _scrollStart; // AutoScrollPosition when drag started
 
         // Thumbnail strip
-        private const int PreviewThumbSize = 110;
         private const int PreviewSiblingCount = 10; // siblings on each side
+        private int PreviewThumbSize => settings.ThumbnailSize;
         private readonly Dictionary<string, (PictureBox Thumb, Label Label)> _thumbControls = [];
 
         // JSON serialization options
@@ -33,6 +33,7 @@ namespace PhotoLikerUI
 
             scrollPanel.MouseWheel += Panel2_MouseWheel;
             pictureBox1.MouseWheel += Panel2_MouseWheel;
+            previewFlowPanel.MouseWheel += PreviewFlowPanel_MouseWheel;
 
             pictureBox1.Paint += PictureBox1_Paint;
             pictureBox1.MouseDown += PictureBox1_MouseDown;
@@ -217,6 +218,33 @@ namespace PhotoLikerUI
             //pictureBox1.Location = new Point((scrollPanel.ClientSize.Width - pictureBox1.Width) / 2, (scrollPanel.ClientSize.Height - pictureBox1.Height) / 2);
 
             pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
+        }
+
+        private void PreviewFlowPanel_MouseWheel(object? sender, MouseEventArgs e)
+        {
+            if ((ModifierKeys & Keys.Control) == 0)
+                return;
+
+            const int sizeStep = 50;
+            const int minSize  = 50;
+            const int maxSize  = 600;
+
+            if (e.Delta > 0)
+                settings.ThumbnailSize = Math.Min(settings.ThumbnailSize + sizeStep, maxSize);
+            else if (e.Delta < 0)
+                settings.ThumbnailSize = Math.Max(settings.ThumbnailSize - sizeStep, minSize);
+            else
+                return;
+
+            // Clear thumb controls so they are recreated with the new size
+            _thumbCache.Clear();
+            ClearThumbnailControls();
+            AdjustRulerWidth();
+            settingsPropertyGrid.Refresh();
+
+            var currentFile = pictureBox1.Tag as string;
+            if (currentFile is not null)
+                UpdateSiblingPreviews(currentFile);
         }
 
         private void openToolStripButton_Click(object sender, EventArgs e)
@@ -508,9 +536,14 @@ namespace PhotoLikerUI
 
         private void RefreshLikeState(string currentFile)
         {
-            // Invalidate thumb cache and control so the liked badge is redrawn correctly
-            if (_thumbCache.TryRemove(currentFile, out var old))
-                old.Dispose();
+            // Cancel any in-flight thumbnail loading before touching the cache,
+            // so no queued BeginInvoke can assign a disposed image to a PictureBox.
+            _thumbCts.Cancel();
+
+            // Remove from cache but do NOT dispose here — a queued BeginInvoke on the
+            // UI thread may still hold a reference to this image; disposing it now would
+            // cause "Parameter is not valid" inside PictureBox.Animate.
+            _thumbCache.TryRemove(currentFile, out _);
 
             if (_thumbControls.TryGetValue(currentFile, out var pair))
             {
@@ -721,6 +754,13 @@ namespace PhotoLikerUI
                     continue;
                 }
 
+                // Calculate the correct insert position so existing controls never need reordering.
+                // Count how many controls from [from..i-1] are already in the panel.
+                int insertAt = 0;
+                for (int j = from; j < i; j++)
+                    if (_thumbControls.ContainsKey(files[j].OriginalFilePath))
+                        insertAt++;
+
                 // New control needed
                 var thumb = new PictureBox
                 {
@@ -761,16 +801,10 @@ namespace PhotoLikerUI
                 _thumbControls[filePath] = (thumb, label);
                 previewFlowPanel.Controls.Add(thumb);
                 previewFlowPanel.Controls.Add(label);
-            }
-
-            // Re-sort controls so order matches the file list
-            int pos = 0;
-            for (int i = from; i <= to; i++)
-            {
-                string filePath = files[i].OriginalFilePath;
-                if (!_thumbControls.TryGetValue(filePath, out var pair)) continue;
-                previewFlowPanel.Controls.SetChildIndex(pair.Thumb,  pos++);
-                previewFlowPanel.Controls.SetChildIndex(pair.Label, pos++);
+                // Place the new pair at the correct position — only 2 SetChildIndex calls
+                // instead of reordering all controls after the loop.
+                previewFlowPanel.Controls.SetChildIndex(thumb,  insertAt * 2);
+                previewFlowPanel.Controls.SetChildIndex(label, insertAt * 2 + 1);
             }
 
             previewFlowPanel.ResumeLayout();

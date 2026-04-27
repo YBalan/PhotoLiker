@@ -77,6 +77,10 @@ namespace PhotoLikerUI
         [Display(Order = 6)]
         [Browsable(false)]
         public bool IsDarkTheme { get; set; } = false;
+
+        [Category("1. Settings")]
+        [Display(Order = 7)]
+        public int ThumbnailSize { get; set; } = 110;
     }
 
     public class PhotoFile(string OriginalFilePath, string LikedFilePath)
