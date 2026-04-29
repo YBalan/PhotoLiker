@@ -46,6 +46,10 @@ namespace PhotoLikerUI
             if (!string.IsNullOrWhiteSpace(initialFolder))
                 settings.CurrentFolder = initialFolder;
 
+            // If a folder is known, also try loading its folder-specific config
+            if (!string.IsNullOrWhiteSpace(settings.CurrentFolder))
+                LoadFolderSettings(settings.CurrentFolder);
+
             RestoreWindowPosition();
             LoadFolder();
 
@@ -95,11 +99,14 @@ namespace PhotoLikerUI
             themeToggleToolStripButton.Text = dark ? MainFormStrings.ThemeLightLabel : MainFormStrings.ThemeDarkLabel;
         }
 
-        private void LoadSettingsFromJson()
+        private static string GetSettingsFilePath(string folder) =>
+            Path.Combine(
+                string.IsNullOrWhiteSpace(folder) ? Environment.CurrentDirectory : folder,
+                MainFormStrings.SettingsFileName);
+
+        private void LoadSettingsFromJson(string? folder = null)
         {
-            
-            // Implement loading settings from JSON file if needed
-            var settingsFilePath = Path.Combine(Environment.CurrentDirectory, MainFormStrings.SettingsFileName);
+            var settingsFilePath = GetSettingsFilePath(folder ?? Environment.CurrentDirectory);
             if (File.Exists(settingsFilePath))
             {
                 try
@@ -119,10 +126,36 @@ namespace PhotoLikerUI
             }
         }
 
+        private void LoadFolderSettings(string newFolder)
+        {
+            // Preserve window/theme settings that are not folder-specific
+            var windowLeft   = settings.WindowLeft;
+            var windowTop    = settings.WindowTop;
+            var windowWidth  = settings.WindowWidth;
+            var windowHeight = settings.WindowHeight;
+            var windowState  = settings.WindowState;
+            var screenIndex  = settings.ScreenIndex;
+            var isDarkTheme  = settings.IsDarkTheme;
+            var thumbSize    = settings.ThumbnailSize;
+
+            settings = new Settings { CurrentFolder = newFolder };
+            LoadSettingsFromJson(newFolder);
+
+            // Always keep window and theme settings from the previous session
+            settings.CurrentFolder = newFolder;
+            settings.WindowLeft    = windowLeft;
+            settings.WindowTop     = windowTop;
+            settings.WindowWidth   = windowWidth;
+            settings.WindowHeight  = windowHeight;
+            settings.WindowState   = windowState;
+            settings.ScreenIndex   = screenIndex;
+            settings.IsDarkTheme   = isDarkTheme;
+            settings.ThumbnailSize = thumbSize;
+        }
+
         private void SaveSettingsToJson()
-        {            
-            // Implement saving settings to JSON file if needed
-            var settingsFilePath = Path.Combine(Environment.CurrentDirectory, MainFormStrings.SettingsFileName);
+        {
+            var settingsFilePath = GetSettingsFilePath(settings.CurrentFolder);
             try
             {
                 var json = System.Text.Json.JsonSerializer.Serialize(settings, _jsonOptions);
@@ -253,9 +286,50 @@ namespace PhotoLikerUI
             folderBrowserDialog.Description = MainFormStrings.FolderBrowserSelectPhotos;
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
-                settings.CurrentFolder = folderBrowserDialog.SelectedPath;
+                SaveSettingsToJson();
+                ClearDisplay();
+                LoadFolderSettings(folderBrowserDialog.SelectedPath);
+                settingsPropertyGrid.SelectedObject = settings;
                 LoadFolder();
             }
+        }
+
+        private void ClearDisplay()
+        {
+            // Cancel any background cache operations
+            _fillCts.Cancel();
+            _fillCts = new CancellationTokenSource();
+            _thumbCts.Cancel();
+            _thumbCts = new CancellationTokenSource();
+
+            // Detach images from controls BEFORE disposing cache entries so
+            // GDI+ never tries to access a disposed Image (e.g. FrameDimensionsList).
+            pictureBox1.Image = null;
+            pictureBox1.Tag = null;
+
+            foreach (var (thumb, _) in _thumbControls.Values)
+                thumb.Image = null;
+
+            // Now safe to dispose and clear the caches
+            foreach (var img in imageCache.Values) img.Dispose();
+            imageCache.Clear();
+            foreach (var img in _thumbCache.Values) img.Dispose();
+            _thumbCache.Clear();
+
+            // Reset zoom/pan state
+            zoomFactor = 1.0f;
+            _panning = false;
+            pictureBox1.Dock = DockStyle.Fill;
+            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+            scrollPanel.AutoScrollPosition = Point.Empty;
+
+            // Clear metadata and GPS link
+            imageMetaPropertyGrid.SelectedObject = null;
+            toolStripStatusLabelGpsLink.Visible = false;
+            toolStripStatusLabelGpsLink.Tag = null;
+
+            // Clear thumbnail strip
+            ClearThumbnailControls();
         }
 
         private void ClearThumbnailControls()
@@ -304,6 +378,28 @@ namespace PhotoLikerUI
         private void SetStatus(string statusMsg)
         {
             toolStripStatusLabel1.Text = statusMsg;
+        }
+
+        private void UpdateGpsLink(MetadataWrapper metadata)
+        {
+            var mapLink = metadata.MapLink;
+            if (!string.IsNullOrEmpty(mapLink))
+            {
+                toolStripStatusLabelGpsLink.Text = MainFormStrings.GpsMapLinkLabel;
+                toolStripStatusLabelGpsLink.Tag  = mapLink;
+                toolStripStatusLabelGpsLink.Visible = true;
+            }
+            else
+            {
+                toolStripStatusLabelGpsLink.Visible = false;
+                toolStripStatusLabelGpsLink.Tag = null;
+            }
+        }
+
+        private void ToolStripStatusLabelGpsLink_Click(object? sender, EventArgs e)
+        {
+            if (toolStripStatusLabelGpsLink.Tag is string url && !string.IsNullOrEmpty(url))
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -607,7 +703,10 @@ namespace PhotoLikerUI
                         : File.Exists(suggestedLikedFilePath) ? suggestedLikedFilePath : string.Empty;
                 }
                 settingsPropertyGrid.Refresh(); // Refresh the property grid to show the new image properties
-                imageMetaPropertyGrid.SelectedObject = new MetadataWrapper(new FriendlyImageMetadata(pictureBox1.Image));
+                var friendlyMeta = new FriendlyImageMetadata(pictureBox1.Image);
+                var metadataWrapper = new MetadataWrapper(friendlyMeta);
+                imageMetaPropertyGrid.SelectedObject = metadataWrapper;
+                UpdateGpsLink(metadataWrapper);
                 FillCacheAsync(file);
                 UpdateSiblingPreviews(file);
             }

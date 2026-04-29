@@ -3,11 +3,12 @@ namespace PhotoLikerUI
     internal static class MainFormStrings
     {
         // Settings persistence
-        public const string SettingsFileName             = "settings.json";
+        public const string SettingsFileName             = "photo-liker-config.json";
         public const string SettingsLoaded               = "Settings loaded from {0}";
         public const string SettingsLoadError            = "Error loading settings: {0}";
         public const string SettingsSaved                = "Settings saved to {0}";
         public const string SettingsSaveError            = "Error saving settings: {0}";
+        public const string SettingsFolderLoaded         = "Settings loaded from folder '{0}'.";
 
         // Folder / file selection dialogs
         public const string FolderBrowserSelectPhotos    = "Select a folder containing photos";
@@ -61,6 +62,9 @@ namespace PhotoLikerUI
         // Exception messages
         public const string ExCurrentFileNullOrEmpty     = "Current file cannot be null or empty.";
         public const string ExCurrentFileNotInList       = "Current file is not in the list of files.";
+
+        // GPS status bar link
+        public const string GpsMapLinkLabel              = "📍 Maps";
     }
 
     internal static class MainFormConstants

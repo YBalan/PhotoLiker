@@ -7,6 +7,9 @@ namespace PhotoLikerUI
         private readonly IReadOnlyList<MetadataEntry> _entries;
         private readonly List<MetadataEntry> _gpsDecoded;
 
+        public IReadOnlyCollection<MetadataEntry> GPSDecoded => _gpsDecoded;
+        public string? MapLink => _gpsDecoded?.FirstOrDefault(e => e.Name == ImageHelperStrings.GpsMapLink)?.Value;
+
         public MetadataWrapper(FriendlyImageMetadata meta)
             : this(meta.Entries) { }
 

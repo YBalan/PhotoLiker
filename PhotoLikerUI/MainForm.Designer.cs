@@ -54,6 +54,7 @@
             previewFlowPanel = new FlowLayoutPanel();
             statusStrip1 = new StatusStrip();
             toolStripStatusLabel1 = new ToolStripStatusLabel();
+            toolStripStatusLabelGpsLink = new ToolStripStatusLabel();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
@@ -296,17 +297,28 @@
             // 
             // statusStrip1
             // 
-            statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripStatusLabel1 });
+            statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripStatusLabelGpsLink, toolStripStatusLabel1 });
             statusStrip1.Location = new Point(0, 428);
             statusStrip1.Name = "statusStrip1";
             statusStrip1.Size = new Size(618, 22);
             statusStrip1.TabIndex = 1;
             statusStrip1.Text = "statusStrip1";
             // 
+            // toolStripStatusLabelGpsLink
+            // 
+            toolStripStatusLabelGpsLink.Name = "toolStripStatusLabelGpsLink";
+            toolStripStatusLabelGpsLink.Size = new Size(0, 17);
+            toolStripStatusLabelGpsLink.IsLink = true;
+            toolStripStatusLabelGpsLink.LinkBehavior = LinkBehavior.HoverUnderline;
+            toolStripStatusLabelGpsLink.Visible = false;
+            toolStripStatusLabelGpsLink.ToolTipText = "Open location in Google Maps";
+            toolStripStatusLabelGpsLink.Click += ToolStripStatusLabelGpsLink_Click;
+            // 
             // toolStripStatusLabel1
             // 
             toolStripStatusLabel1.Name = "toolStripStatusLabel1";
             toolStripStatusLabel1.Size = new Size(0, 17);
+            toolStripStatusLabel1.Spring = true;
             // 
             // MainForm
             // 
@@ -363,7 +375,8 @@
         private FlowLayoutPanel previewFlowPanel;
         private PropertyGrid imageMetaPropertyGrid;
         private StatusStrip statusStrip1;
-        private ToolStripStatusLabel toolStripStatusLabel1;
+            private ToolStripStatusLabel toolStripStatusLabel1;
+            private ToolStripStatusLabel toolStripStatusLabelGpsLink;
         private ToolStripSeparator toolStripSeparator3;
         private ToolStripButton themeToggleToolStripButton;
     }
