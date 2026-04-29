@@ -4,7 +4,8 @@ namespace PhotoLikerUI
 {
     public partial class MainForm : Form
     {
-        private Settings settings = new();
+        private Settings _currentConfig = new();
+        private readonly GlobalConfig _globalConfig = GlobalConfig.Load();
 
         private readonly ConcurrentDictionary<string, Image> imageCache = [];
         private readonly ConcurrentDictionary<string, Image> _thumbCache = [];
@@ -19,7 +20,7 @@ namespace PhotoLikerUI
 
         // Thumbnail strip
         private const int PreviewSiblingCount = 10; // siblings on each side
-        private int PreviewThumbSize => settings.ThumbnailSize;
+        private int PreviewThumbSize => _currentConfig.ThumbnailSize;
         private readonly Dictionary<string, (PictureBox Thumb, Label Label)> _thumbControls = [];
 
         // JSON serialization options
@@ -38,36 +39,41 @@ namespace PhotoLikerUI
             pictureBox1.Paint += PictureBox1_Paint;
             pictureBox1.MouseDown += PictureBox1_MouseDown;
             pictureBox1.MouseMove += PictureBox1_MouseMove;
-            pictureBox1.MouseUp   += PictureBox1_MouseUp;
+            pictureBox1.MouseUp += PictureBox1_MouseUp;
             splitContainer3.Resize += (_, _) => AdjustRulerWidth();
 
             LoadSettingsFromJson();
 
             if (!string.IsNullOrWhiteSpace(initialFolder))
-                settings.CurrentFolder = initialFolder;
+                _currentConfig.CurrentFolder = initialFolder;
+
+            // Fall back to the last opened folder from the global config
+            if (string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder) &&
+                !string.IsNullOrWhiteSpace(_globalConfig.LastFolder))
+                _currentConfig.CurrentFolder = _globalConfig.LastFolder;
 
             // If a folder is known, also try loading its folder-specific config
-            if (!string.IsNullOrWhiteSpace(settings.CurrentFolder))
-                LoadFolderSettings(settings.CurrentFolder);
+            if (!string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder))
+                LoadFolderSettings(_currentConfig.CurrentFolder);
 
             RestoreWindowPosition();
             LoadFolder();
 
-            settingsPropertyGrid.SelectedObject = settings;
+            settingsPropertyGrid.SelectedObject = _currentConfig;
             UpdateContextMenuButton();
 
             // Recalculate ruler width once the form layout is finalised
             Load += (_, _) =>
             {
                 AdjustRulerWidth();
-                ApplyTheme(settings.IsDarkTheme);
+                ApplyTheme(_currentConfig.IsDarkTheme);
             };
         }
 
         private void PictureBox1_Paint(object? sender, PaintEventArgs e)
         {
             //Draw the start at left corner if file alrady copied to liked folder
-            if (pictureBox1.Tag is string && File.Exists(settings.LikedFile))
+            if (pictureBox1.Tag is string && File.Exists(_currentConfig.LikedFile))
             {
                 using var startBrush = new SolidBrush(Color.FromArgb(MainFormConstants.LikedOverlayAlpha, Color.Green));
                 using var font = new Font(this.Font.FontFamily, MainFormConstants.LikedCheckmarkFontSize, FontStyle.Bold);
@@ -84,13 +90,15 @@ namespace PhotoLikerUI
         {
             SaveWindowPosition();
             SaveSettingsToJson();
+            _globalConfig.LastFolder = _currentConfig.CurrentFolder;
+            _globalConfig.Save();
             base.OnClosed(e);
         }
 
         private void ThemeToggleToolStripButton_Click(object? sender, EventArgs e)
         {
-            settings.IsDarkTheme = !settings.IsDarkTheme;
-            ApplyTheme(settings.IsDarkTheme);
+            _currentConfig.IsDarkTheme = !_currentConfig.IsDarkTheme;
+            ApplyTheme(_currentConfig.IsDarkTheme);
         }
 
         private void ApplyTheme(bool dark)
@@ -115,7 +123,7 @@ namespace PhotoLikerUI
                     var loadedSettings = System.Text.Json.JsonSerializer.Deserialize<Settings>(json);
                     if (loadedSettings is not null)
                     {
-                        settings = loadedSettings;
+                        _currentConfig = loadedSettings;
                         SetStatus(string.Format(MainFormStrings.SettingsLoaded, settingsFilePath));
                     }
                 }
@@ -129,36 +137,36 @@ namespace PhotoLikerUI
         private void LoadFolderSettings(string newFolder)
         {
             // Preserve window/theme settings that are not folder-specific
-            var windowLeft   = settings.WindowLeft;
-            var windowTop    = settings.WindowTop;
-            var windowWidth  = settings.WindowWidth;
-            var windowHeight = settings.WindowHeight;
-            var windowState  = settings.WindowState;
-            var screenIndex  = settings.ScreenIndex;
-            var isDarkTheme  = settings.IsDarkTheme;
-            var thumbSize    = settings.ThumbnailSize;
+            var windowLeft = _currentConfig.WindowLeft;
+            var windowTop = _currentConfig.WindowTop;
+            var windowWidth = _currentConfig.WindowWidth;
+            var windowHeight = _currentConfig.WindowHeight;
+            var windowState = _currentConfig.WindowState;
+            var screenIndex = _currentConfig.ScreenIndex;
+            var isDarkTheme = _currentConfig.IsDarkTheme;
+            var thumbSize = _currentConfig.ThumbnailSize;
 
-            settings = new Settings { CurrentFolder = newFolder };
+            _currentConfig = new Settings { CurrentFolder = newFolder };
             LoadSettingsFromJson(newFolder);
 
-            // Always keep window and theme settings from the previous session
-            settings.CurrentFolder = newFolder;
-            settings.WindowLeft    = windowLeft;
-            settings.WindowTop     = windowTop;
-            settings.WindowWidth   = windowWidth;
-            settings.WindowHeight  = windowHeight;
-            settings.WindowState   = windowState;
-            settings.ScreenIndex   = screenIndex;
-            settings.IsDarkTheme   = isDarkTheme;
-            settings.ThumbnailSize = thumbSize;
+            //// Always keep window and theme settings from the previous session
+            //_currentConfig.CurrentFolder = newFolder;
+            //_currentConfig.WindowLeft    = windowLeft;
+            //_currentConfig.WindowTop     = windowTop;
+            //_currentConfig.WindowWidth   = windowWidth;
+            //_currentConfig.WindowHeight  = windowHeight;
+            //_currentConfig.WindowState   = windowState;
+            //_currentConfig.ScreenIndex   = screenIndex;
+            //_currentConfig.IsDarkTheme   = isDarkTheme;
+            //_currentConfig.ThumbnailSize = thumbSize;
         }
 
         private void SaveSettingsToJson()
         {
-            var settingsFilePath = GetSettingsFilePath(settings.CurrentFolder);
+            var settingsFilePath = GetSettingsFilePath(_currentConfig.CurrentFolder);
             try
             {
-                var json = System.Text.Json.JsonSerializer.Serialize(settings, _jsonOptions);
+                var json = System.Text.Json.JsonSerializer.Serialize(_currentConfig, _jsonOptions);
                 File.WriteAllText(settingsFilePath, json);
                 SetStatus(string.Format(MainFormStrings.SettingsSaved, settingsFilePath));
             }
@@ -172,52 +180,52 @@ namespace PhotoLikerUI
         {
             if (WindowState == FormWindowState.Normal)
             {
-                settings.WindowLeft   = Left;
-                settings.WindowTop    = Top;
-                settings.WindowWidth  = Width;
-                settings.WindowHeight = Height;
+                _currentConfig.WindowLeft = Left;
+                _currentConfig.WindowTop = Top;
+                _currentConfig.WindowWidth = Width;
+                _currentConfig.WindowHeight = Height;
             }
             else
             {
-                settings.WindowLeft   = RestoreBounds.Left;
-                settings.WindowTop    = RestoreBounds.Top;
-                settings.WindowWidth  = RestoreBounds.Width;
-                settings.WindowHeight = RestoreBounds.Height;
+                _currentConfig.WindowLeft = RestoreBounds.Left;
+                _currentConfig.WindowTop = RestoreBounds.Top;
+                _currentConfig.WindowWidth = RestoreBounds.Width;
+                _currentConfig.WindowHeight = RestoreBounds.Height;
             }
-            settings.WindowState  = WindowState == FormWindowState.Minimized
+            _currentConfig.WindowState = WindowState == FormWindowState.Minimized
                 ? FormWindowState.Normal
                 : WindowState;
-            settings.ScreenIndex  = Array.IndexOf(Screen.AllScreens, Screen.FromControl(this));
+            _currentConfig.ScreenIndex = Array.IndexOf(Screen.AllScreens, Screen.FromControl(this));
         }
 
         private void RestoreWindowPosition()
         {
             var screens = Screen.AllScreens;
-            var screen  = settings.ScreenIndex >= 0 && settings.ScreenIndex < screens.Length
-                ? screens[settings.ScreenIndex]
+            var screen = _currentConfig.ScreenIndex >= 0 && _currentConfig.ScreenIndex < screens.Length
+                ? screens[_currentConfig.ScreenIndex]
                 : Screen.PrimaryScreen!;
 
             var bounds = new Rectangle(
-                settings.WindowLeft, settings.WindowTop,
-                Math.Max(MainFormConstants.MinWindowWidth, settings.WindowWidth),
-                Math.Max(MainFormConstants.MinWindowHeight, settings.WindowHeight));
+                _currentConfig.WindowLeft, _currentConfig.WindowTop,
+                Math.Max(MainFormConstants.MinWindowWidth, _currentConfig.WindowWidth),
+                Math.Max(MainFormConstants.MinWindowHeight, _currentConfig.WindowHeight));
 
             // Make sure the window is actually visible on the target screen
             if (!screen.WorkingArea.IntersectsWith(bounds))
             {
                 bounds.Location = new Point(
                     screen.WorkingArea.Left + MainFormConstants.WindowOffScreenOffset,
-                    screen.WorkingArea.Top  + MainFormConstants.WindowOffScreenOffset);
+                    screen.WorkingArea.Top + MainFormConstants.WindowOffScreenOffset);
             }
 
-            StartPosition   = FormStartPosition.Manual;
-            Bounds          = bounds;
-            WindowState     = settings.WindowState;
+            StartPosition = FormStartPosition.Manual;
+            Bounds = bounds;
+            WindowState = _currentConfig.WindowState;
         }
 
         private void Panel2_MouseWheel(object? sender, MouseEventArgs e)
         {
-            if(pictureBox1.Image is null) return;
+            if (pictureBox1.Image is null) return;
 
             if ((ModifierKeys & Keys.Control) == 0)
                 return; // zoom only when Ctrl is held; let the panel scroll normally otherwise
@@ -236,12 +244,12 @@ namespace PhotoLikerUI
             float relY = (float)mousePosInImage.Y / pictureBox1.Height;
 
             int newWidth = (int)(pictureBox1.Image.Width * zoomFactor);
-            int newHeight = (int)(pictureBox1.Image.Height * zoomFactor);            
+            int newHeight = (int)(pictureBox1.Image.Height * zoomFactor);
 
-            pictureBox1.Size = new Size(newWidth, newHeight);            
+            pictureBox1.Size = new Size(newWidth, newHeight);
 
             pictureBox1.Dock = DockStyle.None; // Reset dock to allow manual resizing
-            
+
             // adjust scroll to keep zoom centered around mouse
             scrollPanel.AutoScrollPosition = new Point(
                 (int)(newWidth * relX - scrollPanel.ClientSize.Width / 2),
@@ -259,13 +267,13 @@ namespace PhotoLikerUI
                 return;
 
             const int sizeStep = 50;
-            const int minSize  = 50;
-            const int maxSize  = 600;
+            const int minSize = 50;
+            const int maxSize = 600;
 
             if (e.Delta > 0)
-                settings.ThumbnailSize = Math.Min(settings.ThumbnailSize + sizeStep, maxSize);
+                _currentConfig.ThumbnailSize = Math.Min(_currentConfig.ThumbnailSize + sizeStep, maxSize);
             else if (e.Delta < 0)
-                settings.ThumbnailSize = Math.Max(settings.ThumbnailSize - sizeStep, minSize);
+                _currentConfig.ThumbnailSize = Math.Max(_currentConfig.ThumbnailSize - sizeStep, minSize);
             else
                 return;
 
@@ -280,7 +288,7 @@ namespace PhotoLikerUI
                 UpdateSiblingPreviews(currentFile);
         }
 
-        private void openToolStripButton_Click(object sender, EventArgs e)
+        private void OpenToolStripButton_Click(object sender, EventArgs e)
         {
             using var folderBrowserDialog = new FolderBrowserDialog();
             folderBrowserDialog.Description = MainFormStrings.FolderBrowserSelectPhotos;
@@ -289,8 +297,16 @@ namespace PhotoLikerUI
                 SaveSettingsToJson();
                 ClearDisplay();
                 LoadFolderSettings(folderBrowserDialog.SelectedPath);
-                settingsPropertyGrid.SelectedObject = settings;
+                _globalConfig.LastFolder = folderBrowserDialog.SelectedPath;
+                _globalConfig.Save();
+                settingsPropertyGrid.SelectedObject = _currentConfig;
                 LoadFolder();
+
+                RestoreWindowPosition();
+                UpdateContextMenuButton();
+
+                AdjustRulerWidth();
+                ApplyTheme(_currentConfig.IsDarkTheme);
             }
         }
 
@@ -353,15 +369,15 @@ namespace PhotoLikerUI
             {
                 ClearThumbnailControls();
 
-                var isAutoLiked = string.IsNullOrWhiteSpace(settings.LikedFolder) ||
-                    string.Equals(Path.GetFileName(settings.LikedFolder), MainFormStrings.DefaultLikedFolderName, StringComparison.OrdinalIgnoreCase);
-                settings.LikedFolder = isAutoLiked
-                    ? Path.Combine(settings.CurrentFolder, MainFormStrings.DefaultLikedFolderName)
-                    : settings.LikedFolder;
-                settings.Files = GetAllFiles(settings.CurrentFolder, settings.GoThroughtSubFolders)
+                var isAutoLiked = string.IsNullOrWhiteSpace(_currentConfig.LikedFolder) ||
+                    string.Equals(Path.GetFileName(_currentConfig.LikedFolder), MainFormStrings.DefaultLikedFolderName, StringComparison.OrdinalIgnoreCase);
+                _currentConfig.LikedFolder = isAutoLiked
+                    ? Path.Combine(_currentConfig.CurrentFolder, MainFormStrings.DefaultLikedFolderName)
+                    : _currentConfig.LikedFolder;
+                _currentConfig.Files = GetAllFiles(_currentConfig.CurrentFolder, _currentConfig.GoThroughtSubFolders)
                     .Select(f => new PhotoFile(f, string.Empty))
                     .ToList();
-                LoadFirstPhoto(settings.CurrentFilePath);
+                LoadFirstPhoto(_currentConfig.CurrentFilePath);
             }
             catch (Exception ex)
             {
@@ -370,8 +386,8 @@ namespace PhotoLikerUI
             finally
             {
                 settingsPropertyGrid.Refresh();
-                SetStatus(string.Format(MainFormStrings.StatusFolderLoaded, settings.TotalFiles, settings.CurrentFolder));
-                Text = string.Format(MainFormStrings.TitleFormat, settings.CurrentFolder);
+                SetStatus(string.Format(MainFormStrings.StatusFolderLoaded, _currentConfig.TotalFiles, _currentConfig.CurrentFolder));
+                Text = string.Format(MainFormStrings.TitleFormat, _currentConfig.CurrentFolder);
             }
         }
 
@@ -386,7 +402,7 @@ namespace PhotoLikerUI
             if (!string.IsNullOrEmpty(mapLink))
             {
                 toolStripStatusLabelGpsLink.Text = MainFormStrings.GpsMapLinkLabel;
-                toolStripStatusLabelGpsLink.Tag  = mapLink;
+                toolStripStatusLabelGpsLink.Tag = mapLink;
                 toolStripStatusLabelGpsLink.Visible = true;
             }
             else
@@ -413,45 +429,45 @@ namespace PhotoLikerUI
                 return true;
             }
             else
-            if (keyData == Keys.Right)
-            {
-                // Logic to go to the next photo
-                var currentFile = pictureBox1.Tag as string;
-                if (currentFile is not null)
+                if (keyData == Keys.Right)
                 {
-                    var files = settings.Files;
-                    var currentIndex = files.IndexOf(currentFile);
-                    if (currentIndex < files.Count - 1)
+                    // Logic to go to the next photo
+                    var currentFile = pictureBox1.Tag as string;
+                    if (currentFile is not null)
                     {
-                        LoadImage(files[currentIndex + 1].OriginalFilePath);
+                        var files = _currentConfig.Files;
+                        var currentIndex = files.IndexOf(currentFile);
+                        if (currentIndex < files.Count - 1)
+                        {
+                            LoadImage(files[currentIndex + 1].OriginalFilePath);
+                        }
                     }
+                    return true;
                 }
-                return true;
-            }
-            else if (keyData == Keys.Left)
-            {
-                // Logic to go to the previous photo
-                var currentFile = pictureBox1.Tag as string;
-                if (currentFile is not null)
+                else if (keyData == Keys.Left)
                 {
-                    var files = settings.Files;
-                    var currentIndex = files.IndexOf(currentFile);
-                    if (currentIndex > 0)
+                    // Logic to go to the previous photo
+                    var currentFile = pictureBox1.Tag as string;
+                    if (currentFile is not null)
                     {
-                        LoadImage(files[currentIndex - 1].OriginalFilePath);
+                        var files = _currentConfig.Files;
+                        var currentIndex = files.IndexOf(currentFile);
+                        if (currentIndex > 0)
+                        {
+                            LoadImage(files[currentIndex - 1].OriginalFilePath);
+                        }
                     }
+                    return true;
                 }
-                return true;
-            }
-            else if (keyData == Keys.O) // fit image to screen
-            {
-                FitImageToScreen();
-                return true;
-            }
-            else
-            {
-                return base.ProcessCmdKey(ref msg, keyData);
-            }
+                else if (keyData == Keys.O) // fit image to screen
+                {
+                    FitImageToScreen();
+                    return true;
+                }
+                else
+                {
+                    return base.ProcessCmdKey(ref msg, keyData);
+                }
         }
 
         #region Panning
@@ -508,7 +524,7 @@ namespace PhotoLikerUI
 
         private void ToggleLike(string currentFile)
         {
-            if (!string.IsNullOrEmpty(settings.LikedFile) && File.Exists(settings.LikedFile))
+            if (!string.IsNullOrEmpty(_currentConfig.LikedFile) && File.Exists(_currentConfig.LikedFile))
                 UnlikePhoto(currentFile);
             else
                 LikePhoto(currentFile);
@@ -518,9 +534,9 @@ namespace PhotoLikerUI
         {
             try
             {
-                var likedFolder = settings.LikedFolder;
+                var likedFolder = _currentConfig.LikedFolder;
                 if (string.IsNullOrWhiteSpace(likedFolder))
-                    likedFolder = settings.LikedFolder = LikedFolderSelectFolderDialog();
+                    likedFolder = _currentConfig.LikedFolder = LikedFolderSelectFolderDialog();
 
                 if (!Directory.Exists(likedFolder))
                 {
@@ -531,7 +547,7 @@ namespace PhotoLikerUI
                     catch (Exception ex)
                     {
                         SetStatus($"Error creating liked folder: {ex.Message}");
-                        likedFolder = settings.LikedFolder = LikedFolderSelectFolderDialog();
+                        likedFolder = _currentConfig.LikedFolder = LikedFolderSelectFolderDialog();
                     }
                 }
 
@@ -551,11 +567,11 @@ namespace PhotoLikerUI
                     SetStatus(string.Format(MainFormStrings.StatusFileCopied, fileName));
                 }
 
-                var idx = settings.Files.IndexOf(currentFile);
+                var idx = _currentConfig.Files.IndexOf(currentFile);
                 if (idx >= 0)
-                    settings.Files[idx].LikedFilePath = destinationPath;
+                    _currentConfig.Files[idx].LikedFilePath = destinationPath;
 
-                settings.LikedFile = destinationPath;
+                _currentConfig.LikedFile = destinationPath;
                 RefreshLikeState(currentFile);
             }
             catch (Exception ex)
@@ -613,15 +629,15 @@ namespace PhotoLikerUI
         {
             try
             {
-                var likedPath = settings.LikedFile;
+                var likedPath = _currentConfig.LikedFile;
                 File.Delete(likedPath);
                 SetStatus(string.Format(MainFormStrings.StatusFileRemoved, Path.GetFileName(likedPath)));
 
-                var idx = settings.Files.IndexOf(currentFile);
+                var idx = _currentConfig.Files.IndexOf(currentFile);
                 if (idx >= 0)
-                    settings.Files[idx].LikedFilePath = string.Empty;
+                    _currentConfig.Files[idx].LikedFilePath = string.Empty;
 
-                settings.LikedFile = string.Empty;
+                _currentConfig.LikedFile = string.Empty;
                 RefreshLikeState(currentFile);
             }
             catch (Exception ex)
@@ -670,10 +686,10 @@ namespace PhotoLikerUI
                 return null!;
             }
         }
-        
+
         private void LoadFirstPhoto(string currentFile)
         {
-            var file = settings.Files.FirstOrDefault(f => string.Equals(f.OriginalFilePath, currentFile, StringComparison.Ordinal)) ?? settings.Files.FirstOrDefault();
+            var file = _currentConfig.Files.FirstOrDefault(f => string.Equals(f.OriginalFilePath, currentFile, StringComparison.Ordinal)) ?? _currentConfig.Files.FirstOrDefault();
             if (file is not null)
             {
                 LoadImage(file.OriginalFilePath);
@@ -691,14 +707,14 @@ namespace PhotoLikerUI
                 pictureBox1.Image = imageCache.GetOrAdd(file, f => ImageHelper.LoadImageWithCorrectOrientation(f));
                 pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; // Set the size mode to zoom
                 pictureBox1.Tag = file; // Store the file path in the Tag property
-                settings.CurrentFilePath = file;
-                settings.CurrentFileName = Path.GetFileName(file);
-                settings.CurrentIndex = settings.Files.IndexOf(file);
-                if (settings.CurrentIndex >= 0)
+                _currentConfig.CurrentFilePath = file;
+                _currentConfig.CurrentFileName = Path.GetFileName(file);
+                _currentConfig.CurrentIndex = _currentConfig.Files.IndexOf(file);
+                if (_currentConfig.CurrentIndex >= 0)
                 {
-                    var photoFile = settings.Files[settings.CurrentIndex];
-                    var suggestedLikedFilePath = Path.Combine(settings.LikedFolder, Path.GetFileName(photoFile.OriginalFilePath));
-                    settings.LikedFile = File.Exists(photoFile.LikedFilePath)
+                    var photoFile = _currentConfig.Files[_currentConfig.CurrentIndex];
+                    var suggestedLikedFilePath = Path.Combine(_currentConfig.LikedFolder, Path.GetFileName(photoFile.OriginalFilePath));
+                    _currentConfig.LikedFile = File.Exists(photoFile.LikedFilePath)
                         ? photoFile.LikedFilePath
                         : File.Exists(suggestedLikedFilePath) ? suggestedLikedFilePath : string.Empty;
                 }
@@ -733,13 +749,13 @@ namespace PhotoLikerUI
             if (string.IsNullOrEmpty(currentFile))
                 throw new ArgumentException(MainFormStrings.ExCurrentFileNullOrEmpty, nameof(currentFile));
 
-            var files = settings.Files;
+            var files = _currentConfig.Files;
             int currentIndex = files.IndexOf(currentFile);
             if (currentIndex < 0)
                 throw new ArgumentException(MainFormStrings.ExCurrentFileNotInList, nameof(currentFile));
 
-            int from = Math.Max(0, currentIndex - settings.CacheSize);
-            int to   = Math.Min(files.Count - 1, currentIndex + settings.CacheSize);
+            int from = Math.Max(0, currentIndex - _currentConfig.CacheSize);
+            int to = Math.Min(files.Count - 1, currentIndex + _currentConfig.CacheSize);
 
             var keepPaths = new HashSet<string>(
                 Enumerable.Range(from, to - from + 1).Select(i => files[i].OriginalFilePath));
@@ -786,7 +802,7 @@ namespace PhotoLikerUI
         {
             return new DirectoryInfo(currentFolder).GetFiles("*.*",
                 goSubFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
-                .Where(fi => settings.Extensions.Contains(fi.Extension.ToLowerInvariant()))
+                .Where(fi => _currentConfig.Extensions.Contains(fi.Extension.ToLowerInvariant()))
                 .Select(fi => fi.FullName);
         }
 
@@ -806,12 +822,12 @@ namespace PhotoLikerUI
             _thumbCts = new CancellationTokenSource();
             var token = _thumbCts.Token;
 
-            var files = settings.Files;
+            var files = _currentConfig.Files;
             int idx = files.IndexOf(currentFile);
             if (idx < 0) return;
 
             int from = Math.Max(0, idx - PreviewSiblingCount);
-            int to   = Math.Min(files.Count - 1, idx + PreviewSiblingCount);
+            int to = Math.Min(files.Count - 1, idx + PreviewSiblingCount);
 
             // Build set of file paths that should be visible now
             var visiblePaths = new HashSet<string>();
@@ -839,7 +855,7 @@ namespace PhotoLikerUI
             {
                 string filePath = files[i].OriginalFilePath;
                 bool isCurrent = i == idx;
-                string suggestedLiked = Path.Combine(settings.LikedFolder, Path.GetFileName(filePath));
+                string suggestedLiked = Path.Combine(_currentConfig.LikedFolder, Path.GetFileName(filePath));
                 bool isLiked = !string.IsNullOrEmpty(files[i].LikedFilePath)
                                    ? File.Exists(files[i].LikedFilePath)
                                    : File.Exists(suggestedLiked);
@@ -847,9 +863,9 @@ namespace PhotoLikerUI
                 if (_thumbControls.TryGetValue(filePath, out var existing))
                 {
                     // Reuse — just update selection highlight
-                    existing.Thumb.BackColor   = isCurrent ? Color.CornflowerBlue : MainFormConstants.ThumbBackColor;
+                    existing.Thumb.BackColor = isCurrent ? Color.CornflowerBlue : MainFormConstants.ThumbBackColor;
                     existing.Thumb.BorderStyle = isCurrent ? BorderStyle.Fixed3D : BorderStyle.None;
-                    existing.Label.ForeColor   = isCurrent ? Color.White : (isLiked ? Color.LightGreen : Color.LightGray);
+                    existing.Label.ForeColor = isCurrent ? Color.White : (isLiked ? Color.LightGreen : Color.LightGray);
                     continue;
                 }
 
@@ -863,12 +879,12 @@ namespace PhotoLikerUI
                 // New control needed
                 var thumb = new PictureBox
                 {
-                    Size        = new Size(PreviewThumbSize, PreviewThumbSize),
-                    SizeMode    = PictureBoxSizeMode.Zoom,
-                    BackColor   = isCurrent ? Color.CornflowerBlue : MainFormConstants.ThumbBackColor,
-                    Cursor      = Cursors.Hand,
-                    Margin      = new Padding(4, 4, 4, 0),
-                    Tag         = filePath,
+                    Size = new Size(PreviewThumbSize, PreviewThumbSize),
+                    SizeMode = PictureBoxSizeMode.Zoom,
+                    BackColor = isCurrent ? Color.CornflowerBlue : MainFormConstants.ThumbBackColor,
+                    Cursor = Cursors.Hand,
+                    Margin = new Padding(4, 4, 4, 0),
+                    Tag = filePath,
                     BorderStyle = isCurrent ? BorderStyle.Fixed3D : BorderStyle.None,
                 };
 
@@ -877,16 +893,16 @@ namespace PhotoLikerUI
 
                 var label = new Label
                 {
-                    Text      = Path.GetFileName(filePath),
+                    Text = Path.GetFileName(filePath),
                     ForeColor = isCurrent ? Color.White : (isLiked ? Color.LightGreen : Color.LightGray),
                     BackColor = Color.Transparent,
-                    AutoSize  = false,
-                    Width     = PreviewThumbSize,
-                    Height    = MainFormConstants.PreviewLabelHeight,
+                    AutoSize = false,
+                    Width = PreviewThumbSize,
+                    Height = MainFormConstants.PreviewLabelHeight,
                     TextAlign = ContentAlignment.MiddleCenter,
-                    Margin    = new Padding(4, 0, 4, 4),
-                    Cursor    = Cursors.Hand,
-                    Tag       = filePath,
+                    Margin = new Padding(4, 0, 4, 4),
+                    Cursor = Cursors.Hand,
+                    Tag = filePath,
                 };
 
                 thumb.Click += PreviewThumb_Click;
@@ -902,7 +918,7 @@ namespace PhotoLikerUI
                 previewFlowPanel.Controls.Add(label);
                 // Place the new pair at the correct position — only 2 SetChildIndex calls
                 // instead of reordering all controls after the loop.
-                previewFlowPanel.Controls.SetChildIndex(thumb,  insertAt * 2);
+                previewFlowPanel.Controls.SetChildIndex(thumb, insertAt * 2);
                 previewFlowPanel.Controls.SetChildIndex(label, insertAt * 2 + 1);
             }
 
@@ -967,10 +983,10 @@ namespace PhotoLikerUI
             var bmp = new Bitmap(size, size);
             using var g = Graphics.FromImage(bmp);
             g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-            g.PixelOffsetMode   = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
 
             float scale = Math.Min((float)size / source.Width, (float)size / source.Height);
-            int w = (int)(source.Width  * scale);
+            int w = (int)(source.Width * scale);
             int h = (int)(source.Height * scale);
             g.DrawImage(source, (size - w) / 2, (size - h) / 2, w, h);
             return bmp;

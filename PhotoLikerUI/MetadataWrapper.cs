@@ -15,7 +15,7 @@ namespace PhotoLikerUI
 
         public MetadataWrapper(IReadOnlyList<MetadataEntry> entries)
         {
-            _entries    = entries;
+            _entries = entries;
             _gpsDecoded = GpsDecoder.Decode(entries);
         }
 
@@ -27,13 +27,14 @@ namespace PhotoLikerUI
                     e.Value,
                     e.Name.StartsWith(ImageHelperStrings.UnknownPrefix)
                         ? ImageHelperStrings.CategoryUnknown
-                        : ExifTagMap.GetCategory(e.TagId)))
+                        : ExifTagMap.GetCategory(e.TagId).Name,
+                    isBrowsable: ExifTagMap.GetCategory(e.TagId).IsBrowsable))
                 .Cast<PropertyDescriptor>()
                 .ToList();
 
             foreach (var e in _gpsDecoded)
                 props.Add(new MetadataPropertyDescriptor(
-                    e.Name, e.Value, ImageHelperStrings.CategoryGPSDecoded, e.ExtraAttributes));
+                    e.Name, e.Value, ImageHelperStrings.CategoryGPSDecoded, extraAttributes: e.ExtraAttributes));
 
             var allText = string.Join(
                 ImageHelperStrings.AllMetadataSeparator,
@@ -42,7 +43,7 @@ namespace PhotoLikerUI
                 ImageHelperStrings.AllMetadataProperty,
                 allText,
                 ImageHelperStrings.CategoryDebug,
-                [new EditorAttribute(typeof(MultilineTextViewEditor), typeof(System.Drawing.Design.UITypeEditor))]));
+                extraAttributes: [new EditorAttribute(typeof(MultilineTextViewEditor), typeof(System.Drawing.Design.UITypeEditor))]));
 
             return new PropertyDescriptorCollection([.. props]);
         }
@@ -70,15 +71,16 @@ namespace PhotoLikerUI
             string name,
             string value,
             string category = ImageHelperStrings.CategoryExif,
-            Attribute[]? extraAttributes = null)
-            : base(name, BuildAttributes(category, extraAttributes))
+            bool isBrowsable = true,
+            Attribute[]? extraAttributes = null
+            ) : base(name, BuildAttributes(category, isBrowsable, extraAttributes))
         {
             _value = value;
         }
 
-        private static Attribute[] BuildAttributes(string category, Attribute[]? extra)
+        private static Attribute[] BuildAttributes(string category, bool isBrowsable, Attribute[]? extra)
         {
-            Attribute[] baseAttrs = [new CategoryAttribute(category)];
+            Attribute[] baseAttrs = [new CategoryAttribute(category), new BrowsableAttribute(isBrowsable)];
             return extra is { Length: > 0 } ? [.. baseAttrs, .. extra] : baseAttrs;
         }
 

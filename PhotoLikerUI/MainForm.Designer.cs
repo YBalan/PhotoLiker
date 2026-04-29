@@ -117,7 +117,7 @@
             openToolStripButton.Name = "openToolStripButton";
             openToolStripButton.Size = new Size(23, 22);
             openToolStripButton.Text = "&Open";
-            openToolStripButton.Click += openToolStripButton_Click;
+            openToolStripButton.Click += OpenToolStripButton_Click;
             // 
             // saveToolStripButton
             // 

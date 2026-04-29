@@ -1,13 +1,15 @@
 namespace PhotoLikerUI
 {
+    public record struct ExifCategoryInfo(int TagId, string Name, bool IsBrowsable);
+
     public static class ExifTagMap
     {
-        public static string GetCategory(int tagId) => tagId switch
+        public static ExifCategoryInfo GetCategory(int tagId) => tagId switch
         {
-            < 0x0100 => ImageHelperStrings.CategoryGPS,
-            < 0x5000 => ImageHelperStrings.CategoryImage,
-            < 0x6000 => ImageHelperStrings.CategoryThumbnail,
-            _        => ImageHelperStrings.CategoryExif,
+            < 0x0100 => new ExifCategoryInfo(tagId, ImageHelperStrings.CategoryGPS, IsBrowsable: false),
+            < 0x5000 => new ExifCategoryInfo(tagId, ImageHelperStrings.CategoryImage, IsBrowsable: true),
+            < 0x6000 => new ExifCategoryInfo(tagId, ImageHelperStrings.CategoryThumbnail, IsBrowsable: true),
+            _        => new ExifCategoryInfo(tagId, ImageHelperStrings.CategoryExif, IsBrowsable: true),
         };
 
         public static readonly Dictionary<int, string> Tags = new()

@@ -33,7 +33,7 @@ namespace PhotoLikerUI
             double? lat = ParseDegrees(byTag, TagLat);
             double? lon = ParseDegrees(byTag, TagLon);
 
-            if (lat is null && lon is null)
+            if (!IsValidCoordinate(lat) && !IsValidCoordinate(lon))
                 return result;
 
             string latRef = ReadAscii(byTag, TagLatRef);
@@ -42,32 +42,41 @@ namespace PhotoLikerUI
             if (lat.HasValue)
             {
                 double signedLat = latRef == "S" ? -lat.Value : lat.Value;
-                result.Add(Decoded(ImageHelperStrings.GpsLatitude,
-                    string.Format(ImageHelperStrings.GpsDecimalDegreesFormat, signedLat)));
-                result.Add(Decoded(ImageHelperStrings.GpsLatitudeDMS,
-                    ToDms(signedLat, latRef is "N" or "S" ? (latRef == "N" ? "N" : "S") : (signedLat >= 0 ? "N" : "S"))));
+                if (IsValidCoordinate(signedLat))
+                {
+                    result.Add(Decoded(ImageHelperStrings.GpsLatitude,
+                        string.Format(ImageHelperStrings.GpsDecimalDegreesFormat, signedLat)));
+                    result.Add(Decoded(ImageHelperStrings.GpsLatitudeDMS,
+                        ToDms(signedLat, latRef is "N" or "S" ? (latRef == "N" ? "N" : "S") : (signedLat >= 0 ? "N" : "S"))));
+                }
             }
 
             if (lon.HasValue)
             {
                 double signedLon = lonRef == "W" ? -lon.Value : lon.Value;
-                result.Add(Decoded(ImageHelperStrings.GpsLongitude,
-                    string.Format(ImageHelperStrings.GpsDecimalDegreesFormat, signedLon)));
-                result.Add(Decoded(ImageHelperStrings.GpsLongitudeDMS,
-                    ToDms(signedLon, lonRef is "E" or "W" ? lonRef : (signedLon >= 0 ? "E" : "W"))));
+                if (IsValidCoordinate(signedLon))
+                {
+                    result.Add(Decoded(ImageHelperStrings.GpsLongitude,
+                        string.Format(ImageHelperStrings.GpsDecimalDegreesFormat, signedLon)));
+                    result.Add(Decoded(ImageHelperStrings.GpsLongitudeDMS,
+                        ToDms(signedLon, lonRef is "E" or "W" ? lonRef : (signedLon >= 0 ? "E" : "W"))));
+                }
             }
 
             if (lat.HasValue && lon.HasValue)
             {
                 double sLat = latRef == "S" ? -lat.Value : lat.Value;
                 double sLon = lonRef == "W" ? -lon.Value : lon.Value;
-                string coords = string.Format(ImageHelperStrings.GpsCoordFormat,
-                    string.Format(ImageHelperStrings.GpsDecimalDegreesFormat, sLat),
-                    string.Format(ImageHelperStrings.GpsDecimalDegreesFormat, sLon));
-                result.Add(Decoded(ImageHelperStrings.GpsCoordinates, coords));
-                result.Add(Decoded(ImageHelperStrings.GpsMapLink,
-                    string.Format(ImageHelperStrings.GpsMapLinkFormat, sLat, sLon),
-                    [new EditorAttribute(typeof(UrlLauncherEditor), typeof(System.Drawing.Design.UITypeEditor))]));
+                if (IsValidCoordinate(sLat) && IsValidCoordinate(sLon))
+                {
+                    string coords = string.Format(ImageHelperStrings.GpsCoordFormat,
+                        string.Format(ImageHelperStrings.GpsDecimalDegreesFormat, sLat),
+                        string.Format(ImageHelperStrings.GpsDecimalDegreesFormat, sLon));
+                    result.Add(Decoded(ImageHelperStrings.GpsCoordinates, coords));
+                    result.Add(Decoded(ImageHelperStrings.GpsMapLink,
+                        string.Format(ImageHelperStrings.GpsMapLinkFormat, sLat, sLon),
+                        [new EditorAttribute(typeof(UrlLauncherEditor), typeof(System.Drawing.Design.UITypeEditor))]));
+                }
             }
 
             // Altitude
@@ -117,6 +126,16 @@ namespace PhotoLikerUI
         }
 
         // ── helpers ──────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns true when the coordinate is non-null, finite, and not exactly zero
+        /// (a stored value of 0,0 almost always means "no GPS fix").
+        /// </summary>
+        private static bool IsValidCoordinate(double? value) =>
+            value.HasValue && IsValidCoordinate(value.Value);
+
+        private static bool IsValidCoordinate(double value) =>
+            double.IsFinite(value) && value != 0.0;
 
         private static MetadataEntry Decoded(string name, string value, Attribute[]? extraAttributes = null) =>
             new(0, name, value, ExtraAttributes: extraAttributes);
