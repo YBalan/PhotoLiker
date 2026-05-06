@@ -7,9 +7,12 @@ namespace PhotoLiker.Core
         public string? MapLink => GpsDecoded.FirstOrDefault(e => e.Name == ImageHelperStrings.GpsMapLink)?.Value;
 
         public MetadataViewModel(FriendlyImageMetadata meta)
+            : this(meta.Entries) { }
+
+        internal MetadataViewModel(IReadOnlyList<MetadataEntry> entries)
         {
-            Entries    = meta.Entries;
-            GpsDecoded = GpsDecoder.Decode(meta.Entries);
+            Entries    = entries;
+            GpsDecoded = GpsDecoder.Decode(entries);
         }
 
         /// <summary>Flat list of all entries grouped and labelled, suitable for a MAUI CollectionView.</summary>
