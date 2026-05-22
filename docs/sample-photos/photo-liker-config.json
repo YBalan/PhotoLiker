@@ -1,0 +1,27 @@
+{
+  "CurrentFolder": "D:\\source\\repos\\PhotoLiker\\docs\\sample-photos",
+  "LikedFolder": "D:\\source\\repos\\PhotoLiker\\docs\\sample-photos\\Liked",
+  "GoThroughtSubFolders": false,
+  "Extensions": [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".bmp",
+    ".tiff",
+    ".webp"
+  ],
+  "CacheSize": 20,
+  "WindowLeft": 100,
+  "WindowTop": 100,
+  "WindowWidth": 1200,
+  "WindowHeight": 700,
+  "ScreenIndex": 0,
+  "WindowState": 0,
+  "CurrentFileName": "photo-01.jpg",
+  "CurrentFilePath": "D:\\source\\repos\\PhotoLiker\\docs\\sample-photos\\photo-01.jpg",
+  "CurrentIndex": 0,
+  "LikedFile": "",
+  "IsDarkTheme": false,
+  "ThumbnailSize": 110
+}
