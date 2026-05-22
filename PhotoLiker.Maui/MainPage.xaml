@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="PhotoLiker.Maui.MainPage"
+             Title="PhotoLiker">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="⋮"
+                     Order="Primary"
+                     Priority="0"
+                     Clicked="OnOpenFolderClicked" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,3*,*" RowSpacing="8" Padding="10">
+        <HorizontalStackLayout Grid.Row="0" Spacing="8" HorizontalOptions="End">
+            <Button x:Name="LikeButton" Text="Like" Clicked="OnLikeClicked" />
+            <Button x:Name="MapButton" Text="Open Map" IsVisible="False" Clicked="OnOpenMapClicked" />
+        </HorizontalStackLayout>
+
+        <Label Grid.Row="1" x:Name="CurrentFileLabel" LineBreakMode="TailTruncation" FontAttributes="Bold" />
+
+        <Border Grid.Row="2" StrokeThickness="1" Padding="8" Stroke="LightGray" StrokeShape="RoundRectangle 6">
+            <Label x:Name="PermissionHelpLabel"
+                   FontSize="12"
+                   LineBreakMode="WordWrap"
+                   TextColor="Gray" />
+        </Border>
+
+        <Border Grid.Row="3" StrokeThickness="1" Padding="4" Stroke="Gray" StrokeShape="RoundRectangle 6">
+            <ScrollView Orientation="Horizontal">
+                <HorizontalStackLayout x:Name="ThumbnailContainer" Spacing="8" />
+            </ScrollView>
+        </Border>
+
+        <Border Grid.Row="4" StrokeThickness="1" Padding="4" Stroke="Gray" StrokeShape="RoundRectangle 6">
+            <Grid>
+                <Image x:Name="MainImage"
+                       Aspect="AspectFit"
+                       HorizontalOptions="Fill"
+                       VerticalOptions="Fill" />
+
+                <Button x:Name="PreviousOverlayButton"
+                        Text="‹"
+                        WidthRequest="48"
+                        HeightRequest="48"
+                        Padding="0"
+                        CornerRadius="24"
+                        Opacity="0.85"
+                        BackgroundColor="#66000000"
+                        TextColor="White"
+                        HorizontalOptions="Start"
+                        VerticalOptions="Center"
+                        Margin="12,0,0,0"
+                        Clicked="OnPreviousClicked" />
+
+                <Button x:Name="NextOverlayButton"
+                        Text="›"
+                        WidthRequest="48"
+                        HeightRequest="48"
+                        Padding="0"
+                        CornerRadius="24"
+                        Opacity="0.85"
+                        BackgroundColor="#66000000"
+                        TextColor="White"
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        Margin="0,0,12,0"
+                        Clicked="OnNextClicked" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="5" RowDefinitions="Auto,*" RowSpacing="6">
+            <Label Grid.Row="0" Text="Metadata" FontAttributes="Bold" />
+            <CollectionView Grid.Row="1" x:Name="MetadataCollection" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Label Text="{Binding}" LineBreakMode="WordWrap" FontSize="12" />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </Grid>
+    </Grid>
+
+</ContentPage>

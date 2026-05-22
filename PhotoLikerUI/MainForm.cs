@@ -30,6 +30,9 @@ namespace PhotoLikerUI
         {
             InitializeComponent();
 
+            // Set application icon programmatically
+            Icon = AppIcons.AppIcon();
+
             scrollPanel.AutoScroll = true;
 
             scrollPanel.MouseWheel += Panel2_MouseWheel;
@@ -84,15 +87,15 @@ namespace PhotoLikerUI
                 e.Graphics.FillRectangle(startBrush, 0, 0, msgSize.Width, msgSize.Height);
                 e.Graphics.DrawString(msg, font, Brushes.White, MainFormConstants.LikedCheckmarkOffset, MainFormConstants.LikedCheckmarkOffset);
             }
-        }
+        }        
 
-        protected override void OnClosed(EventArgs e)
+        protected override void OnFormClosed(FormClosedEventArgs e)
         {
             SaveWindowPosition();
             SaveSettingsToJson();
             _globalConfig.LastFolder = _currentConfig.CurrentFolder;
             _globalConfig.Save();
-            base.OnClosed(e);
+            base.OnFormClosed(e);
         }
 
         private void ThemeToggleToolStripButton_Click(object? sender, EventArgs e)
@@ -308,6 +311,59 @@ namespace PhotoLikerUI
                 AdjustRulerWidth();
                 ApplyTheme(_currentConfig.IsDarkTheme);
             }
+        }
+
+        private void OpenSourceFolderToolStripButton_Click(object? sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder))
+            {
+                SetStatus(MainFormStrings.StatusSourceFolderNotSet);
+                return;
+            }
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_currentConfig.CurrentFolder) { UseShellExecute = true });
+            SetStatus(MainFormStrings.StatusOpenSourceFolder);
+        }
+
+        private void OpenLikedFolderToolStripButton_Click(object? sender, EventArgs e)
+        {
+            var liked = _currentConfig.LikedFolder;
+            if (string.IsNullOrWhiteSpace(liked) || !Directory.Exists(liked))
+            {
+                SetStatus(MainFormStrings.StatusLikedFolderNotSet);
+                return;
+            }
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(liked) { UseShellExecute = true });
+            SetStatus(MainFormStrings.StatusOpenLikedFolder);
+        }
+
+        private void LoadLikedFolderToolStripButton_Click(object? sender, EventArgs e)
+        {
+            var likedFolder = _currentConfig.LikedFolder;
+            if (string.IsNullOrWhiteSpace(likedFolder) || !Directory.Exists(likedFolder))
+            {
+                // Fall back to the default "Liked" subfolder under the current folder
+                likedFolder = Path.Combine(_currentConfig.CurrentFolder, MainFormStrings.DefaultLikedFolderName);
+            }
+
+            if (!Directory.Exists(likedFolder))
+            {
+                SetStatus(MainFormStrings.StatusLikedFolderNotSet);
+                return;
+            }
+
+            SaveSettingsToJson();
+            ClearDisplay();
+            LoadFolderSettings(likedFolder);
+            _globalConfig.LastFolder = likedFolder;
+            _globalConfig.Save();
+            settingsPropertyGrid.SelectedObject = _currentConfig;
+            LoadFolder();
+
+            RestoreWindowPosition();
+            UpdateContextMenuButton();
+
+            AdjustRulerWidth();
+            ApplyTheme(_currentConfig.IsDarkTheme);
         }
 
         private void ClearDisplay()

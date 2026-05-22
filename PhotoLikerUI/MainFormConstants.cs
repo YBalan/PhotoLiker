@@ -59,6 +59,12 @@ namespace PhotoLikerUI
         public const string StatusContextMenuRemoved     = "Context menu entry removed.";
         public const string StatusContextMenuError       = "Error updating context menu registration: {0}";
 
+        // Folder explorer buttons
+        public const string StatusOpenSourceFolder       = "Opened source folder in File Explorer.";
+        public const string StatusOpenLikedFolder        = "Opened liked folder in File Explorer.";
+        public const string StatusLikedFolderNotSet      = "Liked folder is not set.";
+        public const string StatusSourceFolderNotSet     = "Source folder is not set.";
+
         // Exception messages
         public const string ExCurrentFileNullOrEmpty     = "Current file cannot be null or empty.";
         public const string ExCurrentFileNotInList       = "Current file is not in the list of files.";

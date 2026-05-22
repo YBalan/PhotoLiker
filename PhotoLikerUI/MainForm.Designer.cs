@@ -45,6 +45,10 @@
             contextMenuToolStripButton = new ToolStripButton();
             toolStripSeparator3 = new ToolStripSeparator();
             themeToggleToolStripButton = new ToolStripButton();
+            toolStripSeparator4 = new ToolStripSeparator();
+            openSourceFolderToolStripButton = new ToolStripButton();
+            openLikedFolderToolStripButton = new ToolStripButton();
+            loadLikedFolderToolStripButton = new ToolStripButton();
             splitContainer2 = new SplitContainer();
             settingsPropertyGrid = new PropertyGrid();
             imageMetaPropertyGrid = new PropertyGrid();
@@ -93,7 +97,7 @@
             // 
             // toolStrip1
             // 
-            toolStrip1.Items.AddRange(new ToolStripItem[] { newToolStripButton, openToolStripButton, saveToolStripButton, printToolStripButton, toolStripSeparator, cutToolStripButton, copyToolStripButton, pasteToolStripButton, toolStripSeparator1, helpToolStripButton, toolStripSeparator2, contextMenuToolStripButton, toolStripSeparator3, themeToggleToolStripButton });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { newToolStripButton, openToolStripButton, saveToolStripButton, printToolStripButton, toolStripSeparator, cutToolStripButton, copyToolStripButton, pasteToolStripButton, toolStripSeparator1, helpToolStripButton, toolStripSeparator2, contextMenuToolStripButton, toolStripSeparator3, themeToggleToolStripButton, toolStripSeparator4, openSourceFolderToolStripButton, openLikedFolderToolStripButton, loadLikedFolderToolStripButton });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
             toolStrip1.Size = new Size(178, 25);
@@ -190,10 +194,12 @@
             // 
             // contextMenuToolStripButton
             // 
-            contextMenuToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            contextMenuToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            contextMenuToolStripButton.Image = AppIcons.RegisterContextMenu();
             contextMenuToolStripButton.Name = "contextMenuToolStripButton";
             contextMenuToolStripButton.Size = new Size(23, 22);
             contextMenuToolStripButton.Text = "Register Context Menu";
+            contextMenuToolStripButton.ToolTipText = "Register Context Menu";
             contextMenuToolStripButton.Click += contextMenuToolStripButton_Click;
             // 
             // toolStripSeparator3
@@ -209,6 +215,41 @@
             themeToggleToolStripButton.Text = "🌙 Dark";
             themeToggleToolStripButton.ToolTipText = "Toggle dark / light theme";
             themeToggleToolStripButton.Click += (s, e) => ThemeToggleToolStripButton_Click(s, e);
+            // 
+            // toolStripSeparator4
+            // 
+            toolStripSeparator4.Name = "toolStripSeparator4";
+            toolStripSeparator4.Size = new Size(6, 25);
+            // 
+            // openSourceFolderToolStripButton
+            // 
+            openSourceFolderToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            openSourceFolderToolStripButton.Image = AppIcons.OpenSourceFolder();
+            openSourceFolderToolStripButton.Name = "openSourceFolderToolStripButton";
+            openSourceFolderToolStripButton.Size = new Size(23, 22);
+            openSourceFolderToolStripButton.Text = "Open Source Folder";
+            openSourceFolderToolStripButton.ToolTipText = "Open source folder in File Explorer";
+            openSourceFolderToolStripButton.Click += OpenSourceFolderToolStripButton_Click;
+            // 
+            // openLikedFolderToolStripButton
+            // 
+            openLikedFolderToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            openLikedFolderToolStripButton.Image = AppIcons.OpenLikedFolder();
+            openLikedFolderToolStripButton.Name = "openLikedFolderToolStripButton";
+            openLikedFolderToolStripButton.Size = new Size(23, 22);
+            openLikedFolderToolStripButton.Text = "Open Liked Folder";
+            openLikedFolderToolStripButton.ToolTipText = "Open liked folder in File Explorer";
+            openLikedFolderToolStripButton.Click += OpenLikedFolderToolStripButton_Click;
+            // 
+            // loadLikedFolderToolStripButton
+            // 
+            loadLikedFolderToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            loadLikedFolderToolStripButton.Image = AppIcons.LoadLikedFolder();
+            loadLikedFolderToolStripButton.Name = "loadLikedFolderToolStripButton";
+            loadLikedFolderToolStripButton.Size = new Size(23, 22);
+            loadLikedFolderToolStripButton.Text = "Load Liked Folder";
+            loadLikedFolderToolStripButton.ToolTipText = "Select and load a liked folder";
+            loadLikedFolderToolStripButton.Click += LoadLikedFolderToolStripButton_Click;
             // 
             // splitContainer2
             // 
@@ -379,5 +420,9 @@
             private ToolStripStatusLabel toolStripStatusLabelGpsLink;
         private ToolStripSeparator toolStripSeparator3;
         private ToolStripButton themeToggleToolStripButton;
+        private ToolStripSeparator toolStripSeparator4;
+        private ToolStripButton openSourceFolderToolStripButton;
+        private ToolStripButton openLikedFolderToolStripButton;
+        private ToolStripButton loadLikedFolderToolStripButton;
     }
 }
