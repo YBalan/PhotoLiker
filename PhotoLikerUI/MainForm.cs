@@ -140,14 +140,14 @@ namespace PhotoLikerUI
         private void LoadFolderSettings(string newFolder)
         {
             // Preserve window/theme settings that are not folder-specific
-            var windowLeft = _currentConfig.WindowLeft;
-            var windowTop = _currentConfig.WindowTop;
-            var windowWidth = _currentConfig.WindowWidth;
-            var windowHeight = _currentConfig.WindowHeight;
-            var windowState = _currentConfig.WindowState;
-            var screenIndex = _currentConfig.ScreenIndex;
-            var isDarkTheme = _currentConfig.IsDarkTheme;
-            var thumbSize = _currentConfig.ThumbnailSize;
+            //var windowLeft = _currentConfig.WindowLeft;
+            //var windowTop = _currentConfig.WindowTop;
+            //var windowWidth = _currentConfig.WindowWidth;
+            //var windowHeight = _currentConfig.WindowHeight;
+            //var windowState = _currentConfig.WindowState;
+            //var screenIndex = _currentConfig.ScreenIndex;
+            //var isDarkTheme = _currentConfig.IsDarkTheme;
+            //var thumbSize = _currentConfig.ThumbnailSize;
 
             _currentConfig = new Settings { CurrentFolder = newFolder };
             LoadSettingsFromJson(newFolder);
