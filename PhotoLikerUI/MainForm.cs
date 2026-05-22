@@ -87,7 +87,7 @@ namespace PhotoLikerUI
                 e.Graphics.FillRectangle(startBrush, 0, 0, msgSize.Width, msgSize.Height);
                 e.Graphics.DrawString(msg, font, Brushes.White, MainFormConstants.LikedCheckmarkOffset, MainFormConstants.LikedCheckmarkOffset);
             }
-        }        
+        }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
@@ -139,29 +139,8 @@ namespace PhotoLikerUI
 
         private void LoadFolderSettings(string newFolder)
         {
-            // Preserve window/theme settings that are not folder-specific
-            //var windowLeft = _currentConfig.WindowLeft;
-            //var windowTop = _currentConfig.WindowTop;
-            //var windowWidth = _currentConfig.WindowWidth;
-            //var windowHeight = _currentConfig.WindowHeight;
-            //var windowState = _currentConfig.WindowState;
-            //var screenIndex = _currentConfig.ScreenIndex;
-            //var isDarkTheme = _currentConfig.IsDarkTheme;
-            //var thumbSize = _currentConfig.ThumbnailSize;
-
             _currentConfig = new Settings { CurrentFolder = newFolder };
             LoadSettingsFromJson(newFolder);
-
-            //// Always keep window and theme settings from the previous session
-            //_currentConfig.CurrentFolder = newFolder;
-            //_currentConfig.WindowLeft    = windowLeft;
-            //_currentConfig.WindowTop     = windowTop;
-            //_currentConfig.WindowWidth   = windowWidth;
-            //_currentConfig.WindowHeight  = windowHeight;
-            //_currentConfig.WindowState   = windowState;
-            //_currentConfig.ScreenIndex   = screenIndex;
-            //_currentConfig.IsDarkTheme   = isDarkTheme;
-            //_currentConfig.ThumbnailSize = thumbSize;
         }
 
         private void SaveSettingsToJson()
