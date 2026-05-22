@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-android'))">
+    <AndroidSdkDirectory Condition="Exists('C:\Users\Yurii\AppData\Local\Android\Sdk')">C:\Users\Yurii\AppData\Local\Android\Sdk</AndroidSdkDirectory>
+    <JavaSdkDirectory Condition="Exists('C:\Program Files\Android\Android Studio1\jbr')">C:\Program Files\Android\Android Studio1\jbr</JavaSdkDirectory>
+    <AcceptAndroidSDKLicenses>true</AcceptAndroidSDKLicenses>
+    <AndroidRestoreOnBuild>false</AndroidRestoreOnBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([System.String]::Copy('$(TargetFramework)').Contains('-android')) and '$(Configuration)' == 'Debug'">
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <AndroidFastDeploymentType></AndroidFastDeploymentType>
+  </PropertyGroup>
+</Project>
