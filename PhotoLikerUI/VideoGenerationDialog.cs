@@ -3,6 +3,7 @@ namespace PhotoLikerUI
     internal sealed class VideoGenerationDialog : Form
     {
         private readonly Func<VideoGenerationOptions, Action<string>, Action<int>, Task> _generateVideoAsync;
+        private readonly IReadOnlyList<string> _sourceFiles;
 
         private readonly TextBox _outputFolderTextBox = new();
         private readonly TextBox _outputFileNameTextBox = new();
@@ -26,8 +27,10 @@ namespace PhotoLikerUI
 
         public VideoGenerationDialog(
             string defaultOutputFolder,
+            IReadOnlyList<string> sourceFiles,
             Func<VideoGenerationOptions, Action<string>, Action<int>, Task> generateVideoAsync)
         {
+            _sourceFiles = sourceFiles;
             _generateVideoAsync = generateVideoAsync;
 
             Text = MainFormStrings.VideoDialogTitle;
@@ -112,7 +115,10 @@ namespace PhotoLikerUI
             resolutionPanel.Controls.Add(new Label { Text = "x", AutoSize = true, Margin = new Padding(8, 6, 8, 0) });
             resolutionPanel.Controls.Add(_heightNumeric);
             layout.Controls.Add(resolutionPanel, 1, 2);
-            layout.SetColumnSpan(resolutionPanel, 2);
+
+            var firstImageButton = new Button { Text = "Use first image", AutoSize = true, Dock = DockStyle.Fill };
+            firstImageButton.Click += (_, _) => ApplyFirstImageResolution();
+            layout.Controls.Add(firstImageButton, 2, 2);
 
             layout.Controls.Add(new Label { Text = "Frame time range (sec):", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 3);
             var frameRangePanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
@@ -208,7 +214,8 @@ namespace PhotoLikerUI
                 _codecCombo,
                 _crfNumeric,
                 _reverseSourceFilesCheckBox,
-                browseButton
+                browseButton,
+                firstImageButton
             ]);
 
             FormClosing += (_, e) =>
@@ -331,6 +338,35 @@ namespace PhotoLikerUI
 
             if (dialog.ShowDialog(this) == DialogResult.OK)
                 _outputFolderTextBox.Text = dialog.SelectedPath;
+        }
+
+        private void ApplyFirstImageResolution()
+        {
+            var firstImagePath = GetFirstImagePath();
+            if (string.IsNullOrWhiteSpace(firstImagePath) || !File.Exists(firstImagePath))
+            {
+                MessageBox.Show(this, "No source image is available.", MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                using var image = ImageHelper.LoadImageWithCorrectOrientation(firstImagePath);
+                _widthNumeric.Value = Math.Clamp(image.Width, (int)_widthNumeric.Minimum, (int)_widthNumeric.Maximum);
+                _heightNumeric.Value = Math.Clamp(image.Height, (int)_heightNumeric.Minimum, (int)_heightNumeric.Maximum);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string? GetFirstImagePath()
+        {
+            if (_sourceFiles.Count == 0)
+                return null;
+
+            return _reverseSourceFilesCheckBox.Checked ? _sourceFiles[^1] : _sourceFiles[0];
         }
 
         private void RunGeneratedVideo()
