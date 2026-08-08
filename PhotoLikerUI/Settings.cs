@@ -81,9 +81,10 @@ namespace PhotoLikerUI
         [Category("1. Settings")]
         [Display(Order = 7)]
         public int ThumbnailSize { get; set; } = 110;
-    }
 
-    public class PhotoFile(string OriginalFilePath, string LikedFilePath)
+        }
+
+        public class PhotoFile(string OriginalFilePath, string LikedFilePath)
     {
         public string OriginalFilePath { get; } = OriginalFilePath;
         public string LikedFilePath { get; set; } = LikedFilePath;

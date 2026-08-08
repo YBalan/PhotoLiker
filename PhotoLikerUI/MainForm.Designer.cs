@@ -49,6 +49,7 @@
             openSourceFolderToolStripButton = new ToolStripButton();
             openLikedFolderToolStripButton = new ToolStripButton();
             loadLikedFolderToolStripButton = new ToolStripButton();
+            generateVideoToolStripButton = new ToolStripButton();
             splitContainer2 = new SplitContainer();
             settingsPropertyGrid = new PropertyGrid();
             imageMetaPropertyGrid = new PropertyGrid();
@@ -97,7 +98,7 @@
             // 
             // toolStrip1
             // 
-            toolStrip1.Items.AddRange(new ToolStripItem[] { newToolStripButton, openToolStripButton, saveToolStripButton, printToolStripButton, toolStripSeparator, cutToolStripButton, copyToolStripButton, pasteToolStripButton, toolStripSeparator1, helpToolStripButton, toolStripSeparator2, contextMenuToolStripButton, toolStripSeparator3, themeToggleToolStripButton, toolStripSeparator4, openSourceFolderToolStripButton, openLikedFolderToolStripButton, loadLikedFolderToolStripButton });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { newToolStripButton, openToolStripButton, saveToolStripButton, printToolStripButton, toolStripSeparator, cutToolStripButton, copyToolStripButton, pasteToolStripButton, toolStripSeparator1, helpToolStripButton, toolStripSeparator2, contextMenuToolStripButton, toolStripSeparator3, themeToggleToolStripButton, toolStripSeparator4, openSourceFolderToolStripButton, openLikedFolderToolStripButton, loadLikedFolderToolStripButton, generateVideoToolStripButton });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
             toolStrip1.Size = new Size(178, 25);
@@ -250,6 +251,16 @@
             loadLikedFolderToolStripButton.Text = "Load Liked Folder";
             loadLikedFolderToolStripButton.ToolTipText = "Select and load a liked folder";
             loadLikedFolderToolStripButton.Click += LoadLikedFolderToolStripButton_Click;
+            // 
+            // generateVideoToolStripButton
+            // 
+            generateVideoToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            generateVideoToolStripButton.Image = AppIcons.GenerateVideo();
+            generateVideoToolStripButton.Name = "generateVideoToolStripButton";
+            generateVideoToolStripButton.Size = new Size(23, 22);
+            generateVideoToolStripButton.Text = "Generate Video";
+            generateVideoToolStripButton.ToolTipText = "Generate video from loaded photos using ffmpeg";
+            generateVideoToolStripButton.Click += GenerateVideoToolStripButton_Click;
             // 
             // splitContainer2
             // 
@@ -424,5 +435,6 @@
         private ToolStripButton openSourceFolderToolStripButton;
         private ToolStripButton openLikedFolderToolStripButton;
         private ToolStripButton loadLikedFolderToolStripButton;
+        private ToolStripButton generateVideoToolStripButton;
     }
 }
