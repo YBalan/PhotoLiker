@@ -45,6 +45,24 @@ namespace PhotoLikerUI
             g.FillPolygon(ab, new PointF[] { new(7.5f, 11f), new(12.5f, 11f), new(10f, 14f) });
         });
 
+        // ── Generate Video ────────────────────────────────────────────────
+        // Purple film frame + play marker
+        public static Bitmap GenerateVideo() => DrawOnBitmap(g =>
+        {
+            using var body = new LinearGradientBrush(new RectangleF(1, 2, 13, 12), Color.FromArgb(170, 120, 245), Color.FromArgb(80, 45, 175), 90f);
+            g.FillRoundedRectangle(body, 1, 2, 13, 12, 2f);
+
+            using var sprocket = new SolidBrush(Color.FromArgb(220, 240, 240, 255));
+            for (int y = 3; y <= 11; y += 2)
+            {
+                g.FillRectangle(sprocket, 2, y, 1, 1);
+                g.FillRectangle(sprocket, 12, y, 1, 1);
+            }
+
+            using var play = new SolidBrush(Color.White);
+            g.FillPolygon(play, [new PointF(6f, 5f), new PointF(6f, 10f), new PointF(10f, 7.5f)]);
+        });
+
         // ── Register / Unregister Context Menu ────────────────────────────
         // Windows-flag quadrants + check-mark
         public static Bitmap RegisterContextMenu() => DrawOnBitmap(g =>

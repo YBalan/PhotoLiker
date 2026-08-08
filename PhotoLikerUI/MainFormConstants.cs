@@ -13,6 +13,16 @@ namespace PhotoLikerUI
         // Folder / file selection dialogs
         public const string FolderBrowserSelectPhotos    = "Select a folder containing photos";
         public const string FolderBrowserSelectLiked     = "Select a folder to save liked photos";
+        public const string FolderBrowserSelectVideoOutput = "Select a folder to save generated video";
+
+        // Video generation
+        public const string VideoDialogTitle             = "Generate Video";
+        public const string GenerateVideoButtonText      = "Generate Video";
+        public const string GenerateVideoTooltip         = "Generate video from loaded photos using ffmpeg";
+        public const string StatusVideoNoPhotos          = "No loaded photos to generate video.";
+        public const string StatusVideoGenerating        = "Generating video with ffmpeg...";
+        public const string StatusVideoGenerated         = "Video generated: {0}";
+        public const string StatusVideoGenerationError   = "Video generation failed: {0}";
 
         // Folder loading
         public const string DefaultLikedFolderName       = "Liked";
