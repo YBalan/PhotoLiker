@@ -28,10 +28,12 @@ namespace PhotoLikerUI
         public const string DefaultLikedFolderName       = "Liked";
         public const string StatusFolderLoaded           = "Loaded {0} photos from '{1}'";
         public const string StatusFolderLoadError        = "Error loading folder: {0}";
+        public const string StatusFolderLoading          = "Scanning '{0}'...";
         public const string StatusNoPhotosFound          = "No photos found in the selected folder.";
         public const string TitleFormat                  = "PhotoLiker \u2014 {0}";
 
         // Image loading / cache
+        public const string ImageLoading                 = "Loading...";
         public const string StatusImageLoadError         = "Error loading image: {0}";
         public const string StatusCacheLoadError         = "Error loading image {0}: {1}";
 
@@ -90,6 +92,9 @@ namespace PhotoLikerUI
         public const float  LikedCheckmarkFontSize       = 25f;
         public const float  LikedCheckmarkOffset         = 2f;
         public const string LikedCheckmark               = "\u2713";   // ✓
+
+        // Decoded photos kept in memory around the current one (a 24MP photo is ~96 MB decoded)
+        public const long MaxCachedImageBytes            = 2L * 1024 * 1024 * 1024;
 
         // Window position restore
         public const int MinWindowWidth                  = 400;
