@@ -394,4 +394,83 @@ public class PhotoBrowserServiceTests : IDisposable
 
         Assert.True(fired);
     }
+
+    [Fact]
+    public void LoadImage_WhenLikedCopyExists_SetsSuggestedLikedFile()
+    {
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+
+        var source = _photos[0];
+        var suggested = Path.Combine(_likedDir, Path.GetFileName(source));
+        File.Copy(source, suggested, overwrite: true);
+
+        svc.LoadImage(source);
+
+        Assert.Equal(suggested, svc.Settings.LikedFile);
+    }
+
+    [Fact]
+    public void LoadImage_ForPathOutsideFileList_SetsIndexToMinusOne()
+    {
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+        var outside = Path.Combine(_tempDir, "outside.jpg");
+        File.WriteAllBytes(outside, [0xFF, 0xD8, 0xFF, 0xD9]);
+
+        svc.LoadImage(outside);
+
+        Assert.Equal(-1, svc.Settings.CurrentIndex);
+        Assert.Equal(outside, svc.Settings.CurrentFilePath);
+        Assert.Equal(string.Empty, svc.Settings.LikedFile);
+    }
+
+    [Fact]
+    public void OpenFolder_WhenNoPhotos_EmitsNoPhotosFoundStatus()
+    {
+        var empty = Path.Combine(_tempDir, "empty");
+        Directory.CreateDirectory(empty);
+
+        var svc = CreateService();
+        string? status = null;
+        svc.StatusChanged += s => status = s;
+
+        svc.OpenFolder(empty);
+
+        Assert.Equal(AppStrings.StatusNoPhotosFound, status);
+    }
+
+    [Fact]
+    public void OpenFolder_WithCustomLikedFolderName_PreservesConfiguredLikedFolder()
+    {
+        var customLiked = Path.Combine(_tempDir, "Favorites");
+        new Settings
+        {
+            CurrentFolder = _tempDir,
+            LikedFolder = customLiked,
+        }.Save(_tempDir);
+
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+
+        Assert.Equal(customLiked, svc.Settings.LikedFolder);
+    }
+
+    [Fact]
+    public void UnlikePhoto_WhenLikedFileWasAlreadyRemoved_StillClearsState()
+    {
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+        svc.LikePhoto(_photos[0]);
+        svc.LoadImage(_photos[0]);
+
+        var likedPath = svc.Settings.LikedFile;
+        File.Delete(likedPath);
+
+        svc.UnlikePhoto(_photos[0]);
+
+        Assert.Equal(string.Empty, svc.Settings.LikedFile);
+        var pf = svc.Settings.Files.First(f => f.OriginalFilePath == _photos[0]);
+        Assert.Equal(string.Empty, pf.LikedFilePath);
+    }
 }

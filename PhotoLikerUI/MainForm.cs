@@ -1,16 +1,17 @@
-﻿using System.Collections.Concurrent;
-
-namespace PhotoLikerUI
+﻿namespace PhotoLikerUI
 {
     public partial class MainForm : Form
     {
         private Settings _currentConfig = new();
         private readonly GlobalConfig _globalConfig = GlobalConfig.Load();
 
-        private readonly ConcurrentDictionary<string, Image> imageCache = [];
-        private readonly ConcurrentDictionary<string, Image> _thumbCache = [];
-        private CancellationTokenSource _fillCts = new();
-        private CancellationTokenSource _thumbCts = new();
+        // Decoded photos and thumbnails. Everything below is used on the UI thread only; see PhotoCache.
+        private readonly PhotoCache _photoCache = new(MainFormConstants.MaxCachedImageBytes);
+        private Dictionary<string, int> _indexByPath = new(StringComparer.Ordinal);
+        private LikedLibrary? _liked;
+        private bool _likeInProgress;
+        private int _folderGeneration;
+        private string _imageMessage = string.Empty; // shown in the viewer while there is no image (loading / failed)
 
         // Zoom / pan
         private float zoomFactor = 1.0f;
@@ -45,6 +46,11 @@ namespace PhotoLikerUI
             pictureBox1.MouseUp += PictureBox1_MouseUp;
             splitContainer3.Resize += (_, _) => AdjustRulerWidth();
 
+            _photoCache.Loaded += PhotoCache_Loaded;
+            _photoCache.ThumbReady += PhotoCache_ThumbReady;
+            _photoCache.LoadFailed += PhotoCache_LoadFailed;
+            _photoCache.Evicting += PhotoCache_Evicting;
+
             LoadSettingsFromJson();
 
             if (!string.IsNullOrWhiteSpace(initialFolder))
@@ -75,8 +81,14 @@ namespace PhotoLikerUI
 
         private void PictureBox1_Paint(object? sender, PaintEventArgs e)
         {
+            if (pictureBox1.Image is null && !string.IsNullOrEmpty(_imageMessage))
+            {
+                TextRenderer.DrawText(e.Graphics, _imageMessage, Font, pictureBox1.ClientRectangle, SystemColors.GrayText,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
+            }
+
             //Draw the start at left corner if file alrady copied to liked folder
-            if (pictureBox1.Tag is string && File.Exists(_currentConfig.LikedFile))
+            if (pictureBox1.Tag is string currentFile && IsLiked(currentFile))
             {
                 using var startBrush = new SolidBrush(Color.FromArgb(MainFormConstants.LikedOverlayAlpha, Color.Green));
                 using var font = new Font(this.Font.FontFamily, MainFormConstants.LikedCheckmarkFontSize, FontStyle.Bold);
@@ -91,6 +103,8 @@ namespace PhotoLikerUI
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            _folderGeneration++;
+            _photoCache.Dispose();
             SaveWindowPosition();
             SaveSettingsToJson();
             _globalConfig.LastFolder = _currentConfig.CurrentFolder;
@@ -260,14 +274,13 @@ namespace PhotoLikerUI
                 return;
 
             // Clear thumb controls so they are recreated with the new size
-            _thumbCache.Clear();
             ClearThumbnailControls();
             AdjustRulerWidth();
             settingsPropertyGrid.Refresh();
 
             var currentFile = pictureBox1.Tag as string;
             if (currentFile is not null)
-                UpdateSiblingPreviews(currentFile);
+                RefreshWindow(currentFile);
         }
 
         private void OpenToolStripButton_Click(object sender, EventArgs e)
@@ -396,25 +409,22 @@ namespace PhotoLikerUI
 
         private void ClearDisplay()
         {
-            // Cancel any background cache operations
-            _fillCts.Cancel();
-            _fillCts = new CancellationTokenSource();
-            _thumbCts.Cancel();
-            _thumbCts = new CancellationTokenSource();
+            // Abandon a folder scan that is still running
+            _folderGeneration++;
 
             // Detach images from controls BEFORE disposing cache entries so
             // GDI+ never tries to access a disposed Image (e.g. FrameDimensionsList).
             pictureBox1.Image = null;
             pictureBox1.Tag = null;
+            _imageMessage = string.Empty;
 
             foreach (var (thumb, _) in _thumbControls.Values)
                 thumb.Image = null;
 
-            // Now safe to dispose and clear the caches
-            foreach (var img in imageCache.Values) img.Dispose();
-            imageCache.Clear();
-            foreach (var img in _thumbCache.Values) img.Dispose();
-            _thumbCache.Clear();
+            // Now safe to dispose the cache; loads still in flight are abandoned
+            _photoCache.Clear();
+            _indexByPath = new Dictionary<string, int>(StringComparer.Ordinal);
+            _liked = null;
 
             // Reset zoom/pan state
             zoomFactor = 1.0f;
@@ -447,8 +457,10 @@ namespace PhotoLikerUI
             previewFlowPanel.ResumeLayout();
         }
 
-        private void LoadFolder()
+        private async void LoadFolder()
         {
+            var generation = ++_folderGeneration;
+            var loaded = false;
             try
             {
                 ClearThumbnailControls();
@@ -458,26 +470,78 @@ namespace PhotoLikerUI
                 _currentConfig.LikedFolder = isAutoLiked
                     ? Path.Combine(_currentConfig.CurrentFolder, MainFormStrings.DefaultLikedFolderName)
                     : _currentConfig.LikedFolder;
-                _currentConfig.Files = GetAllFiles(_currentConfig.CurrentFolder, _currentConfig.GoThroughtSubFolders)
-                    .Select(f => new PhotoFile(f, string.Empty))
-                    .ToList();
+
+                var folder = _currentConfig.CurrentFolder;
+                var recursive = _currentConfig.GoThroughtSubFolders;
+                var extensions = _currentConfig.Extensions;
+                var likedFolder = _currentConfig.LikedFolder;
+                SetStatus(string.Format(MainFormStrings.StatusFolderLoading, folder));
+
+                // Listing a network folder can take a long time, so keep it off the UI thread
+                var (files, liked) = await Task.Run(() =>
+                {
+                    var found = PhotoScanner.Scan(folder, recursive, extensions, likedFolder);
+                    return (found, LikedLibrary.Scan(likedFolder, found));
+                });
+
+                // Another folder was opened while this one was being listed
+                if (generation != _folderGeneration)
+                    return;
+
+                liked.Apply(files);
+                _liked = liked;
+                _currentConfig.Files = files;
+                _indexByPath = new Dictionary<string, int>(files.Count, StringComparer.Ordinal);
+                for (var i = 0; i < files.Count; i++)
+                    _indexByPath[files[i].OriginalFilePath] = i;
+
                 LoadFirstPhoto(_currentConfig.CurrentFilePath);
+                loaded = true;
             }
             catch (Exception ex)
             {
-                SetStatus(string.Format(MainFormStrings.StatusFolderLoadError, ex.Message));
+                if (generation == _folderGeneration)
+                    SetStatus(string.Format(MainFormStrings.StatusFolderLoadError, ex.Message));
             }
             finally
             {
-                settingsPropertyGrid.Refresh();
-                SetStatus(string.Format(MainFormStrings.StatusFolderLoaded, _currentConfig.TotalFiles, _currentConfig.CurrentFolder));
-                Text = string.Format(MainFormStrings.TitleFormat, _currentConfig.CurrentFolder);
+                if (generation == _folderGeneration)
+                {
+                    settingsPropertyGrid.Refresh();
+                    if (loaded)
+                        SetStatus(string.Format(MainFormStrings.StatusFolderLoaded, _currentConfig.TotalFiles, _currentConfig.CurrentFolder));
+                    UpdateWindowTitle(_currentConfig.CurrentFilePath);
+                }
             }
         }
 
         private void SetStatus(string statusMsg)
         {
             toolStripStatusLabel1.Text = statusMsg;
+        }
+
+        private void UpdateWindowTitle(string? currentFilePath)
+        {
+            var titleFolder = _currentConfig.CurrentFolder;
+
+            if (_currentConfig.GoThroughtSubFolders &&
+                !string.IsNullOrWhiteSpace(currentFilePath) &&
+                !string.IsNullOrWhiteSpace(titleFolder))
+            {
+                var currentFileFolder = Path.GetDirectoryName(currentFilePath);
+                if (!string.IsNullOrWhiteSpace(currentFileFolder))
+                {
+                    var relativeFolder = Path.GetRelativePath(titleFolder, currentFileFolder);
+                    if (!string.IsNullOrWhiteSpace(relativeFolder) &&
+                        !string.Equals(relativeFolder, ".", StringComparison.Ordinal) &&
+                        !relativeFolder.StartsWith("..", StringComparison.Ordinal))
+                    {
+                        titleFolder = Path.Combine(titleFolder, relativeFolder);
+                    }
+                }
+            }
+
+            Text = string.Format(MainFormStrings.TitleFormat, titleFolder);
         }
 
         private void UpdateGpsLink(MetadataWrapper metadata)
@@ -509,7 +573,7 @@ namespace PhotoLikerUI
             {
                 var currentFile = pictureBox1.Tag as string;
                 if (currentFile is not null)
-                    ToggleLike(currentFile);
+                    _ = ToggleLikeAsync(currentFile);
                 return true;
             }
             else
@@ -606,57 +670,67 @@ namespace PhotoLikerUI
             SetStatus(MainFormStrings.StatusImageFitted);
         }
 
-        private void ToggleLike(string currentFile)
+        private bool IsLiked(string file) =>
+            _indexByPath.TryGetValue(file, out var index) &&
+            index < _currentConfig.Files.Count &&
+            !string.IsNullOrEmpty(_currentConfig.Files[index].LikedFilePath);
+
+        /// <summary>
+        /// Copies the current photo to the liked folder, or removes the copy again. The file operations run in the
+        /// background (the folder is usually on a network share); a second press while one is running is ignored.
+        /// </summary>
+        private async Task ToggleLikeAsync(string currentFile)
         {
-            if (!string.IsNullOrEmpty(_currentConfig.LikedFile) && File.Exists(_currentConfig.LikedFile))
-                UnlikePhoto(currentFile);
-            else
-                LikePhoto(currentFile);
+            if (_likeInProgress)
+                return;
+
+            var index = _currentConfig.Files.IndexOf(currentFile);
+            if (index < 0)
+                return;
+
+            var photo = _currentConfig.Files[index];
+            _likeInProgress = true;
+            try
+            {
+                if (!string.IsNullOrEmpty(photo.LikedFilePath))
+                    await UnlikePhotoAsync(photo);
+                else
+                    await LikePhotoAsync(photo);
+            }
+            finally
+            {
+                _likeInProgress = false;
+            }
         }
 
-        private void LikePhoto(string currentFile)
+        private async Task LikePhotoAsync(PhotoFile photo)
         {
             try
             {
-                var likedFolder = _currentConfig.LikedFolder;
-                if (string.IsNullOrWhiteSpace(likedFolder))
-                    likedFolder = _currentConfig.LikedFolder = LikedFolderSelectFolderDialog();
-
-                if (!Directory.Exists(likedFolder))
-                {
-                    try
-                    {
-                        Directory.CreateDirectory(likedFolder);
-                    }
-                    catch (Exception ex)
-                    {
-                        SetStatus($"Error creating liked folder: {ex.Message}");
-                        likedFolder = _currentConfig.LikedFolder = LikedFolderSelectFolderDialog();
-                    }
-                }
-
-                var fileName = Path.GetFileName(currentFile);
-                var destinationPath = Path.Combine(likedFolder, fileName);
-
-                if (File.Exists(destinationPath))
-                {
-                    UnlikePhoto(currentFile);
+                var likedFolder = await PrepareLikedFolderAsync();
+                if (likedFolder is null)
                     return;
-                    //HandledDuplicateLikedFile(currentFile, likedFolder, fileName, ref destinationPath);
-                    //return;
-                }
-                else
+
+                var library = await EnsureLikedLibraryAsync(likedFolder);
+
+                // The liked folder was changed to one that already holds a copy: same as pressing Space on a liked photo
+                if (!string.IsNullOrEmpty(photo.LikedFilePath))
                 {
-                    File.Copy(currentFile, destinationPath, true);
-                    SetStatus(string.Format(MainFormStrings.StatusFileCopied, fileName));
+                    await UnlikePhotoAsync(photo);
+                    return;
                 }
 
-                var idx = _currentConfig.Files.IndexOf(currentFile);
-                if (idx >= 0)
-                    _currentConfig.Files[idx].LikedFilePath = destinationPath;
+                var source = photo.OriginalFilePath;
+                var destination = library.GetNewCopyPath(photo);
+                await Task.Run(() => CopyToLikedFolder(source, destination));
 
-                _currentConfig.LikedFile = destinationPath;
-                RefreshLikeState(currentFile);
+                photo.LikedFilePath = destination;
+                library.Add(destination, photo);
+                if (IsCurrent(photo))
+                    _currentConfig.LikedFile = destination;
+
+                SetStatus(string.Format(MainFormStrings.StatusFileCopied, Path.GetFileName(source)));
+                RefreshLikeState();
             }
             catch (Exception ex)
             {
@@ -664,65 +738,20 @@ namespace PhotoLikerUI
             }
         }
 
-        private void HandledDuplicateLikedFile(string currentFile, string likedFolder, string fileName, ref string destinationPath)
-        {
-            var dlgRes = MessageBox.Show(
-                                    string.Format(MainFormStrings.DuplicateDialogText, fileName),
-                                    MainFormStrings.DuplicateDialogTitle, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning);
-
-            if (dlgRes == DialogResult.Yes)
-            {
-                using var saveFileDialog = new SaveFileDialog
-                {
-                    FileName = fileName,
-                    InitialDirectory = likedFolder,
-                    Title = MainFormStrings.SaveLikedPhotoDialogTitle,
-                    DefaultExt = Path.GetExtension(fileName),
-                    AddExtension = false,
-                    CheckPathExists = true,
-                    CheckWriteAccess = true,
-                    OverwritePrompt = true,
-                    ValidateNames = true,
-                    Filter = "Image Files|*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.tiff;*.webp"
-                };
-                if (saveFileDialog.ShowDialog() == DialogResult.OK)
-                {
-                    destinationPath = saveFileDialog.FileName;
-                    File.Copy(currentFile, destinationPath, false);
-                    SetStatus(string.Format(MainFormStrings.StatusFileSaved, fileName, destinationPath));
-                }
-                else
-                {
-                    SetStatus(MainFormStrings.StatusLikeCancelled);
-                    return;
-                }
-            }
-            else if (dlgRes == DialogResult.No)
-            {
-                UnlikePhoto(currentFile);
-                return;
-            }
-            else // Cancel
-            {
-                SetStatus(MainFormStrings.StatusLikeCancelled);
-                return;
-            }
-        }
-
-        private void UnlikePhoto(string currentFile)
+        private async Task UnlikePhotoAsync(PhotoFile photo)
         {
             try
             {
-                var likedPath = _currentConfig.LikedFile;
-                File.Delete(likedPath);
+                var likedPath = photo.LikedFilePath;
+                await Task.Run(() => File.Delete(likedPath));
+
+                photo.LikedFilePath = string.Empty;
+                _liked?.Remove(likedPath);
+                if (IsCurrent(photo))
+                    _currentConfig.LikedFile = string.Empty;
+
                 SetStatus(string.Format(MainFormStrings.StatusFileRemoved, Path.GetFileName(likedPath)));
-
-                var idx = _currentConfig.Files.IndexOf(currentFile);
-                if (idx >= 0)
-                    _currentConfig.Files[idx].LikedFilePath = string.Empty;
-
-                _currentConfig.LikedFile = string.Empty;
-                RefreshLikeState(currentFile);
+                RefreshLikeState();
             }
             catch (Exception ex)
             {
@@ -730,33 +759,87 @@ namespace PhotoLikerUI
             }
         }
 
-        private void RefreshLikeState(string currentFile)
+        private bool IsCurrent(PhotoFile photo) =>
+            string.Equals(pictureBox1.Tag as string, photo.OriginalFilePath, StringComparison.Ordinal);
+
+        /// <summary>Makes sure the liked folder is set and exists; asks for one if not. Null if the user cancelled.</summary>
+        private async Task<string?> PrepareLikedFolderAsync()
         {
-            // Cancel any in-flight thumbnail loading before touching the cache,
-            // so no queued BeginInvoke can assign a disposed image to a PictureBox.
-            _thumbCts.Cancel();
+            var likedFolder = _currentConfig.LikedFolder;
+            if (string.IsNullOrWhiteSpace(likedFolder))
+                likedFolder = ChooseLikedFolder();
 
-            // Remove from cache but do NOT dispose here — a queued BeginInvoke on the
-            // UI thread may still hold a reference to this image; disposing it now would
-            // cause "Parameter is not valid" inside PictureBox.Animate.
-            _thumbCache.TryRemove(currentFile, out _);
+            if (string.IsNullOrWhiteSpace(likedFolder))
+                return null;
 
-            if (_thumbControls.TryGetValue(currentFile, out var pair))
+            try
             {
-                previewFlowPanel.Controls.Remove(pair.Thumb);
-                previewFlowPanel.Controls.Remove(pair.Label);
-                pair.Thumb.Image = null;
-                pair.Thumb.Dispose();
-                pair.Label.Dispose();
-                _thumbControls.Remove(currentFile);
+                var folder = likedFolder;
+                await Task.Run(() => Directory.CreateDirectory(folder));
+            }
+            catch (Exception ex)
+            {
+                SetStatus(string.Format(MainFormStrings.StatusCreateLikedFolderError, ex.Message));
+                likedFolder = ChooseLikedFolder();
             }
 
-            settingsPropertyGrid.Refresh();
-            pictureBox1.Invalidate();
-            UpdateSiblingPreviews(currentFile);
+            return string.IsNullOrWhiteSpace(likedFolder) ? null : likedFolder;
         }
 
-        private string LikedFolderSelectFolderDialog()
+        private string? ChooseLikedFolder()
+        {
+            var selected = LikedFolderSelectFolderDialog();
+            if (selected is not null)
+                _currentConfig.LikedFolder = selected;
+            return selected;
+        }
+
+        /// <summary>The liked-folder index, rebuilt when the liked folder was changed in the settings grid.</summary>
+        private async Task<LikedLibrary> EnsureLikedLibraryAsync(string likedFolder)
+        {
+            if (_liked is { } current && string.Equals(current.Folder, likedFolder, StringComparison.OrdinalIgnoreCase))
+                return current;
+
+            var files = _currentConfig.Files;
+            var library = await Task.Run(() => LikedLibrary.Scan(likedFolder, files));
+
+            if (ReferenceEquals(files, _currentConfig.Files))
+            {
+                library.Apply(files);
+                _liked = library;
+            }
+            return library;
+        }
+
+        private static void CopyToLikedFolder(string source, string destination)
+        {
+            var existed = File.Exists(destination);
+            try
+            {
+                File.Copy(source, destination, overwrite: true);
+            }
+            catch
+            {
+                // Don't leave a half-written copy behind that would later look like a liked photo
+                if (!existed)
+                {
+                    try { File.Delete(destination); } catch { /* best effort */ }
+                }
+                throw;
+            }
+        }
+
+        private void RefreshLikeState()
+        {
+            settingsPropertyGrid.Refresh();
+            pictureBox1.Invalidate();
+
+            // Re-colour labels and badges of the thumbnail strip
+            if (pictureBox1.Tag is string currentFile)
+                UpdateSiblingPreviews(currentFile);
+        }
+
+        private string? LikedFolderSelectFolderDialog()
         {
             using var folderBrowserDialog = new FolderBrowserDialog();
             folderBrowserDialog.Description = MainFormStrings.FolderBrowserSelectLiked;
@@ -767,7 +850,7 @@ namespace PhotoLikerUI
             else
             {
                 SetStatus(MainFormStrings.StatusNoFolderSelected);
-                return null!;
+                return null;
             }
         }
 
@@ -788,27 +871,22 @@ namespace PhotoLikerUI
         {
             try
             {
-                pictureBox1.Image = imageCache.GetOrAdd(file, f => ImageHelper.LoadImageWithCorrectOrientation(f));
-                pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; // Set the size mode to zoom
+                // Navigation state is updated right away, so arrow keys keep working while the image is still loading
+                var index = _currentConfig.Files.IndexOf(file);
                 pictureBox1.Tag = file; // Store the file path in the Tag property
                 _currentConfig.CurrentFilePath = file;
                 _currentConfig.CurrentFileName = Path.GetFileName(file);
-                _currentConfig.CurrentIndex = _currentConfig.Files.IndexOf(file);
-                if (_currentConfig.CurrentIndex >= 0)
-                {
-                    var photoFile = _currentConfig.Files[_currentConfig.CurrentIndex];
-                    var suggestedLikedFilePath = Path.Combine(_currentConfig.LikedFolder, Path.GetFileName(photoFile.OriginalFilePath));
-                    _currentConfig.LikedFile = File.Exists(photoFile.LikedFilePath)
-                        ? photoFile.LikedFilePath
-                        : File.Exists(suggestedLikedFilePath) ? suggestedLikedFilePath : string.Empty;
-                }
+                _currentConfig.CurrentIndex = index;
+                _currentConfig.LikedFile = index >= 0 ? _currentConfig.Files[index].LikedFilePath : string.Empty;
                 settingsPropertyGrid.Refresh(); // Refresh the property grid to show the new image properties
-                var friendlyMeta = new FriendlyImageMetadata(pictureBox1.Image);
-                var metadataWrapper = new MetadataWrapper(friendlyMeta);
-                imageMetaPropertyGrid.SelectedObject = metadataWrapper;
-                UpdateGpsLink(metadataWrapper);
-                FillCacheAsync(file);
-                UpdateSiblingPreviews(file);
+                UpdateWindowTitle(file);
+
+                if (_photoCache.TryGet(file, out var entry))
+                    ShowPhoto(entry);
+                else
+                    ShowLoading();
+
+                RefreshWindow(file);
             }
             catch (Exception ex)
             {
@@ -816,78 +894,112 @@ namespace PhotoLikerUI
             }
         }
 
-        /// <summary>
-        /// Asynchronously populates the cache with Images from files near the currentFile left on cache size and right on cache size.
-        /// </summary>        
-        /// <param name="currentFile">The path to the file whose data will be used to populate the cache. Cannot be null or empty.</param>
-        private void FillCacheAsync(string currentFile)
+        private void ShowPhoto(PhotoEntry entry)
         {
-            _fillCts.Cancel();
-            _fillCts = new CancellationTokenSource();
-            var token = _fillCts.Token;
-            Task.Run(() => FillCache(currentFile, token), token);
+            _imageMessage = string.Empty;
+            pictureBox1.Image = entry.Full;
+            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; // Set the size mode to zoom
+
+            var metadataWrapper = new MetadataWrapper(entry.Metadata);
+            imageMetaPropertyGrid.SelectedObject = metadataWrapper;
+            ScrollPropertyGridToTop(imageMetaPropertyGrid);
+            UpdateGpsLink(metadataWrapper);
         }
 
-        private void FillCache(string currentFile, CancellationToken cancellationToken = default)
+        private static void ScrollPropertyGridToTop(PropertyGrid propertyGrid)
         {
-            if (string.IsNullOrEmpty(currentFile))
-                throw new ArgumentException(MainFormStrings.ExCurrentFileNullOrEmpty, nameof(currentFile));
+            var root = propertyGrid.SelectedGridItem;
+            while (root?.Parent is not null)
+                root = root.Parent;
 
+            if (root is not null && root.GridItems.Count > 0)
+                propertyGrid.SelectedGridItem = root.GridItems[0];
+        }
+
+        private void ShowLoading()
+        {
+            _imageMessage = MainFormStrings.ImageLoading;
+            pictureBox1.Image = null;
+            pictureBox1.Invalidate();
+            imageMetaPropertyGrid.SelectedObject = null;
+            toolStripStatusLabelGpsLink.Visible = false;
+            toolStripStatusLabelGpsLink.Tag = null;
+        }
+
+        private void PhotoCache_Loaded(string file, PhotoEntry entry)
+        {
+            AssignThumbnail(file, entry);
+
+            if (string.Equals(pictureBox1.Tag as string, file, StringComparison.Ordinal))
+                ShowPhoto(entry);
+        }
+
+        private void PhotoCache_ThumbReady(string file, PhotoEntry entry) => AssignThumbnail(file, entry);
+
+        private void AssignThumbnail(string file, PhotoEntry entry)
+        {
+            if (entry.Thumb is not null && _thumbControls.TryGetValue(file, out var pair))
+                pair.Thumb.Image = entry.Thumb;
+        }
+
+        private void PhotoCache_LoadFailed(string file, Exception ex)
+        {
+            if (string.Equals(pictureBox1.Tag as string, file, StringComparison.Ordinal))
+            {
+                _imageMessage = string.Format(MainFormStrings.StatusImageLoadError, ex.Message);
+                pictureBox1.Invalidate();
+                SetStatus(_imageMessage);
+            }
+            else
+            {
+                SetStatus(string.Format(MainFormStrings.StatusCacheLoadError, file, ex.Message));
+            }
+        }
+
+        // The cache is about to dispose the entry: let go of its images first so nothing paints a disposed Image.
+        private void PhotoCache_Evicting(string file, PhotoEntry entry)
+        {
+            if (ReferenceEquals(pictureBox1.Image, entry.Full))
+                pictureBox1.Image = null;
+
+            if (_thumbControls.TryGetValue(file, out var pair) && ReferenceEquals(pair.Thumb.Image, entry.Thumb))
+                pair.Thumb.Image = null;
+        }
+
+        private void RefreshWindow(string currentFile)
+        {
+            PrefetchAround(currentFile);
+            UpdateSiblingPreviews(currentFile);
+        }
+
+        /// <summary>
+        /// Tells the cache which photos to keep: the current one and its neighbours, nearest first.
+        /// </summary>
+        private void PrefetchAround(string currentFile)
+        {
             var files = _currentConfig.Files;
             int currentIndex = files.IndexOf(currentFile);
             if (currentIndex < 0)
-                throw new ArgumentException(MainFormStrings.ExCurrentFileNotInList, nameof(currentFile));
+                return;
 
-            int from = Math.Max(0, currentIndex - _currentConfig.CacheSize);
-            int to = Math.Min(files.Count - 1, currentIndex + _currentConfig.CacheSize);
-
-            var keepPaths = new HashSet<string>(
-                Enumerable.Range(from, to - from + 1).Select(i => files[i].OriginalFilePath));
-
-            // Evict and dispose entries that are no longer in the window
-            foreach (var key in imageCache.Keys.ToList())
+            if (_photoCache.ThumbSize != PreviewThumbSize)
             {
-                if (!keepPaths.Contains(key) && imageCache.TryRemove(key, out var evicted))
-                {
-                    evicted.Dispose();
-                    if (_thumbCache.TryRemove(key, out var evictedThumb))
-                        evictedThumb.Dispose();
-                }
+                ClearThumbnailControls(); // the controls still show thumbnails of the old size
+                _photoCache.SetThumbSize(PreviewThumbSize);
             }
 
-            // Load missing entries within the window
-            for (int i = from; i <= to; i++)
+            // The thumbnail strip shows PreviewSiblingCount photos on each side, so cache at least those
+            int radius = Math.Max(_currentConfig.CacheSize, PreviewSiblingCount);
+            var window = new List<string> { currentFile };
+            for (int distance = 1; distance <= radius; distance++)
             {
-                if (cancellationToken.IsCancellationRequested) return;
-
-                string file = files[i].OriginalFilePath;
-                if (!imageCache.ContainsKey(file))
-                {
-                    try
-                    {
-                        var image = ImageHelper.LoadImageWithCorrectOrientation(file);
-                        if (!cancellationToken.IsCancellationRequested)
-                            imageCache[file] = image;
-                        else
-                        {
-                            image.Dispose();
-                            return;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        SetStatus(string.Format(MainFormStrings.StatusCacheLoadError, file, ex.Message));
-                    }
-                }
+                if (currentIndex + distance < files.Count)
+                    window.Add(files[currentIndex + distance].OriginalFilePath);
+                if (currentIndex - distance >= 0)
+                    window.Add(files[currentIndex - distance].OriginalFilePath);
             }
-        }
 
-        private IEnumerable<string> GetAllFiles(string currentFolder, bool goSubFolders)
-        {
-            return new DirectoryInfo(currentFolder).GetFiles("*.*",
-                goSubFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
-                .Where(fi => _currentConfig.Extensions.Contains(fi.Extension.ToLowerInvariant()))
-                .Select(fi => fi.FullName);
+            _photoCache.SetWindow(window);
         }
 
         private void AdjustRulerWidth()
@@ -902,10 +1014,6 @@ namespace PhotoLikerUI
 
         private void UpdateSiblingPreviews(string currentFile)
         {
-            _thumbCts.Cancel();
-            _thumbCts = new CancellationTokenSource();
-            var token = _thumbCts.Token;
-
             var files = _currentConfig.Files;
             int idx = files.IndexOf(currentFile);
             if (idx < 0) return;
@@ -927,22 +1035,17 @@ namespace PhotoLikerUI
                 var (thumb, label) = _thumbControls[path];
                 previewFlowPanel.Controls.Remove(thumb);
                 previewFlowPanel.Controls.Remove(label);
-                thumb.Image = null; // don't dispose — image is owned by _thumbCache
+                thumb.Image = null; // don't dispose — image is owned by the cache
                 thumb.Dispose();
                 label.Dispose();
                 _thumbControls.Remove(path);
             }
 
-            var thumbsToLoad = new List<(PictureBox Thumb, string Path)>();
-
             for (int i = from; i <= to; i++)
             {
                 string filePath = files[i].OriginalFilePath;
                 bool isCurrent = i == idx;
-                string suggestedLiked = Path.Combine(_currentConfig.LikedFolder, Path.GetFileName(filePath));
-                bool isLiked = !string.IsNullOrEmpty(files[i].LikedFilePath)
-                                   ? File.Exists(files[i].LikedFilePath)
-                                   : File.Exists(suggestedLiked);
+                bool isLiked = !string.IsNullOrEmpty(files[i].LikedFilePath);
 
                 if (_thumbControls.TryGetValue(filePath, out var existing))
                 {
@@ -950,6 +1053,7 @@ namespace PhotoLikerUI
                     existing.Thumb.BackColor = isCurrent ? Color.CornflowerBlue : MainFormConstants.ThumbBackColor;
                     existing.Thumb.BorderStyle = isCurrent ? BorderStyle.Fixed3D : BorderStyle.None;
                     existing.Label.ForeColor = isCurrent ? Color.White : (isLiked ? Color.LightGreen : Color.LightGray);
+                    existing.Thumb.Invalidate(); // the liked badge may have changed
                     continue;
                 }
 
@@ -972,8 +1076,7 @@ namespace PhotoLikerUI
                     BorderStyle = isCurrent ? BorderStyle.Fixed3D : BorderStyle.None,
                 };
 
-                if (isLiked)
-                    thumb.Paint += ThumbPaint_LikedBadge;
+                thumb.Paint += ThumbPaint_LikedBadge;
 
                 var label = new Label
                 {
@@ -992,10 +1095,9 @@ namespace PhotoLikerUI
                 thumb.Click += PreviewThumb_Click;
                 label.Click += PreviewThumb_Click;
 
-                if (_thumbCache.TryGetValue(filePath, out var cached))
-                    thumb.Image = cached;
-                else
-                    thumbsToLoad.Add((thumb, filePath));
+                // Not cached yet: the cache assigns the thumbnail once it has been loaded
+                if (_photoCache.TryGet(filePath, out var cached) && cached.Thumb is not null)
+                    thumb.Image = cached.Thumb;
 
                 _thumbControls[filePath] = (thumb, label);
                 previewFlowPanel.Controls.Add(thumb);
@@ -1021,64 +1123,11 @@ namespace PhotoLikerUI
                 BeginInvoke(ScrollToCurrent);
             else
                 Load += (_, _) => ScrollToCurrent();
-
-            Task.Run(() => LoadThumbnailsAsync(thumbsToLoad, token), token);
         }
 
-        private void LoadThumbnailsAsync(List<(PictureBox Thumb, string Path)> pairs, CancellationToken token)
+        private void ThumbPaint_LikedBadge(object? sender, PaintEventArgs e)
         {
-            foreach (var (thumb, path) in pairs)
-            {
-                if (token.IsCancellationRequested) return;
-                try
-                {
-                    // Generate and cache the thumbnail
-                    var thumbnail = _thumbCache.GetOrAdd(path, p =>
-                    {
-                        if (imageCache.TryGetValue(p, out var full))
-                            return CreateThumbnail(full, PreviewThumbSize);
-
-                        using var loaded = ImageHelper.LoadImageWithCorrectOrientation(p);
-                        return CreateThumbnail(loaded, PreviewThumbSize);
-                    });
-
-                    if (token.IsCancellationRequested) return;
-
-                    AssignThumbnailImage(thumb, thumbnail);
-                }
-                catch { /* skip broken images */ }
-            }
-        }
-
-        private static void AssignThumbnailImage(PictureBox thumb, Image img)
-        {
-            if (thumb.IsDisposed) return;
-
-            void Apply() { if (!thumb.IsDisposed) thumb.Image = img; }
-
-            if (thumb.IsHandleCreated)
-                thumb.BeginInvoke(Apply);
-            else
-                thumb.HandleCreated += (_, _) => Apply();
-        }
-
-        private static Bitmap CreateThumbnail(Image source, int size)
-        {
-            var bmp = new Bitmap(size, size);
-            using var g = Graphics.FromImage(bmp);
-            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-
-            float scale = Math.Min((float)size / source.Width, (float)size / source.Height);
-            int w = (int)(source.Width * scale);
-            int h = (int)(source.Height * scale);
-            g.DrawImage(source, (size - w) / 2, (size - h) / 2, w, h);
-            return bmp;
-        }
-
-        private static void ThumbPaint_LikedBadge(object? sender, PaintEventArgs e)
-        {
-            if (sender is not PictureBox pb) return;
+            if (sender is not PictureBox { Tag: string filePath } pb || !IsLiked(filePath)) return;
 
             var badge = MainFormConstants.LikedCheckmark;
             using var font = new Font(SystemFonts.DefaultFont.FontFamily, MainFormConstants.LikedBadgeFontSize, FontStyle.Bold);
