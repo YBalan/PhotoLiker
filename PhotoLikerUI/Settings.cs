@@ -72,6 +72,13 @@ namespace PhotoLikerUI
         [Category("2. Current File")]
         [Display(Order = 4)]
         public string LikedFile { get; set; } = string.Empty;
+        // Every folder holding a copy of the current photo: the liked folder and its group folders
+        [Category("2. Current File")]
+        [Display(Order = 5)]
+        [JsonIgnore]
+        [ReadOnly(true)]
+        [TypeConverter(typeof(StringListConverter))]
+        public string[] SavedInFolders { get; set; } = [];
 
         [Category("1. Settings")]
         [Display(Order = 6)]
@@ -82,20 +89,31 @@ namespace PhotoLikerUI
         [Display(Order = 7)]
         public int ThumbnailSize { get; set; } = 110;
 
+        /// <summary>A copy for the settings file, with the paths relative to the folder the file is in (see <see cref="StoredPaths"/>).</summary>
+        public Settings ForStorage(string folder)
+        {
+            var copy = (Settings)MemberwiseClone();
+            copy.CurrentFolder = StoredPaths.ToStored(folder, CurrentFolder);
+            copy.LikedFolder = StoredPaths.ToStored(folder, LikedFolder);
+            copy.CurrentFilePath = StoredPaths.ToStored(folder, CurrentFilePath);
+            copy.LikedFile = StoredPaths.ToStored(folder, LikedFile);
+            return copy;
         }
 
-        public class PhotoFile(string OriginalFilePath, string LikedFilePath)
-    {
-        public string OriginalFilePath { get; } = OriginalFilePath;
-        public string LikedFilePath { get; set; } = LikedFilePath;
-
-        // Size and timestamp from the folder listing; they tell same-named photos in different folders apart.
-        public long Length { get; init; }
-        public DateTime LastWriteTimeUtc { get; init; }
-
-        public override string ToString()
+        /// <summary>
+        /// Turns the paths read from the settings file in <paramref name="folder"/> into full paths on this machine.
+        /// With <paramref name="pinCurrentFolder"/> the settings belong to the folder they were found in, wherever that
+        /// folder is mounted today: a file written by an older version (full paths, e.g. of drive Y: on another machine)
+        /// is moved over to it.
+        /// </summary>
+        public void ResolveStoredPaths(string folder, bool pinCurrentFolder)
         {
-            return $"{OriginalFilePath} -> {LikedFilePath}";
+            var legacyRoot = pinCurrentFolder && Path.IsPathRooted(CurrentFolder) ? CurrentFolder : null;
+
+            CurrentFolder = pinCurrentFolder ? folder : StoredPaths.FromStored(folder, CurrentFolder);
+            LikedFolder = StoredPaths.FromStored(folder, LikedFolder, legacyRoot);
+            CurrentFilePath = StoredPaths.FromStored(folder, CurrentFilePath, legacyRoot);
+            LikedFile = StoredPaths.FromStored(folder, LikedFile, legacyRoot);
         }
     }
 

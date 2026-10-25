@@ -94,6 +94,24 @@ namespace PhotoLikerUI
         public void Remove(string likedPath) =>
             _copies.Remove(Path.GetFileName(likedPath));
 
+        public static void CopyPhoto(string source, string destination)
+        {
+            var existed = File.Exists(destination);
+            try
+            {
+                File.Copy(source, destination, overwrite: true);
+            }
+            catch
+            {
+                // Don't leave a half-written copy behind that would later look like a liked photo
+                if (!existed)
+                {
+                    try { File.Delete(destination); } catch { /* best effort */ }
+                }
+                throw;
+            }
+        }
+
         private static bool IsCopyOf((long Length, DateTime LastWriteUtc) copy, PhotoFile photo) =>
             copy.Length == photo.Length &&
             (copy.LastWriteUtc - photo.LastWriteTimeUtc).Duration() <= TimestampTolerance;

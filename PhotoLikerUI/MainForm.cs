@@ -9,7 +9,10 @@
         private readonly PhotoCache _photoCache = new(MainFormConstants.MaxCachedImageBytes);
         private Dictionary<string, int> _indexByPath = new(StringComparer.Ordinal);
         private LikedLibrary? _liked;
-        private bool _likeInProgress;
+        private GroupLibrary? _groups;
+        private IReadOnlyList<string> _savedInNames = []; // folders holding a copy of the current photo, drawn on it
+        private IReadOnlyList<GroupLegendEntry> _groupLegend = []; // all group folders, drawn as the legend
+        private bool _likeInProgress; // a like / group copy is running
         private int _folderGeneration;
         private string _imageMessage = string.Empty; // shown in the viewer while there is no image (loading / failed)
 
@@ -87,8 +90,8 @@
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
             }
 
-            //Draw the start at left corner if file alrady copied to liked folder
-            if (pictureBox1.Tag is string currentFile && IsLiked(currentFile))
+            // Draw the check at the left corner if the file is saved anywhere: in the liked folder or in a group
+            if (_savedInNames.Count > 0)
             {
                 using var startBrush = new SolidBrush(Color.FromArgb(MainFormConstants.LikedOverlayAlpha, Color.Green));
                 using var font = new Font(this.Font.FontFamily, MainFormConstants.LikedCheckmarkFontSize, FontStyle.Bold);
@@ -98,7 +101,98 @@
 
                 e.Graphics.FillRectangle(startBrush, 0, 0, msgSize.Width, msgSize.Height);
                 e.Graphics.DrawString(msg, font, Brushes.White, MainFormConstants.LikedCheckmarkOffset, MainFormConstants.LikedCheckmarkOffset);
+
+                DrawSavedInFolders(e.Graphics, msgSize);
             }
+
+            DrawGroupLegend(e.Graphics);
+        }
+
+        /// <summary>
+        /// Lists every group folder in the bottom-left corner of the viewer, so it is clear which key saves where; the
+        /// ones that hold a copy of the current photo are marked. A long list continues in a further column.
+        /// </summary>
+        private void DrawGroupLegend(Graphics g)
+        {
+            var legend = _groupLegend;
+            if (legend.Count == 0)
+                return;
+
+            const float pad = MainFormConstants.SavedInPadding;
+            const float margin = MainFormConstants.GroupLegendMargin;
+            const float columnGap = MainFormConstants.GroupLegendColumnGap;
+            var format = StringFormat.GenericTypographic; // shared instance, must not be disposed
+
+            using var font = new Font(this.Font.FontFamily, MainFormConstants.GroupLegendFontSize);
+            using var markedFont = new Font(font, FontStyle.Bold);
+            using var bgBrush = new SolidBrush(Color.FromArgb(MainFormConstants.SavedInBgAlpha, Color.Black));
+            using var markBrush = new SolidBrush(Color.LightGreen);
+            using var textBrush = new SolidBrush(Color.Gainsboro);
+
+            float TextWidth(string text, Font f) => g.MeasureString(text, f, PointF.Empty, format).Width;
+
+            var viewer = pictureBox1.ClientSize;
+            var lineHeight = font.GetHeight(g) + 2;
+            var markWidth = TextWidth(MainFormConstants.LikedCheckmark, markedFont) + 4;
+
+            // As many rows as fit next to each other, spread evenly over the columns
+            var fitting = Math.Max(1, (int)((viewer.Height - margin * 2 - pad * 2) / lineHeight));
+            var columnCount = (int)Math.Ceiling(legend.Count / (double)fitting);
+            var rows = (int)Math.Ceiling(legend.Count / (double)columnCount);
+
+            var columnWidths = new float[columnCount];
+            for (var i = 0; i < legend.Count; i++)
+            {
+                var entry = legend[i];
+                var width = markWidth + TextWidth(entry.Name, entry.HasPhoto ? markedFont : font);
+                columnWidths[i / rows] = Math.Max(columnWidths[i / rows], width);
+            }
+
+            var boxWidth = columnWidths.Sum() + columnGap * (columnCount - 1) + pad * 2;
+            var boxHeight = rows * lineHeight + pad * 2;
+            var left = margin;
+            var top = viewer.Height - margin - boxHeight;
+
+            g.FillRectangle(bgBrush, left, top, boxWidth, boxHeight);
+
+            for (var i = 0; i < legend.Count; i++)
+            {
+                var entry = legend[i];
+                var column = i / rows;
+                var x = left + pad + columnWidths.Take(column).Sum() + columnGap * column;
+                var y = top + pad + (i % rows) * lineHeight;
+
+                if (entry.HasPhoto)
+                {
+                    g.DrawString(MainFormConstants.LikedCheckmark, markedFont, markBrush, x, y, format);
+                    g.DrawString(entry.Name, markedFont, markBrush, x + markWidth, y, format);
+                }
+                else
+                {
+                    g.DrawString(entry.Name, font, textBrush, x + markWidth, y, format);
+                }
+            }
+        }
+
+        /// <summary>Writes the folders holding a copy of the current photo, each in brackets, right of the check.</summary>
+        private void DrawSavedInFolders(Graphics g, SizeF checkSize)
+        {
+            const float pad = MainFormConstants.SavedInPadding;
+            var maxTextWidth = pictureBox1.ClientSize.Width - checkSize.Width - pad * 2;
+            if (maxTextWidth < 1)
+                return;
+
+            using var font = new Font(this.Font.FontFamily, MainFormConstants.SavedInFontSize, FontStyle.Bold);
+            using var bgBrush = new SolidBrush(Color.FromArgb(MainFormConstants.SavedInBgAlpha, Color.Black));
+            var text = GroupLibrary.FormatFolderList(_savedInNames, keepNamesTogether: true);
+
+            // Long lists wrap to the width of the viewer
+            var textSize = g.MeasureString(text, font, (int)maxTextWidth);
+            var boxHeight = Math.Max(checkSize.Height, textSize.Height + pad * 2);
+
+            g.FillRectangle(bgBrush, checkSize.Width, 0, textSize.Width + pad * 2, boxHeight);
+            g.DrawString(text, font, Brushes.White,
+                new RectangleF(checkSize.Width + pad, (boxHeight - textSize.Height) / 2, textSize.Width + 2, textSize.Height));
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -140,6 +234,9 @@
                     var loadedSettings = System.Text.Json.JsonSerializer.Deserialize<Settings>(json);
                     if (loadedSettings is not null)
                     {
+                        // The paths in the file are relative to the folder it is in; a photo folder opens the same
+                        // from any machine, whatever the drive letter or share it is reached through there
+                        loadedSettings.ResolveStoredPaths(Path.GetDirectoryName(settingsFilePath)!, pinCurrentFolder: folder is not null);
                         _currentConfig = loadedSettings;
                         SetStatus(string.Format(MainFormStrings.SettingsLoaded, settingsFilePath));
                     }
@@ -162,7 +259,8 @@
             var settingsFilePath = GetSettingsFilePath(_currentConfig.CurrentFolder);
             try
             {
-                var json = System.Text.Json.JsonSerializer.Serialize(_currentConfig, _jsonOptions);
+                var stored = _currentConfig.ForStorage(Path.GetDirectoryName(settingsFilePath)!);
+                var json = System.Text.Json.JsonSerializer.Serialize(stored, _jsonOptions);
                 File.WriteAllText(settingsFilePath, json);
                 SetStatus(string.Format(MainFormStrings.SettingsSaved, settingsFilePath));
             }
@@ -425,6 +523,9 @@
             _photoCache.Clear();
             _indexByPath = new Dictionary<string, int>(StringComparer.Ordinal);
             _liked = null;
+            _groups = null;
+            _savedInNames = [];
+            _groupLegend = [];
 
             // Reset zoom/pan state
             zoomFactor = 1.0f;
@@ -478,10 +579,10 @@
                 SetStatus(string.Format(MainFormStrings.StatusFolderLoading, folder));
 
                 // Listing a network folder can take a long time, so keep it off the UI thread
-                var (files, liked) = await Task.Run(() =>
+                var (files, liked, groups) = await Task.Run(() =>
                 {
                     var found = PhotoScanner.Scan(folder, recursive, extensions, likedFolder);
-                    return (found, LikedLibrary.Scan(likedFolder, found));
+                    return (found, LikedLibrary.Scan(likedFolder, found), GroupLibrary.Scan(likedFolder, found));
                 });
 
                 // Another folder was opened while this one was being listed
@@ -490,6 +591,7 @@
 
                 liked.Apply(files);
                 _liked = liked;
+                _groups = groups;
                 _currentConfig.Files = files;
                 _indexByPath = new Dictionary<string, int>(files.Count, StringComparer.Ordinal);
                 for (var i = 0; i < files.Count; i++)
@@ -607,9 +709,16 @@
                     }
                     return true;
                 }
-                else if (keyData == Keys.O) // fit image to screen
+                else if (keyData == Keys.O) // fit image to screen (so group O has no key)
                 {
                     FitImageToScreen();
+                    return true;
+                }
+                else if (TryGetGroupKey(keyData, out var groupKey) && !IsTextEntry(msg.HWnd))
+                {
+                    var currentFile = pictureBox1.Tag as string;
+                    if (currentFile is not null)
+                        _ = ToggleGroupAsync(currentFile, groupKey);
                     return true;
                 }
                 else
@@ -617,6 +726,23 @@
                     return base.ProcessCmdKey(ref msg, keyData);
                 }
         }
+
+        /// <summary>1-9 (also on the numpad) and A-Z, without Ctrl / Alt / Shift.</summary>
+        private static bool TryGetGroupKey(Keys keyData, out char key)
+        {
+            key = keyData switch
+            {
+                >= Keys.D1 and <= Keys.D9 => (char)('1' + (keyData - Keys.D1)),
+                >= Keys.NumPad1 and <= Keys.NumPad9 => (char)('1' + (keyData - Keys.NumPad1)),
+                >= Keys.A and <= Keys.Z => (char)('A' + (keyData - Keys.A)),
+                _ => default,
+            };
+            return key != default;
+        }
+
+        // Typing into a text box (e.g. a path in the settings grid) must not trigger the shortcuts
+        private static bool IsTextEntry(IntPtr focusedWindow) =>
+            Control.FromChildHandle(focusedWindow) is TextBoxBase or ComboBox or UpDownBase;
 
         #region Panning
 
@@ -670,16 +796,31 @@
             SetStatus(MainFormStrings.StatusImageFitted);
         }
 
-        private bool IsLiked(string file) =>
+        /// <summary>True if there is a copy of the photo in the liked folder or in any group folder.</summary>
+        private bool IsSaved(string file) =>
             _indexByPath.TryGetValue(file, out var index) &&
             index < _currentConfig.Files.Count &&
-            !string.IsNullOrEmpty(_currentConfig.Files[index].LikedFilePath);
+            IsSaved(_currentConfig.Files[index]);
+
+        private bool IsSaved(PhotoFile photo) =>
+            !string.IsNullOrEmpty(photo.LikedFilePath) || _groups?.IsInAnyGroup(photo) == true;
 
         /// <summary>
         /// Copies the current photo to the liked folder, or removes the copy again. The file operations run in the
         /// background (the folder is usually on a network share); a second press while one is running is ignored.
         /// </summary>
-        private async Task ToggleLikeAsync(string currentFile)
+        private Task ToggleLikeAsync(string currentFile) =>
+            RunFileOperationAsync(currentFile, photo =>
+                string.IsNullOrEmpty(photo.LikedFilePath) ? LikePhotoAsync(photo) : UnlikePhotoAsync(photo));
+
+        /// <summary>
+        /// Saves the current photo into the folder of a group (1-9, A-Z) under the liked folder, or removes it from
+        /// there again. Same rules as <see cref="ToggleLikeAsync"/>.
+        /// </summary>
+        private Task ToggleGroupAsync(string currentFile, char key) =>
+            RunFileOperationAsync(currentFile, photo => ToggleGroupPhotoAsync(photo, key));
+
+        private async Task RunFileOperationAsync(string currentFile, Func<PhotoFile, Task> operation)
         {
             if (_likeInProgress)
                 return;
@@ -692,14 +833,40 @@
             _likeInProgress = true;
             try
             {
-                if (!string.IsNullOrEmpty(photo.LikedFilePath))
-                    await UnlikePhotoAsync(photo);
-                else
-                    await LikePhotoAsync(photo);
+                await operation(photo);
             }
             finally
             {
                 _likeInProgress = false;
+            }
+        }
+
+        private async Task ToggleGroupPhotoAsync(PhotoFile photo, char key)
+        {
+            try
+            {
+                var likedFolder = await PrepareLikedFolderAsync();
+                if (likedFolder is null)
+                    return;
+
+                var files = _currentConfig.Files;
+                var groups = await EnsureGroupLibraryAsync(likedFolder);
+                var result = await Task.Run(() => groups.Toggle(key, photo, files));
+
+                // Another folder was opened while the copy was running: the result belongs to a list that is gone
+                if (ReferenceEquals(files, _currentConfig.Files))
+                    groups.Update(result);
+
+                var fileName = Path.GetFileName(photo.OriginalFilePath);
+                var groupName = Path.GetFileName(result.Folder);
+                SetStatus(string.Format(
+                    result.Added ? MainFormStrings.StatusFileSaved : MainFormStrings.StatusFileRemovedFromGroup,
+                    fileName, groupName));
+                RefreshLikeState();
+            }
+            catch (Exception ex)
+            {
+                SetStatus(string.Format(MainFormStrings.StatusGroupError, ex.Message));
             }
         }
 
@@ -722,7 +889,7 @@
 
                 var source = photo.OriginalFilePath;
                 var destination = library.GetNewCopyPath(photo);
-                await Task.Run(() => CopyToLikedFolder(source, destination));
+                await Task.Run(() => LikedLibrary.CopyPhoto(source, destination));
 
                 photo.LikedFilePath = destination;
                 library.Add(destination, photo);
@@ -811,26 +978,45 @@
             return library;
         }
 
-        private static void CopyToLikedFolder(string source, string destination)
+        /// <summary>The group-folder index, rebuilt when the liked folder was changed in the settings grid.</summary>
+        private async Task<GroupLibrary> EnsureGroupLibraryAsync(string likedFolder)
         {
-            var existed = File.Exists(destination);
-            try
+            if (_groups is { } current && string.Equals(current.LikedFolder, likedFolder, StringComparison.OrdinalIgnoreCase))
+                return current;
+
+            var files = _currentConfig.Files;
+            var library = await Task.Run(() => GroupLibrary.Scan(likedFolder, files));
+
+            if (ReferenceEquals(files, _currentConfig.Files))
+                _groups = library;
+            return library;
+        }
+
+        /// <summary>
+        /// Works out where the current photo is saved: the "Current File" row, the list next to the check and the
+        /// legend of group folders. Everything comes from the in-memory index, so it is cheap enough for every photo.
+        /// </summary>
+        private void UpdateSavedInInfo()
+        {
+            var index = pictureBox1.Tag is string file ? _currentConfig.Files.IndexOf(file) : -1;
+            if (index >= 0 && _groups is { } groups)
             {
-                File.Copy(source, destination, overwrite: true);
+                var photo = _currentConfig.Files[index];
+                _savedInNames = groups.GetSavedInNames(photo);
+                _groupLegend = groups.GetLegend(photo);
             }
-            catch
+            else
             {
-                // Don't leave a half-written copy behind that would later look like a liked photo
-                if (!existed)
-                {
-                    try { File.Delete(destination); } catch { /* best effort */ }
-                }
-                throw;
+                _savedInNames = [];
+                _groupLegend = [];
             }
+
+            _currentConfig.SavedInFolders = [.. _savedInNames];
         }
 
         private void RefreshLikeState()
         {
+            UpdateSavedInInfo();
             settingsPropertyGrid.Refresh();
             pictureBox1.Invalidate();
 
@@ -878,6 +1064,7 @@
                 _currentConfig.CurrentFileName = Path.GetFileName(file);
                 _currentConfig.CurrentIndex = index;
                 _currentConfig.LikedFile = index >= 0 ? _currentConfig.Files[index].LikedFilePath : string.Empty;
+                UpdateSavedInInfo();
                 settingsPropertyGrid.Refresh(); // Refresh the property grid to show the new image properties
                 UpdateWindowTitle(file);
 
@@ -1045,7 +1232,7 @@
             {
                 string filePath = files[i].OriginalFilePath;
                 bool isCurrent = i == idx;
-                bool isLiked = !string.IsNullOrEmpty(files[i].LikedFilePath);
+                bool isLiked = IsSaved(files[i]);
 
                 if (_thumbControls.TryGetValue(filePath, out var existing))
                 {
@@ -1127,7 +1314,7 @@
 
         private void ThumbPaint_LikedBadge(object? sender, PaintEventArgs e)
         {
-            if (sender is not PictureBox { Tag: string filePath } pb || !IsLiked(filePath)) return;
+            if (sender is not PictureBox { Tag: string filePath } pb || !IsSaved(filePath)) return;
 
             var badge = MainFormConstants.LikedCheckmark;
             using var font = new Font(SystemFonts.DefaultFont.FontFamily, MainFormConstants.LikedBadgeFontSize, FontStyle.Bold);
