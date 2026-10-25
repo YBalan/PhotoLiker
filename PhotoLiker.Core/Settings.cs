@@ -36,10 +36,19 @@ namespace PhotoLiker.Core
             if (!File.Exists(path)) return new Settings { CurrentFolder = folder };
             try
             {
-                return JsonSerializer.Deserialize<Settings>(File.ReadAllText(path)) ?? new Settings { CurrentFolder = folder };
+                var settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(path)) ?? new Settings { CurrentFolder = folder };
+                settings.CurrentFolder = ResolveStoredPath(folder, settings.CurrentFolder);
+                settings.LikedFolder = ResolveStoredPath(folder, settings.LikedFolder);
+                return settings;
             }
             catch { return new Settings { CurrentFolder = folder }; }
         }
+
+        // The WinForms app stores paths relative to the folder the settings file is in ("." and "Liked")
+        private static string ResolveStoredPath(string folder, string stored) =>
+            string.IsNullOrWhiteSpace(stored) || Path.IsPathRooted(stored)
+                ? stored
+                : Path.GetFullPath(Path.Combine(string.IsNullOrWhiteSpace(folder) ? Environment.CurrentDirectory : folder, stored));
 
         public void Save(string? folder = null)
         {

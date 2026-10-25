@@ -41,6 +41,8 @@ namespace PhotoLikerUI
         public const string StatusFileCopied             = "File '{0}' copied to liked folder.";
         public const string StatusFileSaved              = "File '{0}' saved to '{1}'.";
         public const string StatusFileRemoved            = "Removed '{0}' from liked folder.";
+        public const string StatusFileRemovedFromGroup   = "Removed '{0}' from '{1}'.";
+        public const string StatusGroupError             = "Error saving photo to group: {0}";
         public const string StatusLikeCancelled          = "Like cancelled.";
         public const string StatusLikeError              = "Error liking photo: {0}";
         public const string StatusUnlikeError            = "Error unliking photo: {0}";
@@ -92,6 +94,16 @@ namespace PhotoLikerUI
         public const float  LikedCheckmarkFontSize       = 25f;
         public const float  LikedCheckmarkOffset         = 2f;
         public const string LikedCheckmark               = "\u2713";   // ✓
+
+        // Folder list next to the check, e.g. "[Liked] [A - Group]"
+        public const float  SavedInFontSize              = 12f;
+        public const float  SavedInPadding               = 4f;
+        public const int    SavedInBgAlpha               = 150;
+
+        // Legend of the group folders in the bottom-left corner
+        public const float  GroupLegendFontSize          = 10f;
+        public const float  GroupLegendMargin            = 6f;
+        public const float  GroupLegendColumnGap         = 14f;
 
         // Decoded photos kept in memory around the current one (a 24MP photo is ~96 MB decoded)
         public const long MaxCachedImageBytes            = 2L * 1024 * 1024 * 1024;

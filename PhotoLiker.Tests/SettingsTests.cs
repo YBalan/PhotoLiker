@@ -65,6 +65,31 @@ public class SettingsTests : IDisposable
         Assert.Equal(_tempDir, settings.CurrentFolder);
     }
 
+    [Fact]
+    public void Load_RelativePathsFromTheWinFormsApp_AreResolvedAgainstTheFolder()
+    {
+        File.WriteAllText(Path.Combine(_tempDir, "photo-liker-config.json"),
+            """{ "CurrentFolder": ".", "LikedFolder": "Favourites" }""");
+
+        var settings = Settings.Load(_tempDir);
+
+        Assert.Equal(Path.GetFullPath(_tempDir), settings.CurrentFolder);
+        Assert.Equal(Path.Combine(Path.GetFullPath(_tempDir), "Favourites"), settings.LikedFolder);
+    }
+
+    [Fact]
+    public void Load_AbsolutePaths_AreLeftAlone()
+    {
+        var liked = Path.Combine(Path.GetTempPath(), "SomewhereElse", "Liked");
+        var json = System.Text.Json.JsonSerializer.Serialize(new { CurrentFolder = _tempDir, LikedFolder = liked });
+        File.WriteAllText(Path.Combine(_tempDir, "photo-liker-config.json"), json);
+
+        var settings = Settings.Load(_tempDir);
+
+        Assert.Equal(_tempDir, settings.CurrentFolder);
+        Assert.Equal(liked, settings.LikedFolder);
+    }
+
     // ── JsonIgnore fields ───────────────────────────────────────────────────
 
     [Fact]
