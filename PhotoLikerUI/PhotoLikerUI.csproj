@@ -11,6 +11,12 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>PhotoLiker.ico</ApplicationIcon>
+
+    <!-- The compiler fills in the * on every build (days since 2000-01-01 and seconds since midnight / 2), so the
+         version grows with each build. AppVersionInfo reads the build date back from it. -->
+    <AssemblyVersion>1.0.*</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Deterministic>false</Deterministic>
   </PropertyGroup>
 
   <ItemGroup>
