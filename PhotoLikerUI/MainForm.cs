@@ -30,6 +30,7 @@
         public MainForm(string? initialFolder = null)
         {
             InitializeComponent();
+            InitializeSearch();
             Text = WithDebugPrefix(Text);
 
             // Set application icon programmatically
@@ -106,6 +107,7 @@
             }
 
             DrawGroupLegend(e.Graphics);
+            DrawFaces(e.Graphics);
         }
 
         /// <summary>
@@ -199,6 +201,7 @@
         {
             _folderGeneration++;
             _photoCache.Dispose();
+            ShutDownSearch();
             SaveWindowPosition();
             SaveSettingsToJson();
             _globalConfig.LastFolder = _currentConfig.CurrentFolder;
@@ -527,6 +530,8 @@
             _groups = null;
             _savedInNames = [];
             _groupLegend = [];
+            _faces = [];
+            _hoverFace = null;
 
             // Reset zoom/pan state
             zoomFactor = 1.0f;
@@ -563,6 +568,7 @@
         {
             var generation = ++_folderGeneration;
             var loaded = false;
+            AttachFolderSearch();
             try
             {
                 ClearThumbnailControls();
@@ -622,6 +628,12 @@
         private void UpdateWindowTitle(string? currentFilePath)
         {
             var titleFolder = _currentConfig.CurrentFolder;
+
+            if (_resultsActive)
+            {
+                Text = WithDebugPrefix(string.Format(AppStrings.TitleFormat, $"{_resultsTitle} ({titleFolder})"));
+                return;
+            }
 
             if (_currentConfig.GoThroughSubFolders &&
                 !string.IsNullOrWhiteSpace(currentFilePath) &&
@@ -686,6 +698,16 @@
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (keyData == Keys.Escape && _resultsActive)
+            {
+                CloseSearchResults();
+                return true;
+            }
+
+            // Typing in the search box (or any text box) is not a command for the viewer: Space, the arrows and the letters are its own
+            if (IsTextEntry(msg.HWnd))
+                return base.ProcessCmdKey(ref msg, keyData);
+
             SetStatus(string.Format(MainFormStrings.StatusKeyPressed, keyData));
             if (keyData == (Keys.Control | Keys.C) && !IsTextEntry(msg.HWnd)) // a text box keeps copying its own text
             {
@@ -796,6 +818,9 @@
 
         private void PictureBox1_MouseDown(object? sender, MouseEventArgs e)
         {
+            if (HandleFaceMouseDown(e))
+                return;
+
             if (e.Button == MouseButtons.Left && IsEnlarged)
             {
                 _panning = true;
@@ -809,6 +834,9 @@
 
         private void PictureBox1_MouseMove(object? sender, MouseEventArgs e)
         {
+            if (HandleFaceMouseMove(e))
+                return;
+
             if (!_panning) return;
 
             var delta = new Point(
@@ -822,6 +850,9 @@
 
         private void PictureBox1_MouseUp(object? sender, MouseEventArgs e)
         {
+            if (HandleFaceMouseUp(e))
+                return;
+
             if (_panning)
             {
                 _panning = false;
@@ -1111,6 +1142,7 @@
                 _currentConfig.CurrentIndex = index;
                 _currentConfig.LikedFile = index >= 0 ? _currentConfig.Files[index].LikedFilePath : string.Empty;
                 UpdateSavedInInfo();
+                UpdateFaces();
                 settingsPropertyGrid.Refresh(); // Refresh the property grid to show the new image properties
                 UpdateWindowTitle(file);
 
