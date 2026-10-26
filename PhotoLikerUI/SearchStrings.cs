@@ -34,6 +34,25 @@ namespace PhotoLikerUI
 
         public const string ClosingWhileIndexing         = "The folder is still being indexed. Stop indexing and close PhotoLiker?\n\nWhat is finished is kept, the next run continues from there.";
 
+        // Moving the index to another computer
+        public const string IndexFileButton              = "Index file";
+        public const string IndexFileTooltip             = "Save the index to a file to use it on another computer, or load an index that was made on another computer";
+        public const string ExportIndexMenu              = "Export index...";
+        public const string ImportIndexMenu              = "Import index...";
+        public const string IndexFileFilter              = "PhotoLiker index (*.plindex)|*.plindex|All files (*.*)|*.*";
+        public const string IndexFileExtension           = "plindex";
+        public const string ExportIndexTitle             = "Export the index";
+        public const string ImportIndexTitle             = "Import an index";
+        public const string StatusExporting              = "Exporting the index...";
+        public const string StatusExported               = "Index exported to {0}: {1:N0} photos, {2:N0} faces ({3:0.#} MB).";
+        public const string StatusExportError            = "Export failed: {0}";
+        public const string ImportQuestionFormat         = "Use this index for the folder\n{0}\n\nThe file holds {1:N0} photos with {2:N0} faces.{3}{4}";
+        public const string ImportMadeForFormat          = "\nIt was made for {0}{1}.";
+        public const string ImportReplaceNoteFormat      = "\n\nThe index this folder has now ({0:N0} photos) is replaced.";
+        public const string StatusImported               = "Index imported: {0:N0} photos, {1:N0} faces. '" + UpdateIndexButton + "' brings it up to date with the photos.";
+        public const string StatusImportError            = "Import failed: {0}";
+        public const string StatusImportBusy             = "Stop indexing before importing an index.";
+
         // Search box and results
         public const string SearchPlaceholder            = "Search: beach, birthday cake, a person's name...";
         public const string SearchButton                 = "Search";

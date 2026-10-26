@@ -182,6 +182,10 @@ What is kept where:
 
 - **The index** (what was found in each photo) is a cache in `%LocalAppData%\PhotoLiker\index`, one file per photo folder.
   It can always be rebuilt, so deleting it only costs the time of indexing again. Your photos are only read, never changed.
+  To use it on another computer (or to index on the faster one), choose **Index file > Export index...** in the strip, bring
+  the `.plindex` file over, open the same photos there (whatever the drive letter) and choose **Index file > Import index...**.
+  **Update index** then brings it up to date: photos whose size and date are the same are not analyzed again. The models
+  are downloaded there on first use, or copy the `models` folder (below) along.
 - **The names you give** are kept in `photo-liker-people.json` in the photo folder, next to the photos: the face examples of each
   person. It is the only new file in your folder, it is plain JSON, and a rebuilt index finds the same people again.
 - **The models** are in `%LocalAppData%\PhotoLiker\models`: CLIP ViT-B/32 (OpenAI, MIT licence) to match words with photos, and

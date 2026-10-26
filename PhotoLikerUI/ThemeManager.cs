@@ -155,6 +155,18 @@ namespace PhotoLikerUI
             base.OnRenderButtonBackground(e);
         }
 
+        // A drop-down button (the "Index file" menu) that is open or hovered, in the colours of the theme
+        protected override void OnRenderDropDownButtonBackground(ToolStripItemRenderEventArgs e)
+        {
+            if (e.Item.Pressed || e.Item.Selected)
+            {
+                using var b = new SolidBrush(e.Item.Pressed ? ThemeManager.DarkBorder : ThemeManager.DarkHighlight);
+                e.Graphics.FillRectangle(b, new Rectangle(Point.Empty, e.Item.Size));
+                return;
+            }
+            base.OnRenderDropDownButtonBackground(e);
+        }
+
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
         {
             e.TextColor = ThemeManager.DarkFore;
@@ -181,5 +193,22 @@ namespace PhotoLikerUI
         public override Color ButtonPressedGradientEnd    => ThemeManager.DarkHighlight;
         public override Color SeparatorDark               => ThemeManager.DarkBorder;
         public override Color SeparatorLight              => ThemeManager.DarkBack;
+
+        // Pop-up menus: the one of the faces, the "Index file" menu
+        public override Color ToolStripDropDownBackground => ThemeManager.DarkBackAlt;
+        public override Color ImageMarginGradientBegin    => ThemeManager.DarkBackAlt;
+        public override Color ImageMarginGradientMiddle   => ThemeManager.DarkBackAlt;
+        public override Color ImageMarginGradientEnd      => ThemeManager.DarkBackAlt;
+        public override Color MenuBorder                  => ThemeManager.DarkBorder;
+        public override Color MenuItemBorder              => ThemeManager.DarkHighlight;
+        public override Color MenuItemSelected            => ThemeManager.DarkHighlight;
+        public override Color MenuItemSelectedGradientBegin => ThemeManager.DarkHighlight;
+        public override Color MenuItemSelectedGradientEnd => ThemeManager.DarkHighlight;
+        public override Color MenuItemPressedGradientBegin => ThemeManager.DarkBorder;
+        public override Color MenuItemPressedGradientMiddle => ThemeManager.DarkBorder;
+        public override Color MenuItemPressedGradientEnd  => ThemeManager.DarkBorder;
+        public override Color CheckBackground             => ThemeManager.DarkHighlight;
+        public override Color CheckSelectedBackground     => ThemeManager.DarkHighlight;
+        public override Color CheckPressedBackground      => ThemeManager.DarkHighlight;
     }
 }
