@@ -1,10 +1,10 @@
-namespace PhotoLikerUI
+namespace PhotoLiker.Core
 {
     /// <summary>
     /// The settings file lives in the photo folder, so the paths in it are stored relative to that folder. The folder
     /// can then be opened from another machine, drive letter or share and everything in the file still points into it.
     /// </summary>
-    internal static class StoredPaths
+    public static class StoredPaths
     {
         /// <summary>
         /// The path as it goes into the settings file: relative to <paramref name="baseFolder"/> (the folder itself is ".").

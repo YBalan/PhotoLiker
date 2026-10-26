@@ -2,51 +2,50 @@ namespace PhotoLikerUI
 {
     using System.ComponentModel;
 
+    /// <summary>Shows the metadata of a photo in a PropertyGrid: what <see cref="MetadataViewModel"/> holds, one read-only row per entry.</summary>
     public class MetadataWrapper : ICustomTypeDescriptor
     {
-        private readonly IReadOnlyList<MetadataEntry> _entries;
-        private readonly List<MetadataEntry> _gpsDecoded;
+        private readonly MetadataViewModel _metadata;
 
-        public IReadOnlyCollection<MetadataEntry> GPSDecoded => _gpsDecoded;
-        public string? MapLink => _gpsDecoded?.FirstOrDefault(e => e.Name == ImageHelperStrings.GpsMapLink)?.Value;
-
-        public MetadataWrapper(FriendlyImageMetadata meta)
-            : this(meta.Entries) { }
+        public string? MapLink => _metadata.MapLink;
 
         public MetadataWrapper(IReadOnlyList<MetadataEntry> entries)
+            : this(new MetadataViewModel(entries)) { }
+
+        public MetadataWrapper(MetadataViewModel metadata)
         {
-            _entries = entries;
-            _gpsDecoded = GpsDecoder.Decode(entries);
+            _metadata = metadata;
         }
 
         public PropertyDescriptorCollection GetProperties()
         {
-            var props = _entries
-                .Select(e => new MetadataPropertyDescriptor(
-                    e.Name,
-                    e.Value,
-                    e.Name.StartsWith(ImageHelperStrings.UnknownPrefix)
-                        ? ImageHelperStrings.CategoryUnknown
-                        : ExifTagMap.GetCategory(e.TagId).Name,
-                    isBrowsable: ExifTagMap.GetCategory(e.TagId).IsBrowsable))
+            var props = _metadata.Entries
+                .Select(e =>
+                {
+                    var category = ExifTagMap.GetCategory(e);
+                    return new MetadataPropertyDescriptor(e.Name, e.Value, category.Name, category.IsBrowsable);
+                })
                 .Cast<PropertyDescriptor>()
                 .ToList();
 
-            foreach (var e in _gpsDecoded)
+            foreach (var e in _metadata.GpsDecoded)
                 props.Add(new MetadataPropertyDescriptor(
-                    e.Name, e.Value, ImageHelperStrings.CategoryGPSDecoded, extraAttributes: e.ExtraAttributes));
+                    e.Name, e.Value, ImageHelperStrings.CategoryGPSDecoded, extraAttributes: ToAttributes(e.ExtraAttributeTypes)));
 
-            var allText = string.Join(
-                ImageHelperStrings.AllMetadataSeparator,
-                _entries.Select(e => string.Format(ImageHelperStrings.AllMetadataLineFormat, e.Name, e.Value)));
             props.Add(new MetadataPropertyDescriptor(
                 ImageHelperStrings.AllMetadataProperty,
-                allText,
+                _metadata.AllEntriesText,
                 ImageHelperStrings.CategoryDebug,
                 extraAttributes: [new EditorAttribute(typeof(MultilineTextViewEditor), typeof(System.Drawing.Design.UITypeEditor))]));
 
             return new PropertyDescriptorCollection([.. props]);
         }
+
+        /// <summary>What the grid does with the extras of an entry (see <see cref="MetadataExtras"/>).</summary>
+        private static Attribute[]? ToAttributes(string[]? extras) =>
+            extras is not null && extras.Contains(MetadataExtras.MapLink)
+                ? [new EditorAttribute(typeof(UrlLauncherEditor), typeof(System.Drawing.Design.UITypeEditor))]
+                : null;
 
         public PropertyDescriptorCollection GetProperties(Attribute?[]? attributes) => GetProperties();
 

@@ -1,10 +1,10 @@
-using PhotoLikerUI;
+using PhotoLiker.Core;
 
 namespace PhotoLiker.Tests;
 
 /// <summary>
 /// Tests for GroupLibrary (the WinForms app's group folders) against a real temp file system.
-/// The source files are compiled into this project, see PhotoLiker.Tests.csproj.
+/// They live in PhotoLiker.Core.
 /// </summary>
 public class GroupLibraryTests : IDisposable
 {

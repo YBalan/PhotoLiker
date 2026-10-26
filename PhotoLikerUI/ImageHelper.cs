@@ -6,7 +6,6 @@ namespace PhotoLikerUI
     public static class ImageHelper
     {
         private const int ExifOrientationId = 0x0112; // 274
-        private const int MaxReadAttempts = 3;
 
         public static Image LoadImageWithCorrectOrientation(string path)
         {
@@ -26,13 +25,13 @@ namespace PhotoLikerUI
         /// </summary>
         internal static PhotoEntry LoadPhoto(string path, int thumbSize)
         {
-            var stream = new MemoryStream(ReadAllBytesShared(path), writable: false);
+            var stream = new MemoryStream(FileReading.ReadAllBytesShared(path), writable: false);
             Image? source = null;
             var handedOver = false;
             try
             {
                 source = Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: true);
-                var metadata = new FriendlyImageMetadata(source).Entries;
+                var metadata = ReadMetadata(source);
 
                 if (ImageAnimator.CanAnimate(source))
                 {
@@ -69,7 +68,7 @@ namespace PhotoLikerUI
         /// <summary>Decodes a photo just to make its thumbnail. Safe to call from any thread.</summary>
         internal static Bitmap LoadThumbnail(string path, int thumbSize)
         {
-            using var stream = new MemoryStream(ReadAllBytesShared(path), writable: false);
+            using var stream = new MemoryStream(FileReading.ReadAllBytesShared(path), writable: false);
             using var source = Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: true);
 
             var rotateFlip = GetRotateFlip(source);
@@ -120,6 +119,11 @@ namespace PhotoLikerUI
             }
         }
 
+        /// <summary>The EXIF entries GDI+ has read from the image.</summary>
+        private static IReadOnlyList<MetadataEntry> ReadMetadata(Image image) =>
+            FriendlyImageMetadata.FromProperties(
+                image.PropertyItems.Select(p => new RawExifProperty(p.Id, p.Type, p.Value))).Entries;
+
         private static RotateFlipType GetRotateFlip(Image img)
         {
             if (!img.PropertyIdList.Contains(ExifOrientationId))
@@ -139,27 +143,6 @@ namespace PhotoLikerUI
                 8 => RotateFlipType.Rotate270FlipNone,
                 _ => RotateFlipType.RotateNoneFlipNone
             };
-        }
-
-        /// <summary>Reads a whole file, retrying a couple of times on transient I/O errors (network shares).</summary>
-        private static byte[] ReadAllBytesShared(string path)
-        {
-            for (int attempt = 1; ; attempt++)
-            {
-                try
-                {
-                    using var file = new FileStream(
-                        path, FileMode.Open, FileAccess.Read,
-                        FileShare.ReadWrite | FileShare.Delete, bufferSize: 1 << 16, FileOptions.SequentialScan);
-                    var buffer = new byte[file.Length];
-                    file.ReadExactly(buffer);
-                    return buffer;
-                }
-                catch (IOException ex) when (attempt < MaxReadAttempts && ex is not (FileNotFoundException or DirectoryNotFoundException))
-                {
-                    Thread.Sleep(300 * attempt);
-                }
-            }
         }
     }
 }

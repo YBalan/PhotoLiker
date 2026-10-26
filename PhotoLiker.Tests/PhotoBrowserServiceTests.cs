@@ -144,6 +144,41 @@ public class PhotoBrowserServiceTests : IDisposable
         Assert.Equal(3, svc.Settings.Files.Count);
     }
 
+    [Fact]
+    public void OpenFolder_WithSubFolders_DoesNotListTheCopiesInTheLikedFolder()
+    {
+        // A liked copy is not a photo of its own
+        File.WriteAllBytes(Path.Combine(_likedDir, "photo1.jpg"), [0xFF, 0xD8, 0xFF, 0xD9]);
+        new Settings { CurrentFolder = _tempDir, GoThroughSubFolders = true }.Save(_tempDir);
+
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+
+        Assert.Equal(3, svc.Settings.Files.Count);
+        Assert.DoesNotContain(svc.Settings.Files, f => f.OriginalFilePath.StartsWith(_likedDir, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void OpenFolder_RecognisesExtensionsWhateverTheirCase()
+    {
+        File.WriteAllBytes(Path.Combine(_tempDir, "SHOUTING.JPG"), [0xFF, 0xD8, 0xFF, 0xD9]);
+        var svc = CreateService();
+
+        svc.OpenFolder(_tempDir);
+
+        Assert.Equal(4, svc.Settings.Files.Count);
+    }
+
+    [Fact]
+    public void OpenFolder_ListsPhotosWithTheirSizeAndTimestamp()
+    {
+        var svc = CreateService();
+
+        svc.OpenFolder(_tempDir);
+
+        Assert.All(svc.Settings.Files, f => Assert.Equal(4, f.Length));
+    }
+
     // ── Navigation ──────────────────────────────────────────────────────────
 
     [Fact]

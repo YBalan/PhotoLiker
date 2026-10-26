@@ -1,9 +1,9 @@
 using System.IO.Enumeration;
 
-namespace PhotoLikerUI
+namespace PhotoLiker.Core
 {
     /// <summary>Lists the photos of a folder (optionally including subfolders).</summary>
-    internal static class PhotoScanner
+    public static class PhotoScanner
     {
         // Folders that hold system data or NAS-generated thumbnails rather than photos
         private static readonly string[] SkippedFolderNames =

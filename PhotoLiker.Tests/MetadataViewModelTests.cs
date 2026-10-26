@@ -102,6 +102,30 @@ public class MetadataViewModelTests
         Assert.StartsWith("https://maps.google.com/maps?q=", vm.MapLink);
     }
 
+    // ── AllEntriesText ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void AllEntriesText_ListsEveryEntryAsNameAndValue()
+    {
+        var vm = Build([new(1, "Width", "100"), new(2, "Height", "50")]);
+
+        Assert.Equal("Width: 100" + ImageHelperStrings.AllMetadataSeparator + "Height: 50", vm.AllEntriesText);
+    }
+
+    [Fact]
+    public void AllEntriesText_NoEntries_IsEmpty()
+    {
+        Assert.Equal(string.Empty, Build([]).AllEntriesText);
+    }
+
+    [Fact]
+    public void AllEntriesText_LeavesOutTheDecodedGpsEntries()
+    {
+        var vm = BuildWithGps();
+
+        Assert.DoesNotContain(ImageHelperStrings.GpsMapLink, vm.AllEntriesText);
+    }
+
     // ── MetadataGroup ────────────────────────────────────────────────────────
 
     [Fact]

@@ -1,9 +1,7 @@
-using PhotoLiker.Core;
-
-namespace PhotoLikerUI
+namespace PhotoLiker.Core
 {
     /// <summary>What <see cref="GroupLibrary.Toggle"/> did, for the UI thread to apply with <see cref="GroupLibrary.Update"/>.</summary>
-    internal sealed record GroupToggleResult(
+    public sealed record GroupToggleResult(
         char Key,
         string Folder,
         string FilePath,
@@ -11,7 +9,7 @@ namespace PhotoLikerUI
         IReadOnlyDictionary<string, (char Key, LikedLibrary Library)> Folders);
 
     /// <summary>One line of the legend: a group folder and whether the current photo has a copy in it.</summary>
-    internal sealed record GroupLegendEntry(char Key, string Name, bool HasPhoto);
+    public sealed record GroupLegendEntry(char Key, string Name, bool HasPhoto);
 
     /// <summary>
     /// Knows which photos have a copy in the group folders under the liked folder ("A - Group", "1 - Group", ...),
@@ -21,7 +19,7 @@ namespace PhotoLikerUI
     /// (<see cref="Scan"/>, <see cref="Toggle"/>) can run on any thread: it never changes the index, it returns a new
     /// one that the UI thread - the only one that reads the index - swaps in with <see cref="Update"/>.
     /// </summary>
-    internal sealed class GroupLibrary
+    public sealed class GroupLibrary
     {
         private IReadOnlyDictionary<string, (char Key, LikedLibrary Library)> _folders;
 

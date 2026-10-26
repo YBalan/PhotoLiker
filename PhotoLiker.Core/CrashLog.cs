@@ -1,14 +1,11 @@
-namespace PhotoLikerUI
+namespace PhotoLiker.Core
 {
     /// <summary>
     /// Appends unexpected exceptions to %LocalAppData%\PhotoLiker\crash.log so a crash leaves a stack trace behind.
     /// </summary>
-    internal static class CrashLog
+    public static class CrashLog
     {
-        public static readonly string FilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PhotoLiker",
-            "crash.log");
+        public static readonly string FilePath = Path.Combine(AppPaths.DataFolder, "crash.log");
 
         public static void Write(string source, Exception exception)
         {

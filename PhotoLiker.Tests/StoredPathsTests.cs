@@ -1,4 +1,4 @@
-using PhotoLikerUI;
+using PhotoLiker.Core;
 
 namespace PhotoLiker.Tests;
 

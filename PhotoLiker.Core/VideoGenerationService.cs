@@ -1,6 +1,6 @@
-namespace PhotoLikerUI
+namespace PhotoLiker.Core
 {
-    internal static class VideoGenerationService
+    public static class VideoGenerationService
     {
         public static List<string> SortSourceFiles(IReadOnlyCollection<string> sourceFiles, bool reverseSourceFiles)
         {
@@ -100,7 +100,7 @@ namespace PhotoLikerUI
             return "ffmpeg";
         }
 
-        private static bool TryParseFfmpegProgressPercent(string line, double totalDurationMs, out int percent)
+        internal static bool TryParseFfmpegProgressPercent(string line, double totalDurationMs, out int percent)
         {
             percent = 0;
 
@@ -122,7 +122,7 @@ namespace PhotoLikerUI
             return true;
         }
 
-        private static string BuildFfmpegConcatFile(IReadOnlyList<string> sourceFiles, IReadOnlyList<double> frameDurations)
+        internal static string BuildFfmpegConcatFile(IReadOnlyList<string> sourceFiles, IReadOnlyList<double> frameDurations)
         {
             var sb = new System.Text.StringBuilder();
             for (var i = 0; i < sourceFiles.Count; i++)
@@ -143,7 +143,7 @@ namespace PhotoLikerUI
             return sb.ToString();
         }
 
-        private static IReadOnlyList<double> BuildFrameDurations(int sourceFileCount, double startFrameTimeSeconds, double endFrameTimeSeconds)
+        internal static IReadOnlyList<double> BuildFrameDurations(int sourceFileCount, double startFrameTimeSeconds, double endFrameTimeSeconds)
         {
             if (sourceFileCount <= 0)
                 return [];

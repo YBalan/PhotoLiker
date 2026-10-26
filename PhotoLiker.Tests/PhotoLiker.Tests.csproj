@@ -22,13 +22,9 @@
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
   </ItemGroup>
 
-  <!-- A net10.0 project can't reference the net10.0-windows app, so the WinForms-free sources under test are compiled in. -->
+  <!-- A net10.0 project can't reference the net10.0-windows app, so the WinForms-free source under test is compiled in. -->
   <ItemGroup>
-    <Compile Include="..\PhotoLikerUI\PhotoFile.cs" Link="PhotoLikerUI\PhotoFile.cs" />
-    <Compile Include="..\PhotoLikerUI\LikedLibrary.cs" Link="PhotoLikerUI\LikedLibrary.cs" />
-    <Compile Include="..\PhotoLikerUI\GroupLibrary.cs" Link="PhotoLikerUI\GroupLibrary.cs" />
     <Compile Include="..\PhotoLikerUI\StringListConverter.cs" Link="PhotoLikerUI\StringListConverter.cs" />
-    <Compile Include="..\PhotoLikerUI\StoredPaths.cs" Link="PhotoLikerUI\StoredPaths.cs" />
   </ItemGroup>
 
 </Project>

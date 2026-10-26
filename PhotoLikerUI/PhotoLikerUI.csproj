@@ -4,6 +4,10 @@
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="PhotoLiker.Core" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>

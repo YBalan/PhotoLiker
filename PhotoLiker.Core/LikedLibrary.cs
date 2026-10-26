@@ -1,4 +1,4 @@
-namespace PhotoLikerUI
+namespace PhotoLiker.Core
 {
     /// <summary>
     /// Knows which photos already have a copy in the liked folder, from a single directory listing, so the UI
@@ -7,7 +7,7 @@ namespace PhotoLikerUI
     /// Copies stay flat in the liked folder. Only when several photos share a file name (typical with subfolders)
     /// are their copies told apart by size and timestamp and named "name (2).ext", "name (3).ext", ...
     /// </summary>
-    internal sealed class LikedLibrary
+    public sealed class LikedLibrary
     {
         // File.Copy keeps the timestamp, but not every file system stores it with the same precision
         private static readonly TimeSpan TimestampTolerance = TimeSpan.FromSeconds(2);
