@@ -37,6 +37,10 @@ namespace PhotoLikerUI
         private ToolStripButton _closeResultsButton = null!;
         private ToolStripButton _similarButton = null!;
         private ToolStripButton _facesButton = null!;
+        private ToolStripDropDownButton _transferButton = null!;
+        private ToolStripMenuItem _exportItem = null!;
+        private ToolStripMenuItem _importItem = null!;
+        private bool _transferBusy; // an index is being exported or imported
 
         private bool FacesMode => _facesButton.Checked && _folderSearch is not null;
 
@@ -101,11 +105,26 @@ namespace PhotoLikerUI
                 pictureBox1.Invalidate();
             };
 
+            _exportItem = new ToolStripMenuItem(SearchStrings.ExportIndexMenu) { Name = "exportIndexMenuItem" };
+            _exportItem.Click += (_, _) => ExportIndex();
+            _importItem = new ToolStripMenuItem(SearchStrings.ImportIndexMenu) { Name = "importIndexMenuItem" };
+            _importItem.Click += (_, _) => ImportIndex();
+            _transferButton = new ToolStripDropDownButton(SearchStrings.IndexFileButton)
+            {
+                Name = "indexFileToolStripButton",
+                DisplayStyle = ToolStripItemDisplayStyle.Text,
+                ToolTipText = SearchStrings.IndexFileTooltip,
+            };
+            _transferButton.DropDownItems.AddRange([_exportItem, _importItem]);
+            _transferButton.DropDownOpening += (_, _) => ApplyMenuTheme(_transferButton.DropDown);
+
             var strip = new ToolStrip { Name = "searchToolStrip", GripStyle = ToolStripGripStyle.Hidden, Dock = DockStyle.Top };
             strip.Items.AddRange([
                 _indexButton, _indexProgress, _indexLabel,
                 new ToolStripSeparator(),
                 _searchBox, _searchButton, _closeResultsButton, _similarButton, _facesButton,
+                new ToolStripSeparator(),
+                _transferButton,
             ]);
             splitContainer3.Panel1.Controls.Add(strip);
 
@@ -150,6 +169,9 @@ namespace PhotoLikerUI
             _searchButton.Enabled = searchable;
             _facesButton.Enabled = searchable;
             _closeResultsButton.Visible = _resultsActive;
+            _transferButton.Enabled = folderKnown;
+            _exportItem.Enabled = searchable && !_transferBusy;
+            _importItem.Enabled = folderKnown && !indexing && !_transferBusy;
             UpdateSimilarEnabled();
         }
 
@@ -666,12 +688,7 @@ namespace PhotoLikerUI
                 return;
 
             var menu = new ContextMenuStrip();
-            if (_currentConfig.IsDarkTheme)
-            {
-                menu.Renderer = new DarkToolStripRenderer();
-                menu.BackColor = ThemeManager.DarkBackAlt;
-                menu.ForeColor = ThemeManager.DarkFore;
-            }
+            ApplyMenuTheme(menu);
 
             var heading = label.Name is null ? SearchStrings.FaceWhoIsThis
                 : label.Confirmed ? label.Name
@@ -781,6 +798,137 @@ namespace PhotoLikerUI
 
             var result = label.Confirmed && label.Name is not null ? search.SearchPerson(label.Name) : search.SearchPerson(label.Face, label.Name);
             _ = ShowResultsAsync(result);
+        }
+
+        /// <summary>Pop-up menus are not part of the form's control tree, so the theme is applied to them when they open.</summary>
+        private void ApplyMenuTheme(ToolStripDropDown menu)
+        {
+            var dark = _currentConfig.IsDarkTheme;
+            menu.Renderer = dark ? new DarkToolStripRenderer() : new ToolStripProfessionalRenderer();
+            menu.BackColor = dark ? ThemeManager.DarkBackAlt : ThemeManager.LightBack;
+            menu.ForeColor = dark ? ThemeManager.DarkFore : ThemeManager.LightFore;
+        }
+
+        // ── moving the index to another computer ───────────────────────────
+
+        private async void ExportIndex()
+        {
+            if (_folderSearch is not { } search || _transferBusy)
+                return;
+
+            var name = Path.GetFileName(Path.TrimEndingDirectorySeparator(search.Folder));
+            using var dialog = new SaveFileDialog
+            {
+                Title = SearchStrings.ExportIndexTitle,
+                Filter = SearchStrings.IndexFileFilter,
+                DefaultExt = SearchStrings.IndexFileExtension,
+                AddExtension = true,
+                OverwritePrompt = true,
+                FileName = (name.Length > 0 ? name : "photos") + "." + SearchStrings.IndexFileExtension,
+            };
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            var file = dialog.FileName;
+            _transferBusy = true;
+            UpdateSearchControls();
+            SetStatus(SearchStrings.StatusExporting);
+            try
+            {
+                await Task.Run(() => search.Index.ExportTo(file));
+                SetStatus(string.Format(SearchStrings.StatusExported, file, search.Index.PhotoCount, search.Index.FaceCount, new FileInfo(file).Length / 1048576.0));
+            }
+            catch (Exception ex)
+            {
+                var message = string.Format(SearchStrings.StatusExportError, ex.Message);
+                SetStatus(message);
+                MessageBox.Show(this, message, SearchStrings.ExportIndexTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                _transferBusy = false;
+                UpdateSearchControls();
+            }
+        }
+
+        /// <summary>Makes an exported index the index of the open folder (after asking), and opens it.</summary>
+        private async void ImportIndex()
+        {
+            var folder = _currentConfig.CurrentFolder;
+            if (string.IsNullOrWhiteSpace(folder) || _transferBusy)
+                return;
+            if (_indexCts is not null)
+            {
+                SetStatus(SearchStrings.StatusImportBusy);
+                return;
+            }
+
+            using var dialog = new OpenFileDialog
+            {
+                Title = SearchStrings.ImportIndexTitle,
+                Filter = SearchStrings.IndexFileFilter,
+                CheckFileExists = true,
+            };
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            var file = dialog.FileName;
+            _transferBusy = true;
+            UpdateSearchControls();
+            var closed = false;
+            try
+            {
+                var info = await Task.Run(() => PhotoIndex.Inspect(file));
+
+                var madeFor = info.Root is null ? string.Empty
+                    : string.Format(SearchStrings.ImportMadeForFormat, info.Root, info.ExportedAt is { } at ? $" on {at:g}" : string.Empty);
+                var current = _folderSearch?.Index.PhotoCount ?? 0;
+                var replaces = current > 0 ? string.Format(SearchStrings.ImportReplaceNoteFormat, current) : string.Empty;
+                var question = string.Format(SearchStrings.ImportQuestionFormat, folder, info.Photos, info.Faces, madeFor, replaces);
+                if (MessageBox.Show(this, question, SearchStrings.ImportIndexTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+
+                // A file that is open can not be replaced
+                ShowIndex(null);
+                closed = true;
+                await Task.Run(() => PhotoIndex.Import(folder, file));
+                SetStatus(string.Format(SearchStrings.StatusImported, info.Photos, info.Faces));
+            }
+            catch (Exception ex)
+            {
+                var message = string.Format(SearchStrings.StatusImportError, ex.Message);
+                SetStatus(message);
+                MessageBox.Show(this, message, SearchStrings.ImportIndexTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                // The imported index is opened; if the import failed this is the one the folder had before
+                if (closed)
+                    await ReopenIndexAsync(folder);
+
+                _transferBusy = false;
+                UpdateSearchControls();
+            }
+        }
+
+        private async Task ReopenIndexAsync(string folder)
+        {
+            FolderIndex? opened = null;
+            try
+            {
+                if (File.Exists(SearchPaths.IndexFile(folder)))
+                    opened = await Task.Run(() => FolderIndex.Open(folder));
+            }
+            catch (Exception ex)
+            {
+                SetStatus(string.Format(SearchStrings.StatusSearchError, ex.Message));
+            }
+
+            // The user may have opened another folder in the meantime
+            if (opened is not null && _folderSearch is null && SameFolder(_currentConfig.CurrentFolder, folder))
+                ShowIndex(opened);
+            else
+                opened?.Dispose();
         }
 
         // ── closing ────────────────────────────────────────────────────────

@@ -30,7 +30,7 @@ namespace PhotoLiker.Search
         public static PhotoIndex Open(string photoFolder, string indexFile)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(indexFile)!);
-            var db = new SqliteConnection($"Data Source={indexFile}");
+            var db = new SqliteConnection($"Data Source={indexFile};Pooling=False");
             db.Open();
 
             var index = new PhotoIndex(SearchPaths.Normalize(photoFolder), db);
@@ -138,6 +138,93 @@ namespace PhotoLiker.Search
                 Execute("DELETE FROM faces WHERE id = $id", ("$id", face.Id));
                 face.Photo.Faces = [.. face.Photo.Faces.Where(f => !ReferenceEquals(f, face))];
             }
+        }
+
+        // ── moving an index to another machine ─────────────────────────────
+
+        /// <summary>
+        /// Writes a copy of the index to one file (SQLite's online backup, so it is consistent even while photos are being
+        /// indexed). Such a file can be brought to another machine and loaded there with <see cref="Import"/>.
+        /// </summary>
+        public void ExportTo(string file)
+        {
+            var temporary = file + ".tmp";
+            File.Delete(temporary);
+
+            lock (_gate)
+            {
+                using (var copy = new SqliteConnection($"Data Source={temporary};Pooling=False"))
+                {
+                    copy.Open();
+                    _db.BackupDatabase(copy);
+
+                    // One plain file, no write-ahead log next to it; and a note of where it comes from
+                    using var finish = copy.CreateCommand();
+                    finish.CommandText = """
+                        PRAGMA journal_mode = DELETE;
+                        INSERT OR REPLACE INTO meta (key, value) VALUES ('exported_root', $root);
+                        INSERT OR REPLACE INTO meta (key, value) VALUES ('exported_at', $at);
+                        """;
+                    finish.Parameters.AddWithValue("$root", Root);
+                    finish.Parameters.AddWithValue("$at", DateTime.UtcNow.ToString("O"));
+                    finish.ExecuteNonQuery();
+                }
+            }
+
+            File.Move(temporary, file, overwrite: true);
+        }
+
+        /// <summary>What is in an index file, to show before it replaces an index. Throws <see cref="InvalidDataException"/> if the file is not a usable index.</summary>
+        public static IndexFileInfo Inspect(string file)
+        {
+            if (!File.Exists(file))
+                throw new FileNotFoundException("The index file was not found.", file);
+
+            try
+            {
+                using var db = new SqliteConnection($"Data Source={file};Mode=ReadOnly;Pooling=False");
+                db.Open();
+
+                if (Scalar(db, "SELECT value FROM meta WHERE key = 'schema'") as string != SchemaVersion.ToString())
+                    throw new InvalidDataException("This index was made by another version of PhotoLiker and can not be used.");
+
+                var photos = Convert.ToInt32(Scalar(db, "SELECT COUNT(*) FROM photos WHERE clip IS NOT NULL"));
+                var faces = Convert.ToInt32(Scalar(db, "SELECT COUNT(*) FROM faces"));
+                var from = Scalar(db, "SELECT value FROM meta WHERE key = 'exported_root'") as string;
+                DateTime? at = DateTime.TryParse(Scalar(db, "SELECT value FROM meta WHERE key = 'exported_at'") as string, null,
+                    System.Globalization.DateTimeStyles.RoundtripKind, out var parsed) ? parsed.ToLocalTime() : null;
+                return new IndexFileInfo(photos, faces, from, at);
+            }
+            catch (SqliteException ex)
+            {
+                throw new InvalidDataException("This is not a PhotoLiker index file.", ex);
+            }
+        }
+
+        /// <summary>
+        /// Makes an exported index the index of a photo folder, replacing the one it has. Paths inside an index are relative, so
+        /// it does not matter that the folder is at another place (another drive letter or share) than where it was made.
+        /// The folder's index must not be open.
+        /// </summary>
+        public static void Import(string photoFolder, string file)
+        {
+            Inspect(file);
+
+            var target = SearchPaths.IndexFile(photoFolder);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+
+            var temporary = target + ".import";
+            File.Copy(file, temporary, overwrite: true);
+            File.Delete(target + "-wal");
+            File.Delete(target + "-shm");
+            File.Move(temporary, target, overwrite: true);
+        }
+
+        private static object? Scalar(SqliteConnection db, string sql)
+        {
+            using var command = db.CreateCommand();
+            command.CommandText = sql;
+            return command.ExecuteScalar();
         }
 
         // ── SQLite ─────────────────────────────────────────────────────────
@@ -284,4 +371,8 @@ namespace PhotoLiker.Search
                 _db.Dispose();
         }
     }
+
+    /// <summary>What an index file holds.</summary>
+    /// <param name="Root">The photo folder the file was exported from, if it says.</param>
+    public sealed record IndexFileInfo(int Photos, int Faces, string? Root, DateTime? ExportedAt);
 }
