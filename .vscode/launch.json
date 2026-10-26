@@ -1,14 +1,6 @@
 {
   "version": "0.2.0",
   "configurations": [
-    
-    {
-      "name": "C#: PhotoLiker Debug",
-      "type": "dotnet",
-      "request": "launch",
-      "projectPath": "${workspaceFolder}/PhotoLikerUI/PhotoLikerUI.csproj"
-    },
-    
     {
       "name": "PhotoLikerUI",
       "type": "coreclr",
@@ -16,6 +8,17 @@
       "preLaunchTask": "build-ui",
       "program": "${workspaceFolder}/PhotoLikerUI/bin/Debug/net10.0-windows/PhotoLikerUI.dll",
       "cwd": "${workspaceFolder}/PhotoLikerUI/bin/Debug/net10.0-windows",
+      "console": "internalConsole",
+      "stopAtEntry": false
+    },
+
+    {
+      "name": "PhotoLikerUI (Release)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-ui-release",
+      "program": "${workspaceFolder}/PhotoLikerUI/bin/Release/net10.0-windows/PhotoLikerUI.dll",
+      "cwd": "${workspaceFolder}/PhotoLikerUI/bin/Release/net10.0-windows",
       "console": "internalConsole",
       "stopAtEntry": false
     }

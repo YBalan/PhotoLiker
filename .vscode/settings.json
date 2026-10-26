@@ -1,0 +1,26 @@
+{
+  "actionButtons": {
+    "reloadButton": null,
+    "loadNpmCommands": false,
+    "commands": [
+      {
+        "name": "$(debug-alt) Debug...",
+        "tooltip": "Pick a launch config (Debug or Release) and start debugging",
+        "useVsCodeApi": true,
+        "command": "workbench.action.debug.selectandstart"
+      },
+      {
+        "name": "$(play) Run Debug",
+        "tooltip": "dotnet run (Debug), no debugger",
+        "command": "dotnet run -c Debug --project PhotoLikerUI/PhotoLikerUI.csproj",
+        "singleInstance": true
+      },
+      {
+        "name": "$(rocket) Run Release",
+        "tooltip": "dotnet run (Release), no debugger",
+        "command": "dotnet run -c Release --project PhotoLikerUI/PhotoLikerUI.csproj",
+        "singleInstance": true
+      }
+    ]
+  }
+}

@@ -33,6 +33,7 @@
         public MainForm(string? initialFolder = null)
         {
             InitializeComponent();
+            Text = WithDebugPrefix(Text);
 
             // Set application icon programmatically
             Icon = AppIcons.AppIcon();
@@ -643,7 +644,26 @@
                 }
             }
 
-            Text = string.Format(MainFormStrings.TitleFormat, titleFolder);
+            Text = WithDebugPrefix(string.Format(MainFormStrings.TitleFormat, titleFolder));
+        }
+
+        private static string WithDebugPrefix(string title)
+        {
+#if DEBUG
+            return MainFormStrings.DebugTitlePrefix + title;
+#else
+            return title;
+#endif
+        }
+
+        private void HelpToolStripButton_Click(object? sender, EventArgs e)
+        {
+            MessageBox.Show(
+                this,
+                string.Format(MainFormStrings.AboutMessageFormat, AppVersionInfo.Version, AppVersionInfo.BuildDate),
+                MainFormStrings.AboutTitle,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
         private void UpdateGpsLink(MetadataWrapper metadata)
@@ -671,7 +691,12 @@
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             SetStatus(string.Format(MainFormStrings.StatusKeyPressed, keyData));
-            if (keyData == Keys.Space)
+            if (keyData == (Keys.Control | Keys.C) && !IsTextEntry(msg.HWnd)) // a text box keeps copying its own text
+            {
+                CopyCurrentPhotoToClipboard();
+                return true;
+            }
+            else if (keyData == Keys.Space)
             {
                 var currentFile = pictureBox1.Tag as string;
                 if (currentFile is not null)
@@ -725,6 +750,31 @@
                 {
                     return base.ProcessCmdKey(ref msg, keyData);
                 }
+        }
+
+        private void CopyToolStripButton_Click(object? sender, EventArgs e) => CopyCurrentPhotoToClipboard();
+
+        /// <summary>Puts the shown photo on the clipboard as a file and as a picture, see <see cref="PhotoClipboard"/>.</summary>
+        private void CopyCurrentPhotoToClipboard()
+        {
+            if (pictureBox1.Tag is not string file)
+            {
+                SetStatus(MainFormStrings.StatusCopyNoPhoto);
+                return;
+            }
+
+            try
+            {
+                if (!File.Exists(file))
+                    throw new FileNotFoundException(null, file);
+
+                Clipboard.SetDataObject(PhotoClipboard.CreateDataObject(file, pictureBox1.Image), copy: true);
+                SetStatus(string.Format(MainFormStrings.StatusPhotoCopied, Path.GetFileName(file)));
+            }
+            catch (Exception ex) // e.g. another program is holding the clipboard
+            {
+                SetStatus(string.Format(MainFormStrings.StatusCopyError, ex.Message));
+            }
         }
 
         /// <summary>1-9 (also on the numpad) and A-Z, without Ctrl / Alt / Shift.</summary>

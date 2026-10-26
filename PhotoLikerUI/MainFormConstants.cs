@@ -31,6 +31,11 @@ namespace PhotoLikerUI
         public const string StatusFolderLoading          = "Scanning '{0}'...";
         public const string StatusNoPhotosFound          = "No photos found in the selected folder.";
         public const string TitleFormat                  = "PhotoLiker \u2014 {0}";
+        public const string DebugTitlePrefix             = "[DEBUG] ";
+
+        // About (Help button)
+        public const string AboutTitle                   = "About PhotoLiker";
+        public const string AboutMessageFormat           = "PhotoLiker\n\nVersion: {0}\nBuild date: {1:yyyy-MM-dd HH:mm:ss}";
 
         // Image loading / cache
         public const string ImageLoading                 = "Loading...";
@@ -53,6 +58,11 @@ namespace PhotoLikerUI
         public const string DuplicateDialogText          = "File '{0}' already exists in the liked folder. Choose another location?";
         public const string DuplicateDialogTitle         = "File Exists";
         public const string SaveLikedPhotoDialogTitle    = "Save Liked Photo";
+
+        // Copy to the clipboard
+        public const string StatusPhotoCopied            = "Photo '{0}' copied to the clipboard.";
+        public const string StatusCopyNoPhoto            = "No photo to copy.";
+        public const string StatusCopyError              = "Error copying photo: {0}";
 
         // Zoom / fit
         public const string StatusImageFitted            = "Image fitted to screen.";

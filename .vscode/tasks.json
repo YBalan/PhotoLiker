@@ -13,6 +13,18 @@
       "group": { "kind": "build", "isDefault": true }
     },
     {
+      "label": "build-ui-release",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/PhotoLikerUI/PhotoLikerUI.csproj",
+        "-c",
+        "Release"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
       "label": "run-ui",
       "command": "dotnet",
       "type": "process",
@@ -20,6 +32,17 @@
         "run",
         "--project",
         "${workspaceFolder}/PhotoLikerUI/PhotoLikerUI.csproj"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "package-installer",
+      "command": "pwsh",
+      "type": "process",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/installer/build-installer.ps1"
       ],
       "problemMatcher": "$msCompile"
     },

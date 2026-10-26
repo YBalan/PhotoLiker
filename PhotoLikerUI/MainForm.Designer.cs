@@ -164,6 +164,7 @@
             copyToolStripButton.Name = "copyToolStripButton";
             copyToolStripButton.Size = new Size(23, 22);
             copyToolStripButton.Text = "&Copy";
+            copyToolStripButton.Click += CopyToolStripButton_Click;
             // 
             // pasteToolStripButton
             // 
@@ -187,6 +188,7 @@
             helpToolStripButton.Name = "helpToolStripButton";
             helpToolStripButton.Size = new Size(23, 20);
             helpToolStripButton.Text = "He&lp";
+            helpToolStripButton.Click += HelpToolStripButton_Click;
             // 
             // toolStripSeparator2
             // 
