@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.8.12009.203 stable
+VisualStudioVersion = 18.8.12009.203
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLikerUI", "PhotoLikerUI\PhotoLikerUI.csproj", "{9C7D2E11-B34F-440C-8C53-47C02AD07133}"
 EndProject
@@ -10,6 +10,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLiker.Tests", "PhotoLiker.Tests\PhotoLiker.Tests.csproj", "{EBFB1942-8EA0-43FE-958D-70729AA25BAA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLiker.Maui", "PhotoLiker.Maui\PhotoLiker.Maui.csproj", "{F49FF7B5-1DA2-499A-80DF-D3671875D95A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLiker.Search", "PhotoLiker.Search\PhotoLiker.Search.csproj", "{7CED7980-B69D-49EF-8342-81A137AAA20C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLiker.Search.Tests", "PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj", "{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -69,6 +73,30 @@ Global
 		{F49FF7B5-1DA2-499A-80DF-D3671875D95A}.Release|x64.Build.0 = Release|Any CPU
 		{F49FF7B5-1DA2-499A-80DF-D3671875D95A}.Release|x86.ActiveCfg = Release|Any CPU
 		{F49FF7B5-1DA2-499A-80DF-D3671875D95A}.Release|x86.Build.0 = Release|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Debug|x64.Build.0 = Debug|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Debug|x86.Build.0 = Debug|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Release|x64.ActiveCfg = Release|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Release|x64.Build.0 = Release|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Release|x86.ActiveCfg = Release|Any CPU
+		{7CED7980-B69D-49EF-8342-81A137AAA20C}.Release|x86.Build.0 = Release|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Debug|x64.Build.0 = Debug|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Debug|x86.Build.0 = Debug|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Release|x64.ActiveCfg = Release|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Release|x64.Build.0 = Release|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Release|x86.ActiveCfg = Release|Any CPU
+		{431A45FF-EF9C-4834-8894-99BEC5A5B4A3}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

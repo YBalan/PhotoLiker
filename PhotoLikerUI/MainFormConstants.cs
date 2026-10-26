@@ -100,6 +100,10 @@ namespace PhotoLikerUI
         public const float  GroupLegendMargin            = 6f;
         public const float  GroupLegendColumnGap         = 14f;
 
+        // Face boxes drawn on the photo
+        public const float  FaceNameFontSize             = 10f;
+        public const float  MinMarkedFaceSize            = 12f;   // a face marked by hand must be at least this many pixels wide and high
+
         // Decoded photos kept in memory around the current one (a 24MP photo is ~96 MB decoded)
         public const long MaxCachedImageBytes            = 2L * 1024 * 1024 * 1024;
 

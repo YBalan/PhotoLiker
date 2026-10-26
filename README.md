@@ -4,8 +4,14 @@ PhotoLiker is a Windows desktop photo triage tool for quickly browsing images an
 Open a folder, flip through it with the arrow keys, press <kbd>Space</kbd> to like a photo or a letter/number key to sort it
 into a group. Likes are plain copies of the files, so nothing is hidden in a database.
 
+And when the folder is a NAS full of old photos you can no longer scroll through, let PhotoLiker index it once in the
+background and then **search it like the web**: type "birthday cake" or "children on a stage", or name a person once and
+find every photo they are in. It all runs on your own computer, no photo is ever uploaded.
+
 ![PhotoLiker with a folder of photos open, dark theme](docs/images/01-home.png)
 
+- **AI photo search** of a big old library, by what is in the photos ("snow", "autumn leaves") and by who is in them:
+  a background indexer with a progress bar, face detection and naming, "more like this". See [Photo search](#photo-search).
 - **Fast browsing** with a thumbnail strip, preloading of the neighbouring photos, and a folder scan that also works
   on network shares.
 - **Likes and groups**: copy the current photo to a `Liked` folder, or into `1 - Group` ... `Z - Group` folders under it.
@@ -143,6 +149,45 @@ The theme button of the toolbar switches between the two. The choice is stored i
 
 ![The light theme](docs/images/11-light-theme.png)
 
+## Photo search
+
+For a library of thousands of old photos on a NAS, PhotoLiker can look at every photo once (**Index photos**, in the strip
+above the viewer) and then answer questions about them. Nothing is uploaded: the analysis runs on this computer.
+
+1. **Index photos** analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the
+   time left. You can keep browsing, stop it (the button turns into **Stop indexing**) and continue later: only new or
+   changed photos are done again. The search box works as soon as the first photos are in the index.
+   The first time, the AI models are downloaded (about 650 MB, you are asked first).
+2. **Search** by describing what you look for: `children on a stage`, `snow`, `a dog`, `autumn leaves`. The results replace
+   the folder in the viewer, so you browse, like and group them like any photos; <kbd>Esc</kbd> or **Close results** goes
+   back. **More like this** finds photos that look like the one shown. Descriptions work in English.
+3. **Faces**: switch **Faces** on to see the faces found in the shown photo. Click a face to say who it is (**New person...**
+   or one you named before), to find all photos of that person, or to delete a wrong face (dolls, posters). Typing the name
+   of a person into the search box finds their photos, best match first. A dashed yellow box with a name and a question
+   mark is a guess ("looks like Mom"); click it to confirm. A face the program missed (small, turned away, dark): hold
+   <kbd>Shift</kbd> and drag a box around it.
+
+| Input | What it does |
+|---|---|
+| Click / right click on a face | The menu of the face: name it, find the person, delete it. |
+| <kbd>Shift</kbd>+drag over the photo | Mark a face that was not found (with **Faces** on). |
+| <kbd>Enter</kbd> in the search box | Search. |
+| <kbd>Esc</kbd> | Close the results. |
+
+How long indexing takes depends mostly on the processor and on how fast the photos can be read: on a 6-core desktop
+processor it is about three photos per second (20,000 photos: roughly two hours), a network drive can be slower. It does
+not need a graphics card.
+
+What is kept where:
+
+- **The index** (what was found in each photo) is a cache in `%LocalAppData%\PhotoLiker\index`, one file per photo folder.
+  It can always be rebuilt, so deleting it only costs the time of indexing again. Your photos are only read, never changed.
+- **The names you give** are kept in `photo-liker-people.json` in the photo folder, next to the photos: the face examples of each
+  person. It is the only new file in your folder, it is plain JSON, and a rebuilt index finds the same people again.
+- **The models** are in `%LocalAppData%\PhotoLiker\models`: CLIP ViT-B/32 (OpenAI, MIT licence) to match words with photos, and
+  InsightFace's SCRFD and ArcFace (`buffalo_l`) to find and recognize faces. The InsightFace models are free for
+  non-commercial use only, which fits a private photo library.
+
 ## Settings file
 
 Each photo folder keeps its settings in `photo-liker-config.json` inside the folder, so every folder remembers its own
@@ -182,8 +227,10 @@ to keep them somewhere else; the tests do that, so running them leaves your own 
 |---|---|
 | `PhotoLikerUI` | The Windows (WinForms) app. Everything that needs WinForms or GDI+: the window, decoding and caching of photos, the settings grid with its editors, themes, the context menu registration. |
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders, the liked and group libraries, EXIF reading and GPS decoding, the ffmpeg video service. Shared by all front ends. |
+| `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people file. Windows only (WPF's image decoder). |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app). |
+| `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizer, image and face geometry, index, people file, search. They need no models. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script and `build-installer.ps1`. |
 | `docs` | Screenshots and a small sample folder of photos. |
@@ -194,7 +241,8 @@ You need the .NET 10 SDK (see `global.json`) on Windows.
 
 ```powershell
 dotnet build PhotoLikerUI\PhotoLikerUI.csproj          # build the app
-dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests
+dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests of the Core library
+dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
 installer\build-installer.ps1                           # publish and pack the installer (needs Inno Setup 6)
 ```
 
