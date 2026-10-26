@@ -27,9 +27,6 @@
         private int PreviewThumbSize => _currentConfig.ThumbnailSize;
         private readonly Dictionary<string, (PictureBox Thumb, Label Label)> _thumbControls = [];
 
-        // JSON serialization options
-        private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
         public MainForm(string? initialFolder = null)
         {
             InitializeComponent();
@@ -54,6 +51,8 @@
             _photoCache.ThumbReady += PhotoCache_ThumbReady;
             _photoCache.LoadFailed += PhotoCache_LoadFailed;
             _photoCache.Evicting += PhotoCache_Evicting;
+
+            settingsPropertyGrid.PropertyValueChanged += SettingsPropertyGrid_PropertyValueChanged;
 
             LoadSettingsFromJson();
 
@@ -96,7 +95,7 @@
             {
                 using var startBrush = new SolidBrush(Color.FromArgb(MainFormConstants.LikedOverlayAlpha, Color.Green));
                 using var font = new Font(this.Font.FontFamily, MainFormConstants.LikedCheckmarkFontSize, FontStyle.Bold);
-                var msg = MainFormConstants.LikedCheckmark;
+                var msg = AppStrings.LikedCheckmark;
 
                 var msgSize = e.Graphics.MeasureString(msg, font);
 
@@ -134,7 +133,7 @@
 
             var viewer = pictureBox1.ClientSize;
             var lineHeight = font.GetHeight(g) + 2;
-            var markWidth = TextWidth(MainFormConstants.LikedCheckmark, markedFont) + 4;
+            var markWidth = TextWidth(AppStrings.LikedCheckmark, markedFont) + 4;
 
             // As many rows as fit next to each other, spread evenly over the columns
             var fitting = Math.Max(1, (int)((viewer.Height - margin * 2 - pad * 2) / lineHeight));
@@ -165,7 +164,7 @@
 
                 if (entry.HasPhoto)
                 {
-                    g.DrawString(MainFormConstants.LikedCheckmark, markedFont, markBrush, x, y, format);
+                    g.DrawString(AppStrings.LikedCheckmark, markedFont, markBrush, x, y, format);
                     g.DrawString(entry.Name, markedFont, markBrush, x + markWidth, y, format);
                 }
                 else
@@ -219,33 +218,22 @@
             themeToggleToolStripButton.Text = dark ? MainFormStrings.ThemeLightLabel : MainFormStrings.ThemeDarkLabel;
         }
 
-        private static string GetSettingsFilePath(string folder) =>
-            Path.Combine(
-                string.IsNullOrWhiteSpace(folder) ? Environment.CurrentDirectory : folder,
-                MainFormStrings.SettingsFileName);
-
         private void LoadSettingsFromJson(string? folder = null)
         {
-            var settingsFilePath = GetSettingsFilePath(folder ?? Environment.CurrentDirectory);
-            if (File.Exists(settingsFilePath))
+            var directory = folder ?? Environment.CurrentDirectory;
+            try
             {
-                try
+                // The paths in the file are relative to the folder it is in; a photo folder opens the same
+                // from any machine, whatever the drive letter or share it is reached through there
+                if (Settings.Read(directory, pinCurrentFolder: folder is not null) is { } loadedSettings)
                 {
-                    var json = File.ReadAllText(settingsFilePath);
-                    var loadedSettings = System.Text.Json.JsonSerializer.Deserialize<Settings>(json);
-                    if (loadedSettings is not null)
-                    {
-                        // The paths in the file are relative to the folder it is in; a photo folder opens the same
-                        // from any machine, whatever the drive letter or share it is reached through there
-                        loadedSettings.ResolveStoredPaths(Path.GetDirectoryName(settingsFilePath)!, pinCurrentFolder: folder is not null);
-                        _currentConfig = loadedSettings;
-                        SetStatus(string.Format(MainFormStrings.SettingsLoaded, settingsFilePath));
-                    }
+                    _currentConfig = loadedSettings;
+                    SetStatus(string.Format(MainFormStrings.SettingsLoaded, Settings.GetFilePath(directory)));
                 }
-                catch (Exception ex)
-                {
-                    SetStatus(string.Format(MainFormStrings.SettingsLoadError, ex.Message));
-                }
+            }
+            catch (Exception ex)
+            {
+                SetStatus(string.Format(MainFormStrings.SettingsLoadError, ex.Message));
             }
         }
 
@@ -257,13 +245,10 @@
 
         private void SaveSettingsToJson()
         {
-            var settingsFilePath = GetSettingsFilePath(_currentConfig.CurrentFolder);
             try
             {
-                var stored = _currentConfig.ForStorage(Path.GetDirectoryName(settingsFilePath)!);
-                var json = System.Text.Json.JsonSerializer.Serialize(stored, _jsonOptions);
-                File.WriteAllText(settingsFilePath, json);
-                SetStatus(string.Format(MainFormStrings.SettingsSaved, settingsFilePath));
+                _currentConfig.Write();
+                SetStatus(string.Format(MainFormStrings.SettingsSaved, Settings.GetFilePath(_currentConfig.CurrentFolder)));
             }
             catch (Exception ex)
             {
@@ -287,9 +272,9 @@
                 _currentConfig.WindowWidth = RestoreBounds.Width;
                 _currentConfig.WindowHeight = RestoreBounds.Height;
             }
-            _currentConfig.WindowState = WindowState == FormWindowState.Minimized
+            _currentConfig.WindowState = (int)(WindowState == FormWindowState.Minimized
                 ? FormWindowState.Normal
-                : WindowState;
+                : WindowState);
             _currentConfig.ScreenIndex = Array.IndexOf(Screen.AllScreens, Screen.FromControl(this));
         }
 
@@ -315,7 +300,7 @@
 
             StartPosition = FormStartPosition.Manual;
             Bounds = bounds;
-            WindowState = _currentConfig.WindowState;
+            WindowState = (FormWindowState)_currentConfig.WindowState;
         }
 
         private void Panel2_MouseWheel(object? sender, MouseEventArgs e)
@@ -385,7 +370,7 @@
         private void OpenToolStripButton_Click(object sender, EventArgs e)
         {
             using var folderBrowserDialog = new FolderBrowserDialog();
-            folderBrowserDialog.Description = MainFormStrings.FolderBrowserSelectPhotos;
+            folderBrowserDialog.Description = AppStrings.FolderBrowserSelectPhotos;
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
                 SaveSettingsToJson();
@@ -402,6 +387,21 @@
                 AdjustRulerWidth();
                 ApplyTheme(_currentConfig.IsDarkTheme);
             }
+        }
+
+        // The settings that decide which photos are listed: changing one relists the current folder
+        private void SettingsPropertyGrid_PropertyValueChanged(object? s, PropertyValueChangedEventArgs e)
+        {
+            var name = e.ChangedItem?.PropertyDescriptor?.Name;
+            if (name != nameof(Settings.GoThroughSubFolders) && name != nameof(Settings.Extensions))
+                return;
+
+            if (string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder))
+                return;
+
+            SaveSettingsToJson();
+            ClearDisplay();
+            LoadFolder();
         }
 
         private void OpenSourceFolderToolStripButton_Click(object? sender, EventArgs e)
@@ -433,7 +433,7 @@
             if (string.IsNullOrWhiteSpace(likedFolder) || !Directory.Exists(likedFolder))
             {
                 // Fall back to the default "Liked" subfolder under the current folder
-                likedFolder = Path.Combine(_currentConfig.CurrentFolder, MainFormStrings.DefaultLikedFolderName);
+                likedFolder = Path.Combine(_currentConfig.CurrentFolder, AppStrings.DefaultLikedFolderName);
             }
 
             if (!Directory.Exists(likedFolder))
@@ -567,14 +567,10 @@
             {
                 ClearThumbnailControls();
 
-                var isAutoLiked = string.IsNullOrWhiteSpace(_currentConfig.LikedFolder) ||
-                    string.Equals(Path.GetFileName(_currentConfig.LikedFolder), MainFormStrings.DefaultLikedFolderName, StringComparison.OrdinalIgnoreCase);
-                _currentConfig.LikedFolder = isAutoLiked
-                    ? Path.Combine(_currentConfig.CurrentFolder, MainFormStrings.DefaultLikedFolderName)
-                    : _currentConfig.LikedFolder;
+                _currentConfig.ApplyDefaultLikedFolder();
 
                 var folder = _currentConfig.CurrentFolder;
-                var recursive = _currentConfig.GoThroughtSubFolders;
+                var recursive = _currentConfig.GoThroughSubFolders;
                 var extensions = _currentConfig.Extensions;
                 var likedFolder = _currentConfig.LikedFolder;
                 SetStatus(string.Format(MainFormStrings.StatusFolderLoading, folder));
@@ -604,7 +600,7 @@
             catch (Exception ex)
             {
                 if (generation == _folderGeneration)
-                    SetStatus(string.Format(MainFormStrings.StatusFolderLoadError, ex.Message));
+                    SetStatus(string.Format(AppStrings.StatusFolderLoadError, ex.Message));
             }
             finally
             {
@@ -612,7 +608,7 @@
                 {
                     settingsPropertyGrid.Refresh();
                     if (loaded)
-                        SetStatus(string.Format(MainFormStrings.StatusFolderLoaded, _currentConfig.TotalFiles, _currentConfig.CurrentFolder));
+                        SetStatus(string.Format(AppStrings.StatusFolderLoaded, _currentConfig.TotalFiles, _currentConfig.CurrentFolder));
                     UpdateWindowTitle(_currentConfig.CurrentFilePath);
                 }
             }
@@ -627,7 +623,7 @@
         {
             var titleFolder = _currentConfig.CurrentFolder;
 
-            if (_currentConfig.GoThroughtSubFolders &&
+            if (_currentConfig.GoThroughSubFolders &&
                 !string.IsNullOrWhiteSpace(currentFilePath) &&
                 !string.IsNullOrWhiteSpace(titleFolder))
             {
@@ -644,7 +640,7 @@
                 }
             }
 
-            Text = WithDebugPrefix(string.Format(MainFormStrings.TitleFormat, titleFolder));
+            Text = WithDebugPrefix(string.Format(AppStrings.TitleFormat, titleFolder));
         }
 
         private static string WithDebugPrefix(string title)
@@ -671,7 +667,7 @@
             var mapLink = metadata.MapLink;
             if (!string.IsNullOrEmpty(mapLink))
             {
-                toolStripStatusLabelGpsLink.Text = MainFormStrings.GpsMapLinkLabel;
+                toolStripStatusLabelGpsLink.Text = AppStrings.GpsMapLinkLabel;
                 toolStripStatusLabelGpsLink.Tag = mapLink;
                 toolStripStatusLabelGpsLink.Visible = true;
             }
@@ -951,7 +947,7 @@
             }
             catch (Exception ex)
             {
-                SetStatus(string.Format(MainFormStrings.StatusLikeError, ex.Message));
+                SetStatus(string.Format(AppStrings.StatusLikeError, ex.Message));
             }
         }
 
@@ -967,12 +963,12 @@
                 if (IsCurrent(photo))
                     _currentConfig.LikedFile = string.Empty;
 
-                SetStatus(string.Format(MainFormStrings.StatusFileRemoved, Path.GetFileName(likedPath)));
+                SetStatus(string.Format(AppStrings.StatusFileRemoved, Path.GetFileName(likedPath)));
                 RefreshLikeState();
             }
             catch (Exception ex)
             {
-                SetStatus(string.Format(MainFormStrings.StatusUnlikeError, ex.Message));
+                SetStatus(string.Format(AppStrings.StatusUnlikeError, ex.Message));
             }
         }
 
@@ -1078,7 +1074,7 @@
         private string? LikedFolderSelectFolderDialog()
         {
             using var folderBrowserDialog = new FolderBrowserDialog();
-            folderBrowserDialog.Description = MainFormStrings.FolderBrowserSelectLiked;
+            folderBrowserDialog.Description = AppStrings.FolderBrowserSelectLiked;
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
                 return folderBrowserDialog.SelectedPath;
@@ -1127,7 +1123,7 @@
             }
             catch (Exception ex)
             {
-                SetStatus(string.Format(MainFormStrings.StatusImageLoadError, ex.Message));
+                SetStatus(string.Format(AppStrings.StatusImageLoadError, ex.Message));
             }
         }
 
@@ -1183,7 +1179,7 @@
         {
             if (string.Equals(pictureBox1.Tag as string, file, StringComparison.Ordinal))
             {
-                _imageMessage = string.Format(MainFormStrings.StatusImageLoadError, ex.Message);
+                _imageMessage = string.Format(AppStrings.StatusImageLoadError, ex.Message);
                 pictureBox1.Invalidate();
                 SetStatus(_imageMessage);
             }
@@ -1366,7 +1362,7 @@
         {
             if (sender is not PictureBox { Tag: string filePath } pb || !IsSaved(filePath)) return;
 
-            var badge = MainFormConstants.LikedCheckmark;
+            var badge = AppStrings.LikedCheckmark;
             using var font = new Font(SystemFonts.DefaultFont.FontFamily, MainFormConstants.LikedBadgeFontSize, FontStyle.Bold);
             using var brush = new SolidBrush(Color.FromArgb(MainFormConstants.LikedBadgeBrushAlpha, Color.Green));
 

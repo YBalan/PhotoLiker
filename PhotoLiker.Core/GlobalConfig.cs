@@ -5,10 +5,7 @@ namespace PhotoLiker.Core
     /// <summary>Lightweight user-level config stored in %LocalAppData%\PhotoLiker\.</summary>
     public class GlobalConfig
     {
-        private static readonly string FilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "PhotoLiker",
-            "global-config.json");
+        private static readonly string FilePath = Path.Combine(AppPaths.DataFolder, "global-config.json");
 
         private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 

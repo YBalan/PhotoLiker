@@ -67,7 +67,7 @@ namespace PhotoLiker.Core
                     result.Add(Decoded(ImageHelperStrings.GpsCoordinates, coords));
                     result.Add(Decoded(ImageHelperStrings.GpsMapLink,
                         string.Format(ImageHelperStrings.GpsMapLinkFormat, sLat, sLon),
-                        extraAttributeTypes: ["MapLink"]));
+                        extraAttributeTypes: [MetadataExtras.MapLink]));
                 }
             }
 

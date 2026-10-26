@@ -12,6 +12,27 @@ namespace PhotoLiker.Core
             _        => new ExifCategoryInfo(tagId, ImageHelperStrings.CategoryExif, IsBrowsable: true),
         };
 
+        /// <summary>
+        /// The category an entry is listed under. Entries without a known name ("Unknown (0x....)") are listed as
+        /// unknown whatever their tag id is; whether they can be browsed still follows the tag id.
+        /// </summary>
+        public static ExifCategoryInfo GetCategory(MetadataEntry entry)
+        {
+            var category = GetCategory(entry.TagId);
+            return entry.Name.StartsWith(ImageHelperStrings.UnknownPrefix, StringComparison.Ordinal)
+                ? category with { Name = ImageHelperStrings.CategoryUnknown }
+                : category;
+        }
+
+        /// <summary>
+        /// The friendly name of a tag. Without one, <paramref name="readerName"/> (the name the metadata reader
+        /// itself has for the tag) is used, else "Unknown (0x....)".
+        /// </summary>
+        public static string GetName(int tagId, string? readerName = null) =>
+            Tags.TryGetValue(tagId, out var friendly)
+                ? friendly
+                : readerName ?? string.Format(ImageHelperStrings.UnknownTagFormat, tagId);
+
         public static readonly Dictionary<int, string> Tags = new()
         {
             // TIFF baseline
@@ -50,24 +71,38 @@ namespace PhotoLiker.Core
             [0x8827] = "ISO Speed",
             [0x8830] = "Sensitivity Type",
             [0x8832] = "Recommended Exposure Index",
+            [0x8895] = "Lens Info",
+            [0x889A] = "Camera Owner Name",
+            [0x889D] = "Xiaomi Location",
+            [0x889E] = "Xiaomi Camera Info",
+            [0x889F] = "Xiaomi Extra",
+            [0x88A3] = "Xiaomi AI Info",
+            [0x8773] = "ICC Profile",
             [0x9000] = "Exif Version",
-            [0x9003] = "Date/Time Original",
-            [0x9004] = "Date/Time Digitized",
+            [0x9003] = "Date Taken (Original)",
+            [0x9004] = "Date Time Digitized",
+            [0x9010] = "Offset Time",
+            [0x9011] = "Offset Time Original",
+            [0x9012] = "Offset Time Digitized",
+            [0x9101] = "Components Configuration",
             [0x9201] = "Shutter Speed",
-            [0x9202] = "Aperture Value",
+            [0x9202] = "Aperture",
             [0x9203] = "Brightness Value",
-            [0x9204] = "Exposure Bias",
-            [0x9205] = "Max Aperture",
+            [0x9204] = "Exposure Bias Value",
+            [0x9205] = "Max Aperture Value",
             [0x9207] = "Metering Mode",
             [0x9208] = "Light Source",
             [0x9209] = "Flash",
             [0x920A] = "Focal Length",
-            [0xA002] = "Pixel X Dimension",
-            [0xA003] = "Pixel Y Dimension",
-            [0xA20E] = "Focal Plane X Resolution",
-            [0xA20F] = "Focal Plane Y Resolution",
-            [0xA210] = "Focal Plane Resolution Unit",
-            [0xA401] = "Custom Rendered",
+            [0x927C] = "Maker Note",
+            [0x9290] = "Sub Sec Time",
+            [0x9291] = "Sub Sec Time Original",
+            [0x9292] = "Sub Sec Time Digitized",
+            [0x9999] = "Xiaomi Scene Settings",
+            [0xA000] = "FlashPix Version",
+            [0xA001] = "Color Space",
+            [0xA002] = "Width",
+            [0xA003] = "Height",
             [0xA402] = "Exposure Mode",
             [0xA403] = "White Balance",
             [0xA404] = "Digital Zoom Ratio",
@@ -76,6 +111,27 @@ namespace PhotoLiker.Core
             [0xA408] = "Contrast",
             [0xA409] = "Saturation",
             [0xA40A] = "Sharpness",
+            [0xA20E] = "Focal Plane X Resolution",
+            [0xA20F] = "Focal Plane Y Resolution",
+            [0xA210] = "Focal Plane Resolution Unit",
+            [0xA401] = "Custom Rendered",
+            [0xA661] = "Xiaomi Extra2",
+
+            // Thumbnail / Interoperability
+            [0x5023] = "Thumbnail Format",
+            [0x5026] = "Thumbnail Make",
+            [0x5027] = "Thumbnail Model",
+            [0x5029] = "Thumbnail Orientation",
+            [0x502D] = "Thumbnail X Resolution",
+            [0x502E] = "Thumbnail Y Resolution",
+            [0x5030] = "Thumbnail Resolution Unit",
+            [0x5033] = "Thumbnail DateTime",
+            [0x5039] = "Thumbnail Compression",
+            [0x5041] = "Interop Index",
+            [0x5042] = "Interop Version",
+            [0x5090] = "YCbCr Coefficients",
+            [0x5091] = "YCbCr Positioning (Thumbnail)",
+            [0x501B] = "Thumbnail Data",
         };
     }
 }

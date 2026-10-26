@@ -24,14 +24,9 @@ namespace PhotoLiker.Core
             _settings.Save();
             _settings = Settings.Load(folder);
             _settings.CurrentFolder = folder;
+            _settings.ApplyDefaultLikedFolder();
 
-            if (string.IsNullOrWhiteSpace(_settings.LikedFolder) ||
-                string.Equals(Path.GetFileName(_settings.LikedFolder), AppStrings.DefaultLikedFolderName, StringComparison.OrdinalIgnoreCase))
-                _settings.LikedFolder = Path.Combine(folder, AppStrings.DefaultLikedFolderName);
-
-            _settings.Files = GetAllFiles(folder, _settings.GoThroughSubFolders)
-                .Select(f => new PhotoFile(f, string.Empty))
-                .ToList();
+            _settings.Files = PhotoScanner.Scan(folder, _settings.GoThroughSubFolders, _settings.Extensions, _settings.LikedFolder);
 
             _globalConfig.LastFolder = folder;
             _globalConfig.Save();
@@ -180,14 +175,6 @@ namespace PhotoLiker.Core
                 LoadImage(file.OriginalFilePath);
             else
                 StatusChanged?.Invoke(AppStrings.StatusNoPhotosFound);
-        }
-
-        private IEnumerable<string> GetAllFiles(string folder, bool recursive)
-        {
-            return new DirectoryInfo(folder)
-                .GetFiles("*.*", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)
-                .Where(fi => _settings.Extensions.Contains(fi.Extension.ToLowerInvariant()))
-                .Select(fi => fi.FullName);
         }
     }
 }

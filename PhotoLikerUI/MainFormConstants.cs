@@ -3,7 +3,6 @@ namespace PhotoLikerUI
     internal static class MainFormStrings
     {
         // Settings persistence
-        public const string SettingsFileName             = "photo-liker-config.json";
         public const string SettingsLoaded               = "Settings loaded from {0}";
         public const string SettingsLoadError            = "Error loading settings: {0}";
         public const string SettingsSaved                = "Settings saved to {0}";
@@ -11,8 +10,6 @@ namespace PhotoLikerUI
         public const string SettingsFolderLoaded         = "Settings loaded from folder '{0}'.";
 
         // Folder / file selection dialogs
-        public const string FolderBrowserSelectPhotos    = "Select a folder containing photos";
-        public const string FolderBrowserSelectLiked     = "Select a folder to save liked photos";
         public const string FolderBrowserSelectVideoOutput = "Select a folder to save generated video";
 
         // Video generation
@@ -25,12 +22,8 @@ namespace PhotoLikerUI
         public const string StatusVideoGenerationError   = "Video generation failed: {0}";
 
         // Folder loading
-        public const string DefaultLikedFolderName       = "Liked";
-        public const string StatusFolderLoaded           = "Loaded {0} photos from '{1}'";
-        public const string StatusFolderLoadError        = "Error loading folder: {0}";
         public const string StatusFolderLoading          = "Scanning '{0}'...";
         public const string StatusNoPhotosFound          = "No photos found in the selected folder.";
-        public const string TitleFormat                  = "PhotoLiker \u2014 {0}";
         public const string DebugTitlePrefix             = "[DEBUG] ";
 
         // About (Help button)
@@ -39,18 +32,14 @@ namespace PhotoLikerUI
 
         // Image loading / cache
         public const string ImageLoading                 = "Loading...";
-        public const string StatusImageLoadError         = "Error loading image: {0}";
         public const string StatusCacheLoadError         = "Error loading image {0}: {1}";
 
         // Like / unlike
         public const string StatusFileCopied             = "File '{0}' copied to liked folder.";
         public const string StatusFileSaved              = "File '{0}' saved to '{1}'.";
-        public const string StatusFileRemoved            = "Removed '{0}' from liked folder.";
         public const string StatusFileRemovedFromGroup   = "Removed '{0}' from '{1}'.";
         public const string StatusGroupError             = "Error saving photo to group: {0}";
         public const string StatusLikeCancelled          = "Like cancelled.";
-        public const string StatusLikeError              = "Error liking photo: {0}";
-        public const string StatusUnlikeError            = "Error unliking photo: {0}";
         public const string StatusCreateLikedFolderError = "Error creating liked folder: {0}";
         public const string StatusNoFolderSelected       = "No folder selected for liked photos.";
 
@@ -92,9 +81,6 @@ namespace PhotoLikerUI
         // Exception messages
         public const string ExCurrentFileNullOrEmpty     = "Current file cannot be null or empty.";
         public const string ExCurrentFileNotInList       = "Current file is not in the list of files.";
-
-        // GPS status bar link
-        public const string GpsMapLinkLabel              = "📍 Maps";
     }
 
     internal static class MainFormConstants
@@ -103,7 +89,6 @@ namespace PhotoLikerUI
         public const int    LikedOverlayAlpha            = 128;
         public const float  LikedCheckmarkFontSize       = 25f;
         public const float  LikedCheckmarkOffset         = 2f;
-        public const string LikedCheckmark               = "\u2713";   // ✓
 
         // Folder list next to the check, e.g. "[Liked] [A - Group]"
         public const float  SavedInFontSize              = 12f;
