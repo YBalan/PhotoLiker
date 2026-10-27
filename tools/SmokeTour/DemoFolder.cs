@@ -35,6 +35,12 @@ internal static class DemoFolder
         new("10-night.png",      Color.FromArgb(8, 12, 35),    Color.FromArgb(45, 55, 105),   Color.FromArgb(240, 240, 255), 0.70f, 0.22f, true,  [Color.FromArgb(25, 35, 70), Color.FromArgb(15, 22, 48), Color.FromArgb(8, 12, 28)], 38.7071, -9.1365),
     ];
 
+    /// <summary>July (two photos), August (one), September (two): the months PageUp / PageDown move between.</summary>
+    private static readonly DateTime[] FileDates =
+    [
+        new(2025, 7, 10, 9, 0, 0), new(2025, 7, 12, 9, 0, 0), new(2025, 8, 14, 9, 12, 7), new(2025, 9, 2, 9, 0, 0), new(2025, 9, 3, 9, 0, 0),
+    ];
+
     /// <summary>Files of the folder itself (not of the subfolder) by extension, for the checks of the tour.</summary>
     public static int CountTopLevel(string extension) =>
         Scenes.Count(s => !s.File.Contains(Path.DirectorySeparatorChar) && s.File.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
@@ -62,6 +68,14 @@ internal static class DemoFolder
 
         for (var i = 0; i < Scenes.Length; i++)
             Render(Path.Combine(folder, Scenes[i].File), Scenes[i], i);
+
+        // The first five photos were "taken" in three months, for PageUp / PageDown to jump between (a folder that is not indexed goes by the dates of its files)
+        for (var i = 0; i < FileDates.Length; i++)
+        {
+            var path = Path.Combine(folder, Scenes[i].File);
+            File.SetCreationTime(path, FileDates[i]);
+            File.SetLastWriteTime(path, FileDates[i]);
+        }
 
         new Settings
         {

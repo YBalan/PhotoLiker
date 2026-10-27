@@ -6,6 +6,9 @@ namespace PhotoLiker.Search
         DownloadingModels,
         LoadingModels,
         Indexing,
+
+        /// <summary>Only the dates of photos that are indexed already are read: quick, and no models are needed.</summary>
+        ReadingDates,
     }
 
     /// <summary>What the indexing is doing right now, for a progress bar and a line of text.</summary>
@@ -25,5 +28,6 @@ namespace PhotoLiker.Search
     /// </summary>
     public sealed record StageTimes(TimeSpan Read, TimeSpan Decode, TimeSpan Clip, TimeSpan Faces, int DecoderThreads, int FaceWorkers);
 
-    public sealed record IndexSummary(int Indexed, int Failed, int Faces, int Removed, TimeSpan Elapsed, bool Cancelled, StageTimes? Times = null);
+    /// <param name="DatesRead">Photos that were indexed before and only had their date read now.</param>
+    public sealed record IndexSummary(int Indexed, int Failed, int Faces, int Removed, TimeSpan Elapsed, bool Cancelled, StageTimes? Times = null, int DatesRead = 0);
 }

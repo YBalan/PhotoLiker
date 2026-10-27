@@ -34,32 +34,30 @@
             newToolStripButton = new ToolStripButton();
             openToolStripButton = new ToolStripButton();
             saveToolStripButton = new ToolStripButton();
-            printToolStripButton = new ToolStripButton();
             toolStripSeparator = new ToolStripSeparator();
-            cutToolStripButton = new ToolStripButton();
             copyToolStripButton = new ToolStripButton();
             pasteToolStripButton = new ToolStripButton();
             toolStripSeparator1 = new ToolStripSeparator();
-            helpToolStripButton = new ToolStripButton();
-            toolStripSeparator2 = new ToolStripSeparator();
-            contextMenuToolStripButton = new ToolStripButton();
-            toolStripSeparator3 = new ToolStripSeparator();
             themeToggleToolStripButton = new ToolStripButton();
             toolStripSeparator4 = new ToolStripSeparator();
             openSourceFolderToolStripButton = new ToolStripButton();
             openLikedFolderToolStripButton = new ToolStripButton();
             loadLikedFolderToolStripButton = new ToolStripButton();
             generateVideoToolStripButton = new ToolStripButton();
+            toolStripSeparator2 = new ToolStripSeparator();
+            contextMenuToolStripButton = new ToolStripButton();
+            toolStripSeparator3 = new ToolStripSeparator();
+            helpToolStripButton = new ToolStripButton();
             splitContainer2 = new SplitContainer();
             settingsPropertyGrid = new PropertyGrid();
             imageMetaPropertyGrid = new PropertyGrid();
             splitContainer3 = new SplitContainer();
             scrollPanel = new Panel();
             pictureBox1 = new PictureBox();
-            previewFlowPanel = new FlowLayoutPanel();
             statusStrip1 = new StatusStrip();
-            toolStripStatusLabel1 = new ToolStripStatusLabel();
             toolStripStatusLabelGpsLink = new ToolStripStatusLabel();
+            toolStripStatusLabel1 = new ToolStripStatusLabel();
+            previewFlowPanel = new FlowLayoutPanel();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.Panel1.SuspendLayout();
             splitContainer1.Panel2.SuspendLayout();
@@ -92,16 +90,16 @@
             // splitContainer1.Panel2
             // 
             splitContainer1.Panel2.Controls.Add(splitContainer3);
-            splitContainer1.Size = new Size(800, 450);
-            splitContainer1.SplitterDistance = 178;
+            splitContainer1.Size = new Size(1121, 940);
+            splitContainer1.SplitterDistance = 187;
             splitContainer1.TabIndex = 0;
             // 
             // toolStrip1
             // 
-            toolStrip1.Items.AddRange(new ToolStripItem[] { newToolStripButton, openToolStripButton, saveToolStripButton, printToolStripButton, toolStripSeparator, cutToolStripButton, copyToolStripButton, pasteToolStripButton, toolStripSeparator1, helpToolStripButton, toolStripSeparator2, contextMenuToolStripButton, toolStripSeparator3, themeToggleToolStripButton, toolStripSeparator4, openSourceFolderToolStripButton, openLikedFolderToolStripButton, loadLikedFolderToolStripButton, generateVideoToolStripButton });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { newToolStripButton, openToolStripButton, saveToolStripButton, toolStripSeparator, copyToolStripButton, pasteToolStripButton, toolStripSeparator1, themeToggleToolStripButton, toolStripSeparator4, openSourceFolderToolStripButton, openLikedFolderToolStripButton, loadLikedFolderToolStripButton, generateVideoToolStripButton, toolStripSeparator2, contextMenuToolStripButton, toolStripSeparator3, helpToolStripButton });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
-            toolStrip1.Size = new Size(178, 25);
+            toolStrip1.Size = new Size(187, 25);
             toolStrip1.TabIndex = 1;
             toolStrip1.Text = "toolStrip1";
             // 
@@ -113,6 +111,7 @@
             newToolStripButton.Name = "newToolStripButton";
             newToolStripButton.Size = new Size(23, 22);
             newToolStripButton.Text = "&New";
+            newToolStripButton.Click += newToolStripButton_Click;
             // 
             // openToolStripButton
             // 
@@ -132,29 +131,12 @@
             saveToolStripButton.Name = "saveToolStripButton";
             saveToolStripButton.Size = new Size(23, 22);
             saveToolStripButton.Text = "&Save";
-            // 
-            // printToolStripButton
-            // 
-            printToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            printToolStripButton.Image = (Image)resources.GetObject("printToolStripButton.Image");
-            printToolStripButton.ImageTransparentColor = Color.Magenta;
-            printToolStripButton.Name = "printToolStripButton";
-            printToolStripButton.Size = new Size(23, 22);
-            printToolStripButton.Text = "&Print";
+            saveToolStripButton.Click += saveToolStripButton_Click;
             // 
             // toolStripSeparator
             // 
             toolStripSeparator.Name = "toolStripSeparator";
             toolStripSeparator.Size = new Size(6, 25);
-            // 
-            // cutToolStripButton
-            // 
-            cutToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            cutToolStripButton.Image = (Image)resources.GetObject("cutToolStripButton.Image");
-            cutToolStripButton.ImageTransparentColor = Color.Magenta;
-            cutToolStripButton.Name = "cutToolStripButton";
-            cutToolStripButton.Size = new Size(23, 22);
-            cutToolStripButton.Text = "C&ut";
             // 
             // copyToolStripButton
             // 
@@ -172,13 +154,87 @@
             pasteToolStripButton.Image = (Image)resources.GetObject("pasteToolStripButton.Image");
             pasteToolStripButton.ImageTransparentColor = Color.Magenta;
             pasteToolStripButton.Name = "pasteToolStripButton";
-            pasteToolStripButton.Size = new Size(23, 20);
+            pasteToolStripButton.Size = new Size(23, 22);
             pasteToolStripButton.Text = "&Paste";
             // 
             // toolStripSeparator1
             // 
             toolStripSeparator1.Name = "toolStripSeparator1";
             toolStripSeparator1.Size = new Size(6, 25);
+            // 
+            // themeToggleToolStripButton
+            // 
+            themeToggleToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            themeToggleToolStripButton.Name = "themeToggleToolStripButton";
+            themeToggleToolStripButton.Size = new Size(50, 22);
+            themeToggleToolStripButton.Text = "🌙 Dark";
+            themeToggleToolStripButton.ToolTipText = "Toggle dark / light theme";
+            themeToggleToolStripButton.Click += ThemeToggleToolStripButton_Click;
+            // 
+            // toolStripSeparator4
+            // 
+            toolStripSeparator4.Name = "toolStripSeparator4";
+            toolStripSeparator4.Size = new Size(6, 25);
+            // 
+            // openSourceFolderToolStripButton
+            // 
+            openSourceFolderToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            openSourceFolderToolStripButton.Image = (Image)resources.GetObject("openSourceFolderToolStripButton.Image");
+            openSourceFolderToolStripButton.Name = "openSourceFolderToolStripButton";
+            openSourceFolderToolStripButton.Size = new Size(23, 20);
+            openSourceFolderToolStripButton.Text = "Open Source Folder";
+            openSourceFolderToolStripButton.ToolTipText = "Open source folder in File Explorer";
+            openSourceFolderToolStripButton.Click += OpenSourceFolderToolStripButton_Click;
+            // 
+            // openLikedFolderToolStripButton
+            // 
+            openLikedFolderToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            openLikedFolderToolStripButton.Image = (Image)resources.GetObject("openLikedFolderToolStripButton.Image");
+            openLikedFolderToolStripButton.Name = "openLikedFolderToolStripButton";
+            openLikedFolderToolStripButton.Size = new Size(23, 20);
+            openLikedFolderToolStripButton.Text = "Open Liked Folder";
+            openLikedFolderToolStripButton.ToolTipText = "Open liked folder in File Explorer";
+            openLikedFolderToolStripButton.Click += OpenLikedFolderToolStripButton_Click;
+            // 
+            // loadLikedFolderToolStripButton
+            // 
+            loadLikedFolderToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            loadLikedFolderToolStripButton.Image = (Image)resources.GetObject("loadLikedFolderToolStripButton.Image");
+            loadLikedFolderToolStripButton.Name = "loadLikedFolderToolStripButton";
+            loadLikedFolderToolStripButton.Size = new Size(23, 20);
+            loadLikedFolderToolStripButton.Text = "Load Liked Folder";
+            loadLikedFolderToolStripButton.ToolTipText = "Select and load a liked folder";
+            loadLikedFolderToolStripButton.Click += LoadLikedFolderToolStripButton_Click;
+            // 
+            // generateVideoToolStripButton
+            // 
+            generateVideoToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            generateVideoToolStripButton.Image = (Image)resources.GetObject("generateVideoToolStripButton.Image");
+            generateVideoToolStripButton.Name = "generateVideoToolStripButton";
+            generateVideoToolStripButton.Size = new Size(23, 20);
+            generateVideoToolStripButton.Text = "Generate Video";
+            generateVideoToolStripButton.ToolTipText = "Generate video from loaded photos using ffmpeg";
+            generateVideoToolStripButton.Click += GenerateVideoToolStripButton_Click;
+            // 
+            // toolStripSeparator2
+            // 
+            toolStripSeparator2.Name = "toolStripSeparator2";
+            toolStripSeparator2.Size = new Size(6, 25);
+            // 
+            // contextMenuToolStripButton
+            // 
+            contextMenuToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            contextMenuToolStripButton.Image = (Image)resources.GetObject("contextMenuToolStripButton.Image");
+            contextMenuToolStripButton.Name = "contextMenuToolStripButton";
+            contextMenuToolStripButton.Size = new Size(23, 20);
+            contextMenuToolStripButton.Text = "Register Context Menu";
+            contextMenuToolStripButton.ToolTipText = "Register Context Menu";
+            contextMenuToolStripButton.Click += contextMenuToolStripButton_Click;
+            // 
+            // toolStripSeparator3
+            // 
+            toolStripSeparator3.Name = "toolStripSeparator3";
+            toolStripSeparator3.Size = new Size(6, 25);
             // 
             // helpToolStripButton
             // 
@@ -189,80 +245,6 @@
             helpToolStripButton.Size = new Size(23, 20);
             helpToolStripButton.Text = "He&lp";
             helpToolStripButton.Click += HelpToolStripButton_Click;
-            // 
-            // toolStripSeparator2
-            // 
-            toolStripSeparator2.Name = "toolStripSeparator2";
-            toolStripSeparator2.Size = new Size(6, 25);
-            // 
-            // contextMenuToolStripButton
-            // 
-            contextMenuToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            contextMenuToolStripButton.Image = AppIcons.RegisterContextMenu();
-            contextMenuToolStripButton.Name = "contextMenuToolStripButton";
-            contextMenuToolStripButton.Size = new Size(23, 22);
-            contextMenuToolStripButton.Text = "Register Context Menu";
-            contextMenuToolStripButton.ToolTipText = "Register Context Menu";
-            contextMenuToolStripButton.Click += contextMenuToolStripButton_Click;
-            // 
-            // toolStripSeparator3
-            // 
-            toolStripSeparator3.Name = "toolStripSeparator3";
-            toolStripSeparator3.Size = new Size(6, 25);
-            // 
-            // themeToggleToolStripButton
-            // 
-            themeToggleToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            themeToggleToolStripButton.Name = "themeToggleToolStripButton";
-            themeToggleToolStripButton.Size = new Size(23, 22);
-            themeToggleToolStripButton.Text = "🌙 Dark";
-            themeToggleToolStripButton.ToolTipText = "Toggle dark / light theme";
-            themeToggleToolStripButton.Click += (s, e) => ThemeToggleToolStripButton_Click(s, e);
-            // 
-            // toolStripSeparator4
-            // 
-            toolStripSeparator4.Name = "toolStripSeparator4";
-            toolStripSeparator4.Size = new Size(6, 25);
-            // 
-            // openSourceFolderToolStripButton
-            // 
-            openSourceFolderToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            openSourceFolderToolStripButton.Image = AppIcons.OpenSourceFolder();
-            openSourceFolderToolStripButton.Name = "openSourceFolderToolStripButton";
-            openSourceFolderToolStripButton.Size = new Size(23, 22);
-            openSourceFolderToolStripButton.Text = "Open Source Folder";
-            openSourceFolderToolStripButton.ToolTipText = "Open source folder in File Explorer";
-            openSourceFolderToolStripButton.Click += OpenSourceFolderToolStripButton_Click;
-            // 
-            // openLikedFolderToolStripButton
-            // 
-            openLikedFolderToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            openLikedFolderToolStripButton.Image = AppIcons.OpenLikedFolder();
-            openLikedFolderToolStripButton.Name = "openLikedFolderToolStripButton";
-            openLikedFolderToolStripButton.Size = new Size(23, 22);
-            openLikedFolderToolStripButton.Text = "Open Liked Folder";
-            openLikedFolderToolStripButton.ToolTipText = "Open liked folder in File Explorer";
-            openLikedFolderToolStripButton.Click += OpenLikedFolderToolStripButton_Click;
-            // 
-            // loadLikedFolderToolStripButton
-            // 
-            loadLikedFolderToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            loadLikedFolderToolStripButton.Image = AppIcons.LoadLikedFolder();
-            loadLikedFolderToolStripButton.Name = "loadLikedFolderToolStripButton";
-            loadLikedFolderToolStripButton.Size = new Size(23, 22);
-            loadLikedFolderToolStripButton.Text = "Load Liked Folder";
-            loadLikedFolderToolStripButton.ToolTipText = "Select and load a liked folder";
-            loadLikedFolderToolStripButton.Click += LoadLikedFolderToolStripButton_Click;
-            // 
-            // generateVideoToolStripButton
-            // 
-            generateVideoToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            generateVideoToolStripButton.Image = AppIcons.GenerateVideo();
-            generateVideoToolStripButton.Name = "generateVideoToolStripButton";
-            generateVideoToolStripButton.Size = new Size(23, 22);
-            generateVideoToolStripButton.Text = "Generate Video";
-            generateVideoToolStripButton.ToolTipText = "Generate video from loaded photos using ffmpeg";
-            generateVideoToolStripButton.Click += GenerateVideoToolStripButton_Click;
             // 
             // splitContainer2
             // 
@@ -278,8 +260,8 @@
             // splitContainer2.Panel2
             // 
             splitContainer2.Panel2.Controls.Add(imageMetaPropertyGrid);
-            splitContainer2.Size = new Size(172, 419);
-            splitContainer2.SplitterDistance = 175;
+            splitContainer2.Size = new Size(181, 909);
+            splitContainer2.SplitterDistance = 379;
             splitContainer2.TabIndex = 2;
             // 
             // settingsPropertyGrid
@@ -288,7 +270,7 @@
             settingsPropertyGrid.Dock = DockStyle.Fill;
             settingsPropertyGrid.Location = new Point(0, 0);
             settingsPropertyGrid.Name = "settingsPropertyGrid";
-            settingsPropertyGrid.Size = new Size(172, 175);
+            settingsPropertyGrid.Size = new Size(181, 379);
             settingsPropertyGrid.TabIndex = 0;
             // 
             // imageMetaPropertyGrid
@@ -297,7 +279,7 @@
             imageMetaPropertyGrid.Dock = DockStyle.Fill;
             imageMetaPropertyGrid.Location = new Point(0, 0);
             imageMetaPropertyGrid.Name = "imageMetaPropertyGrid";
-            imageMetaPropertyGrid.Size = new Size(172, 240);
+            imageMetaPropertyGrid.Size = new Size(181, 526);
             imageMetaPropertyGrid.TabIndex = 0;
             // 
             // splitContainer3
@@ -313,9 +295,53 @@
             // splitContainer3.Panel2
             // 
             splitContainer3.Panel2.Controls.Add(previewFlowPanel);
-            splitContainer3.Size = new Size(618, 450);
-            splitContainer3.SplitterDistance = 490;
+            splitContainer3.Size = new Size(930, 940);
+            splitContainer3.SplitterDistance = 734;
             splitContainer3.TabIndex = 0;
+            // 
+            // scrollPanel
+            // 
+            scrollPanel.Controls.Add(pictureBox1);
+            scrollPanel.Controls.Add(statusStrip1);
+            scrollPanel.Dock = DockStyle.Fill;
+            scrollPanel.Location = new Point(0, 0);
+            scrollPanel.Name = "scrollPanel";
+            scrollPanel.Size = new Size(734, 940);
+            scrollPanel.TabIndex = 1;
+            // 
+            // pictureBox1
+            // 
+            pictureBox1.Dock = DockStyle.Fill;
+            pictureBox1.Location = new Point(0, 0);
+            pictureBox1.Name = "pictureBox1";
+            pictureBox1.Size = new Size(734, 918);
+            pictureBox1.TabIndex = 0;
+            pictureBox1.TabStop = false;
+            // 
+            // statusStrip1
+            // 
+            statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripStatusLabelGpsLink, toolStripStatusLabel1 });
+            statusStrip1.Location = new Point(0, 918);
+            statusStrip1.Name = "statusStrip1";
+            statusStrip1.Size = new Size(734, 22);
+            statusStrip1.TabIndex = 1;
+            statusStrip1.Text = "statusStrip1";
+            // 
+            // toolStripStatusLabelGpsLink
+            // 
+            toolStripStatusLabelGpsLink.IsLink = true;
+            toolStripStatusLabelGpsLink.LinkBehavior = LinkBehavior.HoverUnderline;
+            toolStripStatusLabelGpsLink.Name = "toolStripStatusLabelGpsLink";
+            toolStripStatusLabelGpsLink.Size = new Size(0, 17);
+            toolStripStatusLabelGpsLink.ToolTipText = "Open location in Google Maps";
+            toolStripStatusLabelGpsLink.Visible = false;
+            toolStripStatusLabelGpsLink.Click += ToolStripStatusLabelGpsLink_Click;
+            // 
+            // toolStripStatusLabel1
+            // 
+            toolStripStatusLabel1.Name = "toolStripStatusLabel1";
+            toolStripStatusLabel1.Size = new Size(719, 17);
+            toolStripStatusLabel1.Spring = true;
             // 
             // previewFlowPanel
             // 
@@ -326,59 +352,15 @@
             previewFlowPanel.Location = new Point(0, 0);
             previewFlowPanel.Name = "previewFlowPanel";
             previewFlowPanel.Padding = new Padding(4);
-            previewFlowPanel.Size = new Size(124, 450);
+            previewFlowPanel.Size = new Size(192, 940);
             previewFlowPanel.TabIndex = 0;
             previewFlowPanel.WrapContents = false;
-            // 
-            // scrollPanel
-            // 
-            scrollPanel.Controls.Add(pictureBox1);
-            scrollPanel.Controls.Add(statusStrip1);
-            scrollPanel.Dock = DockStyle.Fill;
-            scrollPanel.Location = new Point(0, 0);
-            scrollPanel.Name = "scrollPanel";
-            scrollPanel.Size = new Size(490, 450);
-            scrollPanel.TabIndex = 1;
-            // 
-            // pictureBox1
-            // 
-            pictureBox1.Dock = DockStyle.Fill;
-            pictureBox1.Location = new Point(0, 0);
-            pictureBox1.Name = "pictureBox1";
-            pictureBox1.Size = new Size(618, 428);
-            pictureBox1.TabIndex = 0;
-            pictureBox1.TabStop = false;
-            // 
-            // statusStrip1
-            // 
-            statusStrip1.Items.AddRange(new ToolStripItem[] { toolStripStatusLabelGpsLink, toolStripStatusLabel1 });
-            statusStrip1.Location = new Point(0, 428);
-            statusStrip1.Name = "statusStrip1";
-            statusStrip1.Size = new Size(618, 22);
-            statusStrip1.TabIndex = 1;
-            statusStrip1.Text = "statusStrip1";
-            // 
-            // toolStripStatusLabelGpsLink
-            // 
-            toolStripStatusLabelGpsLink.Name = "toolStripStatusLabelGpsLink";
-            toolStripStatusLabelGpsLink.Size = new Size(0, 17);
-            toolStripStatusLabelGpsLink.IsLink = true;
-            toolStripStatusLabelGpsLink.LinkBehavior = LinkBehavior.HoverUnderline;
-            toolStripStatusLabelGpsLink.Visible = false;
-            toolStripStatusLabelGpsLink.ToolTipText = "Open location in Google Maps";
-            toolStripStatusLabelGpsLink.Click += ToolStripStatusLabelGpsLink_Click;
-            // 
-            // toolStripStatusLabel1
-            // 
-            toolStripStatusLabel1.Name = "toolStripStatusLabel1";
-            toolStripStatusLabel1.Size = new Size(0, 17);
-            toolStripStatusLabel1.Spring = true;
             // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 450);
+            ClientSize = new Size(1121, 940);
             Controls.Add(splitContainer1);
             Name = "MainForm";
             Text = "PhotoLiker";
@@ -413,9 +395,7 @@
         private ToolStripButton newToolStripButton;
         private ToolStripButton openToolStripButton;
         private ToolStripButton saveToolStripButton;
-        private ToolStripButton printToolStripButton;
         private ToolStripSeparator toolStripSeparator;
-        private ToolStripButton cutToolStripButton;
         private ToolStripButton copyToolStripButton;
         private ToolStripButton pasteToolStripButton;
         private ToolStripSeparator toolStripSeparator1;

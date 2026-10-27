@@ -23,20 +23,22 @@ namespace PhotoLikerUI
                 .Select(e =>
                 {
                     var category = ExifTagMap.GetCategory(e);
-                    return new MetadataPropertyDescriptor(e.Name, e.Value, category.Name, category.IsBrowsable);
+                    return new MetadataPropertyDescriptor(e.Name, e.Value, category.Name, category.IsBrowsable, description: MetadataDescriptions.For(e));
                 })
                 .Cast<PropertyDescriptor>()
                 .ToList();
 
             foreach (var e in _metadata.GpsDecoded)
                 props.Add(new MetadataPropertyDescriptor(
-                    e.Name, e.Value, ImageHelperStrings.CategoryGPSDecoded, extraAttributes: ToAttributes(e.ExtraAttributeTypes)));
+                    e.Name, e.Value, ImageHelperStrings.CategoryGPSDecoded, extraAttributes: ToAttributes(e.ExtraAttributeTypes),
+                    description: MetadataDescriptions.ForDecoded(e.Name)));
 
             props.Add(new MetadataPropertyDescriptor(
                 ImageHelperStrings.AllMetadataProperty,
                 _metadata.AllEntriesText,
                 ImageHelperStrings.CategoryDebug,
-                extraAttributes: [new EditorAttribute(typeof(MultilineTextViewEditor), typeof(System.Drawing.Design.UITypeEditor))]));
+                extraAttributes: [new EditorAttribute(typeof(MultilineTextViewEditor), typeof(System.Drawing.Design.UITypeEditor))],
+                description: MetadataDescriptions.AllMetadata));
 
             return new PropertyDescriptorCollection([.. props]);
         }
@@ -71,16 +73,22 @@ namespace PhotoLikerUI
             string value,
             string category = ImageHelperStrings.CategoryExif,
             bool isBrowsable = true,
-            Attribute[]? extraAttributes = null
-            ) : base(name, BuildAttributes(category, isBrowsable, extraAttributes))
+            Attribute[]? extraAttributes = null,
+            string? description = null
+            ) : base(name, BuildAttributes(category, isBrowsable, extraAttributes, description))
         {
             _value = value;
         }
 
-        private static Attribute[] BuildAttributes(string category, bool isBrowsable, Attribute[]? extra)
+        // The description is what the help pane under the grid shows for the selected row
+        private static Attribute[] BuildAttributes(string category, bool isBrowsable, Attribute[]? extra, string? description)
         {
-            Attribute[] baseAttrs = [new CategoryAttribute(category), new BrowsableAttribute(isBrowsable)];
-            return extra is { Length: > 0 } ? [.. baseAttrs, .. extra] : baseAttrs;
+            List<Attribute> attributes = [new CategoryAttribute(category), new BrowsableAttribute(isBrowsable)];
+            if (!string.IsNullOrEmpty(description))
+                attributes.Add(new DescriptionAttribute(description));
+            if (extra is { Length: > 0 })
+                attributes.AddRange(extra);
+            return [.. attributes];
         }
 
         public override Type PropertyType => typeof(string);

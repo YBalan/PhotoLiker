@@ -8,7 +8,11 @@ namespace PhotoLiker.Search
     /// </summary>
     public sealed class PhotoIndex : IDisposable
     {
-        /// <summary>Bump when the layout of the file changes: an index is only a cache, an old one is simply rebuilt.</summary>
+        /// <summary>
+        /// Bump when the layout of the file changes in a way that can not be added to: an index is only a cache, an old one is
+        /// simply rebuilt. Columns that are only added (like the date of a photo) are added to an existing file instead, see
+        /// <see cref="AddMissingColumns"/>, so that an index that took hours to make survives.
+        /// </summary>
         private const int SchemaVersion = 1;
 
         private readonly SqliteConnection _db;
@@ -46,6 +50,9 @@ namespace PhotoLiker.Search
         public int FaceCount { get { lock (_gate) return _photos.Values.Sum(p => p.Faces.Count); } }
 
         public int FailedCount { get { lock (_gate) return _photos.Values.Count(p => p.Failure is not null); } }
+
+        /// <summary>Photos whose date has not been worked out by the current rules yet (an index made before dates were kept): "Update index" reads them.</summary>
+        public int DatesPending { get { lock (_gate) return _photos.Values.Count(p => p.Clip is not null && p.Date.Version < PhotoDates.Version); } }
 
         /// <summary>All photos at this moment; later changes do not show in the array.</summary>
         public IndexedPhoto[] Snapshot()
@@ -99,6 +106,27 @@ namespace PhotoLiker.Search
                         face.Id = InsertFace(photo.Id, face);
 
                     _photos[photo.RelativePath] = photo;
+                }
+                transaction.Commit();
+            }
+        }
+
+        /// <summary>Stores the dates of photos that are already in the index, leaving everything else about them alone.</summary>
+        public void SaveDates(IReadOnlyCollection<(IndexedPhoto Photo, PhotoDate Date)> dates)
+        {
+            if (dates.Count == 0)
+                return;
+
+            lock (_gate)
+            {
+                using var transaction = _db.BeginTransaction();
+                foreach (var (photo, date) in dates)
+                {
+                    Execute(
+                        "UPDATE photos SET taken = $taken, taken_source = $source, date_version = $version WHERE id = $id",
+                        ("$taken", date.Taken is { } taken ? (object)taken.Ticks : DBNull.Value),
+                        ("$source", (int)date.Source), ("$version", date.Version), ("$id", photo.Id));
+                    photo.Date = date;
                 }
                 transaction.Commit();
             }
@@ -255,8 +283,12 @@ namespace PhotoLiker.Search
                     clip BLOB,
                     clip_version INTEGER NOT NULL,
                     face_version INTEGER NOT NULL,
-                    failure TEXT)
+                    failure TEXT,
+                    taken INTEGER,
+                    taken_source INTEGER NOT NULL DEFAULT 0,
+                    date_version INTEGER NOT NULL DEFAULT 0)
                 """);
+            AddMissingColumns();
             Execute("""
                 CREATE TABLE IF NOT EXISTS faces (
                     id INTEGER PRIMARY KEY,
@@ -269,13 +301,33 @@ namespace PhotoLiker.Search
             Execute("CREATE INDEX IF NOT EXISTS faces_photo ON faces(photo_id)");
         }
 
+        /// <summary>An index file made before the dates were kept has no columns for them: they are added, the photos keep everything they have.</summary>
+        private void AddMissingColumns()
+        {
+            var have = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var info = _db.CreateCommand())
+            {
+                info.CommandText = "PRAGMA table_info(photos)";
+                using var reader = info.ExecuteReader();
+                while (reader.Read())
+                    have.Add(reader.GetString(1));
+            }
+
+            if (!have.Contains("taken"))
+                Execute("ALTER TABLE photos ADD COLUMN taken INTEGER");
+            if (!have.Contains("taken_source"))
+                Execute("ALTER TABLE photos ADD COLUMN taken_source INTEGER NOT NULL DEFAULT 0");
+            if (!have.Contains("date_version"))
+                Execute("ALTER TABLE photos ADD COLUMN date_version INTEGER NOT NULL DEFAULT 0");
+        }
+
         private void Load()
         {
             var byId = new Dictionary<long, IndexedPhoto>();
 
             using (var photos = _db.CreateCommand())
             {
-                photos.CommandText = "SELECT id, path, length, modified, clip, clip_version, face_version, failure FROM photos";
+                photos.CommandText = "SELECT id, path, length, modified, clip, clip_version, face_version, failure, taken, taken_source, date_version FROM photos";
                 using var reader = photos.ExecuteReader();
                 while (reader.Read())
                 {
@@ -286,6 +338,7 @@ namespace PhotoLiker.Search
                         ClipVersion = reader.GetInt32(5),
                         FaceVersion = reader.GetInt32(6),
                         Failure = reader.IsDBNull(7) ? null : reader.GetString(7),
+                        Date = new PhotoDate(reader.IsDBNull(8) ? null : new DateTime(reader.GetInt64(8)), (DateSource)reader.GetInt32(9), reader.GetInt32(10)),
                     };
                     byId[photo.Id] = photo;
                     _photos[photo.RelativePath] = photo;
@@ -320,13 +373,17 @@ namespace PhotoLiker.Search
         {
             using var command = _db.CreateCommand();
             command.CommandText = """
-                INSERT INTO photos (path, length, modified, clip, clip_version, face_version, failure)
-                VALUES ($path, $length, $modified, $clip, $clipVersion, $faceVersion, $failure)
+                INSERT INTO photos (path, length, modified, clip, clip_version, face_version, failure, taken, taken_source, date_version)
+                VALUES ($path, $length, $modified, $clip, $clipVersion, $faceVersion, $failure, $taken, $takenSource, $dateVersion)
                 ON CONFLICT(path) DO UPDATE SET
                     length = excluded.length, modified = excluded.modified, clip = excluded.clip,
-                    clip_version = excluded.clip_version, face_version = excluded.face_version, failure = excluded.failure
+                    clip_version = excluded.clip_version, face_version = excluded.face_version, failure = excluded.failure,
+                    taken = excluded.taken, taken_source = excluded.taken_source, date_version = excluded.date_version
                 RETURNING id
                 """;
+            command.Parameters.AddWithValue("$taken", photo.Date.Taken is { } taken ? (object)taken.Ticks : DBNull.Value);
+            command.Parameters.AddWithValue("$takenSource", (int)photo.Date.Source);
+            command.Parameters.AddWithValue("$dateVersion", photo.Date.Version);
             command.Parameters.AddWithValue("$path", photo.RelativePath);
             command.Parameters.AddWithValue("$length", photo.Length);
             command.Parameters.AddWithValue("$modified", photo.ModifiedTicks);

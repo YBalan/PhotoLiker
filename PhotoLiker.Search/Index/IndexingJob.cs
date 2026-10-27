@@ -45,9 +45,15 @@ namespace PhotoLiker.Search
             var found = await Task.Run(() => PhotoScanner.Scan(index.Root, recursive: true, extensions, excludedFolder), cancellationToken);
 
             var removed = RemoveVanished(index, found);
-            var work = ListWork(index, found);
-            if (work.Count == 0)
-                return new IndexSummary(0, 0, 0, removed, clock.Elapsed, Cancelled: false);
+            var (work, dateWork) = ListWork(index, found);
+
+            // Photos that are indexed but have no date yet (an index made before dates were kept): quick, needs no models
+            var datesRead = 0;
+            if (dateWork.Count > 0)
+                datesRead = await Task.Run(() => ReadDates(index, dateWork, progress, cancellationToken), CancellationToken.None);
+
+            if (work.Count == 0 || cancellationToken.IsCancellationRequested)
+                return new IndexSummary(0, 0, 0, removed, clock.Elapsed, cancellationToken.IsCancellationRequested, DatesRead: datesRead);
 
             if (!models.IsDownloaded)
                 await models.EnsureDownloadedAsync(new DownloadReporter(progress), cancellationToken);
@@ -64,7 +70,7 @@ namespace PhotoLiker.Search
             await Task.Run(() => pipeline.Run(cancellationToken), CancellationToken.None);
 
             return new IndexSummary(pipeline.Done - pipeline.Failed, pipeline.Failed, pipeline.Faces, removed, clock.Elapsed,
-                cancellationToken.IsCancellationRequested, pipeline.Times);
+                cancellationToken.IsCancellationRequested, pipeline.Times, datesRead);
         }
 
         /// <summary>Forgets the photos that are gone from the disk. Not when nothing was found: the folder may just be unreachable.</summary>
@@ -85,10 +91,17 @@ namespace PhotoLiker.Search
             return vanished.Count;
         }
 
-        /// <summary>The photos that are not indexed yet, changed since, or were indexed by older models; in path order.</summary>
-        private static List<WorkItem> ListWork(PhotoIndex index, IEnumerable<PhotoFile> found)
+        /// <summary>A photo that is indexed and unchanged, and only lacks its date.</summary>
+        private sealed record DateWork(PhotoFile File, IndexedPhoto Photo);
+
+        /// <summary>
+        /// The photos that are not indexed yet, changed since, or were indexed by older models, in path order; and apart from
+        /// them the photos that only need their date read (which does not take the models, so it is a separate, quick job).
+        /// </summary>
+        private static (List<WorkItem> Work, List<DateWork> DateWork) ListWork(PhotoIndex index, IEnumerable<PhotoFile> found)
         {
             var work = new List<WorkItem>();
+            var dateWork = new List<DateWork>();
             foreach (var file in found.OrderBy(f => f.OriginalFilePath, StringComparer.OrdinalIgnoreCase))
             {
                 if (!index.TryGetRelativePath(file.OriginalFilePath, out var relative))
@@ -100,10 +113,70 @@ namespace PhotoLiker.Search
                 var needClip = !unchanged || existing!.ClipVersion < ClipVersion;
                 var needFaces = !unchanged || existing!.FaceVersion < FaceVersion;
                 if (needClip || needFaces)
-                    work.Add(new WorkItem(file, relative, unchanged ? existing : null, needClip, needFaces));
+                    work.Add(new WorkItem(file, relative, unchanged ? existing : null, needClip, needFaces)); // its date is read on the way
+                else if (existing!.Date.Version < PhotoDates.Version)
+                    dateWork.Add(new DateWork(file, existing));
             }
-            return work;
+            return (work, dateWork);
         }
+
+        private const int DateReaders = 8;   // reading a header is waiting for the network, not for the processor (a router tops out at about 30 photos a second, more readers do not help)
+        private const int DateChunkSize = 200;
+
+        /// <summary>
+        /// Reads the date of photos that are in the index without one: only the start of each file, no decoding, so it takes
+        /// minutes for a library where indexing takes hours. Returns how many were done; a stop keeps what is finished.
+        /// </summary>
+        private static int ReadDates(PhotoIndex index, IReadOnlyList<DateWork> work, IProgress<IndexProgress>? progress, CancellationToken token)
+        {
+            var clock = Stopwatch.StartNew();
+            var now = DateTime.Now;
+            var done = 0;
+            progress?.Report(new IndexProgress(IndexPhase.ReadingDates, string.Empty, 0, work.Count, 0, 0, 0, null));
+
+            foreach (var chunk in work.Chunk(DateChunkSize))
+            {
+                if (token.IsCancellationRequested)
+                    break;
+
+                var dates = new (IndexedPhoto Photo, PhotoDate Date)?[chunk.Length];
+                Parallel.For(0, chunk.Length, new ParallelOptions { MaxDegreeOfParallelism = DateReaders }, i =>
+                {
+                    if (token.IsCancellationRequested)
+                        return;
+                    if (ReadDate(chunk[i].File, now) is { } date)
+                        dates[i] = (chunk[i].Photo, date);
+                });
+
+                var ready = dates.Where(d => d is not null).Select(d => d!.Value).ToList();
+                index.SaveDates(ready);
+                done += ready.Count;
+
+                var rate = clock.Elapsed.TotalSeconds > 0 ? done / clock.Elapsed.TotalSeconds : 0;
+                TimeSpan? remaining = done >= 20 && rate > 0 ? TimeSpan.FromSeconds((work.Count - done) / rate) : null;
+                progress?.Report(new IndexProgress(IndexPhase.ReadingDates, string.Empty, done, work.Count, 0, 0, rate, remaining));
+            }
+            return done;
+        }
+
+        /// <summary>The date of a photo file, read from the start of the file; null if the file can not be read now (it is tried again next time).</summary>
+        private static PhotoDate? ReadDate(PhotoFile file, DateTime now)
+        {
+            try
+            {
+                using var stream = new FileStream(
+                    file.OriginalFilePath, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete, bufferSize: 1 << 16, FileOptions.RandomAccess);
+                return ResolveDate(ExifReader.Read(stream), file, now);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        private static PhotoDate ResolveDate(ExifDates exif, PhotoFile file, DateTime now) =>
+            PhotoDates.Resolve(exif, PhotoDates.FileTime(file.CreationTimeUtc), PhotoDates.FileTime(file.LastWriteTimeUtc), now);
 
         // ── the pipeline ───────────────────────────────────────────────────
 
@@ -118,6 +191,7 @@ namespace PhotoLiker.Search
             public bool NeedFaces { get; } = needFaces;
 
             public byte[]? FileBytes;
+            public PhotoDate Date = PhotoDate.NotRead; // worked out by the reader, from the bytes it has just read
             public DecodedPhoto? Decoded;
             public float[]? ClipInput;
             public float[]? DetectInput;
@@ -243,6 +317,7 @@ namespace PhotoLiker.Search
                         {
                             item.FileBytes = FileReading.ReadAllBytesShared(item.File.OriginalFilePath);
                             Interlocked.Add(ref _readTicks, Stopwatch.GetTimestamp() - started);
+                            item.Date = ResolveDate(ExifReader.Read(new MemoryStream(item.FileBytes, writable: false)), item.File, DateTime.Now);
                         }
                         catch (Exception ex) when (ex is not OperationCanceledException)
                         {
@@ -455,6 +530,7 @@ namespace PhotoLiker.Search
                     ClipVersion = ClipVersion,
                     FaceVersion = FaceVersion,
                     Failure = item.Failure,
+                    Date = item.Date,
                 };
                 if (item.Failure is not null)
                     return photo;

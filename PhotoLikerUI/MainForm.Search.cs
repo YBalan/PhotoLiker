@@ -68,7 +68,8 @@ namespace PhotoLikerUI
             _searchButton = new ToolStripButton(SearchStrings.SearchButton)
             {
                 Name = "searchToolStripButton",
-                DisplayStyle = ToolStripItemDisplayStyle.Text,
+                DisplayStyle = ToolStripItemDisplayStyle.Image, // the text is still the accessible name
+                Image = AppIcons.Search(),
                 ToolTipText = SearchStrings.SearchTooltip,
             };
             _searchButton.Click += (_, _) => RunSearch(_searchBox.Text);
@@ -93,7 +94,8 @@ namespace PhotoLikerUI
             _facesButton = new ToolStripButton(SearchStrings.FacesButton)
             {
                 Name = "facesToolStripButton",
-                DisplayStyle = ToolStripItemDisplayStyle.Text,
+                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                Image = AppIcons.FaceRecognition(),
                 ToolTipText = SearchStrings.FacesTooltip,
                 CheckOnClick = true,
             };
@@ -120,11 +122,11 @@ namespace PhotoLikerUI
 
             var strip = new ToolStrip { Name = "searchToolStrip", GripStyle = ToolStripGripStyle.Hidden, Dock = DockStyle.Top };
             strip.Items.AddRange([
+                _transferButton,
+                new ToolStripSeparator(),
                 _indexButton, _indexProgress, _indexLabel,
                 new ToolStripSeparator(),
                 _searchBox, _searchButton, _closeResultsButton, _similarButton, _facesButton,
-                new ToolStripSeparator(),
-                _transferButton,
             ]);
             splitContainer3.Panel1.Controls.Add(strip);
 
@@ -329,7 +331,11 @@ namespace PhotoLikerUI
             if (summary.Cancelled)
                 return string.Format(SearchStrings.StatusIndexStopped, summary.Indexed + summary.Failed);
             if (summary.Indexed + summary.Failed == 0)
-                return string.Format(SearchStrings.StatusIndexUpToDate, removed);
+            {
+                return summary.DatesRead > 0
+                    ? string.Format(SearchStrings.StatusDatesRead, summary.DatesRead, FormatDuration(summary.Elapsed), removed)
+                    : string.Format(SearchStrings.StatusIndexUpToDate, removed);
+            }
 
             var failed = summary.Failed > 0 ? string.Format(SearchStrings.StatusIndexFailedPart, summary.Failed) : string.Empty;
             return string.Format(SearchStrings.StatusIndexDone, summary.Indexed, summary.Faces, FormatDuration(summary.Elapsed), failed + removed);
@@ -354,6 +360,14 @@ namespace PhotoLikerUI
                     ShowBar(progress.Done, progress.Total);
                     _indexLabel.Text = progress.Message;
                     _indexLabel.ToolTipText = progress.Message;
+                    break;
+
+                case IndexPhase.ReadingDates:
+                    ShowBar(progress.Done, progress.Total);
+                    _indexLabel.Text = progress.Remaining is { } left
+                        ? string.Format(SearchStrings.IndexDatesProgressFormat, progress.Done, progress.Total, progress.PhotosPerSecond, FormatDuration(left))
+                        : string.Format(SearchStrings.IndexDatesProgressNoEstimateFormat, progress.Done, progress.Total);
+                    _indexLabel.ToolTipText = _indexLabel.Text;
                     break;
 
                 default:
@@ -408,8 +422,8 @@ namespace PhotoLikerUI
             if (search is null || text.Length == 0)
                 return;
 
-            // The name of a person is searched in the faces and needs no text model
-            if (!_models.ClipDownloaded && !search.People.TryFindName(text, out _))
+            // The name of a person is searched in the faces, and a date in the dates: neither needs the text model
+            if (!_models.ClipDownloaded && search.NeedsTextModel(text))
             {
                 SetStatus(SearchStrings.StatusModelMissing);
                 return;
@@ -451,7 +465,7 @@ namespace PhotoLikerUI
         {
             if (result.Hits.Count == 0)
             {
-                SetStatus(string.Format(SearchStrings.StatusNothingFound, result.Description));
+                SetStatus(string.Format(SearchStrings.StatusNothingFound, result.Description) + DateNotes(result));
                 return;
             }
 
@@ -485,9 +499,24 @@ namespace PhotoLikerUI
                 _indexByPath[files[i].OriginalFilePath] = i;
 
             UpdateSearchControls();
-            SetStatus(string.Format(SearchStrings.StatusResultsShown, result.Description, files.Count, result.SearchedPhotos));
+            SetStatus(string.Format(SearchStrings.StatusResultsShown, result.Description, files.Count, result.SearchedPhotos) + DateNotes(result));
             LoadFirstPhoto(files[0].OriginalFilePath);
             settingsPropertyGrid.Refresh();
+        }
+
+        /// <summary>
+        /// What to know about the dates behind a search that was limited by a date: how many photos are dated by their file
+        /// instead of by the camera, and that an index made before dates were kept still has to read them.
+        /// </summary>
+        private string DateNotes(SearchResult result)
+        {
+            if (result.Dates is null)
+                return string.Empty;
+
+            var notes = result.FileDated > 0 ? string.Format(SearchStrings.StatusFileDatedNote, result.FileDated) : string.Empty;
+            if (_folderSearch?.Index.DatesPending is > 0 and var pending)
+                notes += string.Format(SearchStrings.StatusDatesPendingNote, pending);
+            return notes;
         }
 
         /// <summary>Leaves the results and shows the folder again, at the photo that was shown before.</summary>

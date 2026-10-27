@@ -14,6 +14,7 @@
         private IReadOnlyList<GroupLegendEntry> _groupLegend = []; // all group folders, drawn as the legend
         private bool _likeInProgress; // a like / group copy is running
         private int _folderGeneration;
+        private bool _jumpedFromGrid; // the photo being shown was chosen by typing its index in the settings grid
         private string _imageMessage = string.Empty; // shown in the viewer while there is no image (loading / failed)
 
         // Zoom / pan
@@ -392,10 +393,16 @@
             }
         }
 
-        // The settings that decide which photos are listed: changing one relists the current folder
+        // CurrentIndex jumps to that photo; the settings that decide which photos are listed relist the current folder
         private void SettingsPropertyGrid_PropertyValueChanged(object? s, PropertyValueChangedEventArgs e)
         {
             var name = e.ChangedItem?.PropertyDescriptor?.Name;
+            if (name == nameof(Settings.CurrentIndex))
+            {
+                ShowTypedIndex();
+                return;
+            }
+
             if (name != nameof(Settings.GoThroughSubFolders) && name != nameof(Settings.Extensions))
                 return;
 
@@ -752,7 +759,27 @@
                     }
                     return true;
                 }
-                else if (keyData == Keys.O) // fit image to screen (so group O has no key)
+                else if (keyData == Keys.Home)
+                {
+                    ShowEdgePhoto(last: false);
+                    return true;
+                }
+                else if (keyData == Keys.End)
+                {
+                    ShowEdgePhoto(last: true);
+                    return true;
+                }
+                else if (keyData == Keys.PageDown)
+                {
+                    ShowNeighbourMonth(forward: true);
+                    return true;
+                }
+                else if (keyData == Keys.PageUp)
+                {
+                    ShowNeighbourMonth(forward: false);
+                    return true;
+                }
+                else if (keyData is Keys.D0 or Keys.NumPad0) // fit image to screen (0 is not a group key, group keys are 1-9 and A-Z)
                 {
                     FitImageToScreen();
                     return true;
@@ -768,6 +795,79 @@
                 {
                     return base.ProcessCmdKey(ref msg, keyData);
                 }
+        }
+
+        /// <summary>
+        /// A number was typed into the CurrentIndex row: shows that photo, or the nearest end of the list if the number
+        /// is outside it. The row stays selected, so the next number can be typed straight away.
+        /// </summary>
+        private void ShowTypedIndex()
+        {
+            var files = _currentConfig.Files;
+            if (files.Count == 0)
+                return;
+
+            var index = Math.Clamp(_currentConfig.CurrentIndex, 0, files.Count - 1);
+            var target = files[index].OriginalFilePath;
+            if (!string.Equals(target, pictureBox1.Tag as string, StringComparison.Ordinal))
+            {
+                _jumpedFromGrid = true;
+                try
+                {
+                    LoadImage(target);
+                }
+                finally
+                {
+                    _jumpedFromGrid = false;
+                }
+            }
+
+            _currentConfig.CurrentIndex = index; // the typed number may have been outside the list
+            settingsPropertyGrid.Refresh();
+        }
+
+        /// <summary>
+        /// PageDown / PageUp: shows the first photo of the next / the previous month of the list (see <see cref="MonthNavigation"/>).
+        /// A photo's month is the one of its date in the index (the EXIF date, see PhotoDates) when the folder is indexed, otherwise
+        /// the one of its file.
+        /// </summary>
+        private void ShowNeighbourMonth(bool forward)
+        {
+            var files = _currentConfig.Files;
+            if (pictureBox1.Tag is not string current)
+                return;
+
+            var index = files.IndexOf(current);
+            if (index < 0)
+                return;
+
+            var now = DateTime.Now;
+            var target = MonthNavigation.FindMonthStart(files, index, photo => MonthOf(photo, now), forward);
+            if (target < 0)
+            {
+                SetStatus(forward ? MainFormStrings.StatusNoNextMonth : MainFormStrings.StatusNoPreviousMonth);
+                return;
+            }
+
+            LoadImage(files[target].OriginalFilePath);
+            SetStatus(string.Format(MainFormStrings.StatusMonthShown, MonthNavigation.Describe(MonthOf(files[target], now)), target + 1, files.Count));
+        }
+
+        private int? MonthOf(PhotoFile photo, DateTime now) =>
+            MonthNavigation.MonthOf(
+                _folderSearch?.Index.FindFullPath(photo.OriginalFilePath)?.Date.Taken
+                ?? PhotoLiker.Search.PhotoDates.FromFile(photo, now));
+
+        /// <summary>Home / End: shows the first / the last photo of the list.</summary>
+        private void ShowEdgePhoto(bool last)
+        {
+            var files = _currentConfig.Files;
+            if (files.Count == 0)
+                return;
+
+            var target = files[last ? files.Count - 1 : 0].OriginalFilePath;
+            if (!string.Equals(target, pictureBox1.Tag as string, StringComparison.Ordinal))
+                LoadImage(target);
         }
 
         private void CopyToolStripButton_Click(object? sender, EventArgs e) => CopyCurrentPhotoToClipboard();
@@ -1144,6 +1244,8 @@
                 UpdateSavedInInfo();
                 UpdateFaces();
                 settingsPropertyGrid.Refresh(); // Refresh the property grid to show the new image properties
+                if (!_jumpedFromGrid)
+                    ScrollPropertyGridToTop(settingsPropertyGrid); // not when the photo was chosen in the grid: its row stays selected
                 UpdateWindowTitle(file);
 
                 if (_photoCache.TryGet(file, out var entry))
@@ -1443,6 +1545,16 @@
             {
                 SetStatus(string.Format(MainFormStrings.StatusContextMenuError, ex.Message));
             }
+        }
+
+        private void newToolStripButton_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void saveToolStripButton_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

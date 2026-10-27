@@ -16,6 +16,9 @@ namespace PhotoLikerUI
         public const string IndexProgressFormat          = "{0:N0} / {1:N0}   {2:0.0}/s   {3} left";
         public const string IndexProgressNoEstimateFormat = "{0:N0} / {1:N0}";
         public const string IndexProgressTooltipFormat   = "{0:N0} of {1:N0} photos done, {2:N0} faces found so far";
+        public const string IndexDatesProgressFormat     = "Reading dates: {0:N0} / {1:N0}   {2:0}/s   {3} left";
+        public const string IndexDatesProgressNoEstimateFormat = "Reading dates: {0:N0} / {1:N0}";
+        public const string StatusDatesRead              = "Read the dates of {0:N0} photos in {1}{2}.";
         public const string StatusIndexDone              = "Indexed {0:N0} photos with {1:N0} faces in {2}{3}.";
         public const string StatusIndexFailedPart        = " ({0:N0} could not be read)";
         public const string StatusIndexUpToDate          = "The index is up to date{0}.";
@@ -35,8 +38,8 @@ namespace PhotoLikerUI
         public const string ClosingWhileIndexing         = "The folder is still being indexed. Stop indexing and close PhotoLiker?\n\nWhat is finished is kept, the next run continues from there.";
 
         // Moving the index to another computer
-        public const string IndexFileButton              = "Index file";
-        public const string IndexFileTooltip             = "Save the index to a file to use it on another computer, or load an index that was made on another computer";
+        public const string IndexFileButton              = "I/E";
+        public const string IndexFileTooltip             = "Import / Export the index: save it to a file to use it on another computer, or load an index that was made on another computer";
         public const string ExportIndexMenu              = "Export index...";
         public const string ImportIndexMenu              = "Import index...";
         public const string IndexFileFilter              = "PhotoLiker index (*.plindex)|*.plindex|All files (*.*)|*.*";
@@ -54,9 +57,12 @@ namespace PhotoLikerUI
         public const string StatusImportBusy             = "Stop indexing before importing an index.";
 
         // Search box and results
-        public const string SearchPlaceholder            = "Search: beach, birthday cake, a person's name...";
+        public const string SearchPlaceholder            = "Search: beach, Mom, September 1, 2009...";
         public const string SearchButton                 = "Search";
-        public const string SearchTooltip                = "Describe what you look for, or type the name of a person you have named";
+        public const string SearchTooltip                =
+            "Describe what you look for, or type the name of a person you have named.\n" +
+            "A date limits the search to the photos taken then: September 1 (in every year), September 2009, 2009, 2009-2011.\n" +
+            "Combine them: beach September 2009, Mom 2005. Put the text in quotes to search for the words only.";
         public const string SimilarButton                = "More like this";
         public const string SimilarTooltip               = "Find photos that look like the one shown";
         public const string CloseResultsButton           = "Close results";
@@ -72,6 +78,8 @@ namespace PhotoLikerUI
         public const string ResultsTitleWeakFormat       = "Search: {0} - no strong match, the {1:N0} closest photos";
         public const string ResultsPartialNote           = " (indexing is not finished)";
         public const string StatusResultsShown           = "{0}: {1:N0} of {2:N0} indexed photos.";
+        public const string StatusFileDatedNote          = " {0:N0} of them are dated by their file, because the camera's date is missing or wrong.";
+        public const string StatusDatesPendingNote       = " The dates of {0:N0} photos have not been read yet: '" + UpdateIndexButton + "' reads them (it is quick).";
 
         // Faces
         public const string FaceWhoIsThis                = "Who is this?";

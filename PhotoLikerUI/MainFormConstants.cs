@@ -58,6 +58,9 @@ namespace PhotoLikerUI
 
         // Keyboard
         public const string StatusKeyPressed             = "Key pressed: {0}";
+        public const string StatusMonthShown             = "{0}: photo {1:N0} of {2:N0}.";
+        public const string StatusNoNextMonth            = "This is the last month of the list.";
+        public const string StatusNoPreviousMonth        = "This is the first month of the list.";
 
         // Theme toggle button labels
         public const string ThemeDarkLabel               = "\U0001f319 Dark";

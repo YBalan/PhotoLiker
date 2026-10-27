@@ -5,6 +5,11 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  # Run it by hand from the Actions tab on any branch (e.g. to get an installer of a feature branch)
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -37,3 +42,28 @@ jobs:
         with:
           name: PhotoLikerUI
           path: PhotoLikerUI.zip
+
+      # The installer: the same script that is run by hand (installer\build-installer.ps1). It publishes the app again
+      # (framework-dependent, win-x64) into the same folder, which is why it comes after the zip.
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if ((Get-Command ISCC.exe -ErrorAction SilentlyContinue) -or (Test-Path $iscc)) {
+            Write-Host 'Inno Setup is already on this runner.'
+          } else {
+            choco install innosetup --no-progress -y
+            if ($LASTEXITCODE -ne 0) { throw "Installing Inno Setup failed with exit code $LASTEXITCODE" }
+          }
+
+      - name: Build installer
+        shell: pwsh
+        run: ./installer/build-installer.ps1
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhotoLiker-Setup
+          path: publish/installer/PhotoLiker-Setup-*.exe
+          if-no-files-found: error
+          compression-level: 0 # the installer is compressed already

@@ -9,6 +9,9 @@ namespace PhotoLiker.Core
         public long Length { get; init; }
         public DateTime LastWriteTimeUtc { get; init; }
 
+        // When the file was put on this disk (a copy or an import gets the date of the copy), also from the folder listing
+        public DateTime CreationTimeUtc { get; init; }
+
         public override string ToString()
         {
             return $"{OriginalFilePath} -> {LikedFilePath}";

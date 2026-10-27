@@ -64,6 +64,18 @@ public class PhotoScannerTests : IDisposable
     }
 
     [Fact]
+    public void ThePhotoKnowsWhenItsFileWasCreated_WhichIsNotWhenItWasLastChanged()
+    {
+        var path = Touch("a.jpg", "12345");
+        File.SetCreationTimeUtc(path, new DateTime(2010, 5, 5, 12, 0, 0, DateTimeKind.Utc));
+
+        var photo = Assert.Single(PhotoScanner.Scan(_root, recursive: false, Extensions, excludedFolder: null));
+
+        Assert.Equal(new DateTime(2010, 5, 5, 12, 0, 0, DateTimeKind.Utc), photo.CreationTimeUtc, TimeSpan.FromSeconds(2));
+        Assert.True(photo.LastWriteTimeUtc > photo.CreationTimeUtc);
+    }
+
+    [Fact]
     public void SubfoldersAreOnlyListedWhenAsked()
     {
         Touch("top.jpg");
