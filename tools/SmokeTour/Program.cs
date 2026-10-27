@@ -12,7 +12,8 @@ namespace SmokeTour;
 ///   --demo-folder &lt;path&gt;   where the demo photos go (recreated every run; default: PhotoLikerDemo\Holiday on the drive of the repo)
 ///   --keep                 leave the demo folder behind
 ///
-/// The window takes the screen for about a minute (it is photographed as it is on screen): leave the mouse alone.
+/// The window takes the screen for about a minute (it is photographed as it is on screen, and one step clicks and types
+/// for real): leave the mouse and the keyboard alone.
 /// </summary>
 internal static class Program
 {
@@ -81,7 +82,7 @@ internal static class Program
             checks.Fail("reading the saved settings: " + ex.Message);
         }
 
-        checks.Step("10. Nothing leaked");
+        checks.Step("11. Nothing leaked");
         checks.That(!File.Exists(CrashLog.FilePath), "no crash log was written");
         checks.That(File.Exists(Path.Combine(appData, "global-config.json")), "the last folder went to the redirected app-data folder, not the real one");
 

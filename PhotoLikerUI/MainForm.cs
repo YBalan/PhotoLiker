@@ -44,6 +44,8 @@
             previewFlowPanel.MouseWheel += PreviewFlowPanel_MouseWheel;
 
             pictureBox1.Paint += PictureBox1_Paint;
+            scrollPanel.MouseDown += (_, _) => FocusViewer();
+            previewFlowPanel.MouseDown += (_, _) => FocusViewer();
             pictureBox1.MouseDown += PictureBox1_MouseDown;
             pictureBox1.MouseMove += PictureBox1_MouseMove;
             pictureBox1.MouseUp += PictureBox1_MouseUp;
@@ -393,7 +395,7 @@
             }
         }
 
-        // CurrentIndex jumps to that photo; the settings that decide which photos are listed relist the current folder
+        // CurrentIndex jumps to that photo; the settings that decide which photos are listed, and in what order, relist the current folder
         private void SettingsPropertyGrid_PropertyValueChanged(object? s, PropertyValueChangedEventArgs e)
         {
             var name = e.ChangedItem?.PropertyDescriptor?.Name;
@@ -403,7 +405,7 @@
                 return;
             }
 
-            if (name != nameof(Settings.GoThroughSubFolders) && name != nameof(Settings.Extensions))
+            if (name != nameof(Settings.GoThroughSubFolders) && name != nameof(Settings.Extensions) && name != nameof(Settings.SortOrder))
                 return;
 
             if (string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder))
@@ -585,13 +587,14 @@
                 var folder = _currentConfig.CurrentFolder;
                 var recursive = _currentConfig.GoThroughSubFolders;
                 var extensions = _currentConfig.Extensions;
+                var sortOrder = _currentConfig.SortOrder;
                 var likedFolder = _currentConfig.LikedFolder;
                 SetStatus(string.Format(MainFormStrings.StatusFolderLoading, folder));
 
                 // Listing a network folder can take a long time, so keep it off the UI thread
                 var (files, liked, groups) = await Task.Run(() =>
                 {
-                    var found = PhotoScanner.Scan(folder, recursive, extensions, likedFolder);
+                    var found = PhotoScanner.Scan(folder, recursive, extensions, likedFolder, sortOrder);
                     return (found, LikedLibrary.Scan(likedFolder, found), GroupLibrary.Scan(likedFolder, found));
                 });
 
@@ -912,12 +915,20 @@
         private static bool IsTextEntry(IntPtr focusedWindow) =>
             Control.FromChildHandle(focusedWindow) is TextBoxBase or ComboBox or UpDownBase;
 
+        /// <summary>
+        /// Gives the keyboard focus to the photo. A text box (the edit of a grid row, the search box) keeps the keys for its own
+        /// typing until the focus leaves it (see <see cref="IsTextEntry"/>), and a click on a PictureBox doesn't move the focus by itself.
+        /// </summary>
+        private void FocusViewer() => pictureBox1.Focus();
+
         #region Panning
 
         private bool IsEnlarged => pictureBox1.Dock != DockStyle.Fill;
 
         private void PictureBox1_MouseDown(object? sender, MouseEventArgs e)
         {
+            FocusViewer();
+
             if (HandleFaceMouseDown(e))
                 return;
 
@@ -1511,6 +1522,8 @@
 
         private void PreviewThumb_Click(object? sender, EventArgs e)
         {
+            FocusViewer();
+
             if (sender is Control c && c.Tag is string filePath)
                 LoadImage(filePath);
         }

@@ -21,6 +21,8 @@ namespace PhotoLiker.Core
         public bool   GoThroughSubFoldersAlternateSpelling { set => GoThroughSubFolders = value; }
 
         public string[] Extensions   { get; set; } = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"];
+        [JsonConverter(typeof(PhotoSortOrderConverter))]
+        public PhotoSortOrder SortOrder { get; set; } = PhotoSortOrder.OldestFirst;
         public int    CacheSize      { get; set; } = 20;
         public int    ThumbnailSize  { get; set; } = 110;
         public bool   IsDarkTheme    { get; set; } = false;

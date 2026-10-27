@@ -144,6 +144,22 @@ public class PhotoBrowserServiceTests : IDisposable
         Assert.Equal(3, svc.Settings.Files.Count);
     }
 
+    [Theory]
+    [InlineData(PhotoSortOrder.OldestFirst, new[] { "photo3.jpg", "photo1.jpg", "photo2.jpg" })]
+    [InlineData(PhotoSortOrder.NewestFirst, new[] { "photo2.jpg", "photo1.jpg", "photo3.jpg" })]
+    public void OpenFolder_ListsThePhotosInTheOrderOfTheSettingsFile(PhotoSortOrder order, string[] expected)
+    {
+        File.SetCreationTimeUtc(_photos[0], new DateTime(2012, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        File.SetCreationTimeUtc(_photos[1], new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        File.SetCreationTimeUtc(_photos[2], new DateTime(2005, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        new Settings { CurrentFolder = _tempDir, SortOrder = order }.Save(_tempDir);
+
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+
+        Assert.Equal(expected, svc.Settings.Files.Select(f => Path.GetFileName(f.OriginalFilePath)));
+    }
+
     [Fact]
     public void OpenFolder_WithSubFolders_DoesNotListTheCopiesInTheLikedFolder()
     {

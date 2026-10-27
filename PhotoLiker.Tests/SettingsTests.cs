@@ -175,6 +175,49 @@ public class SettingsTests : IDisposable
             (loaded.WindowLeft, loaded.WindowTop, loaded.WindowWidth, loaded.WindowHeight, loaded.ScreenIndex, loaded.WindowState));
     }
 
+    // ── SortOrder in the file ───────────────────────────────────────────────
+
+    [Fact]
+    public void SortOrder_IsOldestFirst_UnlessTheFolderSaysOtherwise()
+    {
+        Assert.Equal(PhotoSortOrder.OldestFirst, new Settings().SortOrder);
+
+        // A file from before the setting existed
+        File.WriteAllText(Settings.GetFilePath(_tempDir), """{ "CacheSize": 30 }""");
+
+        Assert.Equal(PhotoSortOrder.OldestFirst, Settings.Load(_tempDir).SortOrder);
+    }
+
+    [Theory]
+    [InlineData(PhotoSortOrder.OldestFirst)]
+    [InlineData(PhotoSortOrder.NewestFirst)]
+    [InlineData(PhotoSortOrder.None)]
+    public void SortOrder_IsSavedByName_AndReadBack(PhotoSortOrder order)
+    {
+        new Settings { CurrentFolder = _tempDir, SortOrder = order }.Save(_tempDir);
+
+        Assert.Contains($"\"SortOrder\": \"{order}\"", File.ReadAllText(Settings.GetFilePath(_tempDir)));
+        Assert.Equal(order, Settings.Load(_tempDir).SortOrder);
+    }
+
+    [Theory]
+    [InlineData("\"newestfirst\"", PhotoSortOrder.NewestFirst)] // typed by hand
+    [InlineData("\"ByTakenDate\"", PhotoSortOrder.OldestFirst)] // a name only a newer version knows
+    [InlineData("\"7\"", PhotoSortOrder.OldestFirst)]
+    [InlineData("1", PhotoSortOrder.OldestFirst)]
+    [InlineData("null", PhotoSortOrder.OldestFirst)]
+    [InlineData("""{ "by": "name" }""", PhotoSortOrder.OldestFirst)]
+    public void SortOrder_ThatCannotBeRead_IsTheDefault_AndTheRestOfTheFileStillCounts(string value, PhotoSortOrder expected)
+    {
+        File.WriteAllText(Settings.GetFilePath(_tempDir), "{ \"SortOrder\": " + value + ", \"CacheSize\": 30, \"IsDarkTheme\": true }");
+
+        var settings = Settings.Load(_tempDir);
+
+        Assert.Equal(expected, settings.SortOrder);
+        Assert.Equal(30, settings.CacheSize);
+        Assert.True(settings.IsDarkTheme);
+    }
+
     // ── GoThroughSubFolders in the file ─────────────────────────────────────
 
     [Fact]

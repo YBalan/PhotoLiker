@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Drawing.Design;
 using System.Drawing.Imaging;
 using System.Reflection;
+using PhotoLiker.Core;
 using PhotoLikerUI;
 
 namespace SmokeTour;
@@ -13,7 +14,7 @@ namespace SmokeTour;
 internal sealed class Tour(DrivenForm form, string folder, string? screenshotFolder, Checks checks)
 {
     private const int SidePanelWidth = 430;      // wider than the default so the setting names are readable
-    private const int SettingsGridHeight = 450;   // tall enough for all twelve rows
+    private const int SettingsGridHeight = 450;   // tall enough for all thirteen rows
 
     private readonly string _likedFolder = Path.Combine(folder, "Liked");
 
@@ -31,7 +32,8 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         await ReloadOnChange();
         await Metadata();
         await ThemeToggle();
-        await FitKeyAndGroupO(); // last: the folder of group O would show in the legend of the screenshots after it
+        await FitKeyAndGroupO(); // the folder of group O would show in the legend of the screenshots after it
+        await FocusAfterEditing(); // last: it changes settings and clicks around, which would show in the screenshots
     }
 
     // ── 1. the folder opens, in dark mode ───────────────────────────────────────────────────────
@@ -183,7 +185,7 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
 
         var rows = form.VisibleSettingsRows().ToList();
         string[] expected = ["TotalFiles", "CurrentIndex", "CurrentFolder", "CurrentFilePath", "CurrentFileName", "LikedFile", "SavedInFolders",
-            "LikedFolder", "GoThroughSubFolders", "Extensions", "CacheSize", "ThumbnailSize"];
+            "LikedFolder", "GoThroughSubFolders", "Extensions", "SortOrder", "CacheSize", "ThumbnailSize"];
         checks.That(expected.All(rows.Contains), "all settings are listed");
         checks.That(!rows.Contains("WindowLeft") && !rows.Contains("IsDarkTheme") && !rows.Contains("Files"), "window state, theme and file list stay hidden");
 
@@ -247,11 +249,11 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         checks.That(form.Config.LikedFolder == before, $"LikedFolder is still {before}");
     }
 
-    // ── 5. changing GoThroughSubFolders / Extensions relists ────────────────────────────────────
+    // ── 5. changing GoThroughSubFolders / Extensions / SortOrder relists ────────────────────────
 
     private async Task ReloadOnChange()
     {
-        checks.Step("5. Changing GoThroughSubFolders or Extensions in the grid reloads the folder");
+        checks.Step("5. Changing GoThroughSubFolders, Extensions or SortOrder in the grid reloads the folder");
 
         var jpegs = DemoFolder.CountTopLevel(".jpg");
         var inSubFolder = DemoFolder.CountInSubFolder;
@@ -276,6 +278,36 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
 
         checks.That(File.Exists(Path.Combine(folder, "photo-liker-config.json")) && File.ReadAllText(Path.Combine(folder, "photo-liker-config.json")).Contains(".png"),
             "the new settings were saved right away");
+
+        await ChangeSortOrder();
+    }
+
+    /// <summary>
+    /// The list is by the created date of the files, oldest first unless the folder says otherwise. The demo files are made
+    /// so that the order of the file system (the folder's own photos, then the subfolder's) is not the order of the dates.
+    /// </summary>
+    private async Task ChangeSortOrder()
+    {
+        var paths = () => form.Config.Files.Select(f => f.OriginalFilePath).ToList();
+        var oldestFirst = paths();
+        var fileSystemOrder = PhotoScanner.Scan(folder, recursive: true, form.Config.Extensions, form.Config.LikedFolder).Select(f => f.OriginalFilePath).ToList();
+        var shown = form.Config.CurrentFilePath;
+
+        checks.That(form.Config.SortOrder == PhotoSortOrder.OldestFirst, "SortOrder is OldestFirst unless the folder's file says otherwise");
+        checks.That(form.Config.Files.Zip(form.Config.Files.Skip(1)).All(pair => pair.First.CreationTimeUtc <= pair.Second.CreationTimeUtc), "so the list runs from the oldest file to the newest");
+        checks.That(!fileSystemOrder.SequenceEqual(oldestFirst), "which is not the order the file system lists them in (the demo files are made that way)");
+
+        await ChangeSetting("SortOrder", PhotoSortOrder.NewestFirst);
+        checks.That(await Until(() => paths().SequenceEqual(Enumerable.Reverse(oldestFirst)) && PhotoShown()), "NewestFirst reloads the folder and turns the list around");
+        checks.That(form.Config.CurrentFilePath == shown && form.Config.Files[form.Config.CurrentIndex].OriginalFilePath == shown,
+            $"the photo that was shown is still shown, now at index {form.Config.CurrentIndex}");
+
+        await ChangeSetting("SortOrder", PhotoSortOrder.None);
+        checks.That(await Until(() => paths().SequenceEqual(fileSystemOrder) && PhotoShown()), "None lists the photos as the file system does");
+
+        await ChangeSetting("SortOrder", PhotoSortOrder.OldestFirst);
+        checks.That(await Until(() => paths().SequenceEqual(oldestFirst) && PhotoShown()), "and OldestFirst brings the first order back (the steps after this one rely on it)");
+        checks.That(File.ReadAllText(Path.Combine(folder, "photo-liker-config.json")).Contains("\"SortOrder\": \"OldestFirst\""), "the order is saved by name in the folder's file");
     }
 
     // ── 6. EXIF and GPS ─────────────────────────────────────────────────────────────────────────
@@ -354,11 +386,128 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         checks.That(await Until(() => !File.Exists(groupO)), "O again takes the copy away");
     }
 
+    // ── 9. the keys work again after the settings grid was used ─────────────────────────────────
+
+    /// <summary>
+    /// While a row of a grid is being edited its text box has the keyboard focus, and the arrow keys and letters belong to the
+    /// text. Whatever a person does next, the photo has to get the keys back. Real clicks and real keys here:
+    /// <see cref="DrivenForm.Press"/> hands a key to the form and would not notice where the focus is.
+    /// </summary>
+    private async Task FocusAfterEditing()
+    {
+        checks.Step("9. After the settings grid was used, the keys work on the photo again");
+
+        ScreenCapture.BringToFront(Window);
+        await Settle(300);
+
+        // A. Click the value, type a number, Enter: what a person does to change CacheSize
+        await GoTo(0);
+        RealInput.Click(ValueCellOf("CacheSize"));
+        await Settle(300);
+        checks.That(RealInput.Focused()?.GetType().Name == "GridViewTextBox", $"a click on the value of CacheSize opens the edit, which has the focus ({RealInput.Focused()?.GetType().Name})");
+        SendKeys.SendWait("{HOME}+{END}21{ENTER}");
+        await Settle(300);
+        checks.That(form.Config.CacheSize == 21, $"typing 21 and Enter changed CacheSize ({form.Config.CacheSize})");
+        checks.That(await ArrowKeyMovesOn(), "an arrow key shows the next photo right after the edit");
+
+        // B. The edit is still open, and a click on the photo takes the focus away from it
+        RealInput.Click(ValueCellOf("CacheSize"));
+        await Settle(300);
+        RealInput.Click(CentreOf(form.Viewer));
+        await Settle(300);
+        checks.That(await ArrowKeyMovesOn(), "a click on the photo, with the edit still open, gives the keys back to it");
+
+        // C. A click on a thumbnail does the same
+        RealInput.Click(ValueCellOf("CacheSize"));
+        await Settle(300);
+        var strip = form.Find<FlowLayoutPanel>("previewFlowPanel");
+        var thumb = strip.Controls.OfType<PictureBox>().First(t => (string)t.Tag! != form.Config.CurrentFilePath && strip.ClientRectangle.Contains(t.Bounds));
+        RealInput.Click(CentreOf(thumb));
+        await Settle(400);
+        checks.That(form.Config.CurrentFilePath == (string)thumb.Tag!, "a click on a thumbnail shows that photo");
+        checks.That(await ArrowKeyMovesOn(), "and the arrow keys move on from it");
+
+        // D. A number typed into CurrentIndex jumps to that photo, and the keys are the photo's right after
+        RealInput.Click(ValueCellOf("CurrentIndex"));
+        await Settle(300);
+        SendKeys.SendWait("{HOME}+{END}4{ENTER}");
+        checks.That(await Until(() => form.Config.CurrentIndex == 4 && PhotoShown()), $"typing 4 into CurrentIndex shows photo 4 (index {form.Config.CurrentIndex})");
+        await Settle(300);
+        SendKeys.SendWait("{RIGHT}");
+        await Settle(300);
+        checks.That(form.Config.CurrentIndex == 5, $"and the Right arrow goes on from there (index {form.Config.CurrentIndex})");
+        SendKeys.SendWait("{END}");
+        await Settle(300);
+        checks.That(form.Config.CurrentIndex == form.Config.Files.Count - 1, $"as does End (index {form.Config.CurrentIndex})");
+
+        // E. A value picked from the drop-down list of a row (SortOrder reloads the folder): open the list with its button, click an item
+        await GoTo(0);
+        RealInput.Click(ValueCellOf("SortOrder"));
+        await Settle(300);
+        RealInput.Click(DropDownButtonOf("SortOrder"));
+        await Settle(400);
+        var list = RealInput.Focused() as ListBox;
+        checks.That(list is not null, $"the button opens the list of the values ({RealInput.Focused()?.GetType().Name})");
+        if (list is not null)
+        {
+            var item = list.Items.Cast<object>().ToList().FindIndex(i => i.ToString() == nameof(PhotoSortOrder.NewestFirst));
+            RealInput.Click(list.PointToScreen(list.GetItemRectangle(item).Location + new Size(10, 4)));
+        }
+        checks.That(await Until(() => form.Config.SortOrder == PhotoSortOrder.NewestFirst && PhotoShown()), $"clicking NewestFirst in it sets SortOrder ({form.Config.SortOrder})");
+        await Settle(300);
+        checks.That(await ArrowKeyMovesOn(), "an arrow key moves on to another photo right after");
+
+        // F. A double click on the value turns a value over, and the keys are the photo's too
+        RealInput.Click(ValueCellOf("SortOrder"), times: 2);
+        checks.That(await Until(() => form.Config.SortOrder == PhotoSortOrder.None && PhotoShown()), $"a double click on SortOrder turns it over ({form.Config.SortOrder})");
+        await Settle(300);
+        checks.That(await ArrowKeyMovesOn(), "an arrow key moves on to another photo right after");
+
+        await ChangeSetting("SortOrder", PhotoSortOrder.OldestFirst);
+        await ChangeSetting("CacheSize", 20);
+        checks.That(await Until(() => form.Config.Files.Zip(form.Config.Files.Skip(1)).All(p => p.First.CreationTimeUtc <= p.Second.CreationTimeUtc) && PhotoShown()), "back to OldestFirst and CacheSize 20");
+    }
+
+    /// <summary>Presses the arrow key that has a photo to go to, and says whether another photo is shown now.</summary>
+    private async Task<bool> ArrowKeyMovesOn()
+    {
+        var before = form.Config.CurrentIndex;
+        SendKeys.SendWait(before < form.Config.Files.Count - 1 ? "{RIGHT}" : "{LEFT}");
+        await Settle(300);
+        return form.Config.CurrentIndex != before;
+    }
+
+    /// <summary>Where the value of a settings row is on the screen (the grid's coordinates are relative to its own window).</summary>
+    private Rectangle ValueCell(string name)
+    {
+        var view = form.SettingsGrid.Controls.Cast<Control>().First(c => c.GetType().Name == "PropertyGridView");
+        var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        var row = (int)view.GetType().GetMethod("GetRowFromGridEntry", flags)!.Invoke(view, [form.SettingsRow(name)])!;
+        var cell = (Rectangle)view.GetType().GetMethods(flags).First(m => m.Name == "GetRectangle" && m.GetParameters().Length == 2).Invoke(view, [row, 2])!; // 2: the value, not the name
+        return view.RectangleToScreen(cell);
+    }
+
+    /// <summary>A little in from the left edge of the value: where a person clicks to edit it.</summary>
+    private Point ValueCellOf(string name)
+    {
+        var cell = ValueCell(name);
+        return new Point(cell.Left + 12, cell.Top + cell.Height / 2);
+    }
+
+    /// <summary>The button at the right end of the value of a row that has a list of values.</summary>
+    private Point DropDownButtonOf(string name)
+    {
+        var cell = ValueCell(name);
+        return new Point(cell.Right - 8, cell.Top + cell.Height / 2);
+    }
+
+    private static Point CentreOf(Control control) => control.PointToScreen(new Point(control.Width / 2, control.Height / 2));
+
     // ── what the tour leaves behind, checked after the window is closed ─────────────────────────
 
     public void VerifySavedSettings()
     {
-        checks.Step("9. The settings file written when the window closed");
+        checks.Step("10. The settings file written when the window closed");
 
         var path = Path.Combine(folder, "photo-liker-config.json");
         var text = File.ReadAllText(path);
@@ -370,6 +519,7 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         checks.That(root.TryGetProperty("GoThroughtSubFolders", out var subfolders) && subfolders.GetBoolean(), "GoThroughtSubFolders (the spelling of the file) is true");
         checks.That(root.GetProperty("IsDarkTheme").GetBoolean(), "IsDarkTheme is true");
         checks.That(root.GetProperty("Extensions").EnumerateArray().Select(e => e.GetString()).SequenceEqual([".jpg", ".png"]), "Extensions are .jpg and .png");
+        checks.That(root.GetProperty("SortOrder").GetString() == "OldestFirst", "SortOrder is stored by name: OldestFirst");
         var current = root.GetProperty("CurrentFilePath").GetString()!;
         checks.That(!Path.IsPathRooted(current), $"the photo it stopped at is stored relative ({current})");
     }
