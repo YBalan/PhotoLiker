@@ -20,13 +20,13 @@ namespace PhotoLikerUI
 
         private static readonly Dictionary<string, Attribute[]> Attributes = new()
         {
-            [nameof(Settings.CurrentFolder)]  = [Category(CurrentFileCategory), ReadOnly],
-            [nameof(Settings.LikedFolder)]    = [Category(SettingsCategory), Editor<FolderPickerEditor>()],
-            [nameof(Settings.GoThroughSubFolders)] = [Category(SettingsCategory)],
+            [nameof(Settings.CurrentFolder)]  = [Category(CurrentFileCategory), ReadOnly, Describe(SettingsStrings.CurrentFolder)],
+            [nameof(Settings.LikedFolder)]    = [Category(SettingsCategory), Editor<FolderPickerEditor>(), Describe(SettingsStrings.LikedFolder)],
+            [nameof(Settings.GoThroughSubFolders)] = [Category(SettingsCategory), Describe(SettingsStrings.GoThroughSubFolders)],
             [nameof(Settings.GoThroughSubFoldersAlternateSpelling)] = [Hidden],
-            [nameof(Settings.Extensions)]     = [Category(SettingsCategory), new TypeConverterAttribute(typeof(PhotoExtsConverter))],
-            [nameof(Settings.CacheSize)]      = [Category(SettingsCategory)],
-            [nameof(Settings.ThumbnailSize)]  = [Category(SettingsCategory)],
+            [nameof(Settings.Extensions)]     = [Category(SettingsCategory), new TypeConverterAttribute(typeof(PhotoExtsConverter)), Describe(SettingsStrings.Extensions)],
+            [nameof(Settings.CacheSize)]      = [Category(SettingsCategory), Describe(SettingsStrings.CacheSize)],
+            [nameof(Settings.ThumbnailSize)]  = [Category(SettingsCategory), Describe(SettingsStrings.ThumbnailSize)],
             [nameof(Settings.IsDarkTheme)]    = [Category(SettingsCategory), Hidden],
 
             [nameof(Settings.WindowLeft)]     = [Category(WindowCategory), Hidden],
@@ -37,16 +37,18 @@ namespace PhotoLikerUI
             [nameof(Settings.WindowState)]    = [Category(WindowCategory), Hidden],
 
             [nameof(Settings.Files)]          = [Category(InfoCategory), Hidden],
-            [nameof(Settings.TotalFiles)]     = [Category(InfoCategory)],
-            [nameof(Settings.CurrentIndex)]   = [Category(InfoCategory), ReadOnly],
+            [nameof(Settings.TotalFiles)]     = [Category(InfoCategory), Describe(SettingsStrings.TotalFiles)],
+            [nameof(Settings.CurrentIndex)]   = [Category(InfoCategory), Describe(SettingsStrings.CurrentIndex)], // editable: typing a number jumps to that photo
 
-            [nameof(Settings.CurrentFileName)] = [Category(CurrentFileCategory), ReadOnly],
-            [nameof(Settings.CurrentFilePath)] = [Category(CurrentFileCategory), ReadOnly],
-            [nameof(Settings.LikedFile)]       = [Category(CurrentFileCategory), ReadOnly],
-            [nameof(Settings.SavedInFolders)]  = [Category(CurrentFileCategory), ReadOnly, new TypeConverterAttribute(typeof(StringListConverter))],
+            [nameof(Settings.CurrentFileName)] = [Category(CurrentFileCategory), ReadOnly, Describe(SettingsStrings.CurrentFileName)],
+            [nameof(Settings.CurrentFilePath)] = [Category(CurrentFileCategory), ReadOnly, Describe(SettingsStrings.CurrentFilePath)],
+            [nameof(Settings.LikedFile)]       = [Category(CurrentFileCategory), ReadOnly, Describe(SettingsStrings.LikedFile)],
+            [nameof(Settings.SavedInFolders)]  = [Category(CurrentFileCategory), ReadOnly, new TypeConverterAttribute(typeof(StringListConverter)), Describe(SettingsStrings.SavedInFolders)],
         };
 
         private static Attribute Category(string name) => new CategoryAttribute(name);
+
+        private static Attribute Describe(string text) => new DescriptionAttribute(text);
 
         private static Attribute Editor<T>() where T : System.Drawing.Design.UITypeEditor =>
             new EditorAttribute(typeof(T), typeof(System.Drawing.Design.UITypeEditor));

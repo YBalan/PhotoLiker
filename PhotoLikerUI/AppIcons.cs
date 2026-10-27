@@ -78,6 +78,47 @@ namespace PhotoLikerUI
             g.DrawLines(ck, new PointF[] { new(4.5f, 8.5f), new(7f, 11.5f), new(11.5f, 5f) });
         });
 
+        // ── Search ────────────────────────────────────────────────────────
+        // Magnifying glass: pale lens, blue rim, amber handle (readable on the dark and the light strip, and on the
+        // blue of a checked button)
+        public static Bitmap Search() => DrawOnBitmap(g =>
+        {
+            using var lens = new SolidBrush(Color.FromArgb(200, 225, 255));
+            g.FillEllipse(lens, 1.5f, 1.5f, 8.5f, 8.5f);
+
+            using var handle = new Pen(Color.FromArgb(240, 150, 30), 2.4f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            g.DrawLine(handle, 9.2f, 9.2f, 14f, 14f);
+
+            using var rim = new Pen(Color.FromArgb(30, 110, 230), 1.7f);
+            g.DrawEllipse(rim, 1.5f, 1.5f, 8.5f, 8.5f);
+
+            using var glare = new Pen(Color.FromArgb(220, 255, 255, 255), 1f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            g.DrawArc(glare, 3.4f, 3.4f, 4.6f, 4.6f, 200f, 70f);
+        });
+
+        // ── Face recognition ──────────────────────────────────────────────
+        // The scanner brackets of a face-recognition symbol around a smiling face
+        public static Bitmap FaceRecognition() => DrawOnBitmap(g =>
+        {
+            using var bracket = new Pen(Color.FromArgb(255, 150, 0), 1.6f) { StartCap = LineCap.Square, EndCap = LineCap.Square };
+            const float near = 1f, far = 15f, arm = 4.5f;
+            g.DrawLines(bracket, [new PointF(near, near + arm), new PointF(near, near), new PointF(near + arm, near)]);
+            g.DrawLines(bracket, [new PointF(far - arm, near), new PointF(far, near), new PointF(far, near + arm)]);
+            g.DrawLines(bracket, [new PointF(near, far - arm), new PointF(near, far), new PointF(near + arm, far)]);
+            g.DrawLines(bracket, [new PointF(far - arm, far), new PointF(far, far), new PointF(far, far - arm)]);
+
+            using var face = new SolidBrush(Color.FromArgb(255, 224, 130));
+            g.FillEllipse(face, 3.8f, 3.8f, 8.4f, 8.4f);
+            using var outline = new Pen(Color.FromArgb(200, 140, 20), 0.8f);
+            g.DrawEllipse(outline, 3.8f, 3.8f, 8.4f, 8.4f);
+
+            using var feature = new SolidBrush(Color.FromArgb(110, 60, 10));
+            g.FillEllipse(feature, 5.7f, 6.3f, 1.3f, 1.6f);
+            g.FillEllipse(feature, 9f, 6.3f, 1.3f, 1.6f);
+            using var smile = new Pen(Color.FromArgb(110, 60, 10), 0.9f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            g.DrawArc(smile, 5.8f, 6.2f, 4.4f, 4.2f, 25f, 130f);
+        });
+
         // ── Main application icon ─────────────────────────────────────────
         public static Icon AppIcon()
         {

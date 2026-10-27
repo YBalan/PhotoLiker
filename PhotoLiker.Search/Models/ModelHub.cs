@@ -53,9 +53,17 @@ namespace PhotoLiker.Search
         public Task EnsureDownloadedAsync(IProgress<DownloadProgress>? progress, CancellationToken cancellationToken) =>
             ModelFiles.EnsureAsync(Paths, progress, cancellationToken);
 
+        // Every model is an ONNX Runtime session: first make sure that the runtime can start at all, see NativeRuntime
         public ClipImageEncoder ImageEncoder
         {
-            get { lock (_gate) return _imageEncoder ??= new ClipImageEncoder(Paths.ClipVision, Threads.Clip); }
+            get
+            {
+                lock (_gate)
+                {
+                    NativeRuntime.EnsureOnnxRuntimeCanLoad();
+                    return _imageEncoder ??= new ClipImageEncoder(Paths.ClipVision, Threads.Clip);
+                }
+            }
         }
 
         public ClipTextEncoder TextEncoder
@@ -63,18 +71,35 @@ namespace PhotoLiker.Search
             get
             {
                 lock (_gate)
+                {
+                    NativeRuntime.EnsureOnnxRuntimeCanLoad();
                     return _textEncoder ??= new ClipTextEncoder(Paths.ClipText, new ClipTokenizer(Paths.ClipVocab, Paths.ClipMerges));
+                }
             }
         }
 
         public FaceDetector Detector
         {
-            get { lock (_gate) return _detector ??= new FaceDetector(Paths.FaceDetector, Threads.Detector); }
+            get
+            {
+                lock (_gate)
+                {
+                    NativeRuntime.EnsureOnnxRuntimeCanLoad();
+                    return _detector ??= new FaceDetector(Paths.FaceDetector, Threads.Detector);
+                }
+            }
         }
 
         public FaceEmbedder Embedder
         {
-            get { lock (_gate) return _embedder ??= new FaceEmbedder(Paths.FaceEmbedder, Threads.Embedder); }
+            get
+            {
+                lock (_gate)
+                {
+                    NativeRuntime.EnsureOnnxRuntimeCanLoad();
+                    return _embedder ??= new FaceEmbedder(Paths.FaceEmbedder, Threads.Embedder);
+                }
+            }
         }
 
         public void Dispose()

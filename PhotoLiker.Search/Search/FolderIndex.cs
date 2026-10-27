@@ -2,13 +2,18 @@ using PhotoLiker.Core;
 
 namespace PhotoLiker.Search
 {
-    public sealed record SearchHit(string FullPath, long Length, DateTime ModifiedUtc, float Score);
+    public sealed record SearchHit(string FullPath, long Length, DateTime ModifiedUtc, float Score, DateSource DateSource = DateSource.None);
 
     /// <summary>
     /// The photos a search found, best first. <paramref name="Weak"/> means that nothing matched well and these are only
     /// the closest photos.
     /// </summary>
-    public sealed record SearchResult(string Description, IReadOnlyList<SearchHit> Hits, int SearchedPhotos, bool Weak = false);
+    /// <param name="Dates">The date the search was limited to, if the text had one.</param>
+    public sealed record SearchResult(string Description, IReadOnlyList<SearchHit> Hits, int SearchedPhotos, bool Weak = false, DateFilter? Dates = null)
+    {
+        /// <summary>Hits whose date is the date of the file because the camera's date was missing or wrong.</summary>
+        public int FileDated => Hits.Count(h => h.DateSource == DateSource.File);
+    }
 
     /// <summary>A face of the shown photo with the name it is known by, if any.</summary>
     public sealed record FaceLabel(IndexedFace Face, string? Name, bool Confirmed, float Score);
@@ -53,36 +58,78 @@ namespace PhotoLiker.Search
 
         // ── searching ──────────────────────────────────────────────────────
 
-        /// <summary>The name of a person finds the photos of that person; anything else is described in words.</summary>
+        /// <summary>
+        /// The name of a person finds the photos of that person; anything else is described in words. A date in the text
+        /// ("beach September 2009", "Mom 2005", "September 1") limits the search to the photos taken then; a date alone lists them, oldest first.
+        /// </summary>
         public SearchResult Search(ModelHub models, string text)
         {
             text = text.Trim();
             if (text.Length == 0)
                 return Empty(string.Empty);
 
+            // A name wins over everything, also one that reads like a date or a month
             if (People.TryFindName(text, out var name))
                 return SearchPerson(name);
 
-            return SearchText(models, text);
+            var query = DateQuery.Parse(text);
+            if (query.Dates is not { } dates)
+                return SearchText(models, text);
+
+            if (query.Words.Length == 0)
+                return SearchDates(dates);
+            if (People.TryFindName(query.Words, out name))
+                return SearchFaces(Describe(name, dates), People.ExamplesOf(name), dates);
+            return SearchText(models, query.Words, dates);
         }
 
-        public SearchResult SearchText(ModelHub models, string text)
+        /// <summary>Whether answering a text needs the text model: a name, or nothing but a date, does not.</summary>
+        public bool NeedsTextModel(string text)
         {
+            text = text.Trim();
+            if (text.Length == 0 || People.TryFindName(text, out _))
+                return false;
+
+            var words = DateQuery.Parse(text).Words;
+            return words.Length > 0 && !People.TryFindName(words, out _);
+        }
+
+        public SearchResult SearchText(ModelHub models, string text) => SearchText(models, text, dates: null);
+
+        private SearchResult SearchText(ModelHub models, string text, DateFilter? dates)
+        {
+            var description = Describe($"\"{text}\"", dates);
             var query = models.TextEncoder.Encode(text);
-            var photos = Index.Snapshot().Where(p => p.Clip is not null).ToList();
+            var indexed = Index.Snapshot().Where(p => p.Clip is not null).ToList();
+            var photos = indexed.Where(p => dates is null || dates.Matches(p.Date.Taken)).ToList();
 
             var scored = photos.Select(p => (Photo: p, Score: VectorMath.Dot(query, p.Clip!))).OrderByDescending(s => s.Score).ToList();
             if (scored.Count == 0)
-                return Empty($"\"{text}\"");
+                return new SearchResult(description, [], indexed.Count, Dates: dates);
 
             var cutoff = Math.Max(MinTextScore, scored[0].Score - TextScoreBand);
             var hits = scored.TakeWhile(s => s.Score >= cutoff).Take(MaxResults).Select(s => ToHit(s.Photo, s.Score)).ToList();
             if (hits.Count > 0)
-                return new SearchResult($"\"{text}\"", hits, photos.Count);
+                return new SearchResult(description, hits, indexed.Count, Dates: dates);
 
             var closest = scored.Take(WeakResultCount).Select(s => ToHit(s.Photo, s.Score)).ToList();
-            return new SearchResult($"\"{text}\"", closest, photos.Count, Weak: true);
+            return new SearchResult(description, closest, indexed.Count, Weak: true, Dates: dates);
         }
+
+        /// <summary>The photos taken at a time, oldest first. No limit on the number: this is browsing, like the folder.</summary>
+        private SearchResult SearchDates(DateFilter dates)
+        {
+            var indexed = Index.Snapshot().Where(p => p.Clip is not null).ToList();
+            var hits = indexed
+                .Where(p => dates.Matches(p.Date.Taken))
+                .OrderBy(p => p.Date.Taken)
+                .ThenBy(p => p.RelativePath, StringComparer.OrdinalIgnoreCase)
+                .Select(p => ToHit(p, 0f))
+                .ToList();
+            return new SearchResult(dates.Describe(), hits, indexed.Count, Dates: dates);
+        }
+
+        private static string Describe(string what, DateFilter? dates) => dates is null ? what : $"{what}, {dates.Describe()}";
 
         public SearchResult SearchSimilar(string fullPath)
         {
@@ -108,12 +155,15 @@ namespace PhotoLiker.Search
         public SearchResult SearchPerson(IndexedFace face, string? name) =>
             SearchFaces(name ?? "this person", [face.Embedding]);
 
-        private SearchResult SearchFaces(string description, IReadOnlyList<float[]> examples)
+        private SearchResult SearchFaces(string description, IReadOnlyList<float[]> examples, DateFilter? dates = null)
         {
             var photos = Index.Snapshot();
             var hits = new List<SearchHit>();
             foreach (var photo in photos)
             {
+                if (dates is not null && !dates.Matches(photo.Date.Taken))
+                    continue;
+
                 var best = 0f;
                 foreach (var face in photo.Faces)
                 {
@@ -125,7 +175,7 @@ namespace PhotoLiker.Search
             }
 
             hits = [.. hits.OrderByDescending(h => h.Score).Take(MaxResults)];
-            return new SearchResult(description, hits, photos.Length);
+            return new SearchResult(description, hits, photos.Length, Dates: dates);
         }
 
         // ── faces of a photo ───────────────────────────────────────────────
@@ -202,7 +252,7 @@ namespace PhotoLiker.Search
         // ── helpers ────────────────────────────────────────────────────────
 
         private SearchHit ToHit(IndexedPhoto photo, float score) =>
-            new(Index.ToFullPath(photo.RelativePath), photo.Length, new DateTime(photo.ModifiedTicks, DateTimeKind.Utc), score);
+            new(Index.ToFullPath(photo.RelativePath), photo.Length, new DateTime(photo.ModifiedTicks, DateTimeKind.Utc), score, photo.Date.Source);
 
         private static SearchResult Empty(string description) => new(description, [], 0);
 

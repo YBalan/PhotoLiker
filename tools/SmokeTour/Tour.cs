@@ -31,6 +31,7 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         await ReloadOnChange();
         await Metadata();
         await ThemeToggle();
+        await FitKeyAndGroupO(); // last: the folder of group O would show in the legend of the screenshots after it
     }
 
     // ── 1. the folder opens, in dark mode ───────────────────────────────────────────────────────
@@ -50,8 +51,19 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
 
         using var shot = await Shot("01-home");
         CheckDark(shot);
+        CheckSearchStrip();
 
         checks.Note($"window {form.Width}x{form.Height}, {form.DeviceDpi} dpi");
+    }
+
+    /// <summary>The strip above the viewer: the index import / export first, icons instead of words on Search and Faces.</summary>
+    private void CheckSearchStrip()
+    {
+        var items = form.Find<ToolStrip>("searchToolStrip").Items;
+        checks.That(items[0].Name == "indexFileToolStripButton" && items[0].Text == "I/E", $"the strip starts with the I/E button ({items[0].Name}: {items[0].Text})");
+
+        foreach (var name in new[] { "searchToolStripButton", "facesToolStripButton" })
+            checks.That(items[name] is { DisplayStyle: ToolStripItemDisplayStyle.Image, Image: not null }, $"{name} shows an icon");
     }
 
     private void CheckDark(Bitmap shot)
@@ -70,7 +82,7 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
 
     private async Task Browse()
     {
-        checks.Step("2. Next / previous photo and like, with the keyboard");
+        checks.Step("2. Next / previous / first / last photo and like, with the keyboard");
 
         await GoTo(1);
         checks.That(form.Config.CurrentFileName == NameAt(1), $"Right arrow shows the next photo ({form.Config.CurrentFileName})");
@@ -85,6 +97,50 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         await GoTo(0);
         checks.That(form.Config.CurrentIndex == 0, "Left arrow goes back");
         (await Shot("04-previous-photo")).Dispose();
+
+        form.Press(Keys.End);
+        var last = form.Config.Files.Count - 1;
+        checks.That(await Until(() => form.Config.CurrentIndex == last && PhotoShown()), $"End shows the last photo ({form.Config.CurrentFileName})");
+        form.Press(Keys.Home);
+        checks.That(await Until(() => form.Config.CurrentIndex == 0 && PhotoShown()), $"Home shows the first photo ({form.Config.CurrentFileName})");
+
+        // A new photo brings the settings grid back to its top, whatever row was looked at
+        form.SettingsRow("ThumbnailSize").Select();
+        checks.That(form.SettingsGrid.SelectedGridItem?.Label == "ThumbnailSize", "a row at the bottom of the settings grid is selected");
+        await GoTo(1);
+        checks.That(form.SettingsGrid.SelectedGridItem?.Label == form.VisibleSettingsCategories().First(), $"the settings grid is back at its top ({form.SettingsGrid.SelectedGridItem?.Label})");
+
+        // CurrentIndex can be edited: the number typed in jumps to that photo, one outside the list to the nearest end
+        checks.That(!form.SettingsProperty("CurrentIndex").IsReadOnly, "CurrentIndex is not read-only");
+        await ChangeSetting("CurrentIndex", 3);
+        checks.That(await Until(() => form.Config.CurrentIndex == 3 && PhotoShown()), $"typing 3 into CurrentIndex shows photo 3 ({form.Config.CurrentFileName})");
+        checks.That(form.SettingsGrid.SelectedGridItem?.Label == "CurrentIndex", "the CurrentIndex row stays selected, ready for the next number");
+        await ChangeSetting("CurrentIndex", 99);
+        checks.That(await Until(() => form.Config.CurrentIndex == last && PhotoShown()), $"99 goes to the last photo, and the row shows {form.Config.CurrentIndex}");
+        await ChangeSetting("CurrentIndex", -4);
+        checks.That(await Until(() => form.Config.CurrentIndex == 0 && PhotoShown()), $"-4 goes to the first photo, and the row shows {form.Config.CurrentIndex}");
+
+        await MonthJumps();
+    }
+
+    /// <summary>PageDown / PageUp: the demo photos are of July (0, 1), August (2) and September (3, 4), by the dates of their files.</summary>
+    private async Task MonthJumps()
+    {
+        form.Press(Keys.PageDown);
+        checks.That(await Until(() => form.Config.CurrentIndex == 2 && PhotoShown()) && form.Status.Contains("August 2025"), $"PageDown goes to the first photo of the next month ({form.Status})");
+        form.Press(Keys.PageDown);
+        checks.That(await Until(() => form.Config.CurrentIndex == 3 && PhotoShown()) && form.Status.Contains("September 2025"), $"PageDown again goes to September ({form.Status})");
+
+        form.Press(Keys.PageDown);
+        checks.That(form.Config.CurrentIndex == 3 && form.Status.Contains("last month"), $"there is no month after the last ({form.Status})");
+
+        form.Press(Keys.PageUp);
+        checks.That(await Until(() => form.Config.CurrentIndex == 2 && PhotoShown()), "PageUp goes back to August");
+        form.Press(Keys.PageUp);
+        checks.That(await Until(() => form.Config.CurrentIndex == 0 && PhotoShown()) && form.Status.Contains("July 2025"), $"PageUp goes to the first photo of July ({form.Status})");
+
+        form.Press(Keys.PageUp);
+        checks.That(form.Config.CurrentIndex == 0 && form.Status.Contains("first month"), $"there is no month before the first ({form.Status})");
     }
 
     // ── 3. groups ───────────────────────────────────────────────────────────────────────────────
@@ -130,6 +186,10 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
             "LikedFolder", "GoThroughSubFolders", "Extensions", "CacheSize", "ThumbnailSize"];
         checks.That(expected.All(rows.Contains), "all settings are listed");
         checks.That(!rows.Contains("WindowLeft") && !rows.Contains("IsDarkTheme") && !rows.Contains("Files"), "window state, theme and file list stay hidden");
+
+        var undescribed = expected.Where(name => form.SettingsProperty(name).Description.Length < 30).ToList();
+        checks.That(undescribed.Count == 0, $"every row has a description for the help pane{(undescribed.Count == 0 ? "" : ", missing: " + string.Join(", ", undescribed))}");
+        checks.That(form.SettingsProperty("CurrentIndex").Description.Contains("PageDown"), "and the one of CurrentIndex tells about the keys");
 
         // The "..." button is only drawn on the selected row while the grid has the focus, as when it was clicked
         var view = form.SettingsGrid.Controls.Cast<Control>().First(c => c.GetType().Name == "PropertyGridView");
@@ -236,6 +296,11 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
             checks.That(expected.All(name => rows.Any(r => r.Name == name)), "Make, Model, decoded GPS rows and the debug text are there");
             checks.That(rows.Any(r => r.Name == "Map Link" && r.Category == "2. GPS Decoded"), "Map Link is in the 'GPS Decoded' category");
             checks.That(rows.All(r => !r.Name.StartsWith("GPS ")), "the raw GPS tags stay hidden");
+
+            var undescribed = rows.Where(r => r.Description.Length < 30).Select(r => r.Name).ToList();
+            checks.That(undescribed.Count == 0, $"all {rows.Count} rows have a description for the help pane{(undescribed.Count == 0 ? "" : ", missing: " + string.Join(", ", undescribed))}");
+            checks.That(rows.First(r => r.Name == "Exposure Time").Description.Contains("shutter"), "an EXIF row explains itself (Exposure Time)");
+            checks.That(rows.First(r => r.Name == "Coordinates").Description.Contains("decimal"), "and so does a decoded GPS row (Coordinates)");
             checks.That(wrapper.MapLink?.StartsWith("https://maps.google.com/maps?q=38.") == true, $"map link: {wrapper.MapLink}");
         }
 
@@ -268,11 +333,32 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         checks.That(form.Config.IsDarkTheme && toggle.Text!.Contains("Light") && darkPixels < 90, $"dark again (settings grid {darkPixels:0} of 255)");
     }
 
+    // ── 8. 0 fits the image, O is a group key like any other letter ─────────────────────────────
+
+    private async Task FitKeyAndGroupO()
+    {
+        checks.Step("8. The 0 key fits the image to the viewer, O is a group key like any other letter");
+
+        var name = NameAt(form.Config.CurrentIndex);
+
+        form.Press(Keys.D0);
+        checks.That(form.Status.Contains("fitted"), $"0 fits the image ({form.Status})");
+        form.Press(Keys.NumPad0);
+        checks.That(form.Status.Contains("fitted"), $"and so does 0 of the numpad ({form.Status})");
+
+        var groupO = Path.Combine(_likedFolder, "O - Group", name);
+        form.Press(Keys.O);
+        checks.That(await Until(() => File.Exists(groupO)), "O saves a copy in 'O - Group'");
+        checks.That(!form.Status.Contains("fitted"), $"and does not fit the image ({form.Status})");
+        form.Press(Keys.O);
+        checks.That(await Until(() => !File.Exists(groupO)), "O again takes the copy away");
+    }
+
     // ── what the tour leaves behind, checked after the window is closed ─────────────────────────
 
     public void VerifySavedSettings()
     {
-        checks.Step("8. The settings file written when the window closed");
+        checks.Step("9. The settings file written when the window closed");
 
         var path = Path.Combine(folder, "photo-liker-config.json");
         var text = File.ReadAllText(path);

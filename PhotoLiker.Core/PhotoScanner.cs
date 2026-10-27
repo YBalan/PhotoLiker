@@ -34,6 +34,7 @@ namespace PhotoLiker.Core
                 {
                     Length = e.Length,
                     LastWriteTimeUtc = e.LastWriteTimeUtc.UtcDateTime,
+                    CreationTimeUtc = e.CreationTimeUtc.UtcDateTime,
                 },
                 options)
             {

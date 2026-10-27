@@ -10,6 +10,9 @@ namespace PhotoLikerUI
         [STAThread]
         static void Main(string[] args)
         {
+            // Before anything can load an old copy of it (a shell extension does, when a dialog opens): the search models crash with that
+            PhotoLiker.Search.NativeRuntime.PreferWindowsRuntime();
+
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();

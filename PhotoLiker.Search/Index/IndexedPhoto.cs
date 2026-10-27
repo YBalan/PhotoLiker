@@ -23,6 +23,9 @@ namespace PhotoLiker.Search
         public string? Failure { get; init; }
 
         public IReadOnlyList<IndexedFace> Faces { get; internal set; } = [];
+
+        /// <summary>When the photo was taken. Replaced as a whole, so a search running at the same time sees the old or the new one.</summary>
+        public PhotoDate Date { get; internal set; } = PhotoDate.NotRead;
     }
 
     /// <summary>A face in a photo. The box is given as fractions of the (upright) photo, so it fits at any size.</summary>

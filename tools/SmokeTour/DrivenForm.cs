@@ -46,6 +46,15 @@ internal sealed class DrivenForm(string folder) : MainForm(folder)
             .First(item => item.Label == name);
     }
 
+    public IEnumerable<string> VisibleSettingsCategories()
+    {
+        var root = SettingsGrid.SelectedGridItem;
+        while (root?.Parent is not null)
+            root = root.Parent;
+
+        return root!.GridItems.Cast<GridItem>().Select(category => category.Label!);
+    }
+
     public IEnumerable<string> VisibleSettingsRows()
     {
         var root = SettingsGrid.SelectedGridItem;

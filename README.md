@@ -25,9 +25,12 @@ find every photo they are in. It all runs on your own computer, no photo is ever
 
 PhotoLiker needs Windows 10/11 (x64) and the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
 
-- **Installer**: build it with `installer\build-installer.ps1` (see [Development](#development)). It installs per user, needs no
-  administrator rights and checks for the runtime.
-- **Zip**: every push and pull request to `master` builds `PhotoLikerUI.zip` as an artifact of the GitHub Actions workflow.
+- **Installer**: build it with `installer\build-installer.ps1` (see [Development](#development)), or take `PhotoLiker-Setup` from
+  the artifacts of a GitHub Actions run (see below). It installs per user, needs no administrator rights and checks for the runtime.
+- **Zip**: `PhotoLikerUI.zip`, also an artifact of the GitHub Actions run.
+- **GitHub Actions artifacts**: every push and pull request to `master` builds both `PhotoLikerUI` (the zip) and `PhotoLiker-Setup`
+  (the installer). To get them for another branch, open *Actions > Build and Package PhotoLikerUI > Run workflow* and pick the
+  branch. The artifacts are on the page of the run.
 - **From source**: `dotnet run --project PhotoLikerUI -c Release -- "C:\Photos\Holiday"`. The folder argument is optional;
   without it the last folder you used is opened.
 
@@ -53,9 +56,11 @@ user only, no administrator rights). The same button removes it again.
 | Input | What it does |
 |---|---|
 | <kbd>Right</kbd> / <kbd>Left</kbd> | Next / previous photo. Clicking a thumbnail jumps to it. |
+| <kbd>Home</kbd> / <kbd>End</kbd> | The first / the last photo of the list (of the search results, while they are shown). |
+| <kbd>PageDown</kbd> / <kbd>PageUp</kbd> | The first photo of the next / the previous month of the list. The list is cut into runs of photos of the same month, in the order it has, so in a folder that is not in date order every change of month counts. A photo's month is the one of its date: the EXIF date if the folder is [indexed](#photo-search), otherwise the date its file was created. The status bar names the month. |
 | <kbd>Space</kbd> | Like the photo (copy it to the Liked folder), or remove the copy again. |
 | <kbd>1</kbd>-<kbd>9</kbd>, <kbd>A</kbd>-<kbd>Z</kbd> | Save the photo in a group, or take it out again (see [Groups](#groups)). |
-| <kbd>O</kbd> | Fit the image to the viewer. |
+| <kbd>0</kbd> | Fit the image to the viewer (after zooming in). |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
 | <kbd>Ctrl</kbd>+mouse wheel | Over the photo: zoom, then drag to pan. Over the thumbnail strip: change the size of the thumbnails. |
 
@@ -70,7 +75,8 @@ the one on your `PATH` is used). You choose resolution, the time each photo is s
 
 ## Settings
 
-The settings grid at the top left shows the progress, the current file and the settings of the folder:
+The settings grid at the top left shows the progress, the current file and the settings of the folder. It scrolls back to
+the top whenever another photo is shown:
 
 ![The settings grid, LikedFolder selected with its "..." button](docs/images/06-settings.png)
 
@@ -82,7 +88,11 @@ The settings grid at the top left shows the progress, the current file and the s
 | **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
 | **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
 
-The rows of **Progress** and **Current File** are read-only.
+The rows of **Current File** and **TotalFiles** are read-only. **CurrentIndex** is the number of the shown photo, counted
+from 0: type another number into it to jump to that photo (a number outside the list goes to the nearest end).
+
+Every row has a description: select it and the pane under the grid says what it is for (drag the divider above the pane to
+make it taller when a text is cut off).
 
 ### Folder picker
 
@@ -128,7 +138,7 @@ The bottom-left corner of the viewer shows a legend of all group folders, under 
 key saves where. The folders that hold a copy of the current photo are ticked and highlighted. A group shows up in the
 legend once its folder exists, that is after the first press of its key.
 
-`O` keeps fitting the image to the viewer, so there is no group `O`.
+`0` is not a group: it fits the image to the viewer. (It used to be `O`, which is a group like every other letter now.)
 
 When several photos of a folder share a file name (typical with subfolders), their copies are told apart by size and
 date and named `name (2).jpg`, `name (3).jpg`, ... in the Liked folder.
@@ -136,7 +146,9 @@ date and named `name (2).jpg`, `name (3).jpg`, ... in the Liked folder.
 ## EXIF and GPS
 
 The grid below the settings shows the metadata of the shown photo in categories: Image, GPS Decoded, EXIF, Thumbnail, and
-the tags PhotoLiker has no name for under Unknown. The *All Metadata* row under Debug holds everything as text.
+the tags PhotoLiker has no name for under Unknown. The *All Metadata* row under Debug holds everything as text. Select a row
+and the pane under the grid explains the tag: what shutter speed or ISO means, what the numbers of *Flash* or *Orientation*
+stand for, which date PhotoLiker takes as the date of the photo.
 
 GPS tags are decoded into decimal and degree/minute/second coordinates, altitude, speed and the UTC time. When the photo has a
 position, the **Map Link** row and the **Maps** link at the right of the status bar open it in Google Maps.
@@ -158,10 +170,17 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
    time left. You can keep browsing, stop it (the button turns into **Stop indexing**) and continue later: only new or
    changed photos are done again. The search box works as soon as the first photos are in the index.
    The first time, the AI models are downloaded (about 650 MB, you are asked first).
-2. **Search** by describing what you look for: `children on a stage`, `snow`, `a dog`, `autumn leaves`. The results replace
+2. **Search** by describing what you look for: `children on a stage`, `snow`, `a dog`, `autumn leaves`. Type it into the
+   search box and press <kbd>Enter</kbd> or click the magnifier icon. The results replace
    the folder in the viewer, so you browse, like and group them like any photos; <kbd>Esc</kbd> or **Close results** goes
    back. **More like this** finds photos that look like the one shown. Descriptions work in English.
-3. **Faces**: switch **Faces** on to see the faces found in the shown photo. Click a face to say who it is (**New person...**
+3. **Dates**: put a date into the search box to look at when the photos were taken, alone or together with the rest of the
+   search: `September 1` (that day in every year), `September 2009`, `1 Sep 2009`, `2009-09-01`, `2009`, `2009-2011`,
+   `beach September 2009`, `Mom 2005`. A date alone lists the photos oldest first, without a limit. Month names are English;
+   a short name (`sep`, `dec`) needs a day or a year with it, and a text in double quotes is searched as words only.
+   The window title says how the date was understood.
+4. **Faces**: switch the face icon (the smiling face in scanner brackets, last button of the strip) on to see the faces
+   found in the shown photo. Click a face to say who it is (**New person...**
    or one you named before), to find all photos of that person, or to delete a wrong face (dolls, posters). Typing the name
    of a person into the search box finds their photos, best match first. A dashed yellow box with a name and a question
    mark is a guess ("looks like Mom"); click it to confirm. A face the program missed (small, turned away, dark): hold
@@ -170,20 +189,35 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
 | Input | What it does |
 |---|---|
 | Click / right click on a face | The menu of the face: name it, find the person, delete it. |
-| <kbd>Shift</kbd>+drag over the photo | Mark a face that was not found (with **Faces** on). |
+| <kbd>Shift</kbd>+drag over the photo | Mark a face that was not found (with the face icon on). |
 | <kbd>Enter</kbd> in the search box | Search. |
 | <kbd>Esc</kbd> | Close the results. |
+
+The models need the current Microsoft Visual C++ runtime (it comes with Windows updates, or as the *Visual C++
+Redistributable* x64). PhotoLiker loads the one of Windows first thing when it starts: some programs (the shell extension of
+TortoiseGit, for one) put an old private copy of it into every program that opens a file or folder dialog, and ONNX Runtime
+does not just fail with that, it takes the whole program down (`0xC0000005` while loading the models). If an old copy is
+there all the same, loading the models stops with a message that says so.
 
 How long indexing takes depends mostly on the processor and on how fast the photos can be read: on a 6-core desktop
 processor it is about three photos per second (20,000 photos: roughly two hours), a network drive can be slower. It does
 not need a graphics card.
 
+Where the date of a photo comes from: the EXIF date of the camera. If that is missing or cannot be believed, the date the file
+was created is used instead (for photos copied off a camera or a card that is about the day they were copied), and the status
+bar says how many of the results are dated that way. A camera date is not believed when it is before 1995 or in the future, or
+when it is on January 1 before noon (an old camera that lost its clock starts again there, and writes `2001-01-01` into every
+photo) and the file was not created at about that time (two days, for a time zone); a real photo of New Year's night is
+kept. An index made before dates were kept gets them when you press **Update index**: that reads only the start of each file,
+needs no models and takes about a minute per 2,000 photos on a network drive.
+
 What is kept where:
 
-- **The index** (what was found in each photo) is a cache in `%LocalAppData%\PhotoLiker\index`, one file per photo folder.
+- **The index** (what was found in each photo, and when it was taken) is a cache in `%LocalAppData%\PhotoLiker\index`, one file per photo folder.
   It can always be rebuilt, so deleting it only costs the time of indexing again. Your photos are only read, never changed.
-  To use it on another computer (or to index on the faster one), choose **Index file > Export index...** in the strip, bring
-  the `.plindex` file over, open the same photos there (whatever the drive letter) and choose **Index file > Import index...**.
+  To use it on another computer (or to index on the faster one), choose **I/E > Export index...** (the first button of the
+  strip: import / export), bring the `.plindex` file over, open the same photos there (whatever the drive letter) and choose
+  **I/E > Import index...**.
   **Update index** then brings it up to date: photos whose size and date are the same are not analyzed again. The models
   are downloaded there on first use, or copy the `models` folder (below) along.
 - **The names you give** are kept in `photo-liker-people.json` in the photo folder, next to the photos: the face examples of each
@@ -260,11 +294,15 @@ data), opens the real PhotoLiker window in **dark mode** and uses it the way a p
 every step:
 
 - the folder opens with the dark theme read from its settings file, and the window really is dark on screen;
-- the arrow keys, <kbd>Space</kbd> and the group keys copy and remove files in the Liked and group folders;
+- the arrow keys, <kbd>Home</kbd>, <kbd>End</kbd>, <kbd>PageUp</kbd>, <kbd>PageDown</kbd> (by the months of the files' dates),
+  <kbd>Space</kbd> and the group keys move through the photos and copy and remove files in the Liked and group folders, a new
+  photo brings the settings grid back to its top, and a number typed into **CurrentIndex** jumps to that photo;
+- the strip above the viewer starts with the **I/E** button and has icons for Search and Faces;
 - the settings grid lists what it should, **LikedFolder** has the folder picker, and cancelling the dialog keeps the value;
 - changing **GoThroughSubFolders** and **Extensions** reloads the folder with the right number of photos;
-- the EXIF and GPS rows are there, and the map link is offered;
+- the EXIF and GPS rows are there, the map link is offered, and every row of both grids has a description;
 - the theme button switches to light and back;
+- <kbd>0</kbd> fits the image to the viewer, and <kbd>O</kbd> saves into a group like any other letter;
 - the settings file written on exit has relative paths, the legacy `GoThroughtSubFolders` key and the dark theme.
 
 ```powershell
