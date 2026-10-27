@@ -8,6 +8,25 @@ And when the folder is a NAS full of old photos you can no longer scroll through
 background and then **search it like the web**: type "birthday cake" or "children on a stage", or name a person once and
 find every photo they are in. It all runs on your own computer, no photo is ever uploaded.
 
+## Contents
+
+- [Install](#install)
+- [Happy path walkthrough](#happy-path-walkthrough)
+  - [Keyboard and mouse](#keyboard-and-mouse)
+  - [Toolbar](#toolbar)
+- [Settings](#settings)
+  - [Folder picker](#folder-picker)
+  - [Changes that reload the folder](#changes-that-reload-the-folder)
+- [Groups](#groups)
+- [EXIF and GPS](#exif-and-gps)
+- [Dark and light theme](#dark-and-light-theme)
+- [Photo search](#photo-search)
+- [Settings file](#settings-file)
+- [Project layout](#project-layout)
+- [Development](#development)
+  - [Smoke tour](#smoke-tour)
+- [License](#license)
+
 ![PhotoLiker with a folder of photos open, dark theme](docs/images/01-home.png)
 
 - **AI photo search** of a big old library, by what is in the photos ("snow", "autumn leaves") and by who is in them:
