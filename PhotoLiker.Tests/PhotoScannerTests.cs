@@ -133,6 +133,84 @@ public class PhotoScannerTests : IDisposable
         Assert.Equal(["a.jpg"], Names(PhotoScanner.Scan(_root, recursive: false, Extensions, null)));
     }
 
+    // ── order ───────────────────────────────────────────────────────────────
+
+    private string TouchCreated(string relativePath, int year)
+    {
+        var path = Touch(relativePath);
+        File.SetCreationTimeUtc(path, new DateTime(year, 6, 1, 12, 0, 0, DateTimeKind.Utc));
+        return path;
+    }
+
+    // Names run against the dates, so the order of the names can't pass for the order of the dates
+    private void MakeThreePhotos()
+    {
+        TouchCreated("a-newest.jpg", 2020);
+        TouchCreated("b-oldest.jpg", 2005);
+        TouchCreated(Path.Combine("sub", "c-middle.jpg"), 2012);
+    }
+
+    private static string[] InOrder(IEnumerable<PhotoFile> photos) => [.. photos.Select(p => Path.GetFileName(p.OriginalFilePath))];
+
+    [Fact]
+    public void OldestFirst_ListsByTheDateTheFileWasCreated_NotByName()
+    {
+        MakeThreePhotos();
+
+        var photos = PhotoScanner.Scan(_root, recursive: true, Extensions, null, PhotoSortOrder.OldestFirst);
+
+        Assert.Equal(["b-oldest.jpg", "c-middle.jpg", "a-newest.jpg"], InOrder(photos));
+    }
+
+    [Fact]
+    public void NewestFirst_IsTheOtherWayRound()
+    {
+        MakeThreePhotos();
+
+        var photos = PhotoScanner.Scan(_root, recursive: true, Extensions, null, PhotoSortOrder.NewestFirst);
+
+        Assert.Equal(["a-newest.jpg", "c-middle.jpg", "b-oldest.jpg"], InOrder(photos));
+    }
+
+    [Fact]
+    public void None_KeepsTheOrderOfTheFileSystem_AndSoDoesNoOrderAtAll()
+    {
+        MakeThreePhotos();
+
+        var unsorted = InOrder(PhotoScanner.Scan(_root, recursive: true, Extensions, null));
+
+        Assert.Equal(unsorted, InOrder(PhotoScanner.Scan(_root, recursive: true, Extensions, null, PhotoSortOrder.None)));
+        Assert.Equal(["a-newest.jpg", "b-oldest.jpg", "c-middle.jpg"], unsorted.Order()); // it is the same photos
+    }
+
+    [Fact]
+    public void PhotosCreatedAtTheSameMoment_AreOrderedByPath_AndNewestFirstIsExactlyTheReverse()
+    {
+        foreach (var name in new[] { "c.jpg", "a.jpg", "b.jpg" })
+            File.SetCreationTimeUtc(Touch(name), new DateTime(2015, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        var oldest = InOrder(PhotoScanner.Scan(_root, recursive: false, Extensions, null, PhotoSortOrder.OldestFirst));
+        var newest = InOrder(PhotoScanner.Scan(_root, recursive: false, Extensions, null, PhotoSortOrder.NewestFirst));
+
+        Assert.Equal(["a.jpg", "b.jpg", "c.jpg"], oldest);
+        Assert.Equal(oldest.Reverse(), newest);
+    }
+
+    [Fact]
+    public void SortingDoesNotChangeWhichPhotosAreListed()
+    {
+        MakeThreePhotos();
+        Touch(Path.Combine("Liked", "a-newest.jpg"));
+        Touch("notes.txt");
+
+        foreach (var order in Enum.GetValues<PhotoSortOrder>())
+        {
+            var photos = PhotoScanner.Scan(_root, recursive: true, Extensions, Path.Combine(_root, "Liked"), order);
+
+            Assert.Equal(["a-newest.jpg", "b-oldest.jpg", "c-middle.jpg"], Names(photos));
+        }
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

@@ -10,7 +10,12 @@ namespace PhotoLiker.Core
             ["@eaDir", "#recycle", "$RECYCLE.BIN", "System Volume Information", ".AppleDouble"];
 
         /// <param name="excludedFolder">A folder to leave out, e.g. the liked folder when it sits inside the photo folder.</param>
-        public static List<PhotoFile> Scan(string folder, bool recursive, IReadOnlyCollection<string> extensions, string? excludedFolder)
+        /// <param name="sortOrder">
+        /// By the time the file was created, which comes with the directory listing, so sorting costs no extra round trip
+        /// per file (the date taken would mean opening every photo). The default is the order of the file system.
+        /// </param>
+        public static List<PhotoFile> Scan(string folder, bool recursive, IReadOnlyCollection<string> extensions, string? excludedFolder,
+            PhotoSortOrder sortOrder = PhotoSortOrder.None)
         {
             if (string.IsNullOrWhiteSpace(folder))
                 return [];
@@ -42,7 +47,24 @@ namespace PhotoLiker.Core
                 ShouldRecursePredicate = (ref FileSystemEntry e) => !IsSkippedFolder(ref e, excluded),
             };
 
-            return photos.ToList();
+            var found = photos.ToList();
+            switch (sortOrder)
+            {
+                case PhotoSortOrder.OldestFirst:
+                    found.Sort(OldestFirst);
+                    break;
+                case PhotoSortOrder.NewestFirst:
+                    found.Sort((a, b) => OldestFirst(b, a));
+                    break;
+            }
+            return found;
+        }
+
+        // Photos created at the same moment (a burst copied in one go) keep a fixed order, by path
+        private static int OldestFirst(PhotoFile a, PhotoFile b)
+        {
+            var byCreated = a.CreationTimeUtc.CompareTo(b.CreationTimeUtc);
+            return byCreated != 0 ? byCreated : string.Compare(a.OriginalFilePath, b.OriginalFilePath, StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsPhoto(ReadOnlySpan<char> fileName, IReadOnlyCollection<string> extensions)

@@ -17,6 +17,7 @@ find every photo they are in. It all runs on your own computer, no photo is ever
 - [Settings](#settings)
   - [Folder picker](#folder-picker)
   - [Changes that reload the folder](#changes-that-reload-the-folder)
+  - [Order of the photos](#order-of-the-photos)
 - [Groups](#groups)
 - [EXIF and GPS](#exif-and-gps)
 - [Dark and light theme](#dark-and-light-theme)
@@ -32,10 +33,11 @@ find every photo they are in. It all runs on your own computer, no photo is ever
 - **AI photo search** of a big old library, by what is in the photos ("snow", "autumn leaves") and by who is in them:
   a background indexer with a progress bar, face detection and naming, "more like this". See [Photo search](#photo-search).
 - **Fast browsing** with a thumbnail strip, preloading of the neighbouring photos, and a folder scan that also works
-  on network shares.
+  on network shares. The photos are listed oldest first (or newest first, or as the disk gives them) by the date their
+  files were created.
 - **Likes and groups**: copy the current photo to a `Liked` folder, or into `1 - Group` ... `Z - Group` folders under it.
-- **Settings grid** next to the photo, with a folder picker for the liked folder. Changing which photos are listed
-  reloads the folder at once.
+- **Settings grid** next to the photo, with a folder picker for the liked folder. Changing which photos are listed,
+  or in what order, reloads the folder at once.
 - **EXIF and GPS** of the shown photo, GPS decoded to coordinates and a link to the map.
 - **Dark and light theme**, remembered per folder.
 - **Portable settings**: each photo folder keeps its own settings file, so the folder opens the same from any machine.
@@ -76,14 +78,16 @@ user only, no administrator rights). The same button removes it again.
 |---|---|
 | <kbd>Right</kbd> / <kbd>Left</kbd> | Next / previous photo. Clicking a thumbnail jumps to it. |
 | <kbd>Home</kbd> / <kbd>End</kbd> | The first / the last photo of the list (of the search results, while they are shown). |
-| <kbd>PageDown</kbd> / <kbd>PageUp</kbd> | The first photo of the next / the previous month of the list. The list is cut into runs of photos of the same month, in the order it has, so in a folder that is not in date order every change of month counts. A photo's month is the one of its date: the EXIF date if the folder is [indexed](#photo-search), otherwise the date its file was created. The status bar names the month. |
+| <kbd>PageDown</kbd> / <kbd>PageUp</kbd> | The first photo of the next / the previous month of the list. The list is cut into runs of photos of the same month, in the order it has (see **SortOrder**), so in a folder that is not in date order every change of month counts. A photo's month is the one of its date: the EXIF date if the folder is [indexed](#photo-search), otherwise the date its file was created. The status bar names the month. |
 | <kbd>Space</kbd> | Like the photo (copy it to the Liked folder), or remove the copy again. |
 | <kbd>1</kbd>-<kbd>9</kbd>, <kbd>A</kbd>-<kbd>Z</kbd> | Save the photo in a group, or take it out again (see [Groups](#groups)). |
 | <kbd>0</kbd> | Fit the image to the viewer (after zooming in). |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
 | <kbd>Ctrl</kbd>+mouse wheel | Over the photo: zoom, then drag to pan. Over the thumbnail strip: change the size of the thumbnails. |
 
-Keys are ignored while you type into a text box.
+Keys are ignored while you type into a text box: the value you are editing in a grid, the search box. A click on the
+photo (or on a thumbnail, or on the empty space around the photo) takes the keyboard focus out of the text box, so the keys
+work on the photo again.
 
 ### Toolbar
 
@@ -104,6 +108,7 @@ the top whenever another photo is shown:
 | **LikedFolder** | Where liked photos are copied. By default the folder `Liked` inside the photo folder. Click the **...** button for a folder picker. A folder with any other name than `Liked` is kept as it is, wherever it is. |
 | **GoThroughSubFolders** | Also list the photos in the subfolders. The Liked folder itself is left out. |
 | **Extensions** | The file extensions that count as photos, separated by `;` or `,`, each with its dot: `.jpg; .png`. Case does not matter. |
+| **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
 | **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
 | **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
 
@@ -124,9 +129,9 @@ the old value.
 
 ### Changes that reload the folder
 
-Changing **GoThroughSubFolders** or **Extensions** lists the folder again straight away: the settings are saved first,
-and the photo you are looking at stays selected if it is still in the list. The other settings do not need that: the new
-**LikedFolder** is used from the next like.
+Changing **GoThroughSubFolders**, **Extensions** or **SortOrder** lists the folder again straight away: the settings are
+saved first, and the photo you are looking at stays selected if it is still in the list. The other settings do not need
+that: the new **LikedFolder** is used from the next like.
 
 With **GoThroughSubFolders** on, the title of the window names the subfolder of the current photo:
 
@@ -135,6 +140,22 @@ With **GoThroughSubFolders** on, the title of the window names the subfolder of 
 Adding `.png` to **Extensions** brings the PNG files of the folder in:
 
 ![Extensions set to .jpg; .png: 10 photos](docs/images/09-extensions.png)
+
+### Order of the photos
+
+**SortOrder** decides how the list is ordered, and so what <kbd>Right</kbd>, <kbd>Left</kbd>, <kbd>Home</kbd>, <kbd>End</kbd>
+and <kbd>PageDown</kbd> / <kbd>PageUp</kbd> walk through:
+
+- `OldestFirst` (the default) and `NewestFirst` go by the date each file was **created**. That date comes with the listing of
+  the folder, so sorting costs nothing extra, even on a network share. (Reading the date a photo was taken from its EXIF
+  data would mean opening every photo, which is what takes minutes over a network.) Photos created at the same moment are
+  ordered by their path, so `NewestFirst` is exactly `OldestFirst` backwards.
+- `None` does not sort: the photos come in the order the file system lists them, by name on most local disks. It is the
+  quickest on a folder with very many photos.
+
+Keep in mind that the created date is when the file appeared on that disk. A photo copied from a card or another disk
+usually has the date of the copy, not of the shot, so a folder copied in one go is in the order it was copied.
+A folder whose settings file has no **SortOrder** yet is listed `OldestFirst`.
 
 ## Groups
 
@@ -260,6 +281,7 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
   "LikedFolder": "Liked",
   "GoThroughtSubFolders": true,
   "Extensions": [ ".jpg", ".png" ],
+  "SortOrder": "OldestFirst",
   "CacheSize": 20,
   "ThumbnailSize": 120,
   "IsDarkTheme": true,
@@ -272,7 +294,9 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
 
 `GoThroughtSubFolders` is spelled like that in the file on purpose: it is the name the first versions wrote, and folders are
 shared between machines that may run different versions. The spelling `GoThroughSubFolders` (used by the MAUI app) is read
-as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized.
+as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized. `SortOrder` is written by name
+(`OldestFirst`, `NewestFirst` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
+as `OldestFirst` and does not spoil the rest of the file.
 
 Besides that the app keeps two small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that
 was opened) and `crash.log` (the stack trace of an unexpected error). Set the environment variable `PHOTOLIKER_DATA_DIR`
@@ -317,20 +341,24 @@ every step:
   <kbd>Space</kbd> and the group keys move through the photos and copy and remove files in the Liked and group folders, a new
   photo brings the settings grid back to its top, and a number typed into **CurrentIndex** jumps to that photo;
 - the strip above the viewer starts with the **I/E** button and has icons for Search and Faces;
+- with real mouse clicks and key presses: after a value was typed into the settings grid, picked from a drop-down list or
+  turned over by a double click, and after a click on the photo or a thumbnail while a value is still being edited, the
+  arrow keys and <kbd>End</kbd> work on the photo again;
 - the settings grid lists what it should, **LikedFolder** has the folder picker, and cancelling the dialog keeps the value;
-- changing **GoThroughSubFolders** and **Extensions** reloads the folder with the right number of photos;
+- changing **GoThroughSubFolders** and **Extensions** reloads the folder with the right number of photos, and changing
+  **SortOrder** lists the same photos oldest first, newest first or as the disk gives them, keeping the shown photo;
 - the EXIF and GPS rows are there, the map link is offered, and every row of both grids has a description;
 - the theme button switches to light and back;
 - <kbd>0</kbd> fits the image to the viewer, and <kbd>O</kbd> saves into a group like any other letter;
-- the settings file written on exit has relative paths, the legacy `GoThroughtSubFolders` key and the dark theme.
+- the settings file written on exit has relative paths, the legacy `GoThroughtSubFolders` key, the sort order and the dark theme.
 
 ```powershell
 dotnet run -c Release --project tools\SmokeTour                              # the checks only
 dotnet run -c Release --project tools\SmokeTour -- --screenshots docs\images # and the screenshots of this README
 ```
 
-The exit code is 0 when every check passed. The window is photographed as it is on screen, so leave the mouse alone for
-the minute it takes. The demo photos go to `PhotoLikerDemo\Holiday` on the drive of the repository (change it with
+The exit code is 0 when every check passed. The window is photographed as it is on screen, and the last step clicks and
+presses keys for real, so leave the mouse and the keyboard alone for the minute it takes. The demo photos go to `PhotoLikerDemo\Holiday` on the drive of the repository (change it with
 `--demo-folder <path>`; `--keep` leaves it there afterwards); the tool only ever deletes a folder it made itself. Your own
 settings and last folder are not touched.
 

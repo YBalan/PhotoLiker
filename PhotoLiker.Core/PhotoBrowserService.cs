@@ -26,7 +26,7 @@ namespace PhotoLiker.Core
             _settings.CurrentFolder = folder;
             _settings.ApplyDefaultLikedFolder();
 
-            _settings.Files = PhotoScanner.Scan(folder, _settings.GoThroughSubFolders, _settings.Extensions, _settings.LikedFolder);
+            _settings.Files = PhotoScanner.Scan(folder, _settings.GoThroughSubFolders, _settings.Extensions, _settings.LikedFolder, _settings.SortOrder);
 
             _globalConfig.LastFolder = folder;
             _globalConfig.Save();

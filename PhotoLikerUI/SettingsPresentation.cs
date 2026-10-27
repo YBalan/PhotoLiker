@@ -25,7 +25,8 @@ namespace PhotoLikerUI
             [nameof(Settings.GoThroughSubFolders)] = [Category(SettingsCategory), Describe(SettingsStrings.GoThroughSubFolders)],
             [nameof(Settings.GoThroughSubFoldersAlternateSpelling)] = [Hidden],
             [nameof(Settings.Extensions)]     = [Category(SettingsCategory), new TypeConverterAttribute(typeof(PhotoExtsConverter)), Describe(SettingsStrings.Extensions)],
-            [nameof(Settings.CacheSize)]      = [Category(SettingsCategory), Describe(SettingsStrings.CacheSize)],
+            [nameof(Settings.SortOrder)]      = [Category(SettingsCategory), Describe(SettingsStrings.SortOrder)],
+            [nameof(Settings.CacheSize)]      =[Category(SettingsCategory), Describe(SettingsStrings.CacheSize)],
             [nameof(Settings.ThumbnailSize)]  = [Category(SettingsCategory), Describe(SettingsStrings.ThumbnailSize)],
             [nameof(Settings.IsDarkTheme)]    = [Category(SettingsCategory), Hidden],
 
