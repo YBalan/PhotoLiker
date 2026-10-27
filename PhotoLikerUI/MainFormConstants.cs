@@ -43,6 +43,10 @@ namespace PhotoLikerUI
         public const string StatusCreateLikedFolderError = "Error creating liked folder: {0}";
         public const string StatusNoFolderSelected       = "No folder selected for liked photos.";
 
+        // Delete (moves the photo to the Deleted folder)
+        public const string StatusPhotoDeleted           = "'{0}' moved to the Deleted folder. In the list now: {1:N0}.";
+        public const string StatusDeleteError            = "Could not move the photo to the Deleted folder: {0}";
+
         // Duplicate file dialog
         public const string DuplicateDialogText          = "File '{0}' already exists in the liked folder. Choose another location?";
         public const string DuplicateDialogTitle         = "File Exists";

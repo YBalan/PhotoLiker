@@ -2,7 +2,10 @@ using System.IO.Enumeration;
 
 namespace PhotoLiker.Core
 {
-    /// <summary>Lists the photos of a folder (optionally including subfolders).</summary>
+    /// <summary>
+    /// Lists the photos of a folder (optionally including subfolders). The folder of deleted photos (<see cref="DeletedPhotos"/>)
+    /// directly inside it is left out.
+    /// </summary>
     public static class PhotoScanner
     {
         // Folders that hold system data or NAS-generated thumbnails rather than photos
@@ -28,9 +31,10 @@ namespace PhotoLiker.Core
                 AttributesToSkip = FileAttributes.System,
             };
 
-            var excluded = string.IsNullOrWhiteSpace(excludedFolder)
-                ? null
-                : Path.TrimEndingDirectorySeparator(Path.GetFullPath(excludedFolder));
+            // Only the Deleted folder of this very folder: a subfolder that happens to be called Deleted further down is the user's own
+            var excluded = new List<string> { Path.TrimEndingDirectorySeparator(DeletedPhotos.FolderOf(Path.GetFullPath(folder))) };
+            if (!string.IsNullOrWhiteSpace(excludedFolder))
+                excluded.Add(Path.TrimEndingDirectorySeparator(Path.GetFullPath(excludedFolder)));
 
             // Length and timestamp come straight from the directory listing, no extra round trip per file
             var photos = new FileSystemEnumerable<PhotoFile>(
@@ -82,7 +86,7 @@ namespace PhotoLiker.Core
             return false;
         }
 
-        private static bool IsSkippedFolder(ref FileSystemEntry entry, string? excludedFolder)
+        private static bool IsSkippedFolder(ref FileSystemEntry entry, List<string> excludedFolders)
         {
             foreach (var name in SkippedFolderNames)
             {
@@ -90,8 +94,13 @@ namespace PhotoLiker.Core
                     return true;
             }
 
-            return excludedFolder is not null &&
-                   string.Equals(Path.TrimEndingDirectorySeparator(entry.ToFullPath()), excludedFolder, StringComparison.OrdinalIgnoreCase);
+            var path = Path.TrimEndingDirectorySeparator(entry.ToFullPath());
+            foreach (var excluded in excludedFolders)
+            {
+                if (string.Equals(path, excluded, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
     }
 }

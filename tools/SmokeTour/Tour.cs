@@ -33,7 +33,8 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         await Metadata();
         await ThemeToggle();
         await FitKeyAndGroupO(); // the folder of group O would show in the legend of the screenshots after it
-        await FocusAfterEditing(); // last: it changes settings and clicks around, which would show in the screenshots
+        await FocusAfterEditing(); // it changes settings and clicks around, which would show in the screenshots
+        await DeleteKey();         // last: the demo photos it moves away are not there for the steps after it
     }
 
     // ── 1. the folder opens, in dark mode ───────────────────────────────────────────────────────
@@ -503,11 +504,72 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
 
     private static Point CentreOf(Control control) => control.PointToScreen(new Point(control.Width / 2, control.Height / 2));
 
+    // ── 10. Delete moves the photo to the Deleted folder ────────────────────────────────────────
+
+    private async Task DeleteKey()
+    {
+        checks.Step("10. Delete moves the photo to the Deleted folder, and the scan leaves that folder out");
+
+        var deletedFolder = Path.Combine(folder, "Deleted");
+        var total = form.Config.Files.Count;
+        checks.That(form.Config.GoThroughSubFolders && total == 10, $"the list is the 10 photos of the folder and its subfolder ({total})");
+
+        // A photo of the subfolder, in the middle of the list: the next one is shown after it
+        var market = form.Config.Files.FindIndex(f => f.OriginalFilePath.EndsWith("06-market.jpg"));
+        await GoTo(market);
+        var next = form.Config.Files[market + 1].OriginalFilePath;
+        form.Press(Keys.Delete);
+        var movedMarket = Path.Combine(deletedFolder, DemoFolder.SubFolder, "06-market.jpg");
+        checks.That(await Until(() => File.Exists(movedMarket) && form.Config.Files.Count == total - 1 && PhotoShown()), "Delete moves 06-market.jpg to 'Deleted/Day 2', keeping its subfolder, and takes it out of the list");
+        checks.That(!File.Exists(Path.Combine(folder, DemoFolder.SubFolder, "06-market.jpg")), "it is gone from where it was");
+        checks.That(form.Config.CurrentFilePath == next && form.Config.CurrentIndex == market, $"the photo after it is shown, at the same place ({form.Config.CurrentFileName}, index {form.Config.CurrentIndex})");
+        checks.That(form.Status.Contains("moved to the Deleted folder") && form.Status.Contains($"In the list now: {total - 1}."), $"status: {form.Status}");
+        checks.That(form.Find<FlowLayoutPanel>("previewFlowPanel").Controls.OfType<PictureBox>().All(t => (string)t.Tag! != Path.Combine(folder, DemoFolder.SubFolder, "06-market.jpg")), "and its thumbnail is gone");
+
+        // The last photo: the one before it is shown
+        form.Press(Keys.End);
+        checks.That(await Until(() => form.Config.CurrentIndex == form.Config.Files.Count - 1 && PhotoShown()), "End goes to the last photo");
+        var last = form.Config.CurrentFilePath;
+        var beforeLast = form.Config.Files[^2].OriginalFilePath;
+        form.Press(Keys.Delete);
+        checks.That(await Until(() => !File.Exists(last) && form.Config.Files.Count == total - 2 && PhotoShown()), "Delete on the last photo moves it too");
+        checks.That(form.Config.CurrentFilePath == beforeLast && form.Config.CurrentIndex == form.Config.Files.Count - 1, $"and the photo before it is shown ({form.Config.CurrentFileName})");
+
+        // Listing the folder again does not bring them back: the Deleted folder is inside the folder, but the scan skips it
+        await ChangeSetting("GoThroughSubFolders", false);
+        await Until(() => form.Config.Files.Count == total - 2 - (DemoFolder.CountInSubFolder - 1));
+        checks.That(form.Config.Files.All(f => !f.OriginalFilePath.StartsWith(deletedFolder)), "the top-level list holds nothing of the Deleted folder");
+        await ChangeSetting("GoThroughSubFolders", true);
+        checks.That(await Until(() => form.Config.Files.Count == total - 2 && PhotoShown()), $"with the subfolders on again there are {form.Config.Files.Count} photos, not the ones in Deleted");
+        checks.That(form.Config.Files.All(f => !f.OriginalFilePath.StartsWith(deletedFolder)), "none of them is in the Deleted folder");
+
+        // Delete until nothing is left: only the PNG files that are still there (the last photo above was one)
+        await ChangeSetting("Extensions", new[] { ".png" });
+        checks.That(await Until(() => form.Config.Files.All(f => f.OriginalFilePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) && PhotoShown()), "only the PNG files are listed");
+        var pngs = form.Config.Files.Count;
+        for (var i = 0; i < pngs; i++)
+        {
+            form.Press(Keys.Delete);
+            var expected = pngs - i - 1;
+            checks.That(await Until(() => form.Config.Files.Count == expected && (expected == 0 || PhotoShown())), $"Delete on a PNG leaves {expected}");
+        }
+        checks.That(form.Viewer.Image is null && form.Viewer.Tag is null && form.Config.TotalFiles == 0, "with the list empty nothing is shown");
+        checks.That(form.Status.Contains("In the list now: 0."), $"status: {form.Status}");
+        form.Press(Keys.Delete);
+        form.Press(Keys.Right);
+        form.Press(Keys.End);
+        await Settle(300);
+        checks.That(form.Config.TotalFiles == 0 && File.Exists(Path.Combine(deletedFolder, "09-panorama.png")) && File.Exists(Path.Combine(deletedFolder, "10-night.png")), "Delete, Right and End on the empty list do nothing, and both PNG files are in Deleted");
+
+        await ChangeSetting("Extensions", new[] { ".jpg", ".png" });
+        checks.That(await Until(() => form.Config.Files.Count == total - 3 && PhotoShown()), $"with the extensions back the list has {form.Config.Files.Count} photos (the three deleted ones are not in it)");
+    }
+
     // ── what the tour leaves behind, checked after the window is closed ─────────────────────────
 
     public void VerifySavedSettings()
     {
-        checks.Step("10. The settings file written when the window closed");
+        checks.Step("11. The settings file written when the window closed");
 
         var path = Path.Combine(folder, "photo-liker-config.json");
         var text = File.ReadAllText(path);

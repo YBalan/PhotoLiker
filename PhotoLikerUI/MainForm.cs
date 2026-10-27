@@ -782,6 +782,12 @@
                     ShowNeighbourMonth(forward: false);
                     return true;
                 }
+                else if (keyData == Keys.Delete)
+                {
+                    if (pictureBox1.Tag is string currentFile)
+                        _ = DeleteAsync(currentFile);
+                    return true;
+                }
                 else if (keyData is Keys.D0 or Keys.NumPad0) // fit image to screen (0 is not a group key, group keys are 1-9 and A-Z)
                 {
                     FitImageToScreen();
@@ -1007,6 +1013,77 @@
         /// </summary>
         private Task ToggleGroupAsync(string currentFile, char key) =>
             RunFileOperationAsync(currentFile, photo => ToggleGroupPhotoAsync(photo, key));
+
+        /// <summary>
+        /// Moves the current photo into the Deleted folder (see <see cref="DeletedPhotos"/>), takes it out of the list and shows the
+        /// photo that comes next, or the one before it when it was the last. Nothing is erased. Same rules as <see cref="ToggleLikeAsync"/>.
+        /// </summary>
+        private Task DeleteAsync(string currentFile) => RunFileOperationAsync(currentFile, DeletePhotoAsync);
+
+        private async Task DeletePhotoAsync(PhotoFile photo)
+        {
+            var file = photo.OriginalFilePath;
+            var folder = _currentConfig.CurrentFolder;
+            var files = _currentConfig.Files;
+            var searchIndex = _folderSearch?.Index;
+
+            try
+            {
+                // On the network share the move can take a moment
+                await Task.Run(() =>
+                {
+                    DeletedPhotos.Move(folder, file);
+                    try { searchIndex?.RemoveFile(file); }
+                    catch { /* the next "Update index" forgets it anyway */ }
+                });
+            }
+            catch (Exception ex)
+            {
+                SetStatus(string.Format(MainFormStrings.StatusDeleteError, ex.Message));
+                return;
+            }
+
+            // Another folder was opened while the photo was moving: that list is gone
+            if (!ReferenceEquals(files, _currentConfig.Files))
+                return;
+
+            var position = files.IndexOf(file);
+            if (position < 0)
+                return;
+
+            files.RemoveAt(position);
+            _indexByPath = new Dictionary<string, int>(files.Count, StringComparer.Ordinal);
+            for (var i = 0; i < files.Count; i++)
+                _indexByPath[files[i].OriginalFilePath] = i;
+
+            if (files.Count == 0)
+            {
+                ShowEmptyList();
+            }
+            else
+            {
+                // The photo shown is the one that was deleted, unless another one was brought up while it was moving
+                var shown = pictureBox1.Tag as string;
+                var next = shown is not null && files.IndexOf(shown) >= 0 ? shown : files[Math.Min(position, files.Count - 1)].OriginalFilePath;
+                LoadImage(next);
+            }
+
+            UpdateSearchControls(); // the index has one photo less
+            SetStatus(string.Format(MainFormStrings.StatusPhotoDeleted, Path.GetFileName(file), files.Count));
+        }
+
+        /// <summary>The last photo of the list was deleted: nothing to show.</summary>
+        private void ShowEmptyList()
+        {
+            ClearDisplay();
+            _currentConfig.CurrentFilePath = string.Empty;
+            _currentConfig.CurrentFileName = string.Empty;
+            _currentConfig.CurrentIndex = 0;
+            _currentConfig.LikedFile = string.Empty;
+            _currentConfig.SavedInFolders = [];
+            settingsPropertyGrid.Refresh();
+            UpdateWindowTitle(null);
+        }
 
         private async Task RunFileOperationAsync(string currentFile, Func<PhotoFile, Task> operation)
         {

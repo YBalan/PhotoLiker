@@ -19,6 +19,7 @@ find every photo they are in. It all runs on your own computer, no photo is ever
   - [Changes that reload the folder](#changes-that-reload-the-folder)
   - [Order of the photos](#order-of-the-photos)
 - [Groups](#groups)
+- [Deleting photos](#deleting-photos)
 - [EXIF and GPS](#exif-and-gps)
 - [Dark and light theme](#dark-and-light-theme)
 - [Photo search](#photo-search)
@@ -36,6 +37,8 @@ find every photo they are in. It all runs on your own computer, no photo is ever
   on network shares. The photos are listed oldest first (or newest first, or as the disk gives them) by the date their
   files were created.
 - **Likes and groups**: copy the current photo to a `Liked` folder, or into `1 - Group` ... `Z - Group` folders under it.
+- **Delete** moves the photo to a `Deleted` folder inside the photo folder; nothing is erased, and the scan leaves that
+  folder out.
 - **Settings grid** next to the photo, with a folder picker for the liked folder. Changing which photos are listed,
   or in what order, reloads the folder at once.
 - **EXIF and GPS** of the shown photo, GPS decoded to coordinates and a link to the map.
@@ -80,6 +83,7 @@ user only, no administrator rights). The same button removes it again.
 | <kbd>Home</kbd> / <kbd>End</kbd> | The first / the last photo of the list (of the search results, while they are shown). |
 | <kbd>PageDown</kbd> / <kbd>PageUp</kbd> | The first photo of the next / the previous month of the list. The list is cut into runs of photos of the same month, in the order it has (see **SortOrder**), so in a folder that is not in date order every change of month counts. A photo's month is the one of its date: the EXIF date if the folder is [indexed](#photo-search), otherwise the date its file was created. The status bar names the month. |
 | <kbd>Space</kbd> | Like the photo (copy it to the Liked folder), or remove the copy again. |
+| <kbd>Delete</kbd> | Move the photo to the `Deleted` folder and show the next one (see [Deleting photos](#deleting-photos)). |
 | <kbd>1</kbd>-<kbd>9</kbd>, <kbd>A</kbd>-<kbd>Z</kbd> | Save the photo in a group, or take it out again (see [Groups](#groups)). |
 | <kbd>0</kbd> | Fit the image to the viewer (after zooming in). |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
@@ -182,6 +186,22 @@ legend once its folder exists, that is after the first press of its key.
 
 When several photos of a folder share a file name (typical with subfolders), their copies are told apart by size and
 date and named `name (2).jpg`, `name (3).jpg`, ... in the Liked folder.
+
+## Deleting photos
+
+<kbd>Delete</kbd> moves the shown photo into the folder `Deleted` inside the photo folder, takes it out of the list and
+shows the photo that came after it (the one before it, if it was the last). Nothing is erased. The photo keeps its path
+below the photo folder: `314CANON\IMG_0001.jpg` goes to `Deleted\314CANON\IMG_0001.jpg`, so photos of different
+subfolders with the same name don't meet. If a photo with that name is already in `Deleted`, the new one is called
+`name (2).jpg`. To put a photo back, move it out of `Deleted` in Explorer; the next time the folder is listed it is there.
+
+The `Deleted` folder of the photo folder is left out when the folder is listed (also with **GoThroughSubFolders** on) and
+by the search indexer. Only that one: a folder called `Deleted` further down is yours and is listed as any folder. A photo
+that is deleted leaves the search index at once; its copies in the Liked and group folders stay where they are. Open the
+`Deleted` folder itself with the folder button to look at what is in it.
+
+While search results are shown, <kbd>Delete</kbd> works the same on the photo shown. Like the other keys, it does nothing
+while you type into a text box.
 
 ## EXIF and GPS
 
@@ -347,6 +367,8 @@ every step:
 - the settings grid lists what it should, **LikedFolder** has the folder picker, and cancelling the dialog keeps the value;
 - changing **GoThroughSubFolders** and **Extensions** reloads the folder with the right number of photos, and changing
   **SortOrder** lists the same photos oldest first, newest first or as the disk gives them, keeping the shown photo;
+- <kbd>Delete</kbd> moves the photo (keeping its subfolder) to `Deleted`, shows the next one, and the folder is not listed
+  again, also with the subfolders on; with the list emptied nothing is shown and the keys do nothing;
 - the EXIF and GPS rows are there, the map link is offered, and every row of both grids has a description;
 - the theme button switches to light and back;
 - <kbd>0</kbd> fits the image to the viewer, and <kbd>O</kbd> saves into a group like any other letter;
