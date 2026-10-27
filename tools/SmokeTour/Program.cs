@@ -82,7 +82,7 @@ internal static class Program
             checks.Fail("reading the saved settings: " + ex.Message);
         }
 
-        checks.Step("11. Nothing leaked");
+        checks.Step("12. Nothing leaked");
         checks.That(!File.Exists(CrashLog.FilePath), "no crash log was written");
         checks.That(File.Exists(Path.Combine(appData, "global-config.json")), "the last folder went to the redirected app-data folder, not the real one");
 

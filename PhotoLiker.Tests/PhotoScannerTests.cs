@@ -109,6 +109,65 @@ public class PhotoScannerTests : IDisposable
     }
 
     [Theory]
+    [InlineData("Deleted")]
+    [InlineData("deleted")]
+    [InlineData("DELETED")]
+    public void TheDeletedFolder_IsSkipped_WhateverItsCase(string folder)
+    {
+        Touch("a.jpg");
+        Touch(Path.Combine(folder, "gone.jpg"));
+        Touch(Path.Combine(folder, "2024", "gone-too.jpg"));
+
+        var photos = PhotoScanner.Scan(_root, recursive: true, Extensions, excludedFolder: null);
+
+        Assert.Equal(["a.jpg"], Names(photos));
+    }
+
+    [Fact]
+    public void TheDeletedFolder_IsSkipped_WithAnExcludedFolderToo()
+    {
+        Touch("a.jpg");
+        Touch(Path.Combine("Deleted", "gone.jpg"));
+        Touch(Path.Combine("Liked", "liked.jpg"));
+        Touch(Path.Combine("Other", "b.jpg"));
+
+        var photos = PhotoScanner.Scan(_root, recursive: true, Extensions, excludedFolder: Path.Combine(_root, "Liked"));
+
+        Assert.Equal(["a.jpg", "b.jpg"], Names(photos));
+    }
+
+    [Fact]
+    public void OnlyTheDeletedFolderOfTheScannedFolderIsSkipped_NotOneFurtherDown()
+    {
+        Touch(Path.Combine("trips", "Deleted", "mine.jpg")); // somebody's own folder that happens to be called that
+        Touch(Path.Combine("Deleted", "gone.jpg"));
+
+        var photos = PhotoScanner.Scan(_root, recursive: true, Extensions, excludedFolder: null);
+
+        Assert.Equal(["mine.jpg"], Names(photos));
+    }
+
+    [Fact]
+    public void TheDeletedFolder_CanBeScannedItself_ToLookAtWhatWasDeleted()
+    {
+        Touch(Path.Combine("Deleted", "gone.jpg"));
+        Touch(Path.Combine("Deleted", "2024", "gone-too.jpg"));
+
+        var photos = PhotoScanner.Scan(Path.Combine(_root, "Deleted"), recursive: true, Extensions, excludedFolder: null);
+
+        Assert.Equal(["gone-too.jpg", "gone.jpg"], Names(photos));
+    }
+
+    [Fact]
+    public void TheDeletedFolder_IsSkipped_WhenTheScannedFolderIsGivenWithATrailingSeparator()
+    {
+        Touch("a.jpg");
+        Touch(Path.Combine("Deleted", "gone.jpg"));
+
+        Assert.Equal(["a.jpg"], Names(PhotoScanner.Scan(_root + Path.DirectorySeparatorChar, recursive: true, Extensions, null)));
+    }
+
+    [Theory]
     [InlineData("@eaDir")]            // Synology thumbnails
     [InlineData("#recycle")]
     [InlineData("$RECYCLE.BIN")]

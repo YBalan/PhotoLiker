@@ -4,6 +4,7 @@ namespace PhotoLiker.Core
     {
         public const string SettingsFileName             = "photo-liker-config.json";
         public const string DefaultLikedFolderName       = "Liked";
+        public const string DeletedFolderName            = "Deleted";
         public const string StatusFolderLoaded           = "Loaded {0} photos from '{1}'";
         public const string StatusFolderLoadError        = "Error loading folder: {0}";
         public const string StatusNoPhotosFound          = "No photos found.";

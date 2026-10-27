@@ -149,6 +149,13 @@ namespace PhotoLiker.Search
             }
         }
 
+        /// <summary>Forgets the photo with this full path, e.g. because it was moved away. Nothing happens if it is not in the index.</summary>
+        public void RemoveFile(string fullPath)
+        {
+            if (TryGetRelativePath(fullPath, out var relative))
+                Remove([relative]);
+        }
+
         /// <summary>Adds a face to an indexed photo.</summary>
         public void AddFace(IndexedFace face)
         {

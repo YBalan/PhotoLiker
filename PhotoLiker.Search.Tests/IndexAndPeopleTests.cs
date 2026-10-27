@@ -98,6 +98,23 @@ public class PhotoIndexTests : IDisposable
     }
 
     [Fact]
+    public void RemoveFile_ForgetsAPhotoByItsFullPath_AndIgnoresOnesThatAreNotThere()
+    {
+        using var index = PhotoIndex.Open(_photos.Path, IndexFile);
+        index.Save([Photo("Sub/one.jpg", Vectors.Unit(1), (0, 0, 0.1f, 0.1f, Vectors.Unit(1))), Photo("two.jpg", Vectors.Unit(2))]);
+
+        index.RemoveFile(Path.Combine(_photos.Path, "Sub", "one.jpg"));
+        index.RemoveFile(Path.Combine(_photos.Path, "never-indexed.jpg"));
+        index.RemoveFile(Path.Combine(Path.GetTempPath(), "outside.jpg"));
+
+        Assert.Null(index.Find("Sub/one.jpg"));
+        Assert.NotNull(index.Find("two.jpg"));
+        Assert.Equal(0, index.FaceCount);
+        using var reopened = PhotoIndex.Open(_photos.Path, IndexFile);
+        Assert.Equal(1, reopened.PhotoCount);
+    }
+
+    [Fact]
     public void AddFaceAndRemoveFace_ChangeThePhoto_AndSurviveReopening()
     {
         using (var index = PhotoIndex.Open(_photos.Path, IndexFile))
