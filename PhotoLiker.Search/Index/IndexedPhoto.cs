@@ -8,9 +8,12 @@ namespace PhotoLiker.Search
         /// <summary>Path below the indexed folder, with '/' as the separator.</summary>
         public string RelativePath { get; } = relativePath;
 
-        /// <summary>Size and timestamp of the file when it was indexed; a different one means the photo has to be indexed again.</summary>
+        /// <summary>
+        /// Size and timestamp of the file when it was indexed; a different one means the photo has to be indexed again. The timestamp is
+        /// replaced by <see cref="PhotoIndex.UpdateStamps"/> when a program changes the dates of the file but not the picture.
+        /// </summary>
         public long Length { get; } = length;
-        public long ModifiedTicks { get; } = modifiedTicks;
+        public long ModifiedTicks { get; internal set; } = modifiedTicks;
 
         /// <summary>The CLIP vector for text search; null if the photo could not be read.</summary>
         public float[]? Clip { get; init; }

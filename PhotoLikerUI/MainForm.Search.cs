@@ -398,7 +398,7 @@ namespace PhotoLikerUI
             _indexProgress.Value = Math.Clamp(done, 0, _indexProgress.Maximum);
         }
 
-        private static string FormatDuration(TimeSpan time) =>
+        internal static string FormatDuration(TimeSpan time) =>
             time.TotalHours >= 1 ? $"{(int)time.TotalHours} h {time.Minutes} min"
             : time.TotalMinutes >= 1 ? $"{(int)Math.Ceiling(time.TotalMinutes)} min"
             : $"{(int)time.TotalSeconds} s";

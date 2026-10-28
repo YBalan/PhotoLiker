@@ -33,8 +33,16 @@ namespace PhotoLiker.Core
                 ? friendly
                 : readerName ?? string.Format(ImageHelperStrings.UnknownTagFormat, tagId);
 
+        /// <summary>
+        /// The tag id of the "File Date" row (see <see cref="FileDateRow"/>). It is no EXIF tag: the number is one that EXIF does not use,
+        /// below 0x5000 so that the row is listed with the Image tags, where it sorts right after "Date Last Saved".
+        /// </summary>
+        public const int FileDateTagId = 0x4F00;
+
         public static readonly Dictionary<int, string> Tags = new()
         {
+            [FileDateTagId] = "File Date",
+
             // TIFF baseline
             [0x0100] = "Image Width",
             [0x0101] = "Image Length",
@@ -45,7 +53,7 @@ namespace PhotoLiker.Core
             [0x011B] = "Y Resolution",
             [0x0128] = "Resolution Unit",
             [0x0131] = "Software",
-            [0x0132] = "Date Taken",
+            [0x0132] = "Date Last Saved",
             [0x0201] = "JPEG Thumbnail Offset",
             [0x0202] = "JPEG Thumbnail Length",
             [0x0213] = "YCbCr Positioning",

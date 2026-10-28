@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using PhotoLiker.Core;
 
 namespace PhotoLiker.Search
 {
@@ -50,6 +51,16 @@ namespace PhotoLiker.Search
         public int FaceCount { get { lock (_gate) return _photos.Values.Sum(p => p.Faces.Count); } }
 
         public int FailedCount { get { lock (_gate) return _photos.Values.Count(p => p.Failure is not null); } }
+
+        /// <summary>
+        /// The photos the indexer could not decode (damaged, cut off), with the full path, the size and why: the unreadable photos of the folder, as far as it is
+        /// indexed. A photo that could not be read only for now (a network error) is not in it: that is tried again, not remembered.
+        /// </summary>
+        public IReadOnlyList<UnreadablePhoto> FailedPhotos()
+        {
+            lock (_gate)
+                return [.. _photos.Values.Where(p => p.Failure is not null).Select(p => new UnreadablePhoto(ToFullPath(p.RelativePath), p.Length, p.Failure!)).OrderBy(p => p.Path, StringComparer.OrdinalIgnoreCase)];
+        }
 
         /// <summary>Photos whose date has not been worked out by the current rules yet (an index made before dates were kept): "Update index" reads them.</summary>
         public int DatesPending { get { lock (_gate) return _photos.Values.Count(p => p.Clip is not null && p.Date.Version < PhotoDates.Version); } }
@@ -127,6 +138,31 @@ namespace PhotoLiker.Search
                         ("$taken", date.Taken is { } taken ? (object)taken.Ticks : DBNull.Value),
                         ("$source", (int)date.Source), ("$version", date.Version), ("$id", photo.Id));
                     photo.Date = date;
+                }
+                transaction.Commit();
+            }
+        }
+
+        /// <summary>
+        /// Photos whose file got another date of change while the picture stayed the same (see <see cref="DateAligner"/>) are still
+        /// the indexed ones: without this "Update index" would take them for changed photos and analyze them again, which takes hours.
+        /// A photo is only taken over if the index knew it by <c>PreviousTicks</c>; one that was already out of date stays so.
+        /// </summary>
+        public void UpdateStamps(IReadOnlyCollection<(string FullPath, long PreviousTicks, long ModifiedTicks)> stamps)
+        {
+            if (stamps.Count == 0)
+                return;
+
+            lock (_gate)
+            {
+                using var transaction = _db.BeginTransaction();
+                foreach (var (fullPath, previous, modified) in stamps)
+                {
+                    if (!TryGetRelativePath(fullPath, out var relative) || !_photos.TryGetValue(relative, out var photo) || photo.ModifiedTicks != previous)
+                        continue;
+
+                    Execute("UPDATE photos SET modified = $modified WHERE id = $id", ("$modified", modified), ("$id", photo.Id));
+                    photo.ModifiedTicks = modified;
                 }
                 transaction.Commit();
             }

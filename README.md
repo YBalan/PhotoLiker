@@ -21,6 +21,9 @@ find every photo they are in. It all runs on your own computer, no photo is ever
 - [Groups](#groups)
 - [Deleting photos](#deleting-photos)
 - [EXIF and GPS](#exif-and-gps)
+- [Aligning file dates](#aligning-file-dates)
+- [Removing empty folders](#removing-empty-folders)
+- [Finding duplicates](#finding-duplicates)
 - [Dark and light theme](#dark-and-light-theme)
 - [Photo search](#photo-search)
 - [Settings file](#settings-file)
@@ -99,6 +102,11 @@ Open a photo folder, copy the photo, *About* (version and build date), register 
 theme, open the photo folder or the Liked folder in Explorer, load the Liked folder as a photo folder of its own, and
 **Generate Video**: turn the loaded photos into a video with ffmpeg (a copy of `ffmpeg.exe` ships with the app; otherwise
 the one on your `PATH` is used). You choose resolution, the time each photo is shown, codec (H.264 / H.265) and quality.
+**Align dates** (the calendar with the green equals sign) makes the dates of the photo files the date the photo was taken,
+see [Aligning file dates](#aligning-file-dates). **Remove empty folders** (a folder with a red cross) lists the folders that hold
+no photos and removes them, see [Removing empty folders](#removing-empty-folders). **Find duplicates** (two overlapping photos)
+finds photos that are the same file in different folders and moves the copies in the worse folders away, see
+[Finding duplicates](#finding-duplicates).
 
 ## Settings
 
@@ -198,7 +206,8 @@ subfolders with the same name don't meet. If a photo with that name is already i
 The `Deleted` folder of the photo folder is left out when the folder is listed (also with **GoThroughSubFolders** on) and
 by the search indexer. Only that one: a folder called `Deleted` further down is yours and is listed as any folder. A photo
 that is deleted leaves the search index at once; its copies in the Liked and group folders stay where they are. Open the
-`Deleted` folder itself with the folder button to look at what is in it.
+`Deleted` folder itself with the folder button to look at what is in it. The copies that [Find duplicates](#finding-duplicates) moves
+away are in `Deleted\Duplicated`, in the same way.
 
 While search results are shown, <kbd>Delete</kbd> works the same on the photo shown. Like the other keys, it does nothing
 while you type into a text box.
@@ -214,6 +223,146 @@ GPS tags are decoded into decimal and degree/minute/second coordinates, altitude
 position, the **Map Link** row and the **Maps** link at the right of the status bar open it in Google Maps.
 
 ![The metadata grid with the decoded GPS data](docs/images/10-metadata-gps.png)
+
+Dates are shown with the month as a word, `14 Aug 2025 09:12:07` (the month is English whatever the language of Windows), in
+the grids and in the dialogs below; the file itself keeps them the way EXIF writes them, `2025:08:14 09:12:07`. The format is
+set in one place, `DateText` in `PhotoLiker.Core`.
+
+The **File Date** row (in the Image rows, right after *Date Last Saved* when the photo has that tag) is not EXIF: it is the
+date of the file on the disk, created and, if different, modified. It ends with `(= Date Taken (Original))` when the file has the
+time of shooting that the camera wrote into the photo and with `(≠ Date Taken (Original))` when it has not (a copied file gets
+the day of the copy); the note names the row it was compared with, and that one is never *Date Last Saved*.
+
+Two EXIF dates look alike and are not. **Date Taken (Original)** (in the EXIF rows) is when the picture was shot. **Date Last Saved**
+(in the Image rows, EXIF's `DateTime`) is when a program last saved the photo: a photo that was turned or edited in Windows Photo
+Viewer shows that day there, months after it was shot. Everything in PhotoLiker (search by date, the order of the list, Align dates) goes by the first.
+
+## Aligning file dates
+
+A file that was copied from a card, a phone or an old disk has the day of the copy as its created date, and the date of the
+photo only sits inside it (EXIF). The **Align dates** button of the toolbar sets the dates of the files to the date taken, so
+that Explorer, other programs and the order of the list (**SortOrder** goes by the created date) agree with the camera.
+
+The dialog looks at the folder first (it reads only the start of each file, so it takes minutes for tens of thousands of photos
+even on a network drive, and can be stopped) and shows, before anything is touched, how many photos will change and which:
+
+- **Will change** lists each photo with its date taken, its created and modified date now, and what would be set; **Already
+  match**, **No usable EXIF date** and **Unreadable** list the others. The counts and the list follow the ticks at once.
+- The ticks are *File created date* and *File modified date* (on) and *Dates inside the photo too* (off). With the last one on,
+  the other two dates inside the photo (Date Time Digitized and Date Last Saved) are made equal to Date Taken (Original). They are overwritten
+  in place (a date has a fixed size), so the file does not grow and the picture is not touched.
+- A photo can be taken out of the run: select it, then <kbd>Space</kbd> or the right-click menu *Leave out of this run*.
+- A **double click** on a row opens the photo in the program Windows has for it (the right-click menu also has *Open* and *Show in
+  File Explorer*, which opens the folder with the file selected), to look at it before deciding. This works while a run is in progress too.
+- Only the date the camera wrote is used, and only if PhotoLiker believes it (see [Photo search](#photo-search): not before
+  1995, not in the future, not a camera that lost its clock). A photo without such a date is listed under **No usable EXIF
+  date** and left as it is, unless you give it one (next list). The date of the camera has no time zone, so it is taken as the
+  time of this computer.
+
+**Photos without a usable date.** Select some of them (or none, for all) and press **Use a date...** (<kbd>Enter</kbd>, or
+the right-click menu). It asks where their date taken comes from, and shows for each answer how many of the photos have one
+from there, and what it would be:
+
+- *The date the photo has: I know it is right*: the EXIF date that looks like a camera that lost its clock but is real, a
+  photo of New Year's night in a folder `2016-01-01`;
+- *The date in the name of its folder*: a day in the folder name (`2015-05-01`, `20150501`, `01.05.2015 Anna`), the innermost
+  folder that has one, at the time of day the photo has, or at noon (a folder called `2015-05` has no day and gives none);
+- *The date of the file*: when it was created, else changed. For a photo that was copied this is the day of the copy, which
+  the dialog says;
+- *This date*: one you type.
+
+The photos then count as having that date taken: they move to **Will change** (marked "(given)") and are changed like the others,
+with the file dates set to it, and the dates inside the photo too if that is ticked, which replaces the date that was not
+believed. A photo that has no place for a date inside it (no EXIF at all) only gets its file dates, which is also the date the
+app goes by for it (the date of its file). "Forget the date given" in the right-click menu takes a date back; a given date is
+not kept after the dialog closes, and the run is logged and can be undone like any other.
+
+**Change N photos** does it. Things that go along:
+
+- Every run writes a log (`photo-liker-datefix-<date>-<time>.jsonl`) in the photo folder, before the first file of each hundred is
+  touched. **Undo last run...** puts the dates (and the dates inside the photo) back from it; a photo that was changed after the
+  run, or whose date was changed again, is left alone and counted.
+- The copies of a changed photo in the Liked and group folders get the same dates, because a copy is matched with its photo by size
+  and date when photos share a name.
+- If the folder is indexed, the index is told that the photos are the same ones: without that, "Update index" would take every
+  changed date for a changed photo and analyze it again. (Stop indexing before using the button.)
+- The dates are read back after writing. A network drive that does not keep the created date is reported, not ignored.
+- The folder is listed again afterwards, so the list is in the new order and the **File Date** row is up to date.
+
+## Removing empty folders
+
+Moving and deleting photos leaves folders behind, and Windows leaves a thumbnail cache (`Thumbs.db`) in the ones it showed. The
+**Remove empty folders** button of the toolbar lists the folders of the photo folder, at any depth, that hold nothing of use:
+nothing at all, or only thumbnail files (`Thumbs.db`, `ehthumbs.db`, `desktop.ini`, `.DS_Store`, `._*` stubs of macOS), or only
+other folders like that. Every folder is ticked and nothing is deleted until you press **Remove N folders**.
+
+- The rule is strict: any other file, whatever it is, keeps its folder and every folder above it. A folder that can not be read
+  is not guessed at. A link to another folder, the `Deleted` folder, the Liked folder with its group folders, and NAS or system
+  folders (`@eaDir`, `#recycle`, `$RECYCLE.BIN`) are left alone, and so are the folders that hold them. The photo folder itself is never removed.
+- Unticking a folder unticks the folders above it (they could not go without it); ticking a folder ticks the ones inside it.
+- A **double click** on a row opens the folder in File Explorer (also *Open in File Explorer* in the right-click menu), to see what is in it before it is removed. It does not change the tick.
+- The thumbnail files are deleted with their folder, the folder is deleted without recursion (a folder that got a file since
+  the list was made stays, and is reported), and the folders inside go before the folder around them.
+- Nothing can be undone here: there is nothing in these folders to bring back, and a missing folder is made again when needed.
+
+**Photos that can not be read.** The second list of the dialog, *Unreadable photos*, holds the photos that no program can show:
+
+- the ones the [search index](#photo-search) could not decode (a damaged or cut-off file: "The image header might be corrupted"). These
+  are the "unreadable" of the index status, and they are only as many as the indexer has got to, so index the folder first;
+  they are taken from the index, so listing them reads nothing from the (possibly slow) drive;
+- empty files (0 bytes) with the extension of a photo, found on the same walk of the folders.
+
+Unlike a thumbnail cache, a photo may still be worth something to another program, so the list starts **unticked**; double click
+a row to look at it, tick the ones to go (*Tick all* ticks them all) and press **Move N to Deleted\Unreadable**. They are moved, not
+erased, with the path they had, like every deleted photo, and the search index forgets them; to bring one back, move it up again in File Explorer
+(to erase them for good, empty that folder). A folder that held only such photos is empty afterwards: press *Look again* to find it. Moving is
+not offered while the folder is being indexed. Photos in the `Deleted` and Liked folders are left out.
+
+## Finding duplicates
+
+Photos get copied: a card into a folder named for the day, the same card again, a folder of discards. The **Find duplicates**
+button of the toolbar finds photos that show *exactly the same picture* in different folders, keeps one of each and moves the other
+copies to `Deleted\Duplicated` inside the photo folder, with the path they had, so a copy goes back by moving it up again.
+
+**How they are found.** The name plays no part (a renamed copy is a copy; two cameras that both count to `IMG_1234` are not).
+Neither does what is written around the picture: a JPEG has a header (EXIF, XMP, a thumbnail) in front of its picture data, and a
+program that writes a rating, a keyword or a date changes the header, often without changing the size of the file. Two copies of
+one camera photo are then not the same *file*, but they are the same photo, so the comparison is of the picture data after the
+header. Only files with the same size can be the same, and the folder listing says that for free, so only those are looked at, by a
+fingerprint of three blocks of 64 KB of the picture data (the start, the middle and the end), which takes minutes for tens of
+thousands of photos even on a network drive. Tick *Compare all of the picture* to read all of it instead: much slower, no doubt left. The
+sample can miss two photos that are the same everywhere but between the blocks; the unit tests show that case. A group whose
+metadata is not the same in all copies says so in the list ("metadata differs from the others"): the copy that stays keeps
+its own, so look at those if you rated or tagged photos in a folder that loses. A file that is not a JPEG is compared as it is.
+Subfolders are always included, and the photos in a folder called `Liked` or in a group folder (`A - Group ...`) are left out: they are copies on purpose.
+A copy whose metadata has another *size* (an XMP block that was added to one of them) is hidden from a comparison of sizes; tick
+*Also look at photos that only share their name with another* to look at those too: it reads more files, and the name is only
+what picks the photos to look at, the picture decides.
+
+**Which copy stays.** The folder decides, the way you would have sorted them by hand:
+
+- a folder **named for a date** (`2014-11-23`, `20141123`, `23.11.2014`, `2014`) or **with a name of its own** (`Natasha's camera`,
+  `Crete trip`) beats a folder that only holds what the camera called the card (`107_2311`, `135___07`, `314CANON`, `100NIKON`);
+  what all the copies have in common (the folder `Photo` that every photo is in) counts for nothing;
+- anything inside a folder called `Deleted` (or `Duplicated`, `Trash`) loses, and among copies that are all in such folders the better name still wins;
+- between copies in equally good folders, the one whose file name is not that of a copy stays: `IMG_5407 - копия.JPG`,
+  `IMG_5407 - Copy.JPG`, `IMG_5407 (2).JPG` and `Copy of IMG_5407.JPG` move, `IMG_5407.JPG` stays (the folder still counts first);
+- the copies that still tie (two date-named folders, two card folders) are left to you, and are never moved until you choose.
+
+Every row says why. You can fill in the two boxes to override the rules: *Always keep copies in folders with* and *Always move
+copies out of folders with* take parts of a path, separated by `;`, with `*` and `?` as wildcards (`107_*; Fotik1`). Select a
+photo and press **Keep this one** (<kbd>Enter</kbd>) to make it the one that stays whatever the rules say, or **Leave group
+alone** (<kbd>Delete</kbd>) to keep a group out of the run; both work from the right-click menu too. At least one copy of every group always stays.
+A **double click** on a row opens that copy in the program Windows has for it, to see which one is the better picture before you
+decide (the right-click menu also has *Open* and *Show in File Explorer*).
+
+**Move N photos** does it. A copy is only moved if the photo that stays is still there with the same size and the copy itself
+is unchanged since the look. Every run writes a log (`photo-liker-duplicates-<date>-<time>.jsonl`) in the photo folder before the
+first move of each hundred, and **Undo last run...** puts the copies back (a copy whose old place is taken stays where it is, and is counted).
+The search index forgets the moved copies at once (after an undo, *Update index* adds them again). Stop indexing before using the button.
+Which folder you open matters for one thing: the `Deleted` folder directly inside the opened folder is the app's own and is not
+scanned; a `Deleted` folder deeper down is a folder like any other, and its copies are found and are the first to go.
+Afterwards **Remove empty folders** clears the card folders that are left with nothing in them.
 
 ## Dark and light theme
 
@@ -274,7 +423,8 @@ needs no models and takes about a minute per 2,000 photos on a network drive.
 What is kept where:
 
 - **The index** (what was found in each photo, and when it was taken) is a cache in `%LocalAppData%\PhotoLiker\index`, one file per photo folder.
-  It can always be rebuilt, so deleting it only costs the time of indexing again. Your photos are only read, never changed.
+  It can always be rebuilt, so deleting it only costs the time of indexing again. Your photos are only read, never changed
+  (except by [Align dates](#aligning-file-dates), which you press yourself).
   To use it on another computer (or to index on the faster one), choose **I/E > Export index...** (the first button of the
   strip: import / export), bring the `.plindex` file over, open the same photos there (whatever the drive letter) and choose
   **I/E > Import index...**.
@@ -327,8 +477,8 @@ to keep them somewhere else; the tests do that, so running them leaves your own 
 | Project | What it is |
 |---|---|
 | `PhotoLikerUI` | The Windows (WinForms) app. Everything that needs WinForms or GDI+: the window, decoding and caching of photos, the settings grid with its editors, themes, the context menu registration. |
-| `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders, the liked and group libraries, EXIF reading and GPS decoding, the ffmpeg video service. Shared by all front ends. |
-| `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people file. Windows only (WPF's image decoder). |
+| `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown, the ffmpeg video service. Shared by all front ends. |
+| `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people file; the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app). |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizer, image and face geometry, index, people file, search. They need no models. |
@@ -369,7 +519,22 @@ every step:
   **SortOrder** lists the same photos oldest first, newest first or as the disk gives them, keeping the shown photo;
 - <kbd>Delete</kbd> moves the photo (keeping its subfolder) to `Deleted`, shows the next one, and the folder is not listed
   again, also with the subfolders on; with the list emptied nothing is shown and the keys do nothing;
-- the EXIF and GPS rows are there, the map link is offered, and every row of both grids has a description;
+- the EXIF and GPS rows are there, the map link is offered, every row of both grids has a description, and the **File Date**
+  row says the file date is not the date taken;
+- **Align dates** opens its dialog, lists what would change without touching anything, sets the dates of the files (and of the
+  copies in the Liked folders), leaves a log, sorts the list by the date taken, and finds nothing left to do the second time;
+- photos that have no usable EXIF date can be given one (from their folder name, or typed): they move from **No usable EXIF
+  date** to **Will change**, are marked "(given)", and get their file dates;
+- **Remove empty folders** also lists photos that can not be read (here empty files), unticked, moves the ticked ones to
+  `Deleted\Unreadable` and leaves a real photo and an empty note alone; looking again then finds the folder that is empty now;
+- a double click with the real mouse on a row of the three dialogs reaches the right photo or folder (it is deleted first, so that
+  nothing is launched, and what the dialog says about it names it), and a double click on the list with ticks leaves the tick alone;
+- **Remove empty folders** lists the empty folders (one with only a hidden `Thumbs.db` too), the ticks follow the folder tree,
+  and the button removes what is ticked and nothing else: a folder with another file, the group and Deleted folders and every photo stay;
+- **Find duplicates** is shown real small photos in a camera folder, a date-named folder and a Deleted folder under other
+  names: the date-named copy stays, a folder with a name of its own beats a camera folder, a group the folders can not decide waits
+  for a choice (*Keep this one*) and a group can be left alone; the copy in a folder called Liked is not touched; the move
+  goes to `Deleted\Duplicated` with the folder path and a log, and **Undo** (answered with the key of its Yes button) puts the copies back;
 - the theme button switches to light and back;
 - <kbd>0</kbd> fits the image to the viewer, and <kbd>O</kbd> saves into a group like any other letter;
 - the settings file written on exit has relative paths, the legacy `GoThroughtSubFolders` key, the sort order and the dark theme.

@@ -33,7 +33,7 @@ namespace PhotoLiker.Core
 
                         if (!seen.Add(name)) continue;
 
-                        string value = tag.Description ?? string.Empty;
+                        string value = DateText.Reformat(tag.Description ?? string.Empty);
                         byte[]? rawBytes = directory.GetByteArray(tagId);
                         int type = 0;
 
@@ -59,7 +59,7 @@ namespace PhotoLiker.Core
                 string name = ExifTagMap.GetName(property.Id);
                 if (!seen.Add(name)) continue;
 
-                string value = ExifValueFormatter.Format(property.Type, property.Value);
+                string value = DateText.Reformat(ExifValueFormatter.Format(property.Type, property.Value));
                 meta.Entries.Add(new MetadataEntry(property.Id, name, value, property.Type, property.Value));
             }
 

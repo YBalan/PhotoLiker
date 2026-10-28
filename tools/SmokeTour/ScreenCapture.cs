@@ -73,14 +73,14 @@ internal static class ScreenCapture
         }
     }
 
-    /// <summary>The visible window of this thread that isn't <paramref name="except"/> (a dialog being shown), or zero.</summary>
-    public static IntPtr FindDialogOfThisThread(IntPtr except)
+    /// <summary>The biggest visible window of this thread that is not one of <paramref name="except"/> (a dialog being shown), or zero.</summary>
+    public static IntPtr FindDialogOfThisThread(params IntPtr[] except)
     {
         var found = IntPtr.Zero;
         long biggest = 0;
         EnumThreadWindows(GetCurrentThreadId(), (window, _) =>
         {
-            if (window != except && IsWindowVisible(window))
+            if (!except.Contains(window) && IsWindowVisible(window))
             {
                 var bounds = FrameBounds(window);
                 var area = (long)bounds.Width * bounds.Height;

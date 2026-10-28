@@ -723,3 +723,31 @@ public class GroupLibraryTests : IDisposable
         Assert.Equal(["Favourites"], groups.GetSavedInNames(photo));
     }
 }
+
+public class GroupLibraryCopiesTests : IDisposable
+{
+    private readonly string _tempDir = Path.Combine(Path.GetTempPath(), "PLGroupCopiesTests_" + Guid.NewGuid());
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_tempDir, recursive: true); } catch { }
+    }
+
+    [Fact]
+    public void TheCopiesOfAPhoto_AreFoundInEveryGroupFolderThatHoldsOne()
+    {
+        var photosDir = Path.Combine(_tempDir, "Photos");
+        var likedDir = Path.Combine(photosDir, "Liked");
+        Directory.CreateDirectory(Path.Combine(likedDir, "A - Group"));
+        Directory.CreateDirectory(Path.Combine(likedDir, "B - Group"));
+        var original = Path.Combine(photosDir, "a.jpg");
+        File.WriteAllText(original, "photo");
+        File.Copy(original, Path.Combine(likedDir, "A - Group", "a.jpg"));
+        var info = new FileInfo(original);
+        var photo = new PhotoFile(original, string.Empty) { Length = info.Length, LastWriteTimeUtc = info.LastWriteTimeUtc };
+
+        var copies = GroupLibrary.Scan(likedDir, [photo]).CopiesOf(photo);
+
+        Assert.Equal([Path.Combine(likedDir, "A - Group", "a.jpg")], copies);
+    }
+}

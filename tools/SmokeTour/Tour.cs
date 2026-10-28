@@ -34,7 +34,13 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         await ThemeToggle();
         await FitKeyAndGroupO(); // the folder of group O would show in the legend of the screenshots after it
         await FocusAfterEditing(); // it changes settings and clicks around, which would show in the screenshots
-        await DeleteKey();         // last: the demo photos it moves away are not there for the steps after it
+        await DeleteKey();         // the demo photos it moves away are not there for the steps after it
+        await AlignDates();        // it gives the files other dates, which the order of the list and the months follow
+        await GiveDates();         // photos without an EXIF date get one from a person
+        await DoubleClicks();      // a double click on a row of the three dialogs opens the photo or the folder
+        await UnreadableList();    // empty photo files are listed, and move to Deleted\Unreadable
+        await RemoveEmptyFolders(); // it makes folders in the demo folder and removes them again
+        await FindDuplicates();     // last: it makes photos in the demo folder, moves them away and brings them back
     }
 
     // ── 1. the folder opens, in dark mode ───────────────────────────────────────────────────────
@@ -339,6 +345,12 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
 
         checks.That(form.GpsLink.Visible && form.GpsLink.Text!.Contains("Maps"), $"status bar offers the map link ({form.GpsLink.Text})");
 
+        // The dates of the file next to the dates of the photo
+        var fileDate = DrivenForm.Row(form.MetadataGrid, "File Date");
+        var imageRows = fileDate.Parent!.GridItems.Cast<GridItem>().Select(i => i.Label!).ToList();
+        checks.That(fileDate.Parent.Label == "1. Image", $"the File Date row is listed with the Image rows: {string.Join(", ", imageRows)}");
+        checks.That(fileDate.Value is string text && text.EndsWith("(≠ Date Taken (Original))"), $"and says that the file date is not the date taken ({fileDate.Value})");
+
         (await Shot("10-metadata-gps")).Dispose();
     }
 
@@ -565,11 +577,564 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         checks.That(await Until(() => form.Config.Files.Count == total - 3 && PhotoShown()), $"with the extensions back the list has {form.Config.Files.Count} photos (the three deleted ones are not in it)");
     }
 
+    // ── 11. Align dates ─────────────────────────────────────────────────────────────────────────
+
+    private async Task AlignDates()
+    {
+        checks.Step("11. Align dates: the dialog lists what would change, the button makes the file dates the date taken");
+
+        var button = (ToolStripButton)form.ToolbarItem("alignDatesToolStripButton");
+        checks.That(button.Image is not null && button.Enabled && button.ToolTipText!.Contains("date the photo was taken"), "the toolbar has an Align dates button with an icon");
+
+        await ChangeSetting("GoThroughSubFolders", true);
+        await ChangeSetting("Extensions", new[] { ".jpg", ".png" });
+        await Until(() => form.Config.Files.Count > 0 && PhotoShown());
+        var photos = form.Config.Files.Select(f => f.OriginalFilePath).ToList();
+        var takenAt = photos.ToDictionary(p => p, p => FileDateRow.TakenOf(new FriendlyImageMetadata(p).Entries));
+        checks.That(takenAt.Values.All(t => t is not null), $"all {photos.Count} photos left in the demo folder have a date taken");
+        checks.That(photos.All(p => !DateAlign(File.GetCreationTime(p), takenAt[p]!.Value)), "and the dates of their files are others");
+
+        // The dialog is modal: it is opened by a posted click, so that the tour can go on while it is up
+        form.BeginInvoke(button.PerformClick);
+        Form? dialog = null;
+        checks.That(await Until(() => (dialog = FindDialog("DateAlignmentDialog")) is not null), "the dialog opens");
+        if (dialog is null)
+            return;
+
+        checks.That(await Until(() => Buttons(dialog).Any(b => b.Text.StartsWith("Change ") && b.Enabled), 30000), "it looks at the photos and offers to change them");
+        var apply = Buttons(dialog).First(b => b.Text.StartsWith("Change "));
+        var list = Controls<ListView>(dialog).Single();
+        checks.That(apply.Text == $"Change {photos.Count} photos" && list.VirtualListSize == photos.Count, $"all {photos.Count} photos will change and are listed ({apply.Text}, {list.VirtualListSize} rows)");
+        checks.That(Controls<RadioButton>(dialog).Any(r => r.Text == $"Will change ({photos.Count})" && r.Checked), "the filter shows what will change");
+        checks.That(Controls<Label>(dialog).Any(l => l.Text.StartsWith($"{photos.Count} of {photos.Count} photos will change")), "the summary says how many");
+        checks.That(Controls<CheckBox>(dialog).Select(c => c.Checked).SequenceEqual([true, true, false]), "created and modified are ticked, the dates inside the photo are not");
+        checks.That(photos.All(p => !DateAlign(File.GetCreationTime(p), takenAt[p]!.Value)), "nothing has been touched yet");
+
+        dialog.TopMost = true; // the window behind it is topmost for the photographs, and would cover it
+        ScreenCapture.BringToFront(dialog.Handle);
+        await Settle(600);
+        using (var picture = ScreenCapture.Capture(dialog.Handle))
+            Save(picture, "11-align-dates");
+
+        apply.PerformClick();
+        checks.That(await Until(() => Controls<Label>(dialog).Any(l => l.Text.StartsWith("Done: ")), 30000), "it does the work");
+        var status = Controls<Label>(dialog).FirstOrDefault(l => l.Text.StartsWith("Done: "))?.Text ?? string.Empty;
+        checks.Note(status);
+        checks.That(status.StartsWith($"Done: {photos.Count} photos changed"), "and reports how many were changed");
+        checks.That(photos.All(p => DateAlign(File.GetCreationTime(p), takenAt[p]!.Value) && DateAlign(File.GetLastWriteTime(p), takenAt[p]!.Value)), "the files now have the date taken as created and modified date");
+        checks.That(Directory.GetFiles(folder, "photo-liker-datefix-*.jsonl").Length == 1, "the run left its log in the photo folder");
+        checks.That(Buttons(dialog).First(b => b.Text.StartsWith("Undo")).Enabled, "and Undo is on offer");
+        checks.That(list.VirtualListSize == 0 && Buttons(dialog).Any(b => b.Text == "Nothing to change"), "nothing is left to change");
+
+        Buttons(dialog).First(b => b.Text == "Close").PerformClick();
+        checks.That(await Until(() => FindDialog("DateAlignmentDialog") is null), "the dialog closes");
+
+        // The folder is listed again: oldest first now means by the date taken
+        var byTaken = photos.OrderBy(p => takenAt[p]).ToList();
+        checks.That(await Until(() => form.Config.Files.Count == photos.Count && PhotoShown() && form.Config.Files.Select(f => f.OriginalFilePath).SequenceEqual(byTaken)), "the list is sorted by the date taken");
+        checks.That(await Until(() => DrivenForm.Row(form.MetadataGrid, "File Date").Value is string text && text.EndsWith("(= Date Taken (Original))")), $"and the File Date row of the photo shown says it is the date taken ({DrivenForm.Row(form.MetadataGrid, "File Date").Value})");
+        (await Shot("12-aligned")).Dispose();
+
+        // The second time there is nothing to do
+        form.BeginInvoke(button.PerformClick);
+        checks.That(await Until(() => (dialog = FindDialog("DateAlignmentDialog")) is not null), "opened again,");
+        checks.That(await Until(() => dialog is not null && Controls<Label>(dialog).Any(l => l.Text.StartsWith("Nothing to change")), 30000), "it finds all the photos aligned");
+        if (dialog is not null)
+            Buttons(dialog).First(b => b.Text == "Close").PerformClick();
+        await Until(() => FindDialog("DateAlignmentDialog") is null);
+    }
+
+    // ── 12. Remove empty folders ────────────────────────────────────────────────────────────────
+
+    private async Task RemoveEmptyFolders()
+    {
+        checks.Step("12. Remove empty folders: the dialog lists them, the ticks follow the tree, the button removes only what is ticked");
+
+        // A messy corner of the demo folder: two empty folders one inside the other, one with only Thumbs.db (hidden, as Windows makes it), one empty
+        var thumbsOnly = Path.Combine(folder, "Only thumbs");
+        Directory.CreateDirectory(thumbsOnly);
+        var thumbs = Path.Combine(thumbsOnly, "Thumbs.db");
+        File.WriteAllText(thumbs, "cache");
+        File.SetAttributes(thumbs, FileAttributes.Hidden | FileAttributes.System);
+        var emptyA = Path.Combine(folder, "Empty A");
+        var day3 = Path.Combine(folder, "Day 3");
+        var nothingYet = Path.Combine(day3, "Nothing yet");
+        Directory.CreateDirectory(emptyA);
+        Directory.CreateDirectory(nothingYet);
+
+        // And what has to stay: a folder with a file that is not a photo, an empty group folder, an empty folder in Deleted
+        var notes = Path.Combine(folder, "Keep me", "notes.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(notes)!);
+        File.WriteAllText(notes, "not a photo, but not a thumbnail cache either");
+        var emptyGroup = Path.Combine(_likedFolder, "Z - Group");
+        var emptyInDeleted = Path.Combine(folder, "Deleted", "Empty in Deleted");
+        Directory.CreateDirectory(emptyGroup);
+        Directory.CreateDirectory(emptyInDeleted);
+        var photosBefore = Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories).Where(f => f.EndsWith(".jpg") || f.EndsWith(".png")).Count();
+
+        var button = (ToolStripButton)form.ToolbarItem("removeEmptyFoldersToolStripButton");
+        checks.That(button.Image is not null && button.Enabled, "the toolbar has a Remove empty folders button with an icon");
+        form.BeginInvoke(button.PerformClick);
+        Form? dialog = null;
+        checks.That(await Until(() => (dialog = FindDialog("EmptyFoldersDialog")) is not null), "the dialog opens");
+        if (dialog is null)
+            return;
+
+        var list = Controls<ListView>(dialog).First();
+        var remove = () => Buttons(dialog).First(b => b.Text.StartsWith("Remove ") || b.Text == "Nothing to remove");
+        checks.That(await Until(() => list.Items.Count == 4 && remove().Enabled, 30000), "it looks at the folders and offers to remove them");
+        var rows = list.Items.Cast<ListViewItem>().ToList();
+        checks.That(rows.Select(r => r.Text).SequenceEqual(["Day 3", "Day 3\\Nothing yet", "Empty A", "Only thumbs"]), $"it lists the four empty folders ({string.Join("; ", rows.Select(r => r.Text))})");
+        checks.That(rows.Select(r => r.SubItems[1].Text).SequenceEqual(["1 empty folder", "nothing", "nothing", "Thumbs.db"]), $"and says what is in each ({string.Join("; ", rows.Select(r => r.SubItems[1].Text))})");
+        checks.That(rows.All(r => r.Checked) && remove().Text == "Remove 4 folders", $"all are ticked ({remove().Text})");
+        checks.That(Controls<Label>(dialog).Any(l => l.Text == "4 empty folders found, with 1 thumbnail file in them."), "the summary counts them and the thumbnail file");
+        checks.That(Directory.Exists(emptyA) && File.Exists(thumbs), "nothing has been removed yet");
+
+        dialog.TopMost = true; // the window behind it is topmost for the photographs, and would cover it
+        ScreenCapture.BringToFront(dialog.Handle);
+        await Settle(600);
+        using (var picture = ScreenCapture.Capture(dialog.Handle))
+            Save(picture, "13-empty-folders");
+
+        // Un-ticking the folder inside takes the folder around it with it: that one could not be removed without it
+        rows[1].Checked = false;
+        checks.That(!rows[0].Checked && rows[2].Checked && rows[3].Checked && remove().Text == "Remove 2 folders", $"un-ticking 'Nothing yet' un-ticks 'Day 3' too ({remove().Text})");
+
+        remove().PerformClick();
+        checks.That(await Until(() => Controls<Label>(dialog).Any(l => l.Text.StartsWith("Removed "))), "it removes what is ticked");
+        var status = Controls<Label>(dialog).First(l => l.Text.StartsWith("Removed ")).Text;
+        checks.Note(status);
+        checks.That(status == "Removed 2 folders and 1 thumbnail file.", "and the thumbnail file with its folder");
+        checks.That(!Directory.Exists(emptyA) && !Directory.Exists(thumbsOnly), "'Empty A' and 'Only thumbs' are gone");
+        checks.That(Directory.Exists(nothingYet) && Directory.Exists(day3), "'Day 3' and 'Nothing yet' were not ticked and stay");
+        checks.That(list.Items.Count == 2, "the list holds the two that are left");
+
+        // Ticking the outer one ticks the inner one: the outer one would not go otherwise
+        Buttons(dialog).First(b => b.Text == "Untick all").PerformClick();
+        checks.That(list.Items.Cast<ListViewItem>().All(i => !i.Checked) && remove().Text == "Nothing to remove", "Untick all leaves nothing to remove");
+        list.Items[0].Checked = true;
+        checks.That(list.Items[1].Checked && remove().Text == "Remove 2 folders", $"ticking 'Day 3' ticks the folder inside ({remove().Text})");
+        remove().PerformClick();
+        checks.That(await Until(() => !Directory.Exists(day3) && list.Items.Count == 0), "and both go");
+
+        checks.That(File.Exists(notes) && Directory.Exists(emptyGroup) && Directory.Exists(emptyInDeleted), "a folder with a file that is not a thumbnail cache, the empty group folder and the empty folder in Deleted stay");
+        checks.That(Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories).Count(f => f.EndsWith(".jpg") || f.EndsWith(".png")) == photosBefore, "and no photo was touched");
+        checks.That(remove().Text == "Nothing to remove" && Controls<Label>(dialog).Any(l => l.Text == "There are no empty folders."), "the dialog has nothing left to offer");
+
+        Buttons(dialog).First(b => b.Text == "Close").PerformClick();
+        checks.That(await Until(() => FindDialog("EmptyFoldersDialog") is null), "the dialog closes");
+        checks.That(form.Status == "Removed 4 empty folders.", $"status: {form.Status}");
+    }
+
+    // ── 13. Find duplicates ─────────────────────────────────────────────────────────────────────
+
+    private async Task FindDuplicates()
+    {
+        checks.Step("13. Find duplicates: the folders decide which copy stays, a person can decide the rest, and the undo puts the copies back");
+
+        // Three groups of photos (real small JPEGs, so the window can show them afterwards): a photo in a camera folder, in a date-named folder
+        // under another name and in a Deleted folder; one in a folder with a name of its own and one in a camera folder; one in two camera folders
+        string P(string relative) => Path.Combine(folder, "Dups", relative);
+        void Write(string relative, byte[] bytes)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(P(relative))!);
+            File.WriteAllBytes(P(relative), bytes);
+        }
+        var a = MakeJpeg(11);
+        var b = MakeJpeg(22);
+        var c = MakeJpeg(33);
+        Write(@"107_2311\IMG_0001.jpg", a);
+        Write(@"2025-08-14\Beach, renamed.jpg", a);
+        Write(@"Deleted\107_2311\IMG_0001.jpg", a);
+        Write(@"135___07\IMG_0007.jpg", b);
+        Write("Natasha's camera\\135___07\\IMG_0007.jpg", b);
+        Write(@"400CANON\IMG_0100.jpg", c);
+        Write(@"401CANON\IMG_0100.jpg", c);
+        Write(@"Liked\IMG_0001.jpg", a); // a copy on purpose, in a folder that is called Liked (not the one the settings name): not a duplicate
+        var liked = P(@"Liked\IMG_0001.jpg");
+
+        var button = (ToolStripButton)form.ToolbarItem("findDuplicatesToolStripButton");
+        checks.That(button.Image is not null && button.Enabled, "the toolbar has a Find duplicates button with an icon");
+        form.BeginInvoke(button.PerformClick);
+        Form? dialog = null;
+        checks.That(await Until(() => (dialog = FindDialog("DuplicatesDialog")) is not null), "the dialog opens");
+        if (dialog is null)
+            return;
+
+        var list = Controls<ListView>(dialog).Single();
+        var move = () => Buttons(dialog).First(x => x.Text.StartsWith("Move ") || x.Text == "Nothing to move");
+        var status = () => Controls<Label>(dialog).Select(l => l.Text).ToList();
+        checks.That(await Until(() => move().Enabled, 60000), "it compares the photos that have the same size and offers to move copies");
+        checks.That(move().Text == "Move 3 photos", $"two groups are decided, with three copies to move ({move().Text})");
+        checks.That(Controls<RadioButton>(dialog).Select(r => r.Text).SequenceEqual(["Will move (2)", "Need your choice (1)", "Left alone (0)", "All groups (3)"]),
+            $"the filters count the groups ({string.Join(", ", Controls<RadioButton>(dialog).Select(r => r.Text))})");
+        checks.That(status().Any(t => t.StartsWith("3 groups of identical photos: 3 photos will move to Deleted\\Duplicated")), "the summary says it");
+        checks.That(status().Any(t => t.Contains("1 photo in Liked and group folders were left out")), $"and that the photo in a folder called Liked was left out ({status().FirstOrDefault(t => t.Contains("looked at"))})");
+
+        string Cell(int row, int column) => list.Items[row].SubItems[column].Text;
+        var rows = Enumerable.Range(0, list.VirtualListSize).Select(i => (Photo: Cell(i, 2), Action: Cell(i, 1), Why: Cell(i, 4))).ToList();
+        checks.That(rows.Count == 5, $"the list shows the five photos of the two groups ({rows.Count})");
+        string Stays(string group) => rows.First(r => r.Photo.Contains(group) && r.Action == "stays").Photo;
+        checks.That(Stays("Beach, renamed").EndsWith("2025-08-14\\Beach, renamed.jpg") && rows.Count(r => r.Photo.Contains("107_2311") && r.Action.StartsWith("moves")) == 2,
+            "the photo in the date-named folder stays, under its own name; the ones in the camera folder and in Deleted move");
+        checks.That(rows.Any(r => r.Photo.EndsWith("Natasha's camera\\135___07\\IMG_0007.jpg") && r.Action == "stays") && rows.Any(r => r.Photo.EndsWith("Dups\\135___07\\IMG_0007.jpg") && r.Action.StartsWith("moves")),
+            "a folder with a name of its own beats a camera folder, even when the camera folder is in it");
+        checks.That(rows.Where(r => r.Action == "stays").All(r => r.Why.Contains("name")), $"every row says why ({string.Join(" | ", rows.Select(r => r.Why).Distinct())})");
+
+        dialog.TopMost = true; // the window behind it is topmost for the photographs, and would cover it
+        ScreenCapture.BringToFront(dialog.Handle);
+        await Settle(600);
+        using (var picture = ScreenCapture.Capture(dialog.Handle))
+            Save(picture, "14-duplicates");
+
+        // The group the folders can not decide waits for a person
+        Controls<RadioButton>(dialog).First(r => r.Text.StartsWith("Need your choice")).Checked = true;
+        checks.That(await Until(() => list.VirtualListSize == 2), "the group of two camera folders is listed under 'Need your choice'");
+        checks.That(Cell(0, 1) == "? your choice" && Cell(1, 1) == "? your choice", "with a question mark on both copies");
+        var pick = Enumerable.Range(0, 2).First(i => Cell(i, 2).Contains("400CANON"));
+        list.SelectedIndices.Add(pick);
+        Buttons(dialog).First(x => x.Text == "Keep this one").PerformClick();
+        checks.That(await Until(() => move().Text == "Move 4 photos"), $"'Keep this one' on the 400CANON copy decides it ({move().Text})");
+
+        // A group can be left alone, and touched again
+        Controls<RadioButton>(dialog).First(r => r.Text.StartsWith("All groups")).Checked = true;
+        await Until(() => list.VirtualListSize == 7);
+        var natasha = Enumerable.Range(0, list.VirtualListSize).First(i => Cell(i, 2).Contains("IMG_0007"));
+        list.SelectedIndices.Clear();
+        list.SelectedIndices.Add(natasha);
+        Buttons(dialog).First(x => x.Text == "Leave group alone").PerformClick();
+        checks.That(await Until(() => move().Text == "Move 3 photos"), $"'Leave group alone' takes a group out of the run ({move().Text})");
+        list.SelectedIndices.Clear();
+        list.SelectedIndices.Add(Enumerable.Range(0, list.VirtualListSize).First(i => Cell(i, 2).Contains("IMG_0007")));
+        Buttons(dialog).First(x => x.Text == "Leave group alone").PerformClick();
+        checks.That(await Until(() => move().Text == "Move 4 photos"), $"and pressed again it is back in ({move().Text})");
+        checks.That(File.Exists(P(@"107_2311\IMG_0001.jpg")) && File.Exists(P(@"401CANON\IMG_0100.jpg")), "nothing has been moved yet");
+
+        move().PerformClick();
+        checks.That(await Until(() => status().Any(t => t.StartsWith("Done: ")), 60000), "it moves the copies");
+        var done = status().First(t => t.StartsWith("Done: "));
+        checks.Note(done);
+        checks.That(done.StartsWith("Done: 4 photos moved to Deleted\\Duplicated"), "and reports how many");
+        var duplicated = Path.Combine(folder, "Deleted", "Duplicated", "Dups");
+        checks.That(File.Exists(Path.Combine(duplicated, "107_2311", "IMG_0001.jpg")) && File.Exists(Path.Combine(duplicated, "Deleted", "107_2311", "IMG_0001.jpg"))
+            && File.Exists(Path.Combine(duplicated, "135___07", "IMG_0007.jpg")) && File.Exists(Path.Combine(duplicated, "401CANON", "IMG_0100.jpg")),
+            "the four copies are in Deleted\\Duplicated, each with the path it had");
+        checks.That(!File.Exists(P(@"107_2311\IMG_0001.jpg")) && File.Exists(P(@"2025-08-14\Beach, renamed.jpg")) && File.Exists(P("Natasha's camera\\135___07\\IMG_0007.jpg")) && File.Exists(P(@"400CANON\IMG_0100.jpg")),
+            "and the three that stay are where they were");
+        checks.That(File.Exists(liked), "the copy in the group folder was not touched");
+        checks.That(Directory.GetFiles(folder, "photo-liker-duplicates-*.jsonl").Length == 1, "the run left its log in the photo folder");
+        checks.That(list.VirtualListSize == 0 && move().Text == "Nothing to move" && Buttons(dialog).First(x => x.Text.StartsWith("Undo")).Enabled, "nothing is left to move, and Undo is on offer");
+
+        // Undo: the question is a message box, answered with the key of its Yes button
+        form.BeginInvoke(Buttons(dialog).First(x => x.Text.StartsWith("Undo")).PerformClick);
+        checks.That(await Until(() => ScreenCapture.FindDialogOfThisThread(Window, dialog.Handle) != IntPtr.Zero), "Undo asks first");
+        await Settle(500);
+        SendKeys.Send("y");
+        checks.That(await Until(() => status().Any(t => t.StartsWith("Put back: 4 photos"))), $"and puts the four copies back ({status().FirstOrDefault(t => t.StartsWith("Put back"))})");
+        checks.That(File.Exists(P(@"107_2311\IMG_0001.jpg")) && File.Exists(P(@"401CANON\IMG_0100.jpg")) && !Directory.Exists(duplicated), "they are where they were, and Deleted\\Duplicated holds nothing of them");
+        checks.That(await Until(() => Controls<RadioButton>(dialog).Any(r => r.Text == "All groups (3)")), "it looks again, and finds the three groups once more");
+
+        Buttons(dialog).First(x => x.Text == "Close").PerformClick();
+        checks.That(await Until(() => FindDialog("DuplicatesDialog") is null), "the dialog closes");
+        checks.That(await Until(() => form.Config.Files.Any(f => f.OriginalFilePath.Contains("Dups")) && PhotoShown()), "the main window lists the folder again, with the photos that are back");
+    }
+
+    /// <summary>A small picture that no other seed makes: a JPEG that the window can show, with a content of its own.</summary>
+    private static byte[] MakeJpeg(int seed)
+    {
+        using var bitmap = new Bitmap(320, 240);
+        using (var graphics = Graphics.FromImage(bitmap))
+        {
+            var random = new Random(seed);
+            graphics.Clear(Color.FromArgb(random.Next(256), random.Next(256), random.Next(256)));
+            for (var i = 0; i < 40; i++)
+            {
+                using var brush = new SolidBrush(Color.FromArgb(random.Next(256), random.Next(256), random.Next(256)));
+                graphics.FillEllipse(brush, random.Next(300), random.Next(220), random.Next(10, 120), random.Next(10, 120));
+            }
+        }
+        using var stream = new MemoryStream();
+        bitmap.Save(stream, ImageFormat.Jpeg);
+        return stream.ToArray();
+    }
+
+    // ── 11b. Photos without a usable EXIF date get one from a person ────────────────────────────
+
+    private async Task GiveDates()
+    {
+        checks.Step("11b. Photos that have no usable EXIF date can be given one: from their folder name, or typed; then they are changed like the others");
+
+        // Two photos with no EXIF at all, one in a folder with a date in its name
+        string P(string relative) => Path.Combine(folder, "No date", relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(P(@"2015-05-01\a.jpg"))!);
+        Directory.CreateDirectory(Path.GetDirectoryName(P(@"Somewhere\b.jpg"))!);
+        File.WriteAllBytes(P(@"2015-05-01\a.jpg"), MakeJpeg(91));
+        File.WriteAllBytes(P(@"Somewhere\b.jpg"), MakeJpeg(92));
+
+        var button = (ToolStripButton)form.ToolbarItem("alignDatesToolStripButton");
+        form.BeginInvoke(button.PerformClick);
+        Form? dialog = null;
+        checks.That(await Until(() => (dialog = FindDialog("DateAlignmentDialog")) is not null), "the dialog opens");
+        if (dialog is null)
+            return;
+
+        var list = Controls<ListView>(dialog).Single();
+        string Cell(int row, int column) => list.Items[row].SubItems[column].Text;
+        string Label(string prefix) => Controls<Label>(dialog).Select(l => l.Text).FirstOrDefault(t => t.StartsWith(prefix)) ?? string.Empty;
+        checks.That(await Until(() => Controls<RadioButton>(dialog).Any(r => r.Text == "No usable EXIF date (2)"), 60000), "it finds the two photos that have no usable EXIF date");
+        Controls<RadioButton>(dialog).First(r => r.Text.StartsWith("No usable EXIF date")).Checked = true;
+        checks.That(await Until(() => list.VirtualListSize == 2), "and lists them");
+        checks.That(Buttons(dialog).First(b => b.Text == "Use a date...").Enabled, "there is a 'Use a date...' button");
+
+        // A photo of the dated folder, with its own choice of where the date comes from
+        list.SelectedIndices.Add(Enumerable.Range(0, 2).First(i => Cell(i, 0).Contains("2015-05-01")));
+        form.BeginInvoke(Buttons(dialog).First(b => b.Text == "Use a date...").PerformClick);
+        Form? chooser = null;
+        checks.That(await Until(() => (chooser = FindDialog("AssignDateDialog")) is not null), "the button asks where the date comes from");
+        if (chooser is null)
+            return;
+
+        var radios = Controls<RadioButton>(chooser);
+        var labels = Controls<Label>(chooser).Select(l => l.Text).ToList();
+        checks.That(radios.Any(r => r.Text == "The 1 selected" && r.Checked) && radios.Any(r => r.Text == "All 2 photos without a usable date"), "for the selected photo, or for all of them");
+        checks.That(labels.Any(t => t.StartsWith("none of 1 has one")), $"it says that the photo has no EXIF date of its own to take ({string.Join(" | ", labels.Where(t => t.Contains("of 1")))})");
+        checks.That(labels.Any(t => t.Contains("1 of 1, for example 01 May 2015 12:00:00")), "and that its folder gives 01 May 2015 at noon");
+        checks.That(labels.Any(t => t.Contains("only their file dates can be set")), "and that EXIF has no place for a date in these photos");
+        checks.That(radios.First(r => r.Text.StartsWith("The date in the name of its folder")).Checked == false, "the source is for the person to choose");
+        radios.First(r => r.Text.StartsWith("The date in the name of its folder")).Checked = true;
+        chooser.TopMost = true; // the window behind it is topmost for the photographs, and would cover it
+        ScreenCapture.BringToFront(chooser.Handle);
+        await Settle(500);
+        using (var picture = ScreenCapture.Capture(chooser.Handle))
+            Save(picture, "11b-use-a-date");
+        checks.That(Buttons(chooser).First(b => b.Text == "Use this date").Enabled, "and the folder date can be used");
+        Buttons(chooser).First(b => b.Text == "Use this date").PerformClick();
+        checks.That(await Until(() => FindDialog("AssignDateDialog") is null), "the question closes");
+
+        checks.That(Controls<Label>(dialog).Any(l => l.Text.StartsWith("Gave 1 photo a date taken")), $"it says so ({Label("Gave")})");
+        checks.That(Controls<RadioButton>(dialog).Any(r => r.Text == "No usable EXIF date (1)") && Controls<RadioButton>(dialog).Any(r => r.Text == "Will change (1)"), "and the photo moves from 'No usable EXIF date' to 'Will change'");
+        Controls<RadioButton>(dialog).First(r => r.Text.StartsWith("Will change")).Checked = true;
+        await Until(() => list.VirtualListSize == 1);
+        checks.That(Cell(0, 1) == "01 May 2015 12:00:00 (given)" && Cell(0, 4).EndsWith("date given"), $"the list shows the date and that it was given ({Cell(0, 1)} | {Cell(0, 4)})");
+
+        // The other one: a date typed, for all the photos that are left without one
+        Controls<RadioButton>(dialog).First(r => r.Text.StartsWith("No usable EXIF date")).Checked = true;
+        await Until(() => list.VirtualListSize == 1);
+        form.BeginInvoke(Buttons(dialog).First(b => b.Text == "Use a date...").PerformClick);
+        checks.That(await Until(() => (chooser = FindDialog("AssignDateDialog")) is not null), "the button asks again, for the photo that is left");
+        if (chooser is null)
+            return;
+        checks.That(Controls<RadioButton>(chooser).Any(r => r.Text == "All 1 photos without a usable date" && r.Checked), "now for all that are left (none is selected)");
+        Controls<DateTimePicker>(chooser).Single().Value = new DateTime(2012, 7, 14, 9, 30, 0);
+        checks.That(Controls<RadioButton>(chooser).First(r => r.Text == "This date:").Checked, "typing a date chooses it");
+        Buttons(chooser).First(b => b.Text == "Use this date").PerformClick();
+        await Until(() => FindDialog("AssignDateDialog") is null);
+        checks.That(await Until(() => Controls<RadioButton>(dialog).Any(r => r.Text == "Will change (2)" ) && Controls<RadioButton>(dialog).Any(r => r.Text == "No usable EXIF date (0)")), "both photos are 'Will change' now");
+
+        var apply = Buttons(dialog).First(b => b.Text.StartsWith("Change "));
+        checks.That(apply.Text == "Change 2 photos", $"({apply.Text})");
+        apply.PerformClick();
+        checks.That(await Until(() => Controls<Label>(dialog).Any(l => l.Text.StartsWith("Done: 2 photos changed")), 30000), "and changed");
+        bool Close(DateTime a, DateTime b) => Math.Abs((a - b).TotalSeconds) <= 2;
+        checks.That(Close(File.GetCreationTime(P(@"2015-05-01\a.jpg")), new DateTime(2015, 5, 1, 12, 0, 0)) && Close(File.GetLastWriteTime(P(@"2015-05-01\a.jpg")), new DateTime(2015, 5, 1, 12, 0, 0)),
+            "the photo of the dated folder has 01 May 2015, 12:00 as its file dates");
+        checks.That(Close(File.GetCreationTime(P(@"Somewhere\b.jpg")), new DateTime(2012, 7, 14, 9, 30, 0)) && Close(File.GetLastWriteTime(P(@"Somewhere\b.jpg")), new DateTime(2012, 7, 14, 9, 30, 0)),
+            "and the other one the date that was typed");
+
+        Buttons(dialog).First(b => b.Text == "Close").PerformClick();
+        await Until(() => FindDialog("DateAlignmentDialog") is null);
+        await Until(() => form.Config.Files.Any(f => f.OriginalFilePath.Contains("No date")) && PhotoShown());
+    }
+
+    // ── 11c. A double click on a row opens the photo or the folder ──────────────────────────────
+
+    /// <summary>
+    /// A double click of the real mouse at this place of the control (the pointer moves there, as a person's would): the dialog is brought to
+    /// the front first, since the click goes to whatever window is under the pointer. Messages sent to the list instead of real input would
+    /// not do: the list looks at the state of the mouse buttons itself and ignores a click that no button is down for.
+    /// </summary>
+    private async Task DoubleClickAt(Form dialog, Control control, Point at)
+    {
+        dialog.TopMost = true; // the window behind it is topmost for the photographs, and would take the click
+        ScreenCapture.BringToFront(dialog.Handle);
+        await Settle(400);
+        RealInput.Click(control.PointToScreen(at), 2);
+        await Settle(300);
+    }
+
+    private async Task DoubleClicks()
+    {
+        checks.Step("11c. A double click on a row of the Align dates, Find duplicates and Remove empty folders lists opens its photo or folder");
+
+        // Every target is deleted before the double click: the handler has to find the right path, and nothing is launched; what it
+        // says when it can not open it shows which path that was
+        string P(string relative) => Path.Combine(folder, relative);
+        void Stage(string relative, byte[] bytes)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(P(relative))!);
+            File.WriteAllBytes(P(relative), bytes);
+        }
+
+        // ── Align dates: a photo without a usable EXIF date is listed, with the path of its file
+        Stage(@"Gone\only-here.jpg", MakeJpeg(81));
+        var align = (ToolStripButton)form.ToolbarItem("alignDatesToolStripButton");
+        form.BeginInvoke(align.PerformClick);
+        Form? dialog = null;
+        checks.That(await Until(() => (dialog = FindDialog("DateAlignmentDialog")) is not null), "the Align dates dialog opens");
+        if (dialog is null)
+            return;
+        var list = Controls<ListView>(dialog).Single();
+        checks.That(await Until(() => Controls<RadioButton>(dialog).Any(r => r.Text.StartsWith("No usable EXIF date (") && !r.Text.EndsWith("(0)")), 60000), "and finds photos without a usable date");
+        Controls<RadioButton>(dialog).First(r => r.Text.StartsWith("No usable EXIF date")).Checked = true;
+        await Until(() => list.VirtualListSize > 0);
+        var row = Enumerable.Range(0, list.VirtualListSize).First(i => list.Items[i].Text.Contains("only-here.jpg"));
+        File.Delete(P(@"Gone\only-here.jpg"));
+        await DoubleClickAt(dialog, list, list.GetItemRect(row).Location + new Size(40, 6));
+        checks.That(await Until(() => Controls<Label>(dialog).Any(l => l.Text == "Could not open 'only-here.jpg': it is not there any more")),
+            $"a double click on the row tries to open that photo ({Controls<Label>(dialog).Select(l => l.Text).FirstOrDefault(t => t.StartsWith("Could not")) ?? "no message"})");
+        Buttons(dialog).First(b => b.Text == "Close").PerformClick();
+        await Until(() => FindDialog("DateAlignmentDialog") is null);
+
+        // ── Find duplicates: the copy in the second folder
+        var same = MakeJpeg(82);
+        Stage(@"Gone\first\copy.jpg", same);
+        Stage(@"Gone\second\copy of it.jpg", same);
+        var duplicates = (ToolStripButton)form.ToolbarItem("findDuplicatesToolStripButton");
+        form.BeginInvoke(duplicates.PerformClick);
+        checks.That(await Until(() => (dialog = FindDialog("DuplicatesDialog")) is not null), "the Find duplicates dialog opens");
+        if (dialog is null)
+            return;
+        list = Controls<ListView>(dialog).Single();
+        checks.That(await Until(() => Buttons(dialog).Any(b => b.Text.StartsWith("Move ") && b.Enabled), 60000), "and offers to move a copy");
+        row = Enumerable.Range(0, list.VirtualListSize).First(i => list.Items[i].SubItems[2].Text.Contains("copy of it.jpg"));
+        File.Delete(P(@"Gone\second\copy of it.jpg"));
+        await DoubleClickAt(dialog, list, list.GetItemRect(row).Location + new Size(40, 6));
+        checks.That(await Until(() => Controls<Label>(dialog).Any(l => l.Text == "Could not open 'copy of it.jpg': it is not there any more")),
+            $"a double click on the row of a copy tries to open that copy ({Controls<Label>(dialog).Select(l => l.Text).FirstOrDefault(t => t.StartsWith("Could not")) ?? "no message"})");
+        Buttons(dialog).First(b => b.Text == "Close").PerformClick();
+        await Until(() => FindDialog("DuplicatesDialog") is null);
+
+        // ── Remove empty folders: the list has ticks, which a double click must leave as they are
+        Directory.CreateDirectory(P(@"Gone2\Hollow"));
+        var empty = (ToolStripButton)form.ToolbarItem("removeEmptyFoldersToolStripButton");
+        form.BeginInvoke(empty.PerformClick);
+        checks.That(await Until(() => (dialog = FindDialog("EmptyFoldersDialog")) is not null), "the Remove empty folders dialog opens");
+        if (dialog is null)
+            return;
+        list = Controls<ListView>(dialog).First();
+        checks.That(await Until(() => list.Items.Cast<ListViewItem>().Any(i => i.Text == @"Gone2\Hollow") && Buttons(dialog).Any(b => b.Text.StartsWith("Remove ") && b.Enabled), 60000), "and lists the empty folder");
+        var hollow = list.Items.Cast<ListViewItem>().First(i => i.Text == @"Gone2\Hollow");
+        Directory.Delete(P("Gone2"), recursive: true);
+        var ticked = hollow.Checked;
+        await DoubleClickAt(dialog, list, hollow.Bounds.Location + new Size(70, 6)); // to the right of the tick
+        checks.That(await Until(() => Controls<Label>(dialog).Any(l => l.Text == "Could not open 'Hollow': it is not there any more")),
+            $"a double click on the row tries to open that folder ({Controls<Label>(dialog).Select(l => l.Text).FirstOrDefault(t => t.StartsWith("Could not")) ?? "no message"})");
+        checks.That(ticked && hollow.Checked, "and does not flip its tick, as a double click on a list with ticks does");
+        Buttons(dialog).First(b => b.Text == "Close").PerformClick();
+        await Until(() => FindDialog("EmptyFoldersDialog") is null);
+
+        // Nothing of this step stays for the next ones
+        if (Directory.Exists(P("Gone")))
+            Directory.Delete(P("Gone"), recursive: true);
+    }
+
+    // ── 11d. Photos that can not be read ────────────────────────────────────────────────────────
+
+    private async Task UnreadableList()
+    {
+        checks.Step("11d. Remove empty folders also lists photos that can not be read (here: empty files), unticked; the ticked ones move to Deleted\\Unreadable");
+
+        string P(string relative) => Path.Combine(folder, relative);
+        Directory.CreateDirectory(P("Broken"));
+        Directory.CreateDirectory(P("Broken2"));
+        File.WriteAllBytes(P(@"Broken\zero.jpg"), []);               // an empty photo file
+        File.WriteAllBytes(P(@"Broken\fine.jpg"), MakeJpeg(93));     // a real photo beside it: it stays
+        File.WriteAllBytes(P(@"Broken\notes.txt"), []);              // empty, but not a photo
+        File.WriteAllBytes(P(@"Broken2\also zero.png"), []);         // the only file of its folder
+
+        var button = (ToolStripButton)form.ToolbarItem("removeEmptyFoldersToolStripButton");
+        form.BeginInvoke(button.PerformClick);
+        Form? dialog = null;
+        checks.That(await Until(() => (dialog = FindDialog("EmptyFoldersDialog")) is not null), "the dialog opens");
+        if (dialog is null)
+            return;
+
+        var folders = Controls<ListView>(dialog).First(l => l.Columns.Count == 2);
+        var photos = Controls<ListView>(dialog).First(l => l.Columns.Count == 3);
+        var radios = Controls<RadioButton>(dialog);
+        checks.That(await Until(() => radios.Any(r => r.Text == "Unreadable photos (2)"), 60000), $"it finds the two empty photo files ({string.Join(", ", radios.Select(r => r.Text))})");
+        checks.That(photos.Visible && !folders.Visible, "and, with no empty folder to show, shows the photos");
+        var rows = photos.Items.Cast<ListViewItem>().ToList();
+        checks.That(rows.Select(r => r.Text).Order(StringComparer.Ordinal).SequenceEqual([@"Broken2\also zero.png", @"Broken\zero.jpg"]), $"it lists exactly them: not 'notes.txt' (no photo) and not 'fine.jpg' ({string.Join("; ", rows.Select(r => r.Text))})");
+        var jpg = rows.First(r => r.Text.EndsWith("zero.jpg"));
+        var png = rows.First(r => r.Text.EndsWith("also zero.png"));
+        checks.That(rows.All(r => r.SubItems[2].Text == "The file is empty (0 bytes)."), "with the reason");
+        checks.That(rows.All(r => !r.Checked), "none is ticked: a photo that can not be read is not thrown away by default");
+        var move = () => Buttons(dialog).First(b => b.Text.StartsWith("Move ") || b.Text == "Tick photos to move");
+        checks.That(move().Text == "Tick photos to move" && !move().Enabled, "and there is nothing to move yet");
+
+        dialog.TopMost = true; // the window behind it is topmost for the photographs, and would cover it
+        ScreenCapture.BringToFront(dialog.Handle);
+        await Settle(500);
+        using (var picture = ScreenCapture.Capture(dialog.Handle))
+            Save(picture, "13b-unreadable-photos");
+
+        Buttons(dialog).First(b => b.Text == "Tick all").PerformClick();
+        checks.That(rows.All(r => r.Checked) && move().Text == "Move 2 photos to Deleted\\Unreadable" && move().Enabled, $"'Tick all' ticks them ({move().Text})");
+        png.Checked = false;
+        checks.That(move().Text == "Move 1 photo to Deleted\\Unreadable", $"one can be left out ({move().Text})");
+
+        move().PerformClick();
+        checks.That(await Until(() => Controls<Label>(dialog).Any(l => l.Text.StartsWith("Moved 1 photo to Deleted\\Unreadable"))), "it moves the ticked one");
+        checks.That(File.Exists(P(@"Deleted\Unreadable\Broken\zero.jpg")) && !File.Exists(P(@"Broken\zero.jpg")), "to Deleted\\Unreadable, with the path it had");
+        checks.That(File.Exists(P(@"Broken\fine.jpg")) && File.Exists(P(@"Broken2\also zero.png")) && File.Exists(P(@"Broken\notes.txt")), "and nothing else: the real photo, the one left out and the empty note stay");
+        checks.That(photos.Items.Count == 1 && radios.Any(r => r.Text == "Unreadable photos (1)"), "the list holds the one that is left");
+
+        // Moving the last photo of a folder leaves the folder empty: looking again finds it
+        photos.Items[0].Checked = true;
+        checks.That(photos.Items[0].Text == @"Broken2\also zero.png" && move().Text == "Move 1 photo to Deleted\\Unreadable", $"the one that was left out is ticked now ({move().Text})");
+        move().PerformClick();
+        checks.That(await Until(() => photos.Items.Count == 0 && File.Exists(P(@"Deleted\Unreadable\Broken2\also zero.png"))), "the other one moves too");
+        Buttons(dialog).First(b => b.Text == "Look again").PerformClick();
+        checks.That(await Until(() => radios.Any(r => r.Text == "Empty folders (1)") && radios.Any(r => r.Text == "Unreadable photos (0)"), 60000), "'Look again' finds the folder that is empty now");
+        radios.First(r => r.Text.StartsWith("Empty folders")).Checked = true;
+        await Until(() => folders.Visible && folders.Items.Count == 1);
+        checks.That(folders.Items[0].Text == "Broken2" && folders.Items[0].Checked, "it is 'Broken2', ticked");
+        Buttons(dialog).First(b => b.Text.StartsWith("Remove ")).PerformClick();
+        checks.That(await Until(() => !Directory.Exists(P("Broken2"))), "and removed");
+
+        Buttons(dialog).First(b => b.Text == "Close").PerformClick();
+        checks.That(await Until(() => FindDialog("EmptyFoldersDialog") is null), "the dialog closes");
+        checks.That(await Until(() => form.Config.Files.All(f => !f.OriginalFilePath.Contains("zero")) && form.Config.Files.Any(f => f.OriginalFilePath.EndsWith("fine.jpg")) && PhotoShown()), "and the main window lists the folder again, without the photos that moved");
+    }
+
+    private static Form? FindDialog(string type) => Application.OpenForms.OfType<Form>().FirstOrDefault(f => f.GetType().Name == type);
+
+    private static bool DateAlign(DateTime a, DateTime b) => Math.Abs((a - b).TotalSeconds) <= 2;
+
+    private static List<T> Controls<T>(Control root) where T : Control
+    {
+        var found = new List<T>();
+        void Walk(Control control)
+        {
+            foreach (Control child in control.Controls)
+            {
+                if (child is T match)
+                    found.Add(match);
+                Walk(child);
+            }
+        }
+        Walk(root);
+        return found;
+    }
+
+    private static List<Button> Buttons(Control root) => Controls<Button>(root);
+
     // ── what the tour leaves behind, checked after the window is closed ─────────────────────────
 
     public void VerifySavedSettings()
     {
-        checks.Step("11. The settings file written when the window closed");
+        checks.Step("14. The settings file written when the window closed");
 
         var path = Path.Combine(folder, "photo-liker-config.json");
         var text = File.ReadAllText(path);
