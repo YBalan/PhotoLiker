@@ -119,6 +119,65 @@ namespace PhotoLikerUI
             g.DrawArc(smile, 5.8f, 6.2f, 4.4f, 4.2f, 25f, 130f);
         });
 
+        // ── Align dates ───────────────────────────────────────────────────
+        // A calendar page with a red header and a green "equal" badge: the dates of the file made equal to the date taken
+        public static Bitmap AlignDates() => DrawOnBitmap(g =>
+        {
+            using var page = new LinearGradientBrush(new RectangleF(1, 2, 12, 12), Color.White, Color.FromArgb(205, 215, 235), 90f);
+            g.FillRoundedRectangle(page, 1, 2, 12, 12, 1.5f);
+
+            using var header = new SolidBrush(Color.FromArgb(215, 60, 55));
+            g.FillRectangle(header, 1.5f, 2.5f, 11f, 3.5f);
+
+            using var rings = new SolidBrush(Color.FromArgb(120, 40, 40, 60));
+            g.FillRectangle(rings, 4f, 1f, 1.2f, 2.4f);
+            g.FillRectangle(rings, 9f, 1f, 1.2f, 2.4f);
+
+            using var days = new SolidBrush(Color.FromArgb(130, 80, 95, 130));
+            for (var row = 0; row < 2; row++)
+                for (var col = 0; col < 3; col++)
+                    g.FillRectangle(days, 2.8f + col * 3f, 7.4f + row * 2.6f, 1.8f, 1.5f);
+
+            using var badge = new SolidBrush(Color.FromArgb(40, 160, 70));
+            g.FillEllipse(badge, 8f, 8f, 7.5f, 7.5f);
+            using var equals = new Pen(Color.White, 1.2f) { StartCap = LineCap.Square, EndCap = LineCap.Square };
+            g.DrawLine(equals, 10f, 10.6f, 13.2f, 10.6f);
+            g.DrawLine(equals, 10f, 12.9f, 13.2f, 12.9f);
+        });
+
+        // ── Remove empty folders ──────────────────────────────────────────
+        // A pale, hollow folder with a red cross badge
+        public static Bitmap RemoveEmptyFolders() => DrawOnBitmap(g =>
+        {
+            DrawFolder(g, Color.FromArgb(225, 232, 245), Color.FromArgb(130, 145, 175));
+
+            using var badge = new SolidBrush(Color.FromArgb(215, 50, 50));
+            g.FillEllipse(badge, 7.5f, 7.5f, 8f, 8f);
+            using var cross = new Pen(Color.White, 1.4f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            g.DrawLine(cross, 10.2f, 10.2f, 12.8f, 12.8f);
+            g.DrawLine(cross, 12.8f, 10.2f, 10.2f, 12.8f);
+        });
+
+        // ── Find duplicates ───────────────────────────────────────────────
+        // Two photos, one behind the other, the one at the back paler
+        public static Bitmap FindDuplicates() => DrawOnBitmap(g =>
+        {
+            using var back = new SolidBrush(Color.FromArgb(185, 200, 225));
+            g.FillRoundedRectangle(back, 1, 1, 10, 9, 1.2f);
+            using var backRim = new Pen(Color.FromArgb(110, 130, 170), 0.9f);
+            g.DrawRectangle(backRim, 1.5f, 1.5f, 9f, 8f);
+
+            using var front = new LinearGradientBrush(new RectangleF(5, 5, 10, 10), Color.FromArgb(235, 244, 255), Color.FromArgb(150, 185, 235), 90f);
+            g.FillRoundedRectangle(front, 5, 5, 10, 10, 1.2f);
+            using var frontRim = new Pen(Color.FromArgb(40, 90, 190), 1.1f);
+            g.DrawRectangle(frontRim, 5.5f, 5.5f, 9f, 9f);
+
+            using var sun = new SolidBrush(Color.FromArgb(250, 170, 40));
+            g.FillEllipse(sun, 11f, 7f, 2.4f, 2.4f);
+            using var hill = new SolidBrush(Color.FromArgb(60, 150, 90));
+            g.FillPolygon(hill, [new PointF(6.3f, 14.2f), new PointF(9.2f, 9.6f), new PointF(11.2f, 12.2f), new PointF(12.2f, 11f), new PointF(14.2f, 14.2f)]);
+        });
+
         // ── Main application icon ─────────────────────────────────────────
         public static Icon AppIcon()
         {

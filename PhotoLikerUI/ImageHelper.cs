@@ -31,7 +31,7 @@ namespace PhotoLikerUI
             try
             {
                 source = Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: true);
-                var metadata = ReadMetadata(source);
+                var metadata = WithFileDate(path, ReadMetadata(source));
 
                 if (ImageAnimator.CanAnimate(source))
                 {
@@ -123,6 +123,10 @@ namespace PhotoLikerUI
         private static IReadOnlyList<MetadataEntry> ReadMetadata(Image image) =>
             FriendlyImageMetadata.FromProperties(
                 image.PropertyItems.Select(p => new RawExifProperty(p.Id, p.Type, p.Value))).Entries;
+
+        /// <summary>The EXIF entries and, next to them, the dates of the file itself (read here, off the UI thread).</summary>
+        private static IReadOnlyList<MetadataEntry> WithFileDate(string path, IReadOnlyList<MetadataEntry> exif) =>
+            FileDateRow.Create(path, exif) is { } row ? [.. exif, row] : exif;
 
         private static RotateFlipType GetRotateFlip(Image img)
         {

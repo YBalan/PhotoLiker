@@ -9,7 +9,7 @@ namespace PhotoLiker.Core
     public static class PhotoScanner
     {
         // Folders that hold system data or NAS-generated thumbnails rather than photos
-        private static readonly string[] SkippedFolderNames =
+        internal static readonly string[] SkippedFolderNames =
             ["@eaDir", "#recycle", "$RECYCLE.BIN", "System Volume Information", ".AppleDouble"];
 
         /// <param name="excludedFolder">A folder to leave out, e.g. the liked folder when it sits inside the photo folder.</param>

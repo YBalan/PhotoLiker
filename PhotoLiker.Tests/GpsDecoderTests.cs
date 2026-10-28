@@ -287,7 +287,7 @@ public class GpsDecoderTests
         var dt = GpsDecoder.Decode(entries)
             .First(e => e.Name == ImageHelperStrings.GpsDateTimeLabel);
 
-        Assert.Contains("2024-06-15", dt.Value);
+        Assert.Contains("15 Jun 2024", dt.Value);
         Assert.Contains("10:30", dt.Value);
     }
 

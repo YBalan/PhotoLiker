@@ -105,6 +105,10 @@ namespace PhotoLiker.Core
                 .Where(f => f.Value.Library.Find(photo) is not null)
                 .Select(f => f.Key);
 
+        /// <summary>The copies of the photo in the group folders, as full paths (the copy in the liked folder itself is <see cref="PhotoFile.LikedFilePath"/>).</summary>
+        public IReadOnlyList<string> CopiesOf(PhotoFile photo) =>
+            [.. _folders.Values.Select(f => f.Library.Find(photo)).OfType<string>()];
+
         /// <summary>
         /// Every group folder there is, ordered by key (1-9, then A-Z), with the ones holding a copy of the photo marked.
         /// Renamed folders appear under their new name; a group that has no folder yet isn't listed.

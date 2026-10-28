@@ -107,7 +107,7 @@ namespace PhotoLiker.Core
                 string datetime = string.IsNullOrWhiteSpace(date)
                     ? time
                     : string.Format(ImageHelperStrings.GpsTimestampFormat,
-                        date.Replace(':', '-'), time);
+                        DateText.ReformatGpsDate(date), time);
                 result.Add(Decoded(ImageHelperStrings.GpsDateTimeLabel, datetime));
             }
 

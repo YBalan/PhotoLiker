@@ -32,6 +32,9 @@
         {
             InitializeComponent();
             InitializeSearch();
+            InitializeDateAlignment();
+            InitializeEmptyFolders();
+            InitializeDuplicates();
             Text = WithDebugPrefix(Text);
 
             // Set application icon programmatically

@@ -143,7 +143,7 @@ public class ExifReaderTests
         Assert.Equal(ExifDates.None, Read([.. whole[..4], 0x00, 0x01, 0xFF])); // a segment shorter than its own length field
     }
 
-    private sealed class NonSeekingStream(byte[] bytes) : Stream
+    internal sealed class NonSeekingStream(byte[] bytes) : Stream
     {
         private readonly MemoryStream _inner = new(bytes);
         public override bool CanRead => true;

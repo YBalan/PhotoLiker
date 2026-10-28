@@ -14,17 +14,34 @@ namespace PhotoLiker.Core
         /// Moves the photo into the Deleted folder of <paramref name="photoFolder"/>, and returns where it is now. A photo with
         /// that name and place in the Deleted folder is not replaced: the new one gets "name (2).ext", "name (3).ext", ...
         /// </summary>
-        public static string Move(string photoFolder, string photoPath)
+        public static string Move(string photoFolder, string photoPath, string? subfolder = null)
+        {
+            var destination = DestinationOf(photoFolder, photoPath, subfolder);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+
+            File.Move(photoPath, destination);
+            return destination;
+        }
+
+        /// <summary>The folder inside Deleted that holds the copies that were moved away as duplicates of a photo that stays.</summary>
+        public static string DuplicatesFolderOf(string photoFolder) => Path.Combine(FolderOf(photoFolder), DuplicatesFolderName);
+
+        public const string DuplicatesFolderName = "Duplicated";
+
+        /// <summary>The folder inside Deleted for photos that can not be read (see <see cref="UnreadablePhotos"/>).</summary>
+        public const string UnreadableFolderName = "Unreadable";
+
+        /// <summary>
+        /// Where <see cref="Move"/> would put the photo: below the Deleted folder (or the <paramref name="subfolder"/> of it, as for the duplicates),
+        /// with the path it has in the photo folder, and a name that is free.
+        /// </summary>
+        public static string DestinationOf(string photoFolder, string photoPath, string? subfolder = null)
         {
             var relative = Path.GetRelativePath(photoFolder, photoPath);
             var outside = Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal);
 
-            var destination = Path.Combine(FolderOf(photoFolder), outside ? Path.GetFileName(photoPath) : relative);
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            destination = FreeName(destination);
-
-            File.Move(photoPath, destination);
-            return destination;
+            var folder = subfolder is null ? FolderOf(photoFolder) : Path.Combine(FolderOf(photoFolder), subfolder);
+            return FreeName(Path.Combine(folder, outside ? Path.GetFileName(photoPath) : relative));
         }
 
         private static string FreeName(string path)
