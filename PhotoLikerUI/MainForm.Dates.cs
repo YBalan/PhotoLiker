@@ -48,7 +48,7 @@ namespace PhotoLikerUI
 
             // The list holds the old dates (and is sorted by them), and the photo shown has them in its File Date row: list the folder again
             ClearDisplay();
-            LoadFolder();
+            LoadFolder(useSavedList: false);
         }
     }
 }

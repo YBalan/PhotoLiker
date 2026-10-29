@@ -42,7 +42,7 @@ namespace PhotoLikerUI
             {
                 // Photos left the folder: the list holds some that are not there any more
                 ClearDisplay();
-                LoadFolder();
+                LoadFolder(useSavedList: false);
             }
             else if (dialog.Removed > 0)
             {

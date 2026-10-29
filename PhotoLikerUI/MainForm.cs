@@ -206,6 +206,8 @@
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             _folderGeneration++;
+            StopListingCheck();
+            SaveListingOnClose();
             _photoCache.Dispose();
             ShutDownSearch();
             SaveWindowPosition();
@@ -576,10 +578,17 @@
             previewFlowPanel.ResumeLayout();
         }
 
-        private async void LoadFolder()
+        /// <param name="useSavedList">
+        /// Show the list saved at the last visit at once and check the folder for changes afterwards (see <see cref="PhotoListing"/>).
+        /// False lists the folder again, for when files were changed in place.
+        /// </param>
+        private async void LoadFolder(bool useSavedList = true)
         {
+            StopListingCheck();
             var generation = ++_folderGeneration;
             var loaded = false;
+            var fromSavedList = false;
+            PhotoListing? shown = null;
             AttachFolderSearch();
             try
             {
@@ -588,17 +597,21 @@
                 _currentConfig.ApplyDefaultLikedFolder();
 
                 var folder = _currentConfig.CurrentFolder;
-                var recursive = _currentConfig.GoThroughSubFolders;
-                var extensions = _currentConfig.Extensions;
                 var sortOrder = _currentConfig.SortOrder;
                 var likedFolder = _currentConfig.LikedFolder;
+                var key = new ListingKey(folder, _currentConfig.GoThroughSubFolders, _currentConfig.Extensions, likedFolder);
                 SetStatus(string.Format(MainFormStrings.StatusFolderLoading, folder));
 
-                // Listing a network folder can take a long time, so keep it off the UI thread
-                var (files, liked, groups) = await Task.Run(() =>
+                // The list of this same folder that is open already may know of photos deleted since it was saved
+                var open = _listing is { } current && current.Key.CacheFile == key.CacheFile ? current : null;
+
+                // Listing a network folder can take a long time, so keep it off the UI thread. A folder that is not there (a share that
+                // is off) is listed, which says so, and not shown from the saved list.
+                var (files, liked, groups, listing, saved) = await Task.Run(() =>
                 {
-                    var found = PhotoScanner.Scan(folder, recursive, extensions, likedFolder, sortOrder);
-                    return (found, LikedLibrary.Scan(likedFolder), GroupLibrary.Scan(likedFolder));
+                    var saved = useSavedList && Directory.Exists(folder) ? LoadSavedListing(open, key) : null;
+                    var listing = saved ?? PhotoListing.Scan(key);
+                    return (listing.ToPhotoFiles(sortOrder), LikedLibrary.Scan(likedFolder), GroupLibrary.Scan(likedFolder), listing, saved is not null);
                 });
 
                 // Another folder was opened while this one was being listed
@@ -608,6 +621,7 @@
                 liked.Apply(files);
                 _liked = liked;
                 _groups = groups;
+                _listing = shown = listing;
                 _currentConfig.Files = files;
                 _indexByPath = new Dictionary<string, int>(files.Count, StringComparer.Ordinal);
                 for (var i = 0; i < files.Count; i++)
@@ -615,6 +629,7 @@
 
                 LoadFirstPhoto(_currentConfig.CurrentFilePath);
                 loaded = true;
+                fromSavedList = saved;
             }
             catch (Exception ex)
             {
@@ -627,9 +642,21 @@
                 {
                     settingsPropertyGrid.Refresh();
                     if (loaded)
-                        SetStatus(string.Format(AppStrings.StatusFolderLoaded, _currentConfig.TotalFiles, _currentConfig.CurrentFolder));
+                    {
+                        SetStatus(string.Format(
+                            fromSavedList ? MainFormStrings.StatusFolderFromSavedList : AppStrings.StatusFolderLoaded,
+                            _currentConfig.TotalFiles, _currentConfig.CurrentFolder));
+                    }
                     UpdateWindowTitle(_currentConfig.CurrentFilePath);
                 }
+            }
+
+            if (loaded && shown is not null && generation == _folderGeneration)
+            {
+                if (fromSavedList)
+                    _ = CheckListingAsync(generation, shown, _currentConfig.SortOrder);
+                else
+                    _ = SaveListingAsync(shown); // listed from scratch: the next visit is quick
             }
         }
 
@@ -789,6 +816,11 @@
                 {
                     if (pictureBox1.Tag is string currentFile)
                         _ = DeleteAsync(currentFile);
+                    return true;
+                }
+                else if (keyData == Keys.F5)
+                {
+                    ListFolderAgain();
                     return true;
                 }
                 else if (keyData is Keys.D0 or Keys.NumPad0) // fit image to screen (0 is not a group key, group keys are 1-9 and A-Z)
@@ -1055,6 +1087,7 @@
                 return;
 
             files.RemoveAt(position);
+            _listing?.Remove(file);
             _indexByPath = new Dictionary<string, int>(files.Count, StringComparer.Ordinal);
             for (var i = 0; i < files.Count; i++)
                 _indexByPath[files[i].OriginalFilePath] = i;

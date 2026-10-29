@@ -502,6 +502,9 @@ namespace PhotoLikerUI
             SetStatus(string.Format(SearchStrings.StatusResultsShown, result.Description, files.Count, result.SearchedPhotos) + DateNotes(result));
             LoadFirstPhoto(files[0].OriginalFilePath);
             settingsPropertyGrid.Refresh();
+
+            // The search box keeps the keys for its own typing: with the focus left in it the arrows, Space and the group keys would not reach the photos
+            FocusViewer();
         }
 
         /// <summary>
