@@ -507,7 +507,7 @@ public class DateSearchTests : IDisposable
     private readonly FolderIndex _search;
     private readonly ModelHub _models = new(modelsFolder: Path.Combine(Path.GetTempPath(), "PLNoModels_" + Guid.NewGuid()));
 
-    public DateSearchTests() => _search = FolderIndex.Open(_photos.Path);
+    public DateSearchTests() => _search = FolderIndex.Open(_photos.Path, sharedPeopleFile: null);
 
     public void Dispose()
     {

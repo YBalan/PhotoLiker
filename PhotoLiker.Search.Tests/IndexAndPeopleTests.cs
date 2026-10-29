@@ -245,7 +245,7 @@ public class PeopleLibraryTests : IDisposable
         Assert.True(File.Exists(file));
         Assert.False(File.Exists(file + ".tmp"));
 
-        var second = PeopleLibrary.Load(_folder.Path);
+        var second = PeopleLibrary.Load(_folder.Path, sharedFile: null);
 
         Assert.Null(second.LoadError);
         Assert.Equal(["Dad", "Mom"], second.Names);
@@ -258,7 +258,7 @@ public class PeopleLibraryTests : IDisposable
     {
         File.WriteAllText(Path.Combine(_folder.Path, SearchPaths.PeopleFileName), "{ this is not json");
 
-        var people = PeopleLibrary.Load(_folder.Path);
+        var people = PeopleLibrary.Load(_folder.Path, sharedFile: null);
 
         Assert.NotNull(people.LoadError);
         Assert.Empty(people.Names);
@@ -267,7 +267,7 @@ public class PeopleLibraryTests : IDisposable
     [Fact]
     public void NoPeopleFile_MeansNoPeople()
     {
-        var people = PeopleLibrary.Load(_folder.Path);
+        var people = PeopleLibrary.Load(_folder.Path, sharedFile: null);
 
         Assert.Null(people.LoadError);
         Assert.Empty(people.Names);
@@ -288,7 +288,7 @@ public class FolderIndexTests : IDisposable
 
     public FolderIndexTests()
     {
-        _search = FolderIndex.Open(_photos.Path);
+        _search = FolderIndex.Open(_photos.Path, sharedPeopleFile: null);
     }
 
     public void Dispose()

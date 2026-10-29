@@ -97,6 +97,8 @@ namespace PhotoLikerUI
         public const string StatusFaceMarking            = "Looking at the face...";
         public const string StatusFaceMarkError          = "Could not mark the face: {0}";
         public const string StatusPeopleFileError        = "The people file could not be read, named faces are not available: {0}";
+        public const string StatusSharedPeopleError      = "The people shared between folders could not be used: {0}";
+        public const string StatusFaceNamedNotShared     = "'{0}' saved in this folder, but not shared with the other folders: {1}";
 
         public const string NamePersonTitle              = "Who is this?";
         public const string NamePersonPrompt             = "Name of the person:";

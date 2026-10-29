@@ -245,6 +245,8 @@ namespace PhotoLikerUI
             ShowIndex(opened);
             if (opened?.People.LoadError is { } error)
                 SetStatus(string.Format(SearchStrings.StatusPeopleFileError, error));
+            else if (opened?.People.SharedError is { } sharedError)
+                SetStatus(string.Format(SearchStrings.StatusSharedPeopleError, sharedError));
         }
 
         /// <summary>Makes this the index of the shown folder.</summary>
@@ -768,7 +770,9 @@ namespace PhotoLikerUI
             try
             {
                 search.NameFace(face, name);
-                SetStatus(string.Format(SearchStrings.StatusFaceNamed, name));
+                SetStatus(search.People.SharedError is { } notShared
+                    ? string.Format(SearchStrings.StatusFaceNamedNotShared, name, notShared)
+                    : string.Format(SearchStrings.StatusFaceNamed, name));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

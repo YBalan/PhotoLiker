@@ -471,6 +471,14 @@ What is kept where:
   are downloaded there on first use, or copy the `models` folder (below) along.
 - **The names you give** are kept in `photo-liker-people.json` in the photo folder, next to the photos: the face examples of each
   person. It is the only new file in your folder, it is plain JSON, and a rebuilt index finds the same people again.
+  The people of all your folders are also collected in `%LocalAppData%\PhotoLiker\people.json`, so a folder you open and index
+  for the first time already knows the people you named in the others: their names are in the list of the face menu and
+  the search box, typing one finds the photos of that person in this folder, and a face that looks like one of them is
+  offered as "Looks like ...". Names are matched without caring about case, so *Mom* in two folders is one person.
+  A face named in another folder is only an example here, it is not marked as named: the faces you confirm in this folder
+  go into this folder's file. The file of a folder stays the truth about that folder (delete it and the folder's people are
+  gone from the shared file the next time the folder is opened), the shared one is a copy that can be deleted any time.
+  Folders you named people in before this existed join it when you open them once (no indexing needed).
 - **The models** are in `%LocalAppData%\PhotoLiker\models`: CLIP ViT-B/32 (OpenAI, MIT licence) to match words with photos, and
   InsightFace's SCRFD and ArcFace (`buffalo_l`) to find and recognize faces. The InsightFace models are free for
   non-commercial use only, which fits a private photo library.
@@ -507,9 +515,10 @@ as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized
 (`OldestFirst`, `NewestFirst` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
 as `OldestFirst` and does not spoil the rest of the file.
 
-Besides that the app keeps two small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that
-was opened) and `crash.log` (the stack trace of an unexpected error). Set the environment variable `PHOTOLIKER_DATA_DIR`
-to keep them somewhere else; the tests do that, so running them leaves your own files alone.
+Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that
+was opened), `people.json` (the people named in all folders, see above) and `crash.log` (the stack trace of an unexpected
+error). Set the environment variable `PHOTOLIKER_DATA_DIR` to keep them somewhere else; the tests do that, so running them
+leaves your own files alone.
 
 ## Project layout
 
@@ -517,7 +526,7 @@ to keep them somewhere else; the tests do that, so running them leaves your own 
 |---|---|
 | `PhotoLikerUI` | The Windows (WinForms) app. Everything that needs WinForms or GDI+: the window, decoding and caching of photos, the settings grid with its editors, themes, the context menu registration. |
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown, the ffmpeg video service. Shared by all front ends. |
-| `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people file; the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
+| `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app). |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizer, image and face geometry, index, people file, search. They need no models. |

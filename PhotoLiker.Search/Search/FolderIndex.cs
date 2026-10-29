@@ -49,7 +49,11 @@ namespace PhotoLiker.Search
         public PeopleLibrary People { get; }
         public string Folder => Index.Root;
 
-        public static FolderIndex Open(string folder) => new(PhotoIndex.Open(folder), PeopleLibrary.Load(folder));
+        public static FolderIndex Open(string folder) => Open(folder, SearchPaths.SharedPeopleFile);
+
+        /// <param name="sharedPeopleFile">Where the people of all folders are collected; null keeps the people of this folder to itself.</param>
+        public static FolderIndex Open(string folder, string? sharedPeopleFile) =>
+            new(PhotoIndex.Open(folder), PeopleLibrary.Load(folder, sharedPeopleFile));
 
         public Task<IndexSummary> IndexAsync(
             ModelHub models, string? excludedFolder, IReadOnlyCollection<string> extensions,
