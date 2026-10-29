@@ -18,7 +18,7 @@ public class IndexingJobTests : IDisposable
 
     public IndexingJobTests()
     {
-        _search = FolderIndex.Open(_photos.Path);
+        _search = FolderIndex.Open(_photos.Path, sharedPeopleFile: null);
     }
 
     public void Dispose()
