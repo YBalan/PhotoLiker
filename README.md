@@ -419,7 +419,8 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
    The first time, the AI models are downloaded (about 650 MB, you are asked first).
 2. **Search** by describing what you look for: `children on a stage`, `snow`, `a dog`, `autumn leaves`. Type it into the
    search box and press <kbd>Enter</kbd> or click the magnifier icon. The results replace
-   the folder in the viewer, so you browse, like and group them like any photos; <kbd>Esc</kbd> or **Close results** goes
+   the folder in the viewer, and the keyboard focus moves to the photo, so the keys work at once: browse, like and group
+   them like any photos. If nothing is found the focus stays in the search box, to change the words. <kbd>Esc</kbd> or **Close results** goes
    back. **More like this** finds photos that look like the one shown. Descriptions work in English.
 3. **Dates**: put a date into the search box to look at when the photos were taken, alone or together with the rest of the
    search: `September 1` (that day in every year), `September 2009`, `1 Sep 2009`, `2009-09-01`, `2009`, `2009-2011`,
