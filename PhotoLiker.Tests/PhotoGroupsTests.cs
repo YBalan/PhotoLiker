@@ -298,4 +298,69 @@ public class PhotoGroupsTests : IDisposable
 
         Assert.False(Directory.Exists(_likedDir) && Directory.EnumerateDirectories(_likedDir).Any());
     }
+
+    // ── a folder named after a search ───────────────────────────────────────
+
+    [Theory]
+    [InlineData("beach", "beach")]
+    [InlineData("  beach   September \t 2009 ", "beach September 2009")]
+    [InlineData("\"children on a stage\", September 2009", "children on a stage, September 2009")]
+    [InlineData("a/b\\c:d*e?f<g>h|i", "a b c d e f g h i")]
+    [InlineData("like IMG_0001.jpg", "like IMG_0001.jpg")]
+    [InlineData("snow...", "snow")]
+    [InlineData("\"\"", "")]
+    [InlineData("", "")]
+    [InlineData(null, "")]
+    public void CleanRequest_MakesTheRequestFitInAFolderName(string? request, string expected)
+    {
+        Assert.Equal(expected, PhotoGroups.CleanRequest(request));
+    }
+
+    [Fact]
+    public void CleanRequest_IsCutShort_WithoutALoneEnd()
+    {
+        var cleaned = PhotoGroups.CleanRequest(new string('a', 30) + " " + new string('b', 60));
+
+        Assert.True(cleaned.Length <= PhotoGroups.MaxRequestLength);
+        Assert.StartsWith(new string('a', 30) + " b", cleaned);
+        Assert.False(cleaned.EndsWith(' '));
+    }
+
+    [Fact]
+    public void GetFolderName_WithARequest_PutsItAfterTheUsualName()
+    {
+        Assert.Equal("A - Group beach", PhotoGroups.GetFolderName('a', "beach"));
+        Assert.Equal("3 - Group", PhotoGroups.GetFolderName('3', null));
+        Assert.Equal("3 - Group", PhotoGroups.GetFolderName('3', "???"));
+    }
+
+    [Fact]
+    public void ANameMadeForARequest_StillIsTheFolderOfItsGroup()
+    {
+        var name = PhotoGroups.GetFolderName('A', "beach, September 2009");
+
+        Assert.True(PhotoGroups.TryGetKey(name, out var key));
+        Assert.Equal('A', key);
+    }
+
+    [Fact]
+    public void EnsureFolder_WithARequest_NamesTheNewFolderAfterIt()
+    {
+        var folder = PhotoGroups.EnsureFolder(_likedDir, 'a', "beach");
+
+        Assert.Equal(Path.Combine(_likedDir, "A - Group beach"), folder);
+        Assert.True(Directory.Exists(folder));
+        Assert.Equal(folder, PhotoGroups.FindFolder(_likedDir, 'A'));
+    }
+
+    [Fact]
+    public void EnsureFolder_WithARequest_UsesTheFolderThatIsThere()
+    {
+        MakeLikedSubfolder("A - Group Family");
+
+        var folder = PhotoGroups.EnsureFolder(_likedDir, 'A', "beach");
+
+        Assert.Equal(Path.Combine(_likedDir, "A - Group Family"), folder);
+        Assert.False(Directory.Exists(Path.Combine(_likedDir, "A - Group beach")));
+    }
 }

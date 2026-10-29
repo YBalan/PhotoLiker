@@ -20,6 +20,7 @@ namespace PhotoLikerUI
         // Results are shown in place of the folder until they are closed
         private bool _resultsActive;
         private string _resultsTitle = string.Empty;
+        private string _resultsRequest = string.Empty;   // what was searched for; names a group folder that Alt + a group key makes
         private string _returnFile = string.Empty;
 
         // Faces of the shown photo
@@ -198,6 +199,7 @@ namespace PhotoLikerUI
         {
             _resultsActive = false;
             _resultsTitle = string.Empty;
+            _resultsRequest = string.Empty;
             var folder = _currentConfig.CurrentFolder;
             var generation = ++_attachGeneration;
 
@@ -465,6 +467,9 @@ namespace PhotoLikerUI
         /// <summary>Shows the photos that were found in place of the folder, so that they can be browsed, liked and grouped like any photos.</summary>
         private async Task ShowResultsAsync(SearchResult result)
         {
+            // In the order of the SortOrder setting, like the folder (None: best match first)
+            result = result.OrderedBy(_currentConfig.SortOrder);
+
             if (result.Hits.Count == 0)
             {
                 SetStatus(string.Format(SearchStrings.StatusNothingFound, result.Description) + DateNotes(result));
@@ -485,6 +490,7 @@ namespace PhotoLikerUI
             ClearDisplay();
             _resultsActive = true;
             _resultsTitle = title;
+            _resultsRequest = result.Description;
             var generation = _folderGeneration;
 
             var likedFolder = _currentConfig.LikedFolder;
@@ -532,6 +538,7 @@ namespace PhotoLikerUI
 
             _resultsActive = false;
             _resultsTitle = string.Empty;
+            _resultsRequest = string.Empty;
             if (!string.IsNullOrEmpty(_returnFile))
                 _currentConfig.CurrentFilePath = _returnFile;
 

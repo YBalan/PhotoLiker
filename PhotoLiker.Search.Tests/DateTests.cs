@@ -507,6 +507,10 @@ public class DateSearchTests : IDisposable
     private readonly FolderIndex _search;
     private readonly ModelHub _models = new(modelsFolder: Path.Combine(Path.GetTempPath(), "PLNoModels_" + Guid.NewGuid()));
 
+    // More than the 500 photos a search once stopped at
+    private const int Many = 520;
+    private int _added;
+
     public DateSearchTests() => _search = FolderIndex.Open(_photos.Path, sharedPeopleFile: null);
 
     public void Dispose()
@@ -519,7 +523,8 @@ public class DateSearchTests : IDisposable
 
     private IndexedPhoto Add(string path, DateTime? taken, DateSource source = DateSource.Exif, params float[][] faces)
     {
-        var photo = new IndexedPhoto(path, length: 10, modifiedTicks: 20)
+        // A size of its own: photos of one size, time and picture are copies of one photo, which a search shows once
+        var photo = new IndexedPhoto(path, length: 10 + _added++, modifiedTicks: 20)
         {
             Clip = Vectors.Unit(1),
             ClipVersion = 1,
@@ -553,12 +558,12 @@ public class DateSearchTests : IDisposable
     [Fact]
     public void AYearOrARange_ListsEveryPhotoOfIt_WithoutALimit()
     {
-        for (var i = 0; i < FolderIndex.MaxResults + 20; i++)
+        for (var i = 0; i < Many; i++)
             Add($"p{i:D4}.jpg", new DateTime(2009, 1, 1).AddHours(12 + i));
         Add("other.jpg", new DateTime(2010, 6, 1));
 
-        Assert.Equal(FolderIndex.MaxResults + 20, _search.Search(_models, "2009").Hits.Count);
-        Assert.Equal(FolderIndex.MaxResults + 21, _search.Search(_models, "2009-2010").Hits.Count);
+        Assert.Equal(Many, _search.Search(_models, "2009").Hits.Count);
+        Assert.Equal(Many + 1, _search.Search(_models, "2009-2010").Hits.Count);
     }
 
     [Fact]
