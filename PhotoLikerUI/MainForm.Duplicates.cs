@@ -47,7 +47,7 @@ namespace PhotoLikerUI
 
             // Photos were moved away (or put back): list the folder again
             ClearDisplay();
-            LoadFolder();
+            LoadFolder(useSavedList: false);
         }
     }
 }

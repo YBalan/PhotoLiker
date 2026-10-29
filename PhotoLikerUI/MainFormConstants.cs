@@ -24,6 +24,15 @@ namespace PhotoLikerUI
         // Folder loading
         public const string StatusFolderLoading          = "Scanning '{0}'...";
         public const string StatusNoPhotosFound          = "No photos found in the selected folder.";
+        public const string StatusFolderFromSavedList    = "Loaded {0:N0} photos from the list saved for '{1}'. Checking the folder for changes...";
+        public const string StatusFolderChecked          = "Loaded {0:N0} photos from '{1}'. Checked for changes in {2:0.0} s: {3}.";
+        public const string StatusFolderNotReachable     = "'{0}' cannot be reached. The list saved at the last visit is shown.";
+        public const string StatusFolderCheckError       = "Could not check the folder for changes: {0}";
+        public const string CheckNothingChanged          = "nothing changed";
+        public const string CheckAdded                   = "{0:N0} added";
+        public const string CheckRemoved                 = "{0:N0} removed";
+        public const string CheckChanged                 = "{0:N0} changed";
+        public const string CheckIncompleteNote          = " {0:N0} folders could not be read and are looked at again next time.";
         public const string DebugTitlePrefix             = "[DEBUG] ";
 
         // About (Help button)

@@ -32,9 +32,7 @@ namespace PhotoLiker.Core
             };
 
             // Only the Deleted folder of this very folder: a subfolder that happens to be called Deleted further down is the user's own
-            var excluded = new List<string> { Path.TrimEndingDirectorySeparator(DeletedPhotos.FolderOf(Path.GetFullPath(folder))) };
-            if (!string.IsNullOrWhiteSpace(excludedFolder))
-                excluded.Add(Path.TrimEndingDirectorySeparator(Path.GetFullPath(excludedFolder)));
+            var excluded = ExcludedFolders(folder, excludedFolder);
 
             // Length and timestamp come straight from the directory listing, no extra round trip per file
             var photos = new FileSystemEnumerable<PhotoFile>(
@@ -52,16 +50,30 @@ namespace PhotoLiker.Core
             };
 
             var found = photos.ToList();
+            Sort(found, sortOrder);
+            return found;
+        }
+
+        internal static void Sort(List<PhotoFile> photos, PhotoSortOrder sortOrder)
+        {
             switch (sortOrder)
             {
                 case PhotoSortOrder.OldestFirst:
-                    found.Sort(OldestFirst);
+                    photos.Sort(OldestFirst);
                     break;
                 case PhotoSortOrder.NewestFirst:
-                    found.Sort((a, b) => OldestFirst(b, a));
+                    photos.Sort((a, b) => OldestFirst(b, a));
                     break;
             }
-            return found;
+        }
+
+        /// <summary>The folders <see cref="Scan"/> does not go into: the folder of deleted photos of the scanned folder, and the excluded one.</summary>
+        internal static List<string> ExcludedFolders(string folder, string? excludedFolder)
+        {
+            var excluded = new List<string> { Path.TrimEndingDirectorySeparator(DeletedPhotos.FolderOf(Path.GetFullPath(folder))) };
+            if (!string.IsNullOrWhiteSpace(excludedFolder))
+                excluded.Add(Path.TrimEndingDirectorySeparator(Path.GetFullPath(excludedFolder)));
+            return excluded;
         }
 
         // Photos created at the same moment (a burst copied in one go) keep a fixed order, by path
@@ -71,7 +83,7 @@ namespace PhotoLiker.Core
             return byCreated != 0 ? byCreated : string.Compare(a.OriginalFilePath, b.OriginalFilePath, StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsPhoto(ReadOnlySpan<char> fileName, IReadOnlyCollection<string> extensions)
+        internal static bool IsPhoto(ReadOnlySpan<char> fileName, IReadOnlyCollection<string> extensions)
         {
             // "._name.jpg" are macOS resource-fork stubs, not images
             if (fileName.StartsWith("._", StringComparison.Ordinal))
@@ -86,7 +98,7 @@ namespace PhotoLiker.Core
             return false;
         }
 
-        private static bool IsSkippedFolder(ref FileSystemEntry entry, List<string> excludedFolders)
+        internal static bool IsSkippedFolder(ref FileSystemEntry entry, List<string> excludedFolders)
         {
             foreach (var name in SkippedFolderNames)
             {

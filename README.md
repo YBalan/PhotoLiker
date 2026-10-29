@@ -20,6 +20,7 @@ find every photo they are in. It all runs on your own computer, no photo is ever
   - [Order of the photos](#order-of-the-photos)
 - [Groups](#groups)
 - [Deleting photos](#deleting-photos)
+- [Big folders open at once](#big-folders-open-at-once)
 - [EXIF and GPS](#exif-and-gps)
 - [Aligning file dates](#aligning-file-dates)
 - [Removing empty folders](#removing-empty-folders)
@@ -38,7 +39,8 @@ find every photo they are in. It all runs on your own computer, no photo is ever
   a background indexer with a progress bar, face detection and naming, "more like this". See [Photo search](#photo-search).
 - **Fast browsing** with a thumbnail strip, preloading of the neighbouring photos, and a folder scan that also works
   on network shares. The photos are listed oldest first (or newest first, or as the disk gives them) by the date their
-  files were created.
+  files were created. A big folder opens at once on every visit after the first, from a list saved on this computer
+  (see [Big folders open at once](#big-folders-open-at-once)).
 - **Likes and groups**: copy the current photo to a `Liked` folder, or into `1 - Group` ... `Z - Group` folders under it.
 - **Delete** moves the photo to a `Deleted` folder inside the photo folder; nothing is erased, and the scan leaves that
   folder out.
@@ -89,6 +91,7 @@ user only, no administrator rights). The same button removes it again.
 | <kbd>Delete</kbd> | Move the photo to the `Deleted` folder and show the next one (see [Deleting photos](#deleting-photos)). |
 | <kbd>1</kbd>-<kbd>9</kbd>, <kbd>A</kbd>-<kbd>Z</kbd> | Save the photo in a group, or take it out again (see [Groups](#groups)). |
 | <kbd>0</kbd> | Fit the image to the viewer (after zooming in). |
+| <kbd>F5</kbd> | List the folder again from scratch instead of from the saved list (see [Big folders open at once](#big-folders-open-at-once)). |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
 | <kbd>Ctrl</kbd>+mouse wheel | Over the photo: zoom, then drag to pan. Over the thumbnail strip: change the size of the thumbnails. |
 
@@ -143,7 +146,8 @@ the old value.
 
 Changing **GoThroughSubFolders**, **Extensions** or **SortOrder** lists the folder again straight away: the settings are
 saved first, and the photo you are looking at stays selected if it is still in the list. The other settings do not need
-that: the new **LikedFolder** is used from the next like.
+that: the new **LikedFolder** is used from the next like. (A folder that was listed before opens from its saved list, see
+[Big folders open at once](#big-folders-open-at-once).)
 
 With **GoThroughSubFolders** on, the title of the window names the subfolder of the current photo:
 
@@ -216,6 +220,35 @@ away are in `Deleted\Duplicated`, in the same way.
 
 While search results are shown, <kbd>Delete</kbd> works the same on the photo shown. Like the other keys, it does nothing
 while you type into a text box.
+
+## Big folders open at once
+
+Listing a folder on a network share costs a round trip per subfolder, however few photos each holds: 6.6 seconds for
+16,000 photos in 985 folders on a router, minutes for a big archive. So the list is kept. The first time a folder is
+opened it is listed (a little faster than before: four folders at a time), and the list is saved on this computer, in
+`%LocalAppData%\PhotoLiker\listing`, one file per folder and set of settings (625 KB for those 16,000 photos). From then
+on the folder opens from the saved list in a fraction of a second, and is checked for changes while you already look at
+the photos.
+
+The check asks every subfolder for the time it last changed: one short question each (a router answers in about 1.5 ms),
+instead of a listing. A folder's time moves when something is created, renamed, moved or deleted in it. The folders whose
+time differs are listed again, and new subfolders are found through their parent. When the check ends, photos that came
+or went are in the list or out of it, the photo you are looking at stays where it is, and the status bar says what was
+found:
+
+> Loaded 16,337 photos from 'Y:\OldFotik\Photo'. Checked for changes in 1.5 s: 2 added.
+
+For the 16,000 photos above that is 1.5 seconds in the background where it was 6.6 in front. If the folder cannot be reached
+(a share that is off) the saved list is shown and the status bar says so.
+
+What the check does not see is a photo that another program changes in place: the time of a folder does not move when a
+file inside is rewritten. For an archive that is only touched with PhotoLiker that does not matter. <kbd>F5</kbd> lists
+the folder from scratch, and **Align dates**, **Find duplicates** and **Remove empty folders** do the same themselves after
+they changed files. Photos that you delete with <kbd>Delete</kbd> are taken out of the saved list by the app.
+
+Changing **SortOrder** only puts the saved list in another order. Another **Extensions**, **GoThroughSubFolders** or
+**LikedFolder** (the liked folder is left out of the list) is another list, made the first time it is used. The saved lists
+are only a cache: they can be deleted at any time, and the folders are listed again.
 
 ## EXIF and GPS
 
@@ -482,7 +515,7 @@ to keep them somewhere else; the tests do that, so running them leaves your own 
 | Project | What it is |
 |---|---|
 | `PhotoLikerUI` | The Windows (WinForms) app. Everything that needs WinForms or GDI+: the window, decoding and caching of photos, the settings grid with its editors, themes, the context menu registration. |
-| `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown, the ffmpeg video service. Shared by all front ends. |
+| `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown, the ffmpeg video service. Shared by all front ends. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people file; the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app). |
@@ -526,6 +559,8 @@ every step:
   again, also with the subfolders on; with the list emptied nothing is shown and the keys do nothing;
 - the EXIF and GPS rows are there, the map link is offered, every row of both grids has a description, and the **File Date**
   row says the file date is not the date taken;
+- a folder opens from its saved list (one photo is taken out of the file to tell), <kbd>F5</kbd> lists it again, and a folder
+  with two photos that comes and goes outside the app is found by the check that follows the opening, keeping the shown photo;
 - **Align dates** opens its dialog, lists what would change without touching anything, sets the dates of the files (and of the
   copies in the Liked folders), leaves a log, sorts the list by the date taken, and finds nothing left to do the second time;
 - photos that have no usable EXIF date can be given one (from their folder name, or typed): they move from **No usable EXIF

@@ -30,6 +30,7 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         await LikesAndGroups();
         await SettingsPanel();
         await ReloadOnChange();
+        await SavedList();         // it changes the folder from outside and restores it
         await Metadata();
         await ThemeToggle();
         await FitKeyAndGroupO(); // the folder of group O would show in the legend of the screenshots after it
@@ -315,6 +316,58 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         await ChangeSetting("SortOrder", PhotoSortOrder.OldestFirst);
         checks.That(await Until(() => paths().SequenceEqual(oldestFirst) && PhotoShown()), "and OldestFirst brings the first order back (the steps after this one rely on it)");
         checks.That(File.ReadAllText(Path.Combine(folder, "photo-liker-config.json")).Contains("\"SortOrder\": \"OldestFirst\""), "the order is saved by name in the folder's file");
+    }
+
+    // ── 5b. the saved list of the folder ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The folder opens from the list saved at the last visit and is checked afterwards. To see which list opens, a photo is
+    /// taken out of the saved file: the folder did not change, so the app does not look again, and F5 does.
+    /// </summary>
+    private async Task SavedList()
+    {
+        checks.Step("5b. A folder opens from its saved list, is checked for changes afterwards, and F5 lists it again");
+
+        var key = new ListingKey(folder, form.Config.GoThroughSubFolders, form.Config.Extensions, form.Config.LikedFolder);
+        var total = form.Config.Files.Count;
+        var shown = form.Config.CurrentFilePath;
+        checks.That(await Until(() => File.Exists(key.CacheFile)), "the list of the folder was saved when it was listed");
+
+        // A photo that is not the shown one goes out of the saved list (the app has its own copy of the list in memory, which it does not write)
+        var hidden = form.Config.Files.First(f => f.OriginalFilePath != shown).OriginalFilePath;
+        var saved = PhotoListing.Load(key)!;
+        saved.Remove(hidden);
+        saved.Save();
+
+        await ChangeSetting("SortOrder", PhotoSortOrder.NewestFirst);
+        checks.That(await Until(() => form.Config.Files.Count == total - 1 && PhotoShown()),
+            $"reloading opens the saved list: {form.Config.Files.Count} photos, one less than on disk ({total})");
+        checks.That(form.Config.Files.All(f => f.OriginalFilePath != hidden) && File.Exists(hidden), "the photo left out is still on disk");
+        checks.That(form.Config.CurrentFilePath == shown, "and the shown photo is still shown");
+
+        form.Press(Keys.F5);
+        checks.That(await Until(() => form.Config.Files.Count == total && PhotoShown() && form.Status.StartsWith("Loaded")), $"F5 lists the folder again: {form.Config.Files.Count} photos");
+        checks.That(!form.Status.Contains("Checked"), $"it did not take the saved list ({form.Status})");
+
+        // Changes made outside the app (a folder with two photos comes, then goes) are found by the check that follows the opening
+        var added = Path.Combine(folder, "Zz Saved List");
+        await Task.Delay(200); // the folder's time must differ from the one it was listed with
+        Directory.CreateDirectory(added);
+        File.Copy(hidden, Path.Combine(added, "one.jpg"));
+        File.Copy(hidden, Path.Combine(added, "two.jpg"));
+
+        await ChangeSetting("SortOrder", PhotoSortOrder.OldestFirst);
+        checks.That(await Until(() => form.Config.Files.Count == total + 2 && form.Status.Contains("2 added")), $"the check finds the two new photos: {form.Config.Files.Count} photos, {form.Status}");
+        checks.That(form.Config.CurrentFilePath == shown && form.Config.Files[form.Config.CurrentIndex].OriginalFilePath == shown, "the shown photo stays shown, now at its new place in the list");
+        checks.That(PhotoShown(), "and it is still on screen");
+
+        await Task.Delay(200);
+        Directory.Delete(added, recursive: true);
+        await ChangeSetting("SortOrder", PhotoSortOrder.NewestFirst);
+        checks.That(await Until(() => form.Config.Files.Count == total && form.Status.Contains("2 removed")), $"and the check finds them gone again: {form.Config.Files.Count} photos, {form.Status}");
+
+        await ChangeSetting("SortOrder", PhotoSortOrder.OldestFirst); // the steps after this one rely on it
+        checks.That(await Until(() => form.Config.Files.Count == total && form.Config.CurrentFilePath == shown && PhotoShown()), "the folder is as it was before this step");
     }
 
     // ── 6. EXIF and GPS ─────────────────────────────────────────────────────────────────────────
