@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace PhotoLiker.Core
 {
     /// <summary>What <see cref="GroupLibrary.Toggle"/> did, for the UI thread to apply with <see cref="GroupLibrary.Update"/>.</summary>
@@ -12,6 +14,37 @@ namespace PhotoLiker.Core
     public sealed record GroupLegendEntry(char Key, string Name, bool HasPhoto);
 
     /// <summary>
+    /// What it takes to save many photos into a group, worked out before anything is copied (see <see cref="GroupLibrary.PlanAdd"/>).
+    /// </summary>
+    /// <param name="Folder">The folder of the group; if <paramref name="FolderIsNew"/> it does not exist yet and is made when the photos are copied.</param>
+    /// <param name="ToCopy">The photos that have no copy in the group yet.</param>
+    /// <param name="AlreadyThere">Photos that are in the group already (or are the same copy as another of the photos); they are left alone.</param>
+    /// <param name="Bytes">The size of the photos to copy.</param>
+    /// <param name="Request">The search the photos are the results of; a folder that is made is named after it.</param>
+    public sealed record GroupAddPlan(
+        char Key, string Folder, IReadOnlyList<PhotoFile> ToCopy, int AlreadyThere, long Bytes, bool FolderIsNew = false, string? Request = null);
+
+    /// <summary>How far <see cref="GroupLibrary.AddAll"/> is.</summary>
+    public readonly record struct GroupAddProgress(int Done, int Total, long BytesDone, long BytesTotal, string FileName);
+
+    public readonly record struct GroupAddFailure(string Path, string Message);
+
+    /// <summary>What <see cref="GroupLibrary.AddAll"/> did, for the UI thread to apply with <see cref="GroupLibrary.Update(GroupAddResult)"/>.</summary>
+    /// <param name="Skipped">Photos that turned out to have a copy in the group already when their turn came.</param>
+    /// <param name="Cancelled">Stopped by the caller; the copies made so far stay.</param>
+    /// <param name="GaveUp">Stopped after <see cref="GroupLibrary.MaxFailuresInARow"/> failures in a row (a share that went away, a full disk).</param>
+    public sealed record GroupAddResult(
+        char Key,
+        string Folder,
+        int Copied,
+        long Bytes,
+        int Skipped,
+        IReadOnlyList<GroupAddFailure> Failures,
+        bool Cancelled,
+        bool GaveUp,
+        IReadOnlyDictionary<string, (char Key, LikedLibrary Library)> Folders);
+
+    /// <summary>
     /// Knows which photos have a copy in the group folders under the liked folder ("A - Group", "1 - Group", ...),
     /// so the UI can list them without asking the (possibly network) file system.
     ///
@@ -22,6 +55,10 @@ namespace PhotoLiker.Core
     /// </summary>
     public sealed class GroupLibrary
     {
+        public const int MaxFailuresInARow = 10;
+
+        private static readonly TimeSpan ProgressInterval = TimeSpan.FromMilliseconds(100);
+
         private IReadOnlyDictionary<string, (char Key, LikedLibrary Library)> _folders;
 
         private GroupLibrary(string likedFolder, IReadOnlyDictionary<string, (char Key, LikedLibrary Library)> folders)
@@ -76,6 +113,114 @@ namespace PhotoLiker.Core
         }
 
         /// <summary>
+        /// Works out what saving the photos into the group would take: which of them have no copy there yet, and how many
+        /// bytes those are. Looks at the folder as it is now (not at what the library knew), so what the user is told
+        /// before agreeing is right. Creates nothing. Can run on any thread.
+        /// </summary>
+        /// <param name="request">The search the photos are the results of. If the group has no folder yet, the folder that is made is named after it.</param>
+        public GroupAddPlan PlanAdd(char key, IReadOnlyList<PhotoFile> photos, string? request = null)
+        {
+            key = PhotoGroups.NormalizeKey(key);
+            var existing = PhotoGroups.FindFolder(LikedFolder, key);
+            var folder = existing ?? Path.Combine(LikedFolder, PhotoGroups.GetFolderName(key, request));
+            var library = LikedLibrary.Scan(folder);
+
+            var toCopy = new List<PhotoFile>();
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var alreadyThere = 0;
+            long bytes = 0;
+            foreach (var photo in photos)
+            {
+                // A copy that lies in the folder is there; photos that would be saved under one name are saved once
+                if (IsInside(folder, photo.OriginalFilePath) || library.Find(photo) is not null || !names.Add(CopyName.For(photo)))
+                {
+                    alreadyThere++;
+                    continue;
+                }
+
+                toCopy.Add(photo);
+                bytes += photo.Length;
+            }
+
+            return new GroupAddPlan(key, folder, toCopy, alreadyThere, bytes, FolderIsNew: existing is null, request);
+        }
+
+        /// <summary>
+        /// Saves a copy of every photo of the plan in the folder of its group (made, named after the search, if it is not there), the way
+        /// <see cref="Toggle"/> does one photo, but only ever adds: a photo that has a copy already is left alone and not
+        /// taken out. A photo that cannot be copied is noted and the others go on; after <see cref="MaxFailuresInARow"/>
+        /// failures in a row it stops. Cancelling stops between two photos and keeps what is copied. Can run on any thread;
+        /// like <see cref="Toggle"/> it returns the new state, which the UI thread swaps in with <see cref="Update(GroupAddResult)"/>.
+        /// </summary>
+        public GroupAddResult AddAll(GroupAddPlan plan, IProgress<GroupAddProgress>? progress, CancellationToken cancellationToken)
+        {
+            var folder = PhotoGroups.EnsureFolder(LikedFolder, plan.Key, plan.Request);
+            var library = LikedLibrary.Scan(folder);
+
+            var failures = new List<GroupAddFailure>();
+            int copied = 0, skipped = 0, failedInARow = 0, done = 0;
+            long copiedBytes = 0, bytesDone = 0;
+            bool cancelled = false, gaveUp = false;
+            var clock = Stopwatch.StartNew();
+            var lastReport = TimeSpan.Zero;
+
+            foreach (var photo in plan.ToCopy)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    cancelled = true;
+                    break;
+                }
+
+                if (library.Find(photo) is not null)
+                {
+                    skipped++;
+                }
+                else
+                {
+                    var destination = library.GetNewCopyPath(photo);
+                    try
+                    {
+                        LikedLibrary.CopyPhoto(photo.OriginalFilePath, destination);
+                        library.Add(destination, photo);
+                        copied++;
+                        copiedBytes += photo.Length;
+                        failedInARow = 0;
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        failures.Add(new GroupAddFailure(photo.OriginalFilePath, ex.Message));
+                        failedInARow++;
+                    }
+                }
+
+                done++;
+                bytesDone += photo.Length;
+                if (failedInARow >= MaxFailuresInARow)
+                {
+                    gaveUp = true;
+                    break;
+                }
+
+                // A local disk copies thousands of small photos a second: the UI is told a few times a second, not each time
+                if (progress is not null && (done == plan.ToCopy.Count || clock.Elapsed - lastReport >= ProgressInterval))
+                {
+                    lastReport = clock.Elapsed;
+                    progress.Report(new GroupAddProgress(done, plan.ToCopy.Count, bytesDone, plan.Bytes, Path.GetFileName(photo.OriginalFilePath)));
+                }
+            }
+
+            return new GroupAddResult(plan.Key, folder, copied, copiedBytes, skipped, failures, cancelled, gaveUp, RefreshFolders(folder, library));
+        }
+
+        private static bool IsInside(string folder, string path)
+        {
+            var directory = Path.GetDirectoryName(path);
+            return directory is not null &&
+                string.Equals(Path.TrimEndingDirectorySeparator(directory), Path.TrimEndingDirectorySeparator(folder), StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
         /// The known folders, brought up to date: folders that were renamed or deleted in the meantime are dropped,
         /// new or renamed ones are scanned, and the toggled folder gets its fresh index.
         /// </summary>
@@ -97,6 +242,9 @@ namespace PhotoLiker.Core
         }
 
         public void Update(GroupToggleResult result) =>
+            _folders = result.Folders;
+
+        public void Update(GroupAddResult result) =>
             _folders = result.Folders;
 
         /// <summary>The group folders holding a copy of the photo, ordered by key (1-9, then A-Z).</summary>

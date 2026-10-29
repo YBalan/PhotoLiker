@@ -29,7 +29,8 @@ namespace PhotoLikerUI
             "The file extensions that count as photos, separated by ; or , each with its dot: .jpg; .png. Case does not matter. Changing it lists the folder again at once.";
         public const string SortOrder =
             "The order of the photos: OldestFirst or NewestFirst by the date the file was created (a copied file is created when it is copied), " +
-            "None for the order the file system gives, usually by name. Changing it lists the folder again at once.";
+            "None for the order the file system gives, usually by name. Changing it lists the folder again at once. " +
+            "Search results follow it too, by the date the photos were taken (None: best match first).";
         public const string CacheSize =
             "How many photos on each side of the shown one are kept decoded in memory, so that the arrow keys show them at once. A larger number browses faster over a slow network but uses more memory.";
         public const string ThumbnailSize =

@@ -299,9 +299,12 @@ public class FolderIndexTests : IDisposable
         try { File.Delete(SearchPaths.IndexFile(_photos.Path)); } catch { /* best effort */ }
     }
 
+    private int _added;
+
     private IndexedPhoto Add(string path, float[]? clip, params float[][] faceVectors)
     {
-        var photo = new IndexedPhoto(path, length: 10, modifiedTicks: 20) { Clip = clip, ClipVersion = 1, FaceVersion = 1 };
+        // A size of its own: photos of one size, time and picture are copies of one photo, which a search shows once
+        var photo = new IndexedPhoto(path, length: 10 + _added++, modifiedTicks: 20) { Clip = clip, ClipVersion = 1, FaceVersion = 1 };
         photo.Faces = [.. faceVectors.Select((v, i) => new IndexedFace(photo, 0.1f + 0.3f * i, 0.2f, 0.2f, 0.2f, 0.9f, manual: false, v))];
         _search.Index.Save([photo]);
         return photo;

@@ -24,8 +24,42 @@ namespace PhotoLiker.Core
             return char.ToUpperInvariant(key);
         }
 
+        /// <summary>The longest search request that is put into the name of a group folder; a path is only so long.</summary>
+        public const int MaxRequestLength = 50;
+
         /// <summary>The name a group folder gets when it is created, e.g. "A - Group".</summary>
         public static string GetFolderName(char key) => NormalizeKey(key) + FolderSuffix;
+
+        /// <summary>
+        /// The name a group folder gets when it is created for the results of a search, with the request after the usual
+        /// name: "A - Group beach, September 2009". That is a renamed folder as far as everything else is concerned (see
+        /// <see cref="TryGetKey"/>). Without a request, or with nothing of it left after <see cref="CleanRequest"/>, the usual name.
+        /// </summary>
+        public static string GetFolderName(char key, string? request)
+        {
+            var name = GetFolderName(key);
+            var text = CleanRequest(request);
+            return text.Length == 0 ? name : name + " " + text;
+        }
+
+        /// <summary>
+        /// The request as part of a folder name: quotes are dropped, what else Windows does not allow in a name (colons, slashes...)
+        /// and line breaks become spaces, runs of spaces one space, the end is cut at <see cref="MaxRequestLength"/> characters, and
+        /// a name must not end in a space or a dot (nor does a comma at the end look like anything).
+        /// </summary>
+        public static string CleanRequest(string? request)
+        {
+            if (string.IsNullOrWhiteSpace(request))
+                return string.Empty;
+
+            var invalid = Path.GetInvalidFileNameChars();
+            // Quotes only mark the words off ("beach", 2009), they do not make a space
+            var spaced = string.Concat(request.Replace("\"", string.Empty).Select(c => char.IsWhiteSpace(c) || char.IsControl(c) || Array.IndexOf(invalid, c) >= 0 ? ' ' : c));
+            var text = string.Join(' ', spaced.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+            if (text.Length > MaxRequestLength)
+                text = text[..MaxRequestLength];
+            return text.TrimEnd(' ', '.', ',');
+        }
 
         /// <summary>Which group a folder name belongs to, e.g. "a - group family" is group A.</summary>
         public static bool TryGetKey(string? folderName, out char key)
@@ -80,8 +114,11 @@ namespace PhotoLiker.Core
             return matches.Count > 0 ? matches[0].Path : null;
         }
 
-        /// <summary>The folder of a group; created, together with the liked folder, if it doesn't exist yet.</summary>
-        public static string EnsureFolder(string likedFolder, char key)
+        /// <summary>
+        /// The folder of a group; created, together with the liked folder, if it doesn't exist yet. A new folder is named
+        /// after the <paramref name="request"/> if there is one (see <see cref="GetFolderName(char, string?)"/>); a folder that is there is used as it is.
+        /// </summary>
+        public static string EnsureFolder(string likedFolder, char key, string? request = null)
         {
             if (string.IsNullOrWhiteSpace(likedFolder))
                 throw new ArgumentException("The liked folder is not set.", nameof(likedFolder));
@@ -90,7 +127,7 @@ namespace PhotoLiker.Core
             if (folder is not null)
                 return folder;
 
-            folder = Path.Combine(likedFolder, GetFolderName(key));
+            folder = Path.Combine(likedFolder, GetFolderName(key, request));
             Directory.CreateDirectory(folder);
             return folder;
         }

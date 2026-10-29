@@ -835,6 +835,11 @@
                         _ = ToggleGroupAsync(currentFile, groupKey);
                     return true;
                 }
+                else if (TryGetAltGroupKey(keyData, out var allGroupKey))
+                {
+                    _ = AddResultsToGroupAsync(allGroupKey);
+                    return true;
+                }
                 else
                 {
                     return base.ProcessCmdKey(ref msg, keyData);
@@ -950,6 +955,16 @@
                 _ => default,
             };
             return key != default;
+        }
+
+        /// <summary>
+        /// Alt + 1-9 (also on the numpad) or A-Z: the group key for all the photos of the search results (see <see cref="AddResultsToGroupAsync"/>).
+        /// Windows types a character by its code with Alt + numpad digits, which only happens in a text box, and those keep their keys (see <see cref="IsTextEntry"/>).
+        /// </summary>
+        private static bool TryGetAltGroupKey(Keys keyData, out char key)
+        {
+            key = default;
+            return (keyData & Keys.Modifiers) == Keys.Alt && TryGetGroupKey(keyData & Keys.KeyCode, out key);
         }
 
         // Typing into a text box (e.g. a path in the settings grid) must not trigger the shortcuts

@@ -90,6 +90,7 @@ user only, no administrator rights). The same button removes it again.
 | <kbd>Space</kbd> | Like the photo (copy it to the Liked folder), or remove the copy again. |
 | <kbd>Delete</kbd> | Move the photo to the `Deleted` folder and show the next one (see [Deleting photos](#deleting-photos)). |
 | <kbd>1</kbd>-<kbd>9</kbd>, <kbd>A</kbd>-<kbd>Z</kbd> | Save the photo in a group, or take it out again (see [Groups](#groups)). |
+| <kbd>Alt</kbd>+<kbd>1</kbd>-<kbd>9</kbd> (also on the numpad), <kbd>Alt</kbd>+<kbd>A</kbd>-<kbd>Z</kbd> | While search results are shown: save *all* of them in the group, after telling how many photos and MB that is and asking. A group without a folder gets one named after the search (see [Groups](#groups)). |
 | <kbd>0</kbd> | Fit the image to the viewer (after zooming in). |
 | <kbd>F5</kbd> | List the folder again from scratch instead of from the saved list (see [Big folders open at once](#big-folders-open-at-once)). |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
@@ -173,6 +174,11 @@ Keep in mind that the created date is when the file appeared on that disk. A pho
 usually has the date of the copy, not of the shot, so a folder copied in one go is in the order it was copied.
 A folder whose settings file has no **SortOrder** yet is listed `OldestFirst`.
 
+The results of a [search](#photo-search) follow the same setting, but by the date the photos were taken, which the index
+knows for every photo without opening it: `OldestFirst` and `NewestFirst` order them by that date (photos of the same moment by
+path), `None` leaves them as the search ranked them. Where the created date and the date taken differ (a folder copied in one
+go), the results are in the order of the photos, the folder in the order of the copying; [Align dates](#aligning-file-dates) makes them agree.
+
 ## Groups
 
 Besides liking a photo, you can sort it into groups. Press `1`-`9` or `A`-`Z` (without Ctrl/Alt/Shift) and a copy of the
@@ -195,6 +201,22 @@ key saves where. The folders that hold a copy of the current photo are ticked an
 legend once its folder exists, that is after the first press of its key.
 
 `0` is not a group: it fits the image to the viewer. (It used to be `O`, which is a group like every other letter now.)
+
+**All the results at once.** While the results of a [search](#photo-search) are shown, <kbd>Alt</kbd>+`1`-`9` or <kbd>Alt</kbd>+`A`-`Z`
+saves *every* photo of the results in that group. Nothing is copied before you agree: a box tells how many photos will be copied
+and how many MB they take (and how many of the results are in the group already, which are left as they are), and asks. On
+*Yes* the program is blocked and a progress bar shows how far the copying is; **Cancel** stops after the photo that is being copied,
+and the copies made by then stay. Unlike the single key this only ever adds: a photo that has a copy in the group is never taken
+out again. A photo that cannot be copied (it was moved away after it was indexed, the drive is gone) is listed afterwards and the
+others go on; after ten in a row the run stops, because the same thing will happen to the rest (a full disk, a share that went
+away). Outside the results the keys do nothing but say so in the status bar. The digits of the numpad work with <kbd>Alt</kbd>
+too (<kbd>Alt</kbd>+numpad `3` is group 3).
+
+If the group has no folder yet, it is made for the occasion and named after the search: after `children on a stage` the
+folder is `A - Group children on a stage` (the request is tidied for a folder name, quotes and characters Windows does not
+allow are dropped, and it is cut at 50 characters), and the box says so before you agree. That is a renamed group folder like any
+other, so the group is still `A` and you can rename it again. A group that has a folder is used as it is, whatever it is
+called; the single key (<kbd>A</kbd> without <kbd>Alt</kbd>) still makes `A - Group`.
 
 A copy has the id of its photo in its name: `IMG_0001 [3f9a1c2e].jpg`. Photos of different folders often share a file
 name (every camera folder has its own `IMG_0001.jpg`), and the id keeps their copies apart: a copy never replaces the copy
@@ -420,11 +442,20 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
 2. **Search** by describing what you look for: `children on a stage`, `snow`, `a dog`, `autumn leaves`. Type it into the
    search box and press <kbd>Enter</kbd> or click the magnifier icon. The results replace
    the folder in the viewer, and the keyboard focus moves to the photo, so the keys work at once: browse, like and group
-   them like any photos. If nothing is found the focus stays in the search box, to change the words. <kbd>Esc</kbd> or **Close results** goes
+   them like any photos (<kbd>Alt</kbd>+a group key groups all of them, see [Groups](#groups)). If nothing is found the focus stays in the
+   search box, to change the words. <kbd>Esc</kbd> or **Close results** goes
    back. **More like this** finds photos that look like the one shown. Descriptions work in English.
+   There is no limit to the number of photos a search shows (a text search shows the photos that match well, however many that is).
+   Each photo is shown once: a photo that is in the library several times (a card copied into two folders, its copy in a group
+   folder) is one result. Copies are photos of the same size, saved at the same second and showing the same picture, the way the
+   name of a copy in a group folder is made (see [Groups](#groups)); of them the one that is not itself a saved copy stays, then
+   the first by path. A copy whose file time was changed on the way is not recognised here, **Find duplicates** deals with those.
+   The results are in the order of **SortOrder**: `OldestFirst` and `NewestFirst` by the date the photos were taken (the EXIF
+   date, see below; the folder itself goes by the date the file was created because that costs nothing there), `None` as the
+   search ranks them, best match first.
 3. **Dates**: put a date into the search box to look at when the photos were taken, alone or together with the rest of the
    search: `September 1` (that day in every year), `September 2009`, `1 Sep 2009`, `2009-09-01`, `2009`, `2009-2011`,
-   `beach September 2009`, `Mom 2005`. A date alone lists the photos oldest first, without a limit. Month names are English;
+   `beach September 2009`, `Mom 2005`. A date alone lists the photos oldest first (or as **SortOrder** says), like every search without a limit. Month names are English;
    a short name (`sep`, `dec`) needs a day or a year with it, and a text in double quotes is searched as words only.
    The window title says how the date was understood.
 4. **Faces**: switch the face icon (the smiling face in scanner brackets, last button of the strip) on to see the faces
