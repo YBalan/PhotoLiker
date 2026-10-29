@@ -270,8 +270,8 @@ namespace PhotoLikerUI
                 {
                     var found = PhotoScanner.Scan(_folder, _recursive, _extensions, _likedFolder);
                     return (found,
-                        LikedLibrary.Scan(_likedFolder, found),
-                        string.IsNullOrWhiteSpace(_likedFolder) ? null : GroupLibrary.Scan(_likedFolder, found));
+                        LikedLibrary.Scan(_likedFolder),
+                        string.IsNullOrWhiteSpace(_likedFolder) ? null : GroupLibrary.Scan(_likedFolder));
                 }, cts.Token);
                 if (IsDisposed)
                     return;

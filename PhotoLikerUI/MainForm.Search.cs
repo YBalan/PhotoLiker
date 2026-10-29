@@ -486,7 +486,7 @@ namespace PhotoLikerUI
             var generation = _folderGeneration;
 
             var likedFolder = _currentConfig.LikedFolder;
-            var (liked, groups) = await Task.Run(() => (LikedLibrary.Scan(likedFolder, files), GroupLibrary.Scan(likedFolder, files)));
+            var (liked, groups) = await Task.Run(() => (LikedLibrary.Scan(likedFolder), GroupLibrary.Scan(likedFolder)));
             if (generation != _folderGeneration)
                 return; // something else was opened meanwhile
 

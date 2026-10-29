@@ -265,7 +265,10 @@ public class PhotoBrowserServiceTests : IDisposable
 
         svc.LikePhoto(_photos[0]);
 
-        Assert.True(File.Exists(Path.Combine(_likedDir, Path.GetFileName(_photos[0]))));
+        var copy = Assert.Single(Directory.GetFiles(_likedDir));
+        Assert.True(CopyName.TryGetId(Path.GetFileName(copy), out var photoName, out _), "the copy has the id of its photo in its name");
+        Assert.Equal(Path.GetFileName(_photos[0]), photoName);
+        Assert.Equal(File.ReadAllBytes(_photos[0]), File.ReadAllBytes(copy));
     }
 
     [Fact]
@@ -316,7 +319,7 @@ public class PhotoBrowserServiceTests : IDisposable
 
         svc.UnlikePhoto(_photos[0]);
 
-        Assert.False(File.Exists(Path.Combine(_likedDir, Path.GetFileName(_photos[0]))));
+        Assert.Empty(Directory.GetFiles(_likedDir));
     }
 
     [Fact]
@@ -393,7 +396,64 @@ public class PhotoBrowserServiceTests : IDisposable
         // second call when file already exists in liked folder → acts as unlike
         svc.LikePhoto(_photos[0]);
 
-        Assert.False(File.Exists(Path.Combine(_likedDir, Path.GetFileName(_photos[0]))));
+        Assert.Empty(Directory.GetFiles(_likedDir));
+    }
+
+    // ── Photos that share a file name ────────────────────────────────────────
+
+    /// <summary>A photo of another folder that has the name of <c>photo1.jpg</c>, with another size.</summary>
+    private string MakeSameNamedPhoto()
+    {
+        var folder = Path.Combine(_tempDir, "sub");
+        Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, "photo1.jpg");
+        File.WriteAllBytes(path, [0xFF, 0xD8, 0xFF, 0xFE, 0x00, 0x04, 0x61, 0x62, 0xFF, 0xD9]);
+        return path;
+    }
+
+    [Fact]
+    public void LikePhoto_PhotosWithTheSameName_GetTheirOwnCopies()
+    {
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+        var other = MakeSameNamedPhoto();
+
+        svc.LikePhoto(_photos[0]);
+        svc.LikePhoto(other);
+
+        Assert.Equal(2, Directory.GetFiles(_likedDir).Length);
+        Assert.Contains(Directory.GetFiles(_likedDir), c => File.ReadAllBytes(c).SequenceEqual(File.ReadAllBytes(_photos[0])));
+        Assert.Contains(Directory.GetFiles(_likedDir), c => File.ReadAllBytes(c).SequenceEqual(File.ReadAllBytes(other)));
+    }
+
+    [Fact]
+    public void LoadImage_PhotoOfTheSameNameAsALikedOne_IsNotLiked()
+    {
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+        svc.LikePhoto(_photos[0]);
+        var other = MakeSameNamedPhoto();
+        svc.OpenFolder(Path.GetDirectoryName(other)!); // the copy of photo1.jpg is there, but not of this one
+
+        svc.LoadImage(other);
+
+        Assert.Equal(string.Empty, svc.Settings.LikedFile);
+        Assert.False(svc.IsCurrentLiked);
+    }
+
+    [Fact]
+    public void UnlikePhoto_PhotosWithTheSameName_RemovesOnlyItsOwnCopy()
+    {
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+        var other = MakeSameNamedPhoto();
+        svc.LikePhoto(_photos[0]);
+        svc.LikePhoto(other);
+
+        svc.UnlikePhoto(other);
+
+        var left = Assert.Single(Directory.GetFiles(_likedDir));
+        Assert.Equal(File.ReadAllBytes(_photos[0]), File.ReadAllBytes(left));
     }
 
     [Fact]
@@ -459,6 +519,19 @@ public class PhotoBrowserServiceTests : IDisposable
         svc.LoadImage(source);
 
         Assert.Equal(suggested, svc.Settings.LikedFile);
+    }
+
+    [Fact]
+    public void LoadImage_WhenACopyMadeBeforeTheIdsExists_ItIsStillLiked()
+    {
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+        var oldCopy = Path.Combine(_likedDir, "photo1 (2).jpg"); // how the second photo of a name used to be saved
+        File.Copy(_photos[0], oldCopy);
+
+        svc.LoadImage(_photos[0]);
+
+        Assert.Equal(oldCopy, svc.Settings.LikedFile);
     }
 
     [Fact]

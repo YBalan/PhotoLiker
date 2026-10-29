@@ -598,7 +598,7 @@
                 var (files, liked, groups) = await Task.Run(() =>
                 {
                     var found = PhotoScanner.Scan(folder, recursive, extensions, likedFolder, sortOrder);
-                    return (found, LikedLibrary.Scan(likedFolder, found), GroupLibrary.Scan(likedFolder, found));
+                    return (found, LikedLibrary.Scan(likedFolder), GroupLibrary.Scan(likedFolder));
                 });
 
                 // Another folder was opened while this one was being listed
@@ -1119,7 +1119,7 @@
 
                 var files = _currentConfig.Files;
                 var groups = await EnsureGroupLibraryAsync(likedFolder);
-                var result = await Task.Run(() => groups.Toggle(key, photo, files));
+                var result = await Task.Run(() => groups.Toggle(key, photo));
 
                 // Another folder was opened while the copy was running: the result belongs to a list that is gone
                 if (ReferenceEquals(files, _currentConfig.Files))
@@ -1236,7 +1236,7 @@
                 return current;
 
             var files = _currentConfig.Files;
-            var library = await Task.Run(() => LikedLibrary.Scan(likedFolder, files));
+            var library = await Task.Run(() => LikedLibrary.Scan(likedFolder));
 
             if (ReferenceEquals(files, _currentConfig.Files))
             {
@@ -1253,7 +1253,7 @@
                 return current;
 
             var files = _currentConfig.Files;
-            var library = await Task.Run(() => GroupLibrary.Scan(likedFolder, files));
+            var library = await Task.Run(() => GroupLibrary.Scan(likedFolder));
 
             if (ReferenceEquals(files, _currentConfig.Files))
                 _groups = library;

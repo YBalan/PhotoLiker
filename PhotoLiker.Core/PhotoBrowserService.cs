@@ -57,10 +57,9 @@ namespace PhotoLiker.Core
                 if (_settings.CurrentIndex >= 0)
                 {
                     var pf = _settings.Files[_settings.CurrentIndex];
-                    var suggested = Path.Combine(_settings.LikedFolder, Path.GetFileName(pf.OriginalFilePath));
                     _settings.LikedFile = File.Exists(pf.LikedFilePath)
                         ? pf.LikedFilePath
-                        : File.Exists(suggested) ? suggested : string.Empty;
+                        : FindLikedCopy(pf) ?? string.Empty;
                 }
 
                 MetadataViewModel? meta = null;
@@ -115,17 +114,19 @@ namespace PhotoLiker.Core
                 if (!Directory.Exists(likedFolder))
                     Directory.CreateDirectory(likedFolder);
 
+                var photo = Describe(filePath) ?? throw new FileNotFoundException(null, filePath);
                 var fileName = Path.GetFileName(filePath);
-                var dest     = Path.Combine(likedFolder, fileName);
 
-                if (File.Exists(dest))
+                var library = LikedLibrary.Scan(likedFolder);
+                if (library.Find(photo) is not null)
                 {
                     // Already exists → treat as unlike
                     UnlikePhoto(filePath);
                     return;
                 }
 
-                File.Copy(filePath, dest, overwrite: true);
+                var dest = library.GetNewCopyPath(photo);
+                LikedLibrary.CopyPhoto(filePath, dest);
 
                 var idx = _settings.Files.IndexOf(filePath);
                 if (idx >= 0) _settings.Files[idx].LikedFilePath = dest;
@@ -146,10 +147,11 @@ namespace PhotoLiker.Core
         {
             try
             {
-                var likedPath = _settings.LikedFile;
-                if (File.Exists(likedPath))
+                // The copy of this photo, not whatever the current photo's copy is
+                var likedPath = Describe(filePath) is { } photo ? FindLikedCopy(photo) : null;
+                if (likedPath is not null && File.Exists(likedPath))
                     File.Delete(likedPath);
-                StatusChanged?.Invoke(string.Format(AppStrings.StatusFileRemoved, Path.GetFileName(likedPath)));
+                StatusChanged?.Invoke(string.Format(AppStrings.StatusFileRemoved, Path.GetFileName(likedPath ?? filePath)));
 
                 var idx = _settings.Files.IndexOf(filePath);
                 if (idx >= 0) _settings.Files[idx].LikedFilePath = string.Empty;
@@ -164,6 +166,28 @@ namespace PhotoLiker.Core
         }
 
         // ── helpers ────────────────────────────────────────────────────────
+
+        /// <summary>The photo from the list, or described by the file system if it isn't in the list; null if the file is gone.</summary>
+        private PhotoFile? Describe(string filePath)
+        {
+            var idx = _settings.Files.IndexOf(filePath);
+            if (idx >= 0)
+                return _settings.Files[idx];
+
+            var info = new FileInfo(filePath);
+            return info.Exists
+                ? new PhotoFile(filePath, string.Empty)
+                {
+                    Length = info.Length,
+                    LastWriteTimeUtc = info.LastWriteTimeUtc,
+                    CreationTimeUtc = info.CreationTimeUtc,
+                }
+                : null;
+        }
+
+        // A fresh listing each time: the folder is also changed from outside while the photos are browsed
+        private string? FindLikedCopy(PhotoFile photo) =>
+            string.IsNullOrWhiteSpace(_settings.LikedFolder) ? null : LikedLibrary.Scan(_settings.LikedFolder).Find(photo);
 
         private void LoadFirstPhoto(string currentFile)
         {

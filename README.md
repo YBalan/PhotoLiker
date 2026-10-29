@@ -192,8 +192,13 @@ legend once its folder exists, that is after the first press of its key.
 
 `0` is not a group: it fits the image to the viewer. (It used to be `O`, which is a group like every other letter now.)
 
-When several photos of a folder share a file name (typical with subfolders), their copies are told apart by size and
-date and named `name (2).jpg`, `name (3).jpg`, ... in the Liked folder.
+A copy has the id of its photo in its name: `IMG_0001 [3f9a1c2e].jpg`. Photos of different folders often share a file
+name (every camera folder has its own `IMG_0001.jpg`), and the id keeps their copies apart: a copy never replaces the copy
+of another photo, and a photo is never shown as liked because another one of the same name is. The id is made from the
+size of the photo and the time it was last written, and from nothing else, not from its folder, its drive or the
+computer. So the same photo gets the same name wherever it is found and whatever else is open, and the Liked folders of
+different computers can be put together. Copies made before the ids (`name.jpg`, `name (2).jpg`) are still recognised, by
+size and date.
 
 ## Deleting photos
 
@@ -282,8 +287,8 @@ not kept after the dialog closes, and the run is logged and can be undone like a
 - Every run writes a log (`photo-liker-datefix-<date>-<time>.jsonl`) in the photo folder, before the first file of each hundred is
   touched. **Undo last run...** puts the dates (and the dates inside the photo) back from it; a photo that was changed after the
   run, or whose date was changed again, is left alone and counted.
-- The copies of a changed photo in the Liked and group folders get the same dates, because a copy is matched with its photo by size
-  and date when photos share a name.
+- The copies of a changed photo in the Liked and group folders get the same dates. A copy is matched with its photo by the id in its
+  name, which comes from the size and the date the photo had when it was copied, or else by size and date.
 - If the folder is indexed, the index is told that the photos are the same ones: without that, "Update index" would take every
   changed date for a changed photo and analyze it again. (Stop indexing before using the button.)
 - The dates are read back after writing. A network drive that does not keep the created date is reported, not ignored.

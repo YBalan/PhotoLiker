@@ -15,9 +15,10 @@ namespace PhotoLiker.Core
     /// Knows which photos have a copy in the group folders under the liked folder ("A - Group", "1 - Group", ...),
     /// so the UI can list them without asking the (possibly network) file system.
     ///
-    /// Every group folder is indexed like the liked folder is (see <see cref="LikedLibrary"/>). The file system work
-    /// (<see cref="Scan"/>, <see cref="Toggle"/>) can run on any thread: it never changes the index, it returns a new
-    /// one that the UI thread - the only one that reads the index - swaps in with <see cref="Update"/>.
+    /// Every group folder is indexed like the liked folder is (see <see cref="LikedLibrary"/>), and its copies are named
+    /// the same way (see <see cref="CopyName"/>). The file system work (<see cref="Scan"/>, <see cref="Toggle"/>) can run on
+    /// any thread: it never changes the index, it returns a new one that the UI thread - the only one that reads the
+    /// index - swaps in with <see cref="Update"/>.
     /// </summary>
     public sealed class GroupLibrary
     {
@@ -31,12 +32,12 @@ namespace PhotoLiker.Core
 
         public string LikedFolder { get; }
 
-        /// <summary>Lists the group folders under the liked folder. Doesn't touch <paramref name="files"/>.</summary>
-        public static GroupLibrary Scan(string likedFolder, IReadOnlyList<PhotoFile> files)
+        /// <summary>Lists the group folders under the liked folder.</summary>
+        public static GroupLibrary Scan(string likedFolder)
         {
             var folders = new Dictionary<string, (char Key, LikedLibrary Library)>(StringComparer.OrdinalIgnoreCase);
             foreach (var group in PhotoGroups.FindFolders(likedFolder))
-                folders[group.Path] = (group.Key, LikedLibrary.Scan(group.Path, files));
+                folders[group.Path] = (group.Key, LikedLibrary.Scan(group.Path));
 
             return new GroupLibrary(likedFolder, folders);
         }
@@ -45,13 +46,13 @@ namespace PhotoLiker.Core
         /// Saves a copy of the photo in the folder of the group, or removes the copy again if the folder already has one.
         /// The folder is a renamed one if there is any ("A - Group Family"), else it is created ("A - Group").
         /// </summary>
-        public GroupToggleResult Toggle(char key, PhotoFile photo, IReadOnlyList<PhotoFile> files)
+        public GroupToggleResult Toggle(char key, PhotoFile photo)
         {
             key = PhotoGroups.NormalizeKey(key);
             var folder = PhotoGroups.EnsureFolder(LikedFolder, key);
 
             // A fresh listing: the folder may have been emptied or added to since the last scan
-            var library = LikedLibrary.Scan(folder, files);
+            var library = LikedLibrary.Scan(folder);
 
             string filePath;
             bool added;
@@ -71,15 +72,14 @@ namespace PhotoLiker.Core
                 added = true;
             }
 
-            return new GroupToggleResult(key, folder, filePath, added, RefreshFolders(folder, library, files));
+            return new GroupToggleResult(key, folder, filePath, added, RefreshFolders(folder, library));
         }
 
         /// <summary>
         /// The known folders, brought up to date: folders that were renamed or deleted in the meantime are dropped,
         /// new or renamed ones are scanned, and the toggled folder gets its fresh index.
         /// </summary>
-        private Dictionary<string, (char Key, LikedLibrary Library)> RefreshFolders(
-            string toggledFolder, LikedLibrary toggledLibrary, IReadOnlyList<PhotoFile> files)
+        private Dictionary<string, (char Key, LikedLibrary Library)> RefreshFolders(string toggledFolder, LikedLibrary toggledLibrary)
         {
             var folders = new Dictionary<string, (char Key, LikedLibrary Library)>(StringComparer.OrdinalIgnoreCase);
 
@@ -90,7 +90,7 @@ namespace PhotoLiker.Core
                 else if (_folders.TryGetValue(group.Path, out var known))
                     folders[group.Path] = known;
                 else
-                    folders[group.Path] = (group.Key, LikedLibrary.Scan(group.Path, files));
+                    folders[group.Path] = (group.Key, LikedLibrary.Scan(group.Path));
             }
 
             return folders;
