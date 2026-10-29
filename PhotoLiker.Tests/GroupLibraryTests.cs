@@ -41,19 +41,22 @@ public class GroupLibraryTests : IDisposable
 
     private string GroupPath(string folderName, string fileName) => Path.Combine(_likedDir, folderName, fileName);
 
-    private GroupLibrary Scan(params PhotoFile[] files) => GroupLibrary.Scan(_likedDir, files);
+    /// <summary>Where the app saves the copy of the photo in a group folder: the name has the id of the photo.</summary>
+    private string GroupCopy(string folderName, PhotoFile photo) => GroupPath(folderName, CopyName.For(photo));
+
+    private GroupLibrary Scan() => GroupLibrary.Scan(_likedDir);
 
     /// <summary>Toggles on an existing index and applies the result, like the UI does.</summary>
-    private static GroupToggleResult Toggle(GroupLibrary groups, char key, PhotoFile photo, params PhotoFile[] files)
+    private static GroupToggleResult Toggle(GroupLibrary groups, char key, PhotoFile photo)
     {
-        var result = groups.Toggle(key, photo, files);
+        var result = groups.Toggle(key, photo);
         groups.Update(result);
         return result;
     }
 
     /// <summary>Toggles on a freshly scanned index; the result is not applied.</summary>
-    private GroupToggleResult ToggleOnce(char key, PhotoFile photo, params PhotoFile[] files) =>
-        Scan(files).Toggle(key, photo, files);
+    private GroupToggleResult ToggleOnce(char key, PhotoFile photo) =>
+        Scan().Toggle(key, photo);
 
     // ── Toggle: saving ──────────────────────────────────────────────────────
 
@@ -62,10 +65,10 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg", "pixels");
 
-        var result = ToggleOnce('A', photo, [photo]);
+        var result = ToggleOnce('A', photo);
 
         Assert.True(result.Added);
-        Assert.Equal(GroupPath("A - Group", "a.jpg"), result.FilePath);
+        Assert.Equal(GroupCopy("A - Group", photo), result.FilePath);
         Assert.Equal("pixels", File.ReadAllText(result.FilePath));
     }
 
@@ -74,7 +77,7 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
 
-        ToggleOnce('A', photo, [photo]);
+        ToggleOnce('A', photo);
 
         Assert.True(File.Exists(photo.OriginalFilePath));
     }
@@ -84,9 +87,9 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
 
-        var result = ToggleOnce('3', photo, [photo]);
+        var result = ToggleOnce('3', photo);
 
-        Assert.Equal(GroupPath("3 - Group", "a.jpg"), result.FilePath);
+        Assert.Equal(GroupCopy("3 - Group", photo), result.FilePath);
         Assert.Equal('3', result.Key);
     }
 
@@ -95,9 +98,9 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
 
-        var result = ToggleOnce('b', photo, [photo]);
+        var result = ToggleOnce('b', photo);
 
-        Assert.Equal(GroupPath("B - Group", "a.jpg"), result.FilePath);
+        Assert.Equal(GroupCopy("B - Group", photo), result.FilePath);
         Assert.Equal('B', result.Key);
     }
 
@@ -107,9 +110,9 @@ public class GroupLibraryTests : IDisposable
         var photo = MakePhoto("a.jpg");
         Directory.CreateDirectory(Path.Combine(_likedDir, "A - Group Family"));
 
-        var result = ToggleOnce('A', photo, [photo]);
+        var result = ToggleOnce('A', photo);
 
-        Assert.True(File.Exists(GroupPath("A - Group Family", "a.jpg")));
+        Assert.True(File.Exists(GroupCopy("A - Group Family", photo)));
         Assert.Equal(Path.Combine(_likedDir, "A - Group Family"), result.Folder);
         Assert.False(Directory.Exists(Path.Combine(_likedDir, "A - Group")));
     }
@@ -118,14 +121,14 @@ public class GroupLibraryTests : IDisposable
     public void Toggle_FolderRenamedAfterTheScan_SavesIntoRenamedFolder()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, 'A', photo, photo);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
         Directory.Move(Path.Combine(_likedDir, "A - Group"), Path.Combine(_likedDir, "A - Group Friends"));
         var other = MakePhoto("b.jpg");
 
-        var result = Toggle(groups, 'A', other, photo, other);
+        var result = Toggle(groups, 'A', other);
 
-        Assert.Equal(GroupPath("A - Group Friends", "b.jpg"), result.FilePath);
+        Assert.Equal(GroupCopy("A - Group Friends", other), result.FilePath);
         Assert.False(Directory.Exists(Path.Combine(_likedDir, "A - Group")));
     }
 
@@ -134,7 +137,7 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => ToggleOnce('0', photo, [photo]));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ToggleOnce('0', photo));
 
         Assert.False(Directory.Exists(_likedDir));
     }
@@ -145,9 +148,9 @@ public class GroupLibraryTests : IDisposable
         var photo = MakePhoto("a.jpg");
         File.Delete(photo.OriginalFilePath);
 
-        Assert.ThrowsAny<IOException>(() => ToggleOnce('A', photo, [photo]));
+        Assert.ThrowsAny<IOException>(() => ToggleOnce('A', photo));
 
-        Assert.False(File.Exists(GroupPath("A - Group", "a.jpg")));
+        Assert.False(File.Exists(GroupCopy("A - Group", photo)));
     }
 
     [Fact]
@@ -158,7 +161,7 @@ public class GroupLibraryTests : IDisposable
         var liked = Path.Combine(_likedDir, "a.jpg");
         File.Copy(photo.OriginalFilePath, liked);
 
-        var result = ToggleOnce('A', photo, [photo]);
+        var result = ToggleOnce('A', photo);
 
         Assert.True(result.Added);
         Assert.True(File.Exists(liked));
@@ -170,10 +173,10 @@ public class GroupLibraryTests : IDisposable
     public void Toggle_PhotoAlreadyInGroup_RemovesTheCopy()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        var saved = Toggle(groups, 'A', photo, photo);
+        var groups = Scan();
+        var saved = Toggle(groups, 'A', photo);
 
-        var removed = Toggle(groups, 'A', photo, photo);
+        var removed = Toggle(groups, 'A', photo);
 
         Assert.True(saved.Added);
         Assert.False(removed.Added);
@@ -186,10 +189,10 @@ public class GroupLibraryTests : IDisposable
     public void Toggle_RemovingTheLastCopy_KeepsTheGroupFolder()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, 'A', photo, photo);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
 
-        Toggle(groups, 'A', photo, photo);
+        Toggle(groups, 'A', photo);
 
         Assert.True(Directory.Exists(Path.Combine(_likedDir, "A - Group")));
     }
@@ -198,11 +201,11 @@ public class GroupLibraryTests : IDisposable
     public void Toggle_ThreeTimes_SavesAgain()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, 'A', photo, photo);
-        Toggle(groups, 'A', photo, photo);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
+        Toggle(groups, 'A', photo);
 
-        var third = Toggle(groups, 'A', photo, photo);
+        var third = Toggle(groups, 'A', photo);
 
         Assert.True(third.Added);
         Assert.True(File.Exists(third.FilePath));
@@ -216,7 +219,7 @@ public class GroupLibraryTests : IDisposable
         Directory.CreateDirectory(renamed);
         File.Copy(photo.OriginalFilePath, Path.Combine(renamed, "a.jpg"));
 
-        var result = ToggleOnce('A', photo, [photo]);
+        var result = ToggleOnce('A', photo);
 
         Assert.False(result.Added);
         Assert.False(File.Exists(Path.Combine(renamed, "a.jpg")));
@@ -226,12 +229,12 @@ public class GroupLibraryTests : IDisposable
     public void Toggle_CopyAddedToTheFolderSinceTheScan_RemovesIt()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
+        var groups = Scan();
         var folder = Path.Combine(_likedDir, "A - Group");
         Directory.CreateDirectory(folder);
         File.Copy(photo.OriginalFilePath, Path.Combine(folder, "a.jpg"));
 
-        var result = Toggle(groups, 'A', photo, photo);
+        var result = Toggle(groups, 'A', photo);
 
         Assert.False(result.Added);
         Assert.False(File.Exists(Path.Combine(folder, "a.jpg")));
@@ -241,11 +244,11 @@ public class GroupLibraryTests : IDisposable
     public void Toggle_CopyDeletedFromTheFolderSinceTheScan_SavesItAgain()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        var saved = Toggle(groups, 'A', photo, photo);
+        var groups = Scan();
+        var saved = Toggle(groups, 'A', photo);
         File.Delete(saved.FilePath);
 
-        var result = Toggle(groups, 'A', photo, photo);
+        var result = Toggle(groups, 'A', photo);
 
         Assert.True(result.Added);
         Assert.True(File.Exists(result.FilePath));
@@ -257,15 +260,15 @@ public class GroupLibraryTests : IDisposable
     public void Toggle_DifferentGroups_KeepIndependentCopies()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, 'A', photo, photo);
-        Toggle(groups, '1', photo, photo);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
+        Toggle(groups, '1', photo);
 
-        var removed = Toggle(groups, 'A', photo, photo);
+        var removed = Toggle(groups, 'A', photo);
 
         Assert.False(removed.Added);
-        Assert.True(File.Exists(GroupPath("1 - Group", "a.jpg")));
-        Assert.False(File.Exists(GroupPath("A - Group", "a.jpg")));
+        Assert.True(File.Exists(GroupCopy("1 - Group", photo)));
+        Assert.False(File.Exists(GroupCopy("A - Group", photo)));
     }
 
     [Fact]
@@ -273,15 +276,16 @@ public class GroupLibraryTests : IDisposable
     {
         var first = MakePhoto("a.jpg", "first photo");
         var second = MakePhoto(Path.Combine("sub", "a.jpg"), "the second one");
-        var groups = Scan(first, second);
+        var groups = Scan();
 
-        var firstCopy = Toggle(groups, 'A', first, first, second);
-        var secondCopy = Toggle(groups, 'A', second, first, second);
+        var firstCopy = Toggle(groups, 'A', first);
+        var secondCopy = Toggle(groups, 'A', second);
 
         Assert.True(firstCopy.Added);
         Assert.True(secondCopy.Added);
-        Assert.Equal(GroupPath("A - Group", "a.jpg"), firstCopy.FilePath);
-        Assert.Equal(GroupPath("A - Group", "a (2).jpg"), secondCopy.FilePath);
+        Assert.Equal(GroupCopy("A - Group", first), firstCopy.FilePath);
+        Assert.Equal(GroupCopy("A - Group", second), secondCopy.FilePath);
+        Assert.NotEqual(firstCopy.FilePath, secondCopy.FilePath);
         Assert.Equal("first photo", File.ReadAllText(firstCopy.FilePath));
         Assert.Equal("the second one", File.ReadAllText(secondCopy.FilePath));
     }
@@ -291,15 +295,67 @@ public class GroupLibraryTests : IDisposable
     {
         var first = MakePhoto("a.jpg", "first photo");
         var second = MakePhoto(Path.Combine("sub", "a.jpg"), "the second one");
-        var groups = Scan(first, second);
-        Toggle(groups, 'A', first, first, second);
-        Toggle(groups, 'A', second, first, second);
+        var groups = Scan();
+        Toggle(groups, 'A', first);
+        Toggle(groups, 'A', second);
 
-        var removed = Toggle(groups, 'A', second, first, second);
+        var removed = Toggle(groups, 'A', second);
 
         Assert.False(removed.Added);
-        Assert.True(File.Exists(GroupPath("A - Group", "a.jpg")));
-        Assert.False(File.Exists(GroupPath("A - Group", "a (2).jpg")));
+        Assert.True(File.Exists(GroupCopy("A - Group", first)));
+        Assert.False(File.Exists(GroupCopy("A - Group", second)));
+    }
+
+    [Fact]
+    public void Toggle_PhotoOfTheSameNameInAnotherFolder_IsNotTakenForTheSavedOne()
+    {
+        // The copy of a/IMG.jpg is in the group; b/IMG.jpg is the only IMG.jpg the next scan knows about
+        var saved = MakePhoto(Path.Combine("a", "IMG.jpg"), "taken at the lake");
+        var other = MakePhoto(Path.Combine("b", "IMG.jpg"), "taken at home, another size");
+        var savedCopy = Toggle(Scan(), 'A', saved);
+
+        var groups = Scan();
+
+        Assert.Empty(groups.FoldersOf(other));
+        Assert.False(groups.IsInAnyGroup(other));
+        Assert.Equal([Path.Combine(_likedDir, "A - Group")], groups.FoldersOf(saved));
+
+        var otherCopy = Toggle(groups, 'A', other);
+        Assert.True(otherCopy.Added);
+        Assert.True(File.Exists(savedCopy.FilePath));
+        Assert.Equal("taken at the lake", File.ReadAllText(savedCopy.FilePath));
+
+        var removed = Toggle(groups, 'A', other);
+        Assert.False(removed.Added);
+        Assert.True(File.Exists(savedCopy.FilePath));
+        Assert.False(File.Exists(otherCopy.FilePath));
+    }
+
+    [Fact]
+    public void Toggle_TheNameOfACopyDoesNotDependOnWhatElseIsOpenOrWhatWasSavedBefore()
+    {
+        var first = MakePhoto(Path.Combine("a", "IMG.jpg"), "first photo");
+        var second = MakePhoto(Path.Combine("b", "IMG.jpg"), "the second one");
+
+        var secondFirst = ToggleOnce('A', second);   // the second photo goes in first, and nothing else is known
+        var firstAfter = Toggle(Scan(), 'A', first);
+
+        Assert.Equal(GroupCopy("A - Group", second), secondFirst.FilePath);
+        Assert.Equal(GroupCopy("A - Group", first), firstAfter.FilePath);
+    }
+
+    [Fact]
+    public void Toggle_TheNameOfACopyHasNothingOfTheFolderOfThePhoto()
+    {
+        var here = MakePhoto(Path.Combine("2015", "IMG.jpg"), "same photo");
+        var moved = new PhotoFile(Path.Combine(_tempDir, "OtherDrive", "elsewhere", "IMG.jpg"), string.Empty)
+        {
+            Length = here.Length,
+            LastWriteTimeUtc = here.LastWriteTimeUtc,
+        };
+
+        Assert.Equal(CopyName.For(here), CopyName.For(moved));
+        Assert.Equal(Path.GetFileName(ToggleOnce('A', here).FilePath), CopyName.For(moved));
     }
 
     // ── Scan / FoldersOf ────────────────────────────────────────────────────
@@ -309,7 +365,7 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
 
-        var groups = Scan(photo);
+        var groups = Scan();
 
         Assert.Empty(groups.FoldersOf(photo));
     }
@@ -325,7 +381,7 @@ public class GroupLibraryTests : IDisposable
         File.Copy(photo.OriginalFilePath, GroupPath("2 - Group", "a.jpg"));
         File.Copy(other.OriginalFilePath, GroupPath("2 - Group", "b.jpg"));
 
-        var groups = Scan(photo, other);
+        var groups = Scan();
 
         Assert.Equal(
             [Path.Combine(_likedDir, "2 - Group"), Path.Combine(_likedDir, "A - Group Family")],
@@ -340,7 +396,7 @@ public class GroupLibraryTests : IDisposable
         Directory.CreateDirectory(_likedDir);
         File.Copy(photo.OriginalFilePath, Path.Combine(_likedDir, "a.jpg"));
 
-        var groups = Scan(photo);
+        var groups = Scan();
 
         Assert.Empty(groups.FoldersOf(photo));
     }
@@ -354,7 +410,7 @@ public class GroupLibraryTests : IDisposable
         File.Copy(photo.OriginalFilePath, GroupPath("Holidays", "a.jpg"));
         File.Copy(photo.OriginalFilePath, GroupPath("0 - Group", "a.jpg"));
 
-        var groups = Scan(photo);
+        var groups = Scan();
 
         Assert.Empty(groups.FoldersOf(photo));
     }
@@ -367,7 +423,7 @@ public class GroupLibraryTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_likedDir, "A - Group"));
         File.Copy(saved.OriginalFilePath, GroupPath("A - Group", "a.jpg"));
 
-        var groups = Scan(saved, unsaved);
+        var groups = Scan();
 
         Assert.Empty(groups.FoldersOf(unsaved));
     }
@@ -376,9 +432,9 @@ public class GroupLibraryTests : IDisposable
     public void FoldersOf_OrdersByKeyDigitsFirst()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
+        var groups = Scan();
         foreach (var key in "ZA9B1")
-            Toggle(groups, key, photo, photo);
+            Toggle(groups, key, photo);
 
         var names = groups.FoldersOf(photo).Select(Path.GetFileName);
 
@@ -391,9 +447,9 @@ public class GroupLibraryTests : IDisposable
     public void Update_AfterSaving_ListsTheFolder()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
+        var groups = Scan();
 
-        var result = groups.Toggle('A', photo, [photo]);
+        var result = groups.Toggle('A', photo);
         Assert.Empty(groups.FoldersOf(photo)); // the index only changes when the UI thread applies the result
 
         groups.Update(result);
@@ -406,11 +462,11 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
         var other = MakePhoto("b.jpg");
-        var groups = Scan(photo, other);
-        Toggle(groups, 'A', photo, photo, other);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
         Directory.Move(Path.Combine(_likedDir, "A - Group"), Path.Combine(_likedDir, "A - Group Family"));
 
-        Toggle(groups, 'A', other, photo, other); // any group action notices the rename
+        Toggle(groups, 'A', other); // any group action notices the rename
 
         var expected = Path.Combine(_likedDir, "A - Group Family");
         Assert.Equal([expected], groups.FoldersOf(photo));
@@ -423,11 +479,11 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
         var other = MakePhoto("b.jpg");
-        var groups = Scan(photo, other);
-        Toggle(groups, '1', photo, photo, other);
+        var groups = Scan();
+        Toggle(groups, '1', photo);
         Directory.Delete(Path.Combine(_likedDir, "1 - Group"), recursive: true);
 
-        Toggle(groups, 'A', other, photo, other);
+        Toggle(groups, 'A', other);
 
         Assert.Empty(groups.FoldersOf(photo));
     }
@@ -437,11 +493,11 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
         var other = MakePhoto("b.jpg");
-        var groups = Scan(photo, other);
+        var groups = Scan();
         Directory.CreateDirectory(Path.Combine(_likedDir, "B - Group"));
         File.Copy(photo.OriginalFilePath, GroupPath("B - Group", "a.jpg"));
 
-        Toggle(groups, 'A', other, photo, other);
+        Toggle(groups, 'A', other);
 
         Assert.Equal([Path.Combine(_likedDir, "B - Group")], groups.FoldersOf(photo));
     }
@@ -450,10 +506,10 @@ public class GroupLibraryTests : IDisposable
     public void Update_KeepsTheIndexOfGroupsThatWereNotTouched()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, '1', photo, photo);
+        var groups = Scan();
+        Toggle(groups, '1', photo);
 
-        Toggle(groups, 'A', photo, photo);
+        Toggle(groups, 'A', photo);
 
         Assert.Equal(
             [Path.Combine(_likedDir, "1 - Group"), Path.Combine(_likedDir, "A - Group")],
@@ -464,10 +520,10 @@ public class GroupLibraryTests : IDisposable
     public void Update_AfterRemoving_NoLongerListsTheFolder()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, 'A', photo, photo);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
 
-        Toggle(groups, 'A', photo, photo);
+        Toggle(groups, 'A', photo);
 
         Assert.Empty(groups.FoldersOf(photo));
     }
@@ -478,8 +534,8 @@ public class GroupLibraryTests : IDisposable
     public void IsInAnyGroup_PhotoInAGroup_IsTrue()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, 'A', photo, photo);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
 
         Assert.True(groups.IsInAnyGroup(photo));
     }
@@ -489,9 +545,9 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
         var other = MakePhoto("b.jpg");
-        var groups = Scan(photo, other);
-        Toggle(groups, 'A', other, photo, other);
-        Toggle(groups, '5', photo, photo, other);
+        var groups = Scan();
+        Toggle(groups, 'A', other);
+        Toggle(groups, '5', photo);
 
         Assert.True(groups.IsInAnyGroup(photo));
     }
@@ -501,8 +557,8 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
         var other = MakePhoto("b.jpg");
-        var groups = Scan(photo, other);
-        Toggle(groups, 'A', other, photo, other);
+        var groups = Scan();
+        Toggle(groups, 'A', other);
 
         Assert.False(groups.IsInAnyGroup(photo));
     }
@@ -513,16 +569,16 @@ public class GroupLibraryTests : IDisposable
         var photo = MakePhoto("a.jpg");
         photo.LikedFilePath = Path.Combine(_likedDir, "a.jpg");
 
-        Assert.False(Scan(photo).IsInAnyGroup(photo));
+        Assert.False(Scan().IsInAnyGroup(photo));
     }
 
     [Fact]
     public void IsInAnyGroup_AfterTheCopyWasRemoved_IsFalse()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, 'A', photo, photo);
-        Toggle(groups, 'A', photo, photo);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
+        Toggle(groups, 'A', photo);
 
         Assert.False(groups.IsInAnyGroup(photo));
     }
@@ -534,7 +590,7 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
 
-        Assert.Empty(Scan(photo).GetLegend(photo));
+        Assert.Empty(Scan().GetLegend(photo));
     }
 
     [Fact]
@@ -544,7 +600,7 @@ public class GroupLibraryTests : IDisposable
         foreach (var name in new[] { "B - Group", "A - Group Family", "3 - Group", "Holidays" })
             Directory.CreateDirectory(Path.Combine(_likedDir, name));
 
-        var legend = Scan(photo).GetLegend(photo);
+        var legend = Scan().GetLegend(photo);
 
         Assert.Equal(['3', 'A', 'B'], legend.Select(e => e.Key));
         Assert.Equal(["3 - Group", "A - Group Family", "B - Group"], legend.Select(e => e.Name));
@@ -555,10 +611,10 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
         var other = MakePhoto("b.jpg");
-        var groups = Scan(photo, other);
-        Toggle(groups, 'A', photo, photo, other);
-        Toggle(groups, '2', other, photo, other);
-        Toggle(groups, 'C', photo, photo, other);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
+        Toggle(groups, '2', other);
+        Toggle(groups, 'C', photo);
 
         var legend = groups.GetLegend(photo);
 
@@ -571,8 +627,8 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
         var other = MakePhoto("b.jpg");
-        var groups = Scan(photo, other);
-        Toggle(groups, 'A', other, photo, other);
+        var groups = Scan();
+        Toggle(groups, 'A', other);
 
         var legend = groups.GetLegend(photo);
 
@@ -583,9 +639,9 @@ public class GroupLibraryTests : IDisposable
     public void GetLegend_NewGroup_AppearsAfterTheResultIsApplied()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
+        var groups = Scan();
 
-        var result = groups.Toggle('G', photo, [photo]);
+        var result = groups.Toggle('G', photo);
         Assert.Empty(groups.GetLegend(photo));
 
         groups.Update(result);
@@ -598,11 +654,11 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
         var other = MakePhoto("b.jpg");
-        var groups = Scan(photo, other);
-        Toggle(groups, 'A', photo, photo, other);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
         Directory.Move(Path.Combine(_likedDir, "A - Group"), Path.Combine(_likedDir, "A - Group Family"));
 
-        Toggle(groups, 'B', other, photo, other); // any group action notices the rename
+        Toggle(groups, 'B', other); // any group action notices the rename
 
         Assert.Equal(["A - Group Family", "B - Group"], groups.GetLegend(photo).Select(e => e.Name));
     }
@@ -611,9 +667,9 @@ public class GroupLibraryTests : IDisposable
     public void GetLegend_FolderLeftEmpty_StaysListed()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, 'A', photo, photo);
-        Toggle(groups, 'A', photo, photo); // removes the copy, keeps the folder
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
+        Toggle(groups, 'A', photo); // removes the copy, keeps the folder
 
         Assert.Equal([new GroupLegendEntry('A', "A - Group", HasPhoto: false)], groups.GetLegend(photo));
     }
@@ -625,7 +681,7 @@ public class GroupLibraryTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_likedDir, "A - Group Work"));
         Directory.CreateDirectory(Path.Combine(_likedDir, "A - Group Family"));
 
-        var legend = Scan(photo).GetLegend(photo);
+        var legend = Scan().GetLegend(photo);
 
         Assert.Equal(["A - Group Family", "A - Group Work"], legend.Select(e => e.Name));
     }
@@ -637,9 +693,9 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
         photo.LikedFilePath = Path.Combine(_likedDir, "a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, 'B', photo, photo);
-        Toggle(groups, '4', photo, photo);
+        var groups = Scan();
+        Toggle(groups, 'B', photo);
+        Toggle(groups, '4', photo);
 
         Assert.Equal(["Liked", "4 - Group", "B - Group"], groups.GetSavedInNames(photo));
     }
@@ -649,7 +705,7 @@ public class GroupLibraryTests : IDisposable
     {
         var photo = MakePhoto("a.jpg");
 
-        Assert.Empty(Scan(photo).GetSavedInNames(photo));
+        Assert.Empty(Scan().GetSavedInNames(photo));
     }
 
     [Fact]
@@ -686,15 +742,15 @@ public class GroupLibraryTests : IDisposable
         var photo = MakePhoto("a.jpg");
         photo.LikedFilePath = Path.Combine(_likedDir, "a.jpg");
 
-        Assert.Equal(["Liked"], Scan(photo).GetSavedInNames(photo));
+        Assert.Equal(["Liked"], Scan().GetSavedInNames(photo));
     }
 
     [Fact]
     public void GetSavedInNames_OnlyInGroup_NamesTheGroupFolder()
     {
         var photo = MakePhoto("a.jpg");
-        var groups = Scan(photo);
-        Toggle(groups, 'A', photo, photo);
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
 
         Assert.Equal(["A - Group"], groups.GetSavedInNames(photo));
     }
@@ -706,8 +762,8 @@ public class GroupLibraryTests : IDisposable
         photo.LikedFilePath = Path.Combine(_likedDir, "a.jpg");
         Directory.CreateDirectory(Path.Combine(_likedDir, "A - Group Family"));
         File.Copy(photo.OriginalFilePath, GroupPath("A - Group Family", "a.jpg"));
-        var groups = Scan(photo);
-        Toggle(groups, '2', photo, photo);
+        var groups = Scan();
+        Toggle(groups, '2', photo);
 
         Assert.Equal(["Liked", "2 - Group", "A - Group Family"], groups.GetSavedInNames(photo));
     }
@@ -718,7 +774,7 @@ public class GroupLibraryTests : IDisposable
         var photo = MakePhoto("a.jpg");
         var customLiked = Path.Combine(_tempDir, "Favourites") + Path.DirectorySeparatorChar;
         photo.LikedFilePath = Path.Combine(customLiked, "a.jpg");
-        var groups = GroupLibrary.Scan(customLiked, [photo]);
+        var groups = GroupLibrary.Scan(customLiked);
 
         Assert.Equal(["Favourites"], groups.GetSavedInNames(photo));
     }
@@ -746,7 +802,7 @@ public class GroupLibraryCopiesTests : IDisposable
         var info = new FileInfo(original);
         var photo = new PhotoFile(original, string.Empty) { Length = info.Length, LastWriteTimeUtc = info.LastWriteTimeUtc };
 
-        var copies = GroupLibrary.Scan(likedDir, [photo]).CopiesOf(photo);
+        var copies = GroupLibrary.Scan(likedDir).CopiesOf(photo);
 
         Assert.Equal([Path.Combine(likedDir, "A - Group", "a.jpg")], copies);
     }

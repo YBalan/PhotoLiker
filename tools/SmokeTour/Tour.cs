@@ -98,7 +98,7 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         (await Shot("02-next-photo")).Dispose();
 
         form.Press(Keys.Space);
-        var likedCopy = Path.Combine(_likedFolder, NameAt(1));
+        var likedCopy = Path.Combine(_likedFolder, CopyNameAt(1));
         checks.That(await Until(() => File.Exists(likedCopy) && form.Config.LikedFile != string.Empty), "Space copies the photo to the Liked folder");
         checks.That(form.Config.SavedInFolders.SequenceEqual(["Liked"]), "SavedInFolders lists [Liked]");
         (await Shot("03-liked")).Dispose();
@@ -159,7 +159,7 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         checks.Step("3. Groups: a key saves a copy under Liked, the same key takes it away again");
 
         await GoTo(2);
-        var name = NameAt(2);
+        var name = CopyNameAt(2);
         var groupA = Path.Combine(_likedFolder, "A - Group", name);
         var group1 = Path.Combine(_likedFolder, "1 - Group", name);
 
@@ -384,7 +384,7 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
     {
         checks.Step("8. The 0 key fits the image to the viewer, O is a group key like any other letter");
 
-        var name = NameAt(form.Config.CurrentIndex);
+        var name = CopyNameAt(form.Config.CurrentIndex);
 
         form.Press(Keys.D0);
         checks.That(form.Status.Contains("fitted"), $"0 fits the image ({form.Status})");
@@ -1154,6 +1154,9 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
     // ── helpers ─────────────────────────────────────────────────────────────────────────────────
 
     private string NameAt(int index) => Path.GetFileName(form.Config.Files[index].OriginalFilePath);
+
+    /// <summary>The name of the copy of a photo in the Liked folder or a group folder: its name with an id.</summary>
+    private string CopyNameAt(int index) => CopyName.For(form.Config.Files[index]);
 
     private bool PhotoShown() => form.Viewer.Image is not null && form.Viewer.Tag as string == form.Config.CurrentFilePath;
 
