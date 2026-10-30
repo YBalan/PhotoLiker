@@ -55,19 +55,40 @@ Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\OpenInPhotoLike
 
 [Code]
 // The app is framework-dependent (keeps the installer small), so it needs the .NET 10 Desktop Runtime.
-function IsDesktopRuntimeInstalled: Boolean;
+const
+  DesktopRuntimeKey = 'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App';
+
+function HasRegisteredRuntime(RootKey: Integer): Boolean;
 var
   Versions: TArrayOfString;
   I: Integer;
 begin
   Result := False;
-  if RegGetValueNames(HKLM64, 'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App', Versions) then
+  if RegGetValueNames(RootKey, DesktopRuntimeKey, Versions) then
     for I := 0 to GetArrayLength(Versions) - 1 do
       if Pos('10.', Versions[I]) = 1 then
       begin
         Result := True;
         Exit;
       end;
+end;
+
+function IsDesktopRuntimeInstalled: Boolean;
+var
+  FindRec: TFindRec;
+begin
+  // The x64 runtime installer registers itself in the 32-bit registry view (WOW6432Node), so HKLM64 alone never finds it.
+  Result := HasRegisteredRuntime(HKLM32) or HasRegisteredRuntime(HKLM64);
+  if Result then
+    Exit;
+
+  // Not registered (e.g. a zip install): look for the runtime folder in the default location.
+  if FindFirst(ExpandConstant('{commonpf64}\dotnet\shared\Microsoft.WindowsDesktop.App\10.*'), FindRec) then
+    try
+      Result := True;
+    finally
+      FindClose(FindRec);
+    end;
 end;
 
 function InitializeSetup: Boolean;
