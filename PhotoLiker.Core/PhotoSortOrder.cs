@@ -17,6 +17,12 @@ namespace PhotoLiker.Core
 
         /// <summary>By the name of the file, as Explorer lists them (see <see cref="PhotoNameOrder"/>). Last, so that the numbers of the others stay.</summary>
         ByName,
+
+        /// <summary>
+        /// In a random order, a new one each time the photos are listed (opening the folder again, F5, a change in the folder), each
+        /// search and each video. Last, so that the numbers of the others stay.
+        /// </summary>
+        Random,
     }
 
     /// <summary>

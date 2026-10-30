@@ -171,6 +171,20 @@ public class PhotoListingTests : IDisposable
     }
 
     [Fact]
+    public void ToPhotoFiles_Random_IsTheSamePhotosInANewOrderEachTime()
+    {
+        for (var i = 0; i < 12; i++)
+            Put($"p{i:00}.jpg");
+        var listing = PhotoListing.Scan(Key());
+
+        var all = listing.ToPhotoFiles(PhotoSortOrder.None).Select(p => p.OriginalFilePath).Order(StringComparer.OrdinalIgnoreCase).ToList();
+        var orders = Enumerable.Range(0, 6).Select(_ => listing.ToPhotoFiles(PhotoSortOrder.Random).Select(p => p.OriginalFilePath).ToList()).ToList();
+
+        Assert.All(orders, order => Assert.Equal(all, order.Order(StringComparer.OrdinalIgnoreCase)));
+        Assert.True(orders.Select(order => string.Join(",", order)).Distinct().Count() > 1);
+    }
+
+    [Fact]
     public void ToPhotoFiles_GivesNewObjectsEachTime()
     {
         Put("a.jpg");

@@ -20,8 +20,8 @@ namespace PhotoLiker.Search
         /// by the date the photos were taken (the date the search works with, known for every indexed photo without
         /// opening it; the folder itself goes by the date the file was created because it has nothing better), photos of
         /// the same moment by their path, so the one order is exactly the other backwards. <see cref="PhotoSortOrder.ByName"/>
-        /// goes by the name of the file (<see cref="PhotoNameOrder"/>). <see cref="PhotoSortOrder.None"/> does not sort: the
-        /// search's own order stays.
+        /// goes by the name of the file (<see cref="PhotoNameOrder"/>), <see cref="PhotoSortOrder.Random"/> shuffles the hits (a new
+        /// order each time). <see cref="PhotoSortOrder.None"/> does not sort: the search's own order stays.
         /// </summary>
         public SearchResult OrderedBy(PhotoSortOrder sortOrder)
         {
@@ -33,6 +33,13 @@ namespace PhotoLiker.Search
                 var byName = Hits.ToList();
                 byName.Sort((a, b) => PhotoNameOrder.Compare(a.FullPath, b.FullPath));
                 return this with { Hits = byName };
+            }
+
+            if (sortOrder == PhotoSortOrder.Random)
+            {
+                var shuffled = Hits.ToList();
+                Random.Shared.Shuffle(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(shuffled));
+                return this with { Hits = shuffled };
             }
 
             // A photo that has no date yet (an index from before dates were kept) goes by the time its file was last written

@@ -47,6 +47,18 @@ public class VideoGenerationServiceTests
     }
 
     [Fact]
+    public void SortSourceFiles_Random_KeepsEveryPhoto_InANewOrderEachTime_AndLeavesTheSourceAlone()
+    {
+        var source = Enumerable.Range(0, 12).Select(i => Photo($"p{i:00}", createdDay: i + 1)).ToList();
+
+        var orders = Enumerable.Range(0, 6).Select(_ => Paths(VideoGenerationService.SortSourceFiles(source, PhotoSortOrder.Random))).ToList();
+
+        Assert.All(orders, order => Assert.Equal(Paths(source), order.Order(StringComparer.Ordinal)));
+        Assert.True(orders.Select(order => string.Join(",", order)).Distinct().Count() > 1);
+        Assert.Equal(Enumerable.Range(0, 12).Select(i => $"p{i:00}"), Paths(source)); // the list that was given is not shuffled
+    }
+
+    [Fact]
     public void SortSourceFiles_None_KeepsTheOrderGiven()
     {
         PhotoFile[] photos = [Photo("c", createdDay: 3), Photo("a", createdDay: 1), Photo("b", createdDay: 2)];
