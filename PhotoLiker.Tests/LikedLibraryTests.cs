@@ -41,6 +41,82 @@ public class LikedLibraryTests : IDisposable
         return destination;
     }
 
+    // ── a photo that was turned has another size ────────────────────────────
+
+    [Fact]
+    public void RenameCopy_TheCopyGetsTheIdOfThePhotoAsItIsNow_AndIsStillItsCopy()
+    {
+        var photo = MakePhoto("IMG_0001.JPG", "photo");
+        var copy = Like(photo);
+        Assert.Equal(copy, LikedLibrary.Scan(_likedDir).Find(photo));
+
+        photo.Length += 36; // the app added the orientation to it
+        Assert.Null(LikedLibrary.Scan(_likedDir).Find(photo));
+
+        var renamed = LikedLibrary.RenameCopy(copy, photo);
+
+        Assert.Equal(LikedPath(CopyName.For(photo)), renamed);
+        Assert.False(File.Exists(copy));
+        Assert.True(File.Exists(renamed));
+        Assert.Equal(renamed, LikedLibrary.Scan(_likedDir).Find(photo));
+    }
+
+    [Fact]
+    public void RenameCopy_ACopyMadeBeforeTheIds_GetsTheIdForm()
+    {
+        var photo = MakePhoto("IMG_0001.JPG", "photo");
+        var oldStyle = LikedPath("IMG_0001.JPG");
+        File.Copy(photo.OriginalFilePath, oldStyle);
+        File.SetLastWriteTimeUtc(oldStyle, photo.LastWriteTimeUtc);
+
+        photo.Length += 36;
+        var renamed = LikedLibrary.RenameCopy(oldStyle, photo);
+
+        Assert.Equal(LikedPath(CopyName.For(photo)), renamed);
+        Assert.Equal(renamed, LikedLibrary.Scan(_likedDir).Find(photo));
+    }
+
+    [Fact]
+    public void RenameCopy_ACopyThatHasTheNameAlready_IsLeftAlone()
+    {
+        var photo = MakePhoto("IMG_0001.JPG", "photo");
+        var copy = Like(photo);
+
+        Assert.Null(LikedLibrary.RenameCopy(copy, photo));
+        Assert.True(File.Exists(copy));
+    }
+
+    [Fact]
+    public void RenameCopy_AnotherFileWithTheNewName_IsNotReplaced()
+    {
+        var photo = MakePhoto("IMG_0001.JPG", "photo");
+        var copy = Like(photo);
+        photo.Length += 36;
+        var taken = LikedPath(CopyName.For(photo));
+        File.WriteAllText(taken, "another");
+
+        Assert.Null(LikedLibrary.RenameCopy(copy, photo));
+
+        Assert.True(File.Exists(copy));
+        Assert.Equal("another", File.ReadAllText(taken));
+    }
+
+    [Fact]
+    public void TheIndexFollowsARenamedCopy()
+    {
+        var photo = MakePhoto("IMG_0001.JPG", "photo");
+        var copy = Like(photo);
+        var library = LikedLibrary.Scan(_likedDir);
+        Assert.Equal(copy, library.Find(photo));
+
+        photo.Length += 36;
+        var renamed = LikedLibrary.RenameCopy(copy, photo)!;
+        library.Remove(copy);
+        library.Add(renamed, photo);
+
+        Assert.Equal(renamed, library.Find(photo));
+    }
+
     // ── new copies ──────────────────────────────────────────────────────────
 
     [Fact]

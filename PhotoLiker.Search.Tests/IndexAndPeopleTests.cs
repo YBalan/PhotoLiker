@@ -136,6 +136,106 @@ public class PhotoIndexTests : IDisposable
     }
 
     [Fact]
+    public void Turn_TheBoxesOfTheFacesTurnWithThePhoto_AndStayTurnedAfterReopening()
+    {
+        using (var index = PhotoIndex.Open(_photos.Path, IndexFile))
+        {
+            // A face in the top left corner of the upright photo, 10 % wide and 20 % high
+            index.Save([Photo("one.jpg", Vectors.Unit(1), (0.1f, 0.2f, 0.1f, 0.2f, Vectors.Unit(1)))]);
+            var face = index.Find("one.jpg")!.Faces[0];
+
+            index.Turn(Path.Combine(_photos.Path, "one.jpg"), 1, previousLength: 1000, newLength: 1000);
+
+            // Turned a quarter clockwise the top left corner is the top right one, and wide and high change places
+            Assert.Equal(0.6f, face.X, 4);
+            Assert.Equal(0.1f, face.Y, 4);
+            Assert.Equal(0.2f, face.Width, 4);
+            Assert.Equal(0.1f, face.Height, 4);
+        }
+
+        using var reopened = PhotoIndex.Open(_photos.Path, IndexFile);
+        var saved = reopened.Find("one.jpg")!.Faces[0];
+        Assert.Equal((0.6f, 0.1f, 0.2f, 0.1f), (saved.X, saved.Y, saved.Width, saved.Height));
+        Assert.Equal(Vectors.Unit(1), saved.Embedding);
+    }
+
+    [Fact]
+    public void Turn_FourQuartersGiveTheBoxBack_AndTheFaceKeepsItself()
+    {
+        using var index = PhotoIndex.Open(_photos.Path, IndexFile);
+        index.Save([Photo("one.jpg", Vectors.Unit(1), (0.1f, 0.2f, 0.1f, 0.2f, Vectors.Unit(1)))]);
+        var face = index.Find("one.jpg")!.Faces[0];
+        var id = face.Id;
+        var path = Path.Combine(_photos.Path, "one.jpg");
+
+        for (var i = 0; i < 4; i++)
+            index.Turn(path, 1, 1000, 1000);
+
+        Assert.Equal(0.1f, face.X, 5);
+        Assert.Equal(0.2f, face.Y, 5);
+        Assert.Equal(0.1f, face.Width, 5);
+        Assert.Equal(0.2f, face.Height, 5);
+        Assert.Same(face, index.Find("one.jpg")!.Faces[0]); // a name given to the face hangs on it
+        Assert.Equal(id, face.Id);
+    }
+
+    [Fact]
+    public void Turn_ThreeQuartersAreAQuarterTheOtherWay()
+    {
+        var box = PhotoIndex.TurnBox(0.1f, 0.2f, 0.1f, 0.2f, 3);
+
+        // Counter-clockwise the top left corner is the bottom left one: the point (x, y) goes to (y, 1 - x)
+        Assert.Equal(0.2f, box.X, 4);
+        Assert.Equal(0.8f, box.Y, 4);
+        Assert.Equal(0.2f, box.Width, 4);
+        Assert.Equal(0.1f, box.Height, 4);
+    }
+
+    [Fact]
+    public void Turn_TheNewSizeOfThePhotoIsTakenOver_SoItIsNotIndexedAgain()
+    {
+        var path = Path.Combine(_photos.Path, "one.jpg");
+        using (var index = PhotoIndex.Open(_photos.Path, IndexFile))
+        {
+            index.Save([Photo("one.jpg", Vectors.Unit(1))]);
+
+            index.Turn(path, 1, previousLength: 1000, newLength: 1036);
+
+            Assert.Equal(1036, index.Find("one.jpg")!.Length);
+            Assert.Equal(5000, index.Find("one.jpg")!.ModifiedTicks);
+        }
+
+        using var reopened = PhotoIndex.Open(_photos.Path, IndexFile);
+        Assert.Equal(1036, reopened.Find("one.jpg")!.Length);
+    }
+
+    [Fact]
+    public void Turn_APhotoThatWasOutOfDateAlready_StaysSo()
+    {
+        var path = Path.Combine(_photos.Path, "one.jpg");
+        using var index = PhotoIndex.Open(_photos.Path, IndexFile);
+        index.Save([Photo("one.jpg", Vectors.Unit(1))]); // indexed when the file had 1000 bytes
+
+        index.Turn(path, 1, previousLength: 2000, newLength: 2036); // but the file had 2000 before the turn: another picture than the indexed one
+
+        Assert.Equal(1000, index.Find("one.jpg")!.Length);
+    }
+
+    [Fact]
+    public void Turn_APhotoTheIndexDoesNotKnow_OrOutsideItsFolder_IsNothing()
+    {
+        using var index = PhotoIndex.Open(_photos.Path, IndexFile);
+        index.Save([Photo("one.jpg", Vectors.Unit(1), (0.1f, 0.2f, 0.1f, 0.2f, Vectors.Unit(1)))]);
+
+        index.Turn(Path.Combine(_photos.Path, "two.jpg"), 1, 1000, 1036);
+        index.Turn(Path.Combine(_data.Path, "one.jpg"), 1, 1000, 1036);
+
+        var face = index.Find("one.jpg")!.Faces[0];
+        Assert.Equal((0.1f, 0.2f, 0.1f, 0.2f), (face.X, face.Y, face.Width, face.Height));
+        Assert.Equal(1000, index.Find("one.jpg")!.Length);
+    }
+
+    [Fact]
     public void APhotoThatFailed_IsRememberedAsFailed_WithoutAVector()
     {
         using var index = PhotoIndex.Open(_photos.Path, IndexFile);

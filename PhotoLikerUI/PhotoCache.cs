@@ -29,6 +29,7 @@ namespace PhotoLikerUI
         private readonly Dictionary<string, PhotoEntry> _entries = new(StringComparer.Ordinal);
         private IReadOnlyList<string> _window = [];                 // nearest-first, first item is the photo being viewed
         private HashSet<string> _wanted = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _outdated = new(StringComparer.Ordinal); // being loaded while the file changed: what comes out is old
         private Session _session = new();
         private long _bytes;
 
@@ -96,11 +97,31 @@ namespace PhotoLikerUI
             StartPumps(session);
         }
 
+        /// <summary>
+        /// The file of a photo was changed on disk (the app turned it): what is cached of it is dropped and, if the photo is still wanted,
+        /// loaded again before the others. A load that is running right now has read the old file, so its result is thrown away.
+        /// </summary>
+        public void Reload(string path)
+        {
+            var session = _session;
+            if (session.Loading.Contains(path))
+                _outdated.Add(path);
+            session.Failed.Remove(path);
+            Evict(path);
+
+            if (_wanted.Contains(path))
+            {
+                session.Queue.Insert(0, new Job(path, ThumbOnly: false));
+                StartPumps(session);
+            }
+        }
+
         /// <summary>Drops everything, e.g. when another folder is opened. The caller must have detached the images.</summary>
         public void Clear()
         {
             _session.Cts.Cancel();
             _session = new Session();
+            _outdated.Clear();
             _window = [];
             _wanted = new HashSet<string>(StringComparer.Ordinal);
 
@@ -159,6 +180,16 @@ namespace PhotoLikerUI
                     }
 
                     session.Loading.Remove(job.Path);
+
+                    if (_outdated.Remove(job.Path))
+                    {
+                        // The file changed while it was read: the result shows the photo as it was
+                        entry?.Dispose();
+                        thumb?.Dispose();
+                        if (_wanted.Contains(job.Path) && !_entries.ContainsKey(job.Path))
+                            session.Queue.Insert(0, new Job(job.Path, ThumbOnly: false));
+                        continue;
+                    }
 
                     if (error is not null)
                     {

@@ -28,6 +28,8 @@ internal sealed class DrivenForm(string folder) : MainForm(folder)
 
     public ToolStripItem ToolbarItem(string name) => Find<ToolStrip>("toolStrip1").Items[name]!;
 
+    public ToolStripItem StatusBarItem(string name) => Find<StatusStrip>("statusStrip1").Items[name]!;
+
     private T StatusItem<T>(string name) where T : ToolStripItem => (T)Find<StatusStrip>("statusStrip1").Items[name]!;
 
     /// <summary>The settings object the grid shows (the one the app works with).</summary>

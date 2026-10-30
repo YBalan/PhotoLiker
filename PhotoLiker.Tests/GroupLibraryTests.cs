@@ -61,6 +61,25 @@ public class GroupLibraryTests : IDisposable
     // ── Toggle: saving ──────────────────────────────────────────────────────
 
     [Fact]
+    public void Replace_TheIndexFollowsACopyThatWasRenamedBecauseThePhotoWasTurned()
+    {
+        var photo = MakePhoto(Path.Combine("100CANON", "IMG_0001.JPG"));
+        var groups = Scan();
+        var toggled = groups.Toggle('3', photo);
+        groups.Update(toggled);
+        Assert.Equal([toggled.FilePath], groups.CopiesOf(photo));
+
+        photo.Length += 36; // the app added the orientation to the photo
+        Assert.False(groups.IsInAnyGroup(photo));
+        var renamed = LikedLibrary.RenameCopy(toggled.FilePath, photo)!;
+        groups.Replace(toggled.FilePath, renamed, photo);
+
+        Assert.True(groups.IsInAnyGroup(photo));
+        Assert.Equal([renamed], groups.CopiesOf(photo));
+        Assert.Equal(renamed, GroupLibrary.Scan(_likedDir).CopiesOf(photo).Single());
+    }
+
+    [Fact]
     public void Toggle_NothingExists_CreatesLikedAndGroupFoldersAndCopiesPhoto()
     {
         var photo = MakePhoto("a.jpg", "pixels");

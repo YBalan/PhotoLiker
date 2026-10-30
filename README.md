@@ -20,6 +20,7 @@ find every photo they are in. It all runs on your own computer, no photo is ever
   - [Order of the photos](#order-of-the-photos)
 - [Groups](#groups)
 - [Deleting photos](#deleting-photos)
+- [Rotating photos](#rotating-photos)
 - [Big folders open at once](#big-folders-open-at-once)
 - [EXIF and GPS](#exif-and-gps)
 - [Aligning file dates](#aligning-file-dates)
@@ -44,6 +45,8 @@ find every photo they are in. It all runs on your own computer, no photo is ever
 - **Likes and groups**: copy the current photo to a `Liked` folder, or into `1 - Group` ... `Z - Group` folders under it.
 - **Delete** moves the photo to a `Deleted` folder inside the photo folder; nothing is erased, and the scan leaves that
   folder out.
+- **Rotate** turns the shown photo a quarter clockwise from the button in the right corner of the status bar and saves
+  it in its file, without losing anything (see [Rotating photos](#rotating-photos)).
 - **Settings grid** next to the photo, with a folder picker for the liked folder. Changing which photos are listed,
   or in what order, reloads the folder at once.
 - **EXIF and GPS** of the shown photo, GPS decoded to coordinates and a link to the map.
@@ -266,6 +269,30 @@ away are in `Deleted\Duplicated`, in the same way.
 
 While search results are shown, <kbd>Delete</kbd> works the same on the photo shown. Like the other keys, it does nothing
 while you type into a text box.
+
+## Rotating photos
+
+The button in the right corner of the status bar turns the shown photo a quarter clockwise and saves that in its file; press
+it again for the next quarter. It works on JPEG files (`.jpg`, `.jpeg`); with another kind of file the status bar says so and
+nothing is written.
+
+A JPEG is not decoded and written again: that would lose a little of the picture each time. What changes is its **orientation**,
+the number in its EXIF block that tells every viewer how the stored picture is turned to show the photo upright (this app,
+Windows, phones and browsers all follow it). So turning is lossless however often you do it, and on a network share it costs two
+bytes instead of a new file.
+
+- A photo that has the orientation already (every phone and most cameras write it, also when it is 1) gets the new number in the
+  same place: the file keeps its size and nothing else in it changes.
+- A photo that has none (a scan, a picture saved by an editor) gets it added: a new EXIF block of 36 bytes, or, if it has an EXIF
+  block, a copy of its directory with the entry in it at the end of the block (nothing the block points to moves, maker notes
+  included). That file is written next to the old one and replaces it, so it is a little larger. A block that is almost 64 KB
+  full has no room for the entry; the photo is then left as it is and the status bar says why.
+- The **dates of the file** (created, modified) stay as they were: the app knows a photo by its size and its date of change, and
+  its order in the list may go by them. If the drive does not keep a date that is set, the status bar tells.
+- The copies of the photo in the Liked and group folders are not turned; they are the photo as it was when it was liked. When the
+  size of the photo changed (the second case) they are renamed to the new id (see [Groups](#groups)), so they are
+  still shown as its copies. The saved list of the folder and the search index take over the new size, and the boxes of the faces
+  in the index turn with the photo, so "Update index" does not analyze it again.
 
 ## Big folders open at once
 
@@ -622,6 +649,9 @@ every step:
   **SortOrder** lists the same photos oldest first, newest first or as the disk gives them, keeping the shown photo;
 - <kbd>Delete</kbd> moves the photo (keeping its subfolder) to `Deleted`, shows the next one, and the folder is not listed
   again, also with the subfolders on; with the list emptied nothing is shown and the keys do nothing;
+- **Rotate**, the button in the right corner of the status bar, turns a photo that has an orientation by two bytes, four clicks give
+  the file back byte for byte, the dates of the file stay; a JPEG without any EXIF gets the flag, and its copy in the Liked folder
+  is renamed and still found (Space takes it away); a PNG is left alone;
 - the EXIF and GPS rows are there, the map link is offered, every row of both grids has a description, and the **File Date**
   row says the file date is not the date taken;
 - a folder opens from its saved list (one photo is taken out of the file to tell), <kbd>F5</kbd> lists it again, and a folder
