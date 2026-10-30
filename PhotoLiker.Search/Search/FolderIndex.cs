@@ -19,13 +19,21 @@ namespace PhotoLiker.Search
         /// The same hits in the order of the SortOrder setting: <see cref="PhotoSortOrder.OldestFirst"/> and <see cref="PhotoSortOrder.NewestFirst"/>
         /// by the date the photos were taken (the date the search works with, known for every indexed photo without
         /// opening it; the folder itself goes by the date the file was created because it has nothing better), photos of
-        /// the same moment by their path, so the one order is exactly the other backwards. <see cref="PhotoSortOrder.None"/>
-        /// does not sort: the search's own order stays.
+        /// the same moment by their path, so the one order is exactly the other backwards. <see cref="PhotoSortOrder.ByName"/>
+        /// goes by the name of the file (<see cref="PhotoNameOrder"/>). <see cref="PhotoSortOrder.None"/> does not sort: the
+        /// search's own order stays.
         /// </summary>
         public SearchResult OrderedBy(PhotoSortOrder sortOrder)
         {
             if (sortOrder == PhotoSortOrder.None || Hits.Count < 2)
                 return this;
+
+            if (sortOrder == PhotoSortOrder.ByName)
+            {
+                var byName = Hits.ToList();
+                byName.Sort((a, b) => PhotoNameOrder.Compare(a.FullPath, b.FullPath));
+                return this with { Hits = byName };
+            }
 
             // A photo that has no date yet (an index from before dates were kept) goes by the time its file was last written
             static DateTime When(SearchHit hit) => hit.Taken ?? PhotoDates.FileTime(hit.ModifiedUtc) ?? DateTime.MinValue;

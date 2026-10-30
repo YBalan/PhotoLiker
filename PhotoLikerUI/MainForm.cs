@@ -476,27 +476,22 @@
 
         private void GenerateVideoToolStripButton_Click(object? sender, EventArgs e)
         {
-            var sourceFiles = _currentConfig.Files
-                .Select(f => f.OriginalFilePath)
-                .Where(File.Exists)
-                .ToList();
-
-            if (sourceFiles.Count == 0)
-            {
-                SetStatus(MainFormStrings.StatusVideoNoPhotos);
-                return;
-            }
-
             SetStatus(MainFormStrings.StatusVideoGenerating);
             generateVideoToolStripButton.Enabled = false;
 
             try
             {
+                _currentConfig.ApplyDefaultLikedFolder();
+
                 using var dialog = new VideoGenerationDialog(
                     _currentConfig.CurrentFolder,
-                    sourceFiles,
-                    (options, appendOutput, reportProgress) => VideoGenerationService.GenerateAsync(
-                        VideoGenerationService.SortSourceFiles(sourceFiles, options.ReverseSourceFiles),
+                    _currentConfig.Files,
+                    _currentConfig.LikedFolder,
+                    _currentConfig.Extensions,
+                    _currentConfig.SortOrder,
+                    _currentConfig.IsDarkTheme,
+                    (options, sourceFiles, appendOutput, reportProgress) => VideoGenerationService.GenerateAsync(
+                        sourceFiles,
                         options.OutputPath,
                         options.WidthPixels,
                         options.HeightPixels,
@@ -504,6 +499,7 @@
                         options.EndFrameTimeSeconds,
                         options.VideoCodec,
                         options.Crf,
+                        options.AudioPath,
                         appendOutput,
                         reportProgress));
 

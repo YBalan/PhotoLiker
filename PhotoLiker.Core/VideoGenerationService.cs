@@ -2,14 +2,38 @@ namespace PhotoLiker.Core
 {
     public static class VideoGenerationService
     {
-        public static List<string> SortSourceFiles(IReadOnlyCollection<string> sourceFiles, bool reverseSourceFiles)
+        /// <summary>
+        /// The photos in the order they appear in the video: by the date the file was created like the folder list
+        /// (<see cref="PhotoSortOrder"/>), by their names (<see cref="PhotoNameOrder"/>), or as they are given. Search results come
+        /// without a created date, so for them it is the last-write date. Photos of one date go by their path.
+        /// </summary>
+        public static List<PhotoFile> SortSourceFiles(IReadOnlyCollection<PhotoFile> photos, PhotoSortOrder sortOrder)
         {
-            var ordered = sourceFiles.ToList();
-            if (reverseSourceFiles)
-                ordered.Reverse();
+            var ordered = photos.ToList();
+            switch (sortOrder)
+            {
+                case PhotoSortOrder.OldestFirst:
+                    ordered.Sort(OldestFirst);
+                    break;
+                case PhotoSortOrder.NewestFirst:
+                    ordered.Sort((a, b) => OldestFirst(b, a));
+                    break;
+                case PhotoSortOrder.ByName:
+                    ordered.Sort((a, b) => PhotoNameOrder.Compare(a.OriginalFilePath, b.OriginalFilePath));
+                    break;
+            }
 
             return ordered;
         }
+
+        private static int OldestFirst(PhotoFile a, PhotoFile b)
+        {
+            var byDate = DateOf(a).CompareTo(DateOf(b));
+            return byDate != 0 ? byDate : string.Compare(a.OriginalFilePath, b.OriginalFilePath, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static DateTime DateOf(PhotoFile photo) =>
+            photo.CreationTimeUtc != default ? photo.CreationTimeUtc : photo.LastWriteTimeUtc;
 
         public static async Task GenerateAsync(
             IReadOnlyList<string> sourceFiles,
@@ -20,6 +44,7 @@ namespace PhotoLiker.Core
             double endFrameTimeSeconds,
             string codec,
             int crf,
+            string? audioPath,
             Action<string> appendOutput,
             Action<int> reportProgress)
         {
@@ -33,8 +58,7 @@ namespace PhotoLiker.Core
                 var concatContent = BuildFfmpegConcatFile(sourceFiles, frameDurations);
                 File.WriteAllText(listFilePath, concatContent);
 
-                var scaleFilter = $"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2";
-                var arguments = $"-y -f concat -safe 0 -i \"{listFilePath}\" -vf \"{scaleFilter}\" -c:v {codec} -crf {crf} -pix_fmt yuv420p -progress pipe:1 -nostats \"{outputPath}\"";
+                var arguments = BuildFfmpegArguments(listFilePath, outputPath, width, height, codec, crf, audioPath);
                 var ffmpegExecutablePath = ResolveFfmpegExecutablePath();
 
                 using var process = new System.Diagnostics.Process
@@ -82,7 +106,7 @@ namespace PhotoLiker.Core
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
-                throw new InvalidOperationException("ffmpeg executable not found. Place ffmpeg.exe in the 'ffmpeg' subfolder next to the app, or ensure ffmpeg is available in PATH.", ex);
+                throw new InvalidOperationException(FfmpegNotFoundMessage, ex);
             }
             finally
             {
@@ -91,7 +115,30 @@ namespace PhotoLiker.Core
             }
         }
 
-        private static string ResolveFfmpegExecutablePath()
+        /// <summary>
+        /// The photos are shown as they are stored: <c>-noautorotate</c> keeps ffmpeg from turning them by their EXIF orientation, so the
+        /// photos given have to be upright already. Left to ffmpeg (7.1), a photo that has to be turned (a portrait shot of a phone)
+        /// also turns the photos after it that have no orientation or "as stored", and landscape photos come out as portrait.
+        /// </summary>
+        /// <param name="audioPath">
+        /// The sound of the video, or null for none. It is played over and over (<c>-stream_loop -1</c>) when it is shorter than the
+        /// video, and <c>-shortest</c> ends the video with the photos, so a longer one is cut. Only its sound is taken (not the cover
+        /// picture of a music file, which is a video stream to ffmpeg), and the photos only from the list.
+        /// </param>
+        internal static string BuildFfmpegArguments(string listFilePath, string outputPath, int width, int height, string codec, int crf, string? audioPath = null)
+        {
+            var scaleFilter = $"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2";
+            var hasAudio = !string.IsNullOrWhiteSpace(audioPath);
+            var audioInput = hasAudio ? $" -stream_loop -1 -i \"{audioPath}\"" : string.Empty;
+            var audioOutput = hasAudio ? " -map 0:v:0 -map 1:a:0 -c:a aac -b:a 192k -shortest" : string.Empty;
+
+            return $"-y -f concat -safe 0 -noautorotate -i \"{listFilePath}\"{audioInput} -vf \"{scaleFilter}\"{audioOutput} -c:v {codec} -crf {crf} -pix_fmt yuv420p -progress pipe:1 -nostats \"{outputPath}\"";
+        }
+
+        internal const string FfmpegNotFoundMessage =
+            "ffmpeg executable not found. Place ffmpeg.exe in the 'ffmpeg' subfolder next to the app, or ensure ffmpeg is available in PATH.";
+
+        internal static string ResolveFfmpegExecutablePath()
         {
             var localFfmpegPath = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffmpeg.exe");
             if (File.Exists(localFfmpegPath))
