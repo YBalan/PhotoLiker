@@ -113,7 +113,7 @@ the other, so a count shows `...` until it is known). The *Output folder* follow
 photos, or the Liked or group folder; one that you typed or browsed to is left alone.
 *Sort order* decides the order of the photos in the video: oldest first, newest first (by file date, as the *SortOrder*
 setting does; a copy in Liked or a group goes by the date of its photo, not by when it was liked), by name (as Explorer
-lists them, `IMG_2` before `IMG_10`) or as listed. It starts as the *SortOrder* setting. The dialog follows the dark theme
+lists them, `IMG_2` before `IMG_10`), random (a new order for each video) or as listed. It starts as the *SortOrder* setting. The dialog follows the dark theme
 of the window. You also choose resolution, the time each photo is shown, codec (H.264 / H.265) and quality.
 Photos that have gone from the disk since they were listed are left out.
 The photos come out the way the app shows them, turned upright by their EXIF orientation. ffmpeg is told not to turn
@@ -142,7 +142,7 @@ the top whenever another photo is shown:
 | **LikedFolder** | Where liked photos are copied. By default the folder `Liked` inside the photo folder. Click the **...** button for a folder picker. A folder with any other name than `Liked` is kept as it is, wherever it is. |
 | **GoThroughSubFolders** | Also list the photos in the subfolders. The Liked folder itself is left out. |
 | **Extensions** | The file extensions that count as photos, separated by `;` or `,`, each with its dot: `.jpg; .png`. Case does not matter. |
-| **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
+| **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, `Random` in a random order, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
 | **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
 | **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
 
@@ -188,6 +188,9 @@ and <kbd>PageDown</kbd> / <kbd>PageUp</kbd> walk through:
 - `ByName` goes by the name of the file, the way Explorer lists a folder: case does not matter and numbers count as numbers,
   so `IMG_2` comes before `IMG_10` and `IMG_007` is the same as `IMG_7`. With subfolders, the photos of a folder come first,
   then those of its subfolders, each folder in this order. The name comes with the listing, so it costs nothing extra either.
+- `Random` shuffles the photos, and it is a **new** order every time the photos are listed: when the folder is opened again,
+  with <kbd>F5</kbd>, when the folder changed while it is open (the photo that is shown stays on screen), and for each search
+  and each video. To get another order, list the folder again.
 - `None` does not sort: the photos come in the order the file system lists them, by name on most local disks (which is not
   quite `ByName`: `IMG_10` comes before `IMG_2` there). It is the quickest on a folder with very many photos.
 
@@ -197,7 +200,7 @@ A folder whose settings file has no **SortOrder** yet is listed `OldestFirst`.
 
 The results of a [search](#photo-search) follow the same setting, but by the date the photos were taken, which the index
 knows for every photo without opening it: `OldestFirst` and `NewestFirst` order them by that date (photos of the same moment by
-path), `ByName` by the name of the file, `None` leaves them as the search ranked them. Where the created date and the date taken differ (a folder copied in one
+path), `ByName` by the name of the file, `Random` shuffles them, `None` leaves them as the search ranked them. Where the created date and the date taken differ (a folder copied in one
 go), the results are in the order of the photos, the folder in the order of the copying; [Align dates](#aligning-file-dates) makes them agree.
 
 ## Groups
@@ -473,7 +476,7 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
    the first by path. A copy whose file time was changed on the way is not recognised here, **Find duplicates** deals with those.
    The results are in the order of **SortOrder**: `OldestFirst` and `NewestFirst` by the date the photos were taken (the EXIF
    date, see below; the folder itself goes by the date the file was created because that costs nothing there), `ByName` by the
-   name of the file, `None` as the search ranks them, best match first.
+   name of the file, `Random` shuffled, `None` as the search ranks them, best match first.
 3. **Dates**: put a date into the search box to look at when the photos were taken, alone or together with the rest of the
    search: `September 1` (that day in every year), `September 2009`, `1 Sep 2009`, `2009-09-01`, `2009`, `2009-2011`,
    `beach September 2009`, `Mom 2005`. A date alone lists the photos oldest first (or as **SortOrder** says), like every search without a limit. Month names are English;
@@ -564,7 +567,7 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
 `GoThroughtSubFolders` is spelled like that in the file on purpose: it is the name the first versions wrote, and folders are
 shared between machines that may run different versions. The spelling `GoThroughSubFolders` (used by the MAUI app) is read
 as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized. `SortOrder` is written by name
-(`OldestFirst`, `NewestFirst`, `ByName` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
+(`OldestFirst`, `NewestFirst`, `ByName`, `Random` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
 as `OldestFirst` and does not spoil the rest of the file.
 
 Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that

@@ -247,6 +247,21 @@ public class PhotoScannerTests : IDisposable
     }
 
     [Fact]
+    public void Random_ListsTheSamePhotos_InANewOrderEachTime()
+    {
+        for (var i = 0; i < 12; i++)
+            Touch($"p{i:00}.jpg");
+
+        var sorted = InOrder(PhotoScanner.Scan(_root, recursive: false, Extensions, null, PhotoSortOrder.ByName));
+        var orders = Enumerable.Range(0, 6)
+            .Select(_ => InOrder(PhotoScanner.Scan(_root, recursive: false, Extensions, null, PhotoSortOrder.Random)))
+            .ToList();
+
+        Assert.All(orders, order => Assert.Equal(sorted, order.Order(StringComparer.Ordinal))); // the same photos, none twice, none lost
+        Assert.True(orders.Select(order => string.Join(",", order)).Distinct().Count() > 1); // not the same order six times in a row (1 in 12!^5)
+    }
+
+    [Fact]
     public void None_KeepsTheOrderOfTheFileSystem_AndSoDoesNoOrderAtAll()
     {
         MakeThreePhotos();

@@ -176,6 +176,23 @@ public class ResultsTests : IDisposable
     }
 
     [Fact]
+    public void Random_ShufflesTheResults_AndKeepsEveryHitAndWhatElseTheResultSays()
+    {
+        var hits = Enumerable.Range(0, 12).Select(i => Hit($"p{i:00}.jpg", new DateTime(2009, 5, 1).AddDays(i))).ToArray();
+        var result = new SearchResult("beach", hits, 99, Weak: true);
+
+        var orders = Enumerable.Range(0, 6).Select(_ => result.OrderedBy(PhotoSortOrder.Random)).ToList();
+
+        Assert.All(orders, shuffled =>
+        {
+            Assert.Equal(hits.Select(h => h.FullPath), shuffled.Hits.Select(h => h.FullPath).Order(StringComparer.Ordinal));
+            Assert.Equal(("beach", 99, true), (shuffled.Description, shuffled.SearchedPhotos, shuffled.Weak));
+        });
+        Assert.True(orders.Select(r => string.Join(",", r.Hits.Select(h => h.FullPath))).Distinct().Count() > 1);
+        Assert.Equal(hits.Select(h => h.FullPath), result.Hits.Select(h => h.FullPath)); // the result itself keeps its order
+    }
+
+    [Fact]
     public void NoSortOrder_KeepsTheOrderOfTheSearch()
     {
         var result = Found(Hit("best.jpg", new DateTime(2012, 5, 1), 0.9f), Hit("old.jpg", new DateTime(2003, 5, 1), 0.3f));

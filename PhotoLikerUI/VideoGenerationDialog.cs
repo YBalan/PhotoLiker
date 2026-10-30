@@ -105,6 +105,7 @@ namespace PhotoLikerUI
                 new(PhotoSortOrder.OldestFirst, "Oldest first"),
                 new(PhotoSortOrder.NewestFirst, "Newest first"),
                 new(PhotoSortOrder.ByName, "By name"),
+                new(PhotoSortOrder.Random, "Random"),
                 new(PhotoSortOrder.None, "As listed (no sorting)")
             ];
             _sortOrderCombo.Items.AddRange(sortOrders);

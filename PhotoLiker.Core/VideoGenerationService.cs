@@ -1,11 +1,14 @@
+using System.Runtime.InteropServices;
+
 namespace PhotoLiker.Core
 {
     public static class VideoGenerationService
     {
         /// <summary>
         /// The photos in the order they appear in the video: by the date the file was created like the folder list
-        /// (<see cref="PhotoSortOrder"/>), by their names (<see cref="PhotoNameOrder"/>), or as they are given. Search results come
-        /// without a created date, so for them it is the last-write date. Photos of one date go by their path.
+        /// (<see cref="PhotoSortOrder"/>), by their names (<see cref="PhotoNameOrder"/>), in a random order (a new one each time), or
+        /// as they are given. Search results come without a created date, so for them it is the last-write date. Photos of one date
+        /// go by their path.
         /// </summary>
         public static List<PhotoFile> SortSourceFiles(IReadOnlyCollection<PhotoFile> photos, PhotoSortOrder sortOrder)
         {
@@ -20,6 +23,9 @@ namespace PhotoLiker.Core
                     break;
                 case PhotoSortOrder.ByName:
                     ordered.Sort((a, b) => PhotoNameOrder.Compare(a.OriginalFilePath, b.OriginalFilePath));
+                    break;
+                case PhotoSortOrder.Random:
+                    Random.Shared.Shuffle(CollectionsMarshal.AsSpan(ordered));
                     break;
             }
 
