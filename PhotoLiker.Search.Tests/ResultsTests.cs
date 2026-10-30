@@ -165,6 +165,17 @@ public class ResultsTests : IDisposable
     }
 
     [Fact]
+    public void ByName_OrdersTheResultsByTheNameOfTheFile_NotByDateOrScore()
+    {
+        var result = Found(
+            Hit(@"C:\p\IMG_10.jpg", new DateTime(2001, 5, 1), score: 0.9f),
+            Hit(@"C:\p\IMG_2.jpg", new DateTime(2012, 5, 1), score: 0.3f),
+            Hit(@"C:\p\IMG_1.jpg", new DateTime(2009, 5, 1), score: 0.6f));
+
+        Assert.Equal([@"C:\p\IMG_1.jpg", @"C:\p\IMG_2.jpg", @"C:\p\IMG_10.jpg"], result.OrderedBy(PhotoSortOrder.ByName).Hits.Select(h => h.FullPath));
+    }
+
+    [Fact]
     public void NoSortOrder_KeepsTheOrderOfTheSearch()
     {
         var result = Found(Hit("best.jpg", new DateTime(2012, 5, 1), 0.9f), Hit("old.jpg", new DateTime(2003, 5, 1), 0.3f));

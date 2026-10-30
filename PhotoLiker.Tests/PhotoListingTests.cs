@@ -149,6 +149,7 @@ public class PhotoListingTests : IDisposable
     [InlineData(PhotoSortOrder.None)]
     [InlineData(PhotoSortOrder.OldestFirst)]
     [InlineData(PhotoSortOrder.NewestFirst)]
+    [InlineData(PhotoSortOrder.ByName)]
     public void ToPhotoFiles_IsInTheOrderOfTheScanner(PhotoSortOrder order)
     {
         var made = new DateTime(2016, 5, 5, 12, 0, 0, DateTimeKind.Utc);

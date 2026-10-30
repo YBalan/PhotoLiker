@@ -128,7 +128,8 @@ namespace PhotoLikerUI
         private static IReadOnlyList<MetadataEntry> WithFileDate(string path, IReadOnlyList<MetadataEntry> exif) =>
             FileDateRow.Create(path, exif) is { } row ? [.. exif, row] : exif;
 
-        private static RotateFlipType GetRotateFlip(Image img)
+        /// <summary>How the stored pixels are turned and mirrored to show the photo upright, by its EXIF orientation.</summary>
+        internal static RotateFlipType GetRotateFlip(Image img)
         {
             if (!img.PropertyIdList.Contains(ExifOrientationId))
                 return RotateFlipType.RotateNoneFlipNone;

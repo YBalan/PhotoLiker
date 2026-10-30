@@ -232,6 +232,21 @@ public class PhotoScannerTests : IDisposable
     }
 
     [Fact]
+    public void ByName_ListsByTheNameOfTheFile_NotByTheDate_AndNumbersCountAsNumbers()
+    {
+        // The newest has the smallest number
+        TouchCreated("IMG_10.jpg", 2005);
+        TouchCreated("IMG_2.jpg", 2012);
+        TouchCreated("IMG_1.jpg", 2020);
+        TouchCreated(Path.Combine("sub", "IMG_0.jpg"), 2001);
+
+        var photos = PhotoScanner.Scan(_root, recursive: true, Extensions, null, PhotoSortOrder.ByName);
+
+        // The photos of the folder, then those of its subfolder
+        Assert.Equal(["IMG_1.jpg", "IMG_2.jpg", "IMG_10.jpg", "IMG_0.jpg"], InOrder(photos));
+    }
+
+    [Fact]
     public void None_KeepsTheOrderOfTheFileSystem_AndSoDoesNoOrderAtAll()
     {
         MakeThreePhotos();

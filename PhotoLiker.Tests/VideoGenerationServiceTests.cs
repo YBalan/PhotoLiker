@@ -6,27 +6,146 @@ public class VideoGenerationServiceTests
 {
     // ── SortSourceFiles ─────────────────────────────────────────────────────
 
-    [Fact]
-    public void SortSourceFiles_KeepsTheOrder()
+    private static readonly DateTime Day1 = new(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    private static PhotoFile Photo(string path, int createdDay = 0, int writtenDay = 0) => new(path, string.Empty)
     {
-        Assert.Equal(["a", "b", "c"], VideoGenerationService.SortSourceFiles(["a", "b", "c"], reverseSourceFiles: false));
+        CreationTimeUtc = createdDay == 0 ? default : Day1.AddDays(createdDay),
+        LastWriteTimeUtc = writtenDay == 0 ? default : Day1.AddDays(writtenDay),
+    };
+
+    private static string[] Paths(IEnumerable<PhotoFile> photos) => [.. photos.Select(p => p.OriginalFilePath)];
+
+    [Fact]
+    public void SortSourceFiles_OldestFirst_GoesByTheCreatedDate()
+    {
+        PhotoFile[] photos = [Photo("c", createdDay: 3), Photo("a", createdDay: 1), Photo("b", createdDay: 2)];
+
+        Assert.Equal(["a", "b", "c"], Paths(VideoGenerationService.SortSourceFiles(photos, PhotoSortOrder.OldestFirst)));
     }
 
     [Fact]
-    public void SortSourceFiles_CanReverseTheOrder()
+    public void SortSourceFiles_NewestFirst_IsTheOldestFirstBackwards()
     {
-        Assert.Equal(["c", "b", "a"], VideoGenerationService.SortSourceFiles(["a", "b", "c"], reverseSourceFiles: true));
+        // Two photos of one moment keep to the path, so the one order is exactly the other reversed
+        PhotoFile[] photos = [Photo("b", createdDay: 1), Photo("c", createdDay: 3), Photo("a", createdDay: 1)];
+
+        var oldest = Paths(VideoGenerationService.SortSourceFiles(photos, PhotoSortOrder.OldestFirst));
+        var newest = Paths(VideoGenerationService.SortSourceFiles(photos, PhotoSortOrder.NewestFirst));
+
+        Assert.Equal(["a", "b", "c"], oldest);
+        Assert.Equal([.. oldest.Reverse()], newest);
+    }
+
+    [Fact]
+    public void SortSourceFiles_ByName_IgnoresTheDates_AndCountsNumbersAsNumbers()
+    {
+        // The newest photo has the smallest number, the oldest the biggest
+        PhotoFile[] photos = [Photo(@"C:\p\IMG_10.jpg", createdDay: 1), Photo(@"C:\p\IMG_2.jpg", createdDay: 3), Photo(@"C:\p\IMG_1.jpg", createdDay: 4)];
+
+        Assert.Equal([@"C:\p\IMG_1.jpg", @"C:\p\IMG_2.jpg", @"C:\p\IMG_10.jpg"], Paths(VideoGenerationService.SortSourceFiles(photos, PhotoSortOrder.ByName)));
+    }
+
+    [Fact]
+    public void SortSourceFiles_None_KeepsTheOrderGiven()
+    {
+        PhotoFile[] photos = [Photo("c", createdDay: 3), Photo("a", createdDay: 1), Photo("b", createdDay: 2)];
+
+        Assert.Equal(["c", "a", "b"], Paths(VideoGenerationService.SortSourceFiles(photos, PhotoSortOrder.None)));
+    }
+
+    [Fact]
+    public void SortSourceFiles_WithoutACreatedDate_GoesByTheLastWriteDate()
+    {
+        // Search results do not know when the file was created
+        PhotoFile[] photos = [Photo("c", writtenDay: 3), Photo("a", writtenDay: 1), Photo("b", writtenDay: 2)];
+
+        Assert.Equal(["a", "b", "c"], Paths(VideoGenerationService.SortSourceFiles(photos, PhotoSortOrder.OldestFirst)));
     }
 
     [Fact]
     public void SortSourceFiles_ReturnsACopy()
     {
-        List<string> source = ["a", "b"];
+        List<PhotoFile> source = [Photo("b", createdDay: 2), Photo("a", createdDay: 1)];
 
-        var sorted = VideoGenerationService.SortSourceFiles(source, reverseSourceFiles: true);
+        var sorted = VideoGenerationService.SortSourceFiles(source, PhotoSortOrder.OldestFirst);
 
-        Assert.Equal(["a", "b"], source);
+        Assert.Equal(["b", "a"], Paths(source));
         Assert.NotSame(source, sorted);
+    }
+
+    // ── BuildFfmpegArguments ────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildFfmpegArguments_KeepsFfmpegFromTurningThePhotos_AsAnInputOption()
+    {
+        var arguments = VideoGenerationService.BuildFfmpegArguments(@"C:\t\list.txt", @"C:\v\out.mp4", 1920, 1080, "libx264", 23);
+
+        // An input option has to come before the -i it is for
+        var option = arguments.IndexOf("-noautorotate", StringComparison.Ordinal);
+        Assert.True(option >= 0);
+        Assert.True(option < arguments.IndexOf(" -i ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void BuildFfmpegArguments_FitsEveryPhotoIntoTheFrame()
+    {
+        var arguments = VideoGenerationService.BuildFfmpegArguments(@"C:\t\list.txt", @"C:\v\out.mp4", 1280, 720, "libx265", 28);
+
+        Assert.Contains("-f concat -safe 0", arguments);
+        Assert.Contains("scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2", arguments);
+        Assert.Contains("-c:v libx265 -crf 28", arguments);
+        Assert.EndsWith("\"C:\\v\\out.mp4\"", arguments);
+    }
+
+    [Fact]
+    public void BuildFfmpegArguments_WithoutAudio_HasNoAudioInput()
+    {
+        foreach (var none in new string?[] { null, "", "   " })
+        {
+            var arguments = VideoGenerationService.BuildFfmpegArguments(@"C:\t\list.txt", @"C:\v\out.mp4", 1920, 1080, "libx264", 23, none);
+
+            Assert.DoesNotContain("-stream_loop", arguments);
+            Assert.DoesNotContain("-shortest", arguments);
+            Assert.DoesNotContain("-map", arguments);
+            Assert.DoesNotContain("-c:a", arguments);
+            Assert.Equal(1, arguments.Split(" -i ").Length - 1);
+        }
+    }
+
+    [Fact]
+    public void BuildFfmpegArguments_WithAudio_RepeatsItAndEndsWithThePhotos()
+    {
+        var arguments = VideoGenerationService.BuildFfmpegArguments(@"C:\t\list.txt", @"C:\v\out.mp4", 1920, 1080, "libx264", 23, @"C:\music\my song.mp3");
+
+        // The photos come first, then the audio, played over and over (an input option, so before the -i it is for)
+        var photos = arguments.IndexOf("-i \"C:\\t\\list.txt\"", StringComparison.Ordinal);
+        var loop = arguments.IndexOf("-stream_loop -1 -i \"C:\\music\\my song.mp3\"", StringComparison.Ordinal);
+        Assert.True(photos >= 0);
+        Assert.True(loop > photos);
+
+        // The video is as long as the photos, so a longer audio is cut; the picture of the photos, the sound of the audio file
+        Assert.Contains("-shortest", arguments);
+        Assert.Contains("-map 0:v:0 -map 1:a:0", arguments);
+        Assert.Contains("-c:a aac", arguments);
+        Assert.True(arguments.IndexOf("-shortest", StringComparison.Ordinal) > loop);
+        Assert.EndsWith("\"C:\\v\\out.mp4\"", arguments);
+    }
+
+    // ── AudioDecoder ────────────────────────────────────────────────────────
+
+    [Fact]
+    public void AudioDecoder_MakesAWavOfTheAudioOnly_ThatIsNotTooLong()
+    {
+        var arguments = AudioDecoder.BuildArguments(@"C:\music\song.mp3", @"C:\t\preview.wav");
+
+        Assert.Contains("-i \"C:\\music\\song.mp3\"", arguments);
+        Assert.Contains("-vn", arguments); // not the cover picture
+        Assert.Contains($"-t {AudioDecoder.MaxPreviewSeconds}", arguments);
+        Assert.Contains("-ac 2 -ar 44100", arguments);
+        Assert.Contains("-c:a pcm_s16le", arguments);
+        Assert.EndsWith("\"C:\\t\\preview.wav\"", arguments);
+        Assert.Equal(44100 * 2 * 2, AudioDecoder.WavBytesPerSecond);
     }
 
     // ── BuildFrameDurations ─────────────────────────────────────────────────

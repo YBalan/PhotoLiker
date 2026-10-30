@@ -15,7 +15,8 @@ namespace PhotoLiker.Core
         /// <param name="excludedFolder">A folder to leave out, e.g. the liked folder when it sits inside the photo folder.</param>
         /// <param name="sortOrder">
         /// By the time the file was created, which comes with the directory listing, so sorting costs no extra round trip
-        /// per file (the date taken would mean opening every photo). The default is the order of the file system.
+        /// per file (the date taken would mean opening every photo), or by the name, which needs nothing more than the listing either.
+        /// The default is the order of the file system.
         /// </param>
         public static List<PhotoFile> Scan(string folder, bool recursive, IReadOnlyCollection<string> extensions, string? excludedFolder,
             PhotoSortOrder sortOrder = PhotoSortOrder.None)
@@ -63,6 +64,9 @@ namespace PhotoLiker.Core
                     break;
                 case PhotoSortOrder.NewestFirst:
                     photos.Sort((a, b) => OldestFirst(b, a));
+                    break;
+                case PhotoSortOrder.ByName:
+                    photos.Sort((a, b) => PhotoNameOrder.Compare(a.OriginalFilePath, b.OriginalFilePath));
                     break;
             }
         }

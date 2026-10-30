@@ -16,7 +16,6 @@ namespace PhotoLikerUI
         public const string VideoDialogTitle             = "Generate Video";
         public const string GenerateVideoButtonText      = "Generate Video";
         public const string GenerateVideoTooltip         = "Generate video from loaded photos using ffmpeg";
-        public const string StatusVideoNoPhotos          = "No loaded photos to generate video.";
         public const string StatusVideoGenerating        = "Generating video with ffmpeg...";
         public const string StatusVideoGenerated         = "Video generated: {0}";
         public const string StatusVideoGenerationError   = "Video generation failed: {0}";

@@ -192,6 +192,7 @@ public class SettingsTests : IDisposable
     [InlineData(PhotoSortOrder.OldestFirst)]
     [InlineData(PhotoSortOrder.NewestFirst)]
     [InlineData(PhotoSortOrder.None)]
+    [InlineData(PhotoSortOrder.ByName)]
     public void SortOrder_IsSavedByName_AndReadBack(PhotoSortOrder order)
     {
         new Settings { CurrentFolder = _tempDir, SortOrder = order }.Save(_tempDir);

@@ -14,6 +14,9 @@ namespace PhotoLiker.Core
 
         /// <summary>As the file system lists them (by name on most local disks). No sorting, which is the quickest.</summary>
         None,
+
+        /// <summary>By the name of the file, as Explorer lists them (see <see cref="PhotoNameOrder"/>). Last, so that the numbers of the others stay.</summary>
+        ByName,
     }
 
     /// <summary>
