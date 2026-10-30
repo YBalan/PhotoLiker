@@ -95,6 +95,21 @@ namespace PhotoLiker.Core
             }
         }
 
+        /// <summary>
+        /// A photo has another size now (the app turned it, see <see cref="JpegOrientation"/>) and with it another id, so a copy that has
+        /// the name of the old one would not be found as its copy any more. The copy is renamed to the name the photo would get now.
+        /// Returns the new path, or null if the copy keeps its name (it has the right one, or another file has the new name already).
+        /// </summary>
+        public static string? RenameCopy(string copyPath, PhotoFile photo)
+        {
+            var target = Path.Combine(Path.GetDirectoryName(copyPath) ?? string.Empty, CopyName.For(photo));
+            if (string.Equals(target, copyPath, StringComparison.OrdinalIgnoreCase) || File.Exists(target))
+                return null;
+
+            File.Move(copyPath, target);
+            return target;
+        }
+
         public static void CopyPhoto(string source, string destination)
         {
             var existed = File.Exists(destination);

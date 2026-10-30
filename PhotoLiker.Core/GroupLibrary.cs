@@ -247,6 +247,19 @@ namespace PhotoLiker.Core
         public void Update(GroupAddResult result) =>
             _folders = result.Folders;
 
+        /// <summary>A copy in a group folder was renamed (see <see cref="LikedLibrary.RenameCopy"/>): the index follows. UI thread only, like every read of the index.</summary>
+        public void Replace(string oldCopyPath, string newCopyPath, PhotoFile photo)
+        {
+            foreach (var (folder, (_, library)) in _folders)
+            {
+                if (!IsInside(folder, oldCopyPath))
+                    continue;
+
+                library.Remove(oldCopyPath);
+                library.Add(newCopyPath, photo);
+            }
+        }
+
         /// <summary>The group folders holding a copy of the photo, ordered by key (1-9, then A-Z).</summary>
         public IEnumerable<string> FoldersOf(PhotoFile photo) =>
             OrderedFolders()

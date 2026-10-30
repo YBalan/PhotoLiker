@@ -600,6 +600,56 @@ public class PhotoListingTests : IDisposable
         Assert.Equal(300 - 14 + 1, listing.ToPhotoFiles(PhotoSortOrder.None).Count);
     }
 
+    // ── Resize ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Resize_GivesThePhotoItsNewSize_AndTheListingIsSaved()
+    {
+        var a = Put("a.jpg", "12345");
+        Put(Path.Combine("sub", "b.jpg"), "123");
+        var listing = ScanAndSave();
+
+        listing.Resize(a, 99);
+        listing.Resize(At(Path.Combine("sub", "B.JPG")), 7); // names do not care about case
+
+        var sizes = listing.ToPhotoFiles(PhotoSortOrder.None).ToDictionary(p => Path.GetFileName(p.OriginalFilePath).ToLowerInvariant(), p => p.Length);
+        Assert.Equal(99, sizes["a.jpg"]);
+        Assert.Equal(7, sizes["b.jpg"]);
+        Assert.True(listing.NeedsSave);
+        listing.Save();
+        Assert.Equal(99, PhotoListing.Load(Key())!.ToPhotoFiles(PhotoSortOrder.None).Single(p => p.OriginalFilePath == a).Length);
+    }
+
+    [Fact]
+    public void Resize_KeepsTheTimesOfThePhoto()
+    {
+        var a = Put("a.jpg", "12345");
+        File.SetLastWriteTimeUtc(a, Old);
+        var listing = ScanAndSave();
+        var before = listing.ToPhotoFiles(PhotoSortOrder.None).Single();
+
+        listing.Resize(a, 99);
+
+        var after = listing.ToPhotoFiles(PhotoSortOrder.None).Single();
+        Assert.Equal(before.LastWriteTimeUtc, after.LastWriteTimeUtc);
+        Assert.Equal(before.CreationTimeUtc, after.CreationTimeUtc);
+    }
+
+    [Fact]
+    public void Resize_ASizeThePhotoHasAlready_OrAPhotoThatIsNotThere_ChangesNothing()
+    {
+        var a = Put("a.jpg", "12345");
+        var listing = ScanAndSave();
+
+        listing.Resize(a, new FileInfo(a).Length);
+        listing.Resize(At("nothing.jpg"), 5);
+        listing.Resize(At(Path.Combine("nowhere", "a.jpg")), 5);
+        listing.Resize(@"C:.jpg", 5);
+
+        Assert.Equal(5, listing.ToPhotoFiles(PhotoSortOrder.None).Single().Length);
+        Assert.False(listing.NeedsSave);
+    }
+
     // ── Remove ──────────────────────────────────────────────────────────────
 
     [Fact]

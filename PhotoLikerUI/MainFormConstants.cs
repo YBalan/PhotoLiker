@@ -65,6 +65,18 @@ namespace PhotoLikerUI
         public const string StatusCopyNoPhoto            = "No photo to copy.";
         public const string StatusCopyError              = "Error copying photo: {0}";
 
+        // Rotate (turns the photo a quarter clockwise and saves it in its own file)
+        public const string RotateButtonText             = "Rotate";
+        public const string RotateButtonTooltip          = "Rotate the photo a quarter clockwise and save it in its file. A JPEG is turned by its orientation flag: the picture is not written again, so nothing is lost however often you turn it, and the dates of the file stay.";
+        public const string StatusRotateNoPhoto          = "No photo to rotate.";
+        public const string StatusRotateOnlyJpeg         = "'{0}' is not a JPEG. Only JPEG photos can be rotated.";
+        public const string StatusRotating               = "Rotating '{0}'...";
+        public const string StatusPhotoRotated           = "'{0}' rotated clockwise and saved.";
+        public const string StatusRotateAdded            = " It had no orientation flag yet, so one was added to the file, which is a little larger now.";
+        public const string StatusRotateDateNotKept      = " The drive did not keep the date of the file.";
+        public const string StatusRotateCopiesNotRenamed = " {0} copy(ies) in the liked folders could not be renamed and are not shown as copies of it any more.";
+        public const string StatusRotateError            = "Could not rotate '{0}': {1}";
+
         // Zoom / fit
         public const string StatusImageFitted            = "Image fitted to screen.";
 

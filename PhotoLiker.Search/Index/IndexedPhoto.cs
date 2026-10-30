@@ -10,9 +10,10 @@ namespace PhotoLiker.Search
 
         /// <summary>
         /// Size and timestamp of the file when it was indexed; a different one means the photo has to be indexed again. The timestamp is
-        /// replaced by <see cref="PhotoIndex.UpdateStamps"/> when a program changes the dates of the file but not the picture.
+        /// replaced by <see cref="PhotoIndex.UpdateStamps"/> when a program changes the dates of the file but not the picture, the size
+        /// by <see cref="PhotoIndex.Turn"/> when the photo is turned.
         /// </summary>
-        public long Length { get; } = length;
+        public long Length { get; internal set; } = length;
         public long ModifiedTicks { get; internal set; } = modifiedTicks;
 
         /// <summary>The CLIP vector for text search; null if the photo could not be read.</summary>
@@ -36,10 +37,10 @@ namespace PhotoLiker.Search
     {
         public long Id { get; internal set; }
         public IndexedPhoto Photo { get; } = photo;
-        public float X { get; } = x;
-        public float Y { get; } = y;
-        public float Width { get; } = width;
-        public float Height { get; } = height;
+        public float X { get; internal set; } = x;
+        public float Y { get; internal set; } = y;
+        public float Width { get; internal set; } = width;
+        public float Height { get; internal set; } = height;
         public float Score { get; } = score;
 
         /// <summary>Marked by hand, not found by the detector.</summary>

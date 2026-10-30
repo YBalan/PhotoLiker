@@ -35,6 +35,7 @@
             InitializeDateAlignment();
             InitializeEmptyFolders();
             InitializeDuplicates();
+            InitializeRotate();
             Text = WithDebugPrefix(Text);
 
             // Set application icon programmatically

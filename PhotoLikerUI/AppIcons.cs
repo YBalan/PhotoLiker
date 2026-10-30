@@ -145,6 +145,30 @@ namespace PhotoLikerUI
             g.DrawLine(equals, 10f, 12.9f, 13.2f, 12.9f);
         });
 
+        // ── Rotate ────────────────────────────────────────────────────────
+        // A blue arrow that runs three quarters of a circle clockwise
+        public static Bitmap RotateClockwise() => DrawOnBitmap(g =>
+        {
+            const float centreX = 8f, centreY = 8.5f, radius = 5f, endAngle = 240f;
+            var blue = Color.FromArgb(60, 135, 235);
+
+            using var pen = new Pen(blue, 1.9f);
+            g.DrawArc(pen, centreX - radius, centreY - radius, radius * 2, radius * 2, -30f, endAngle + 30f);
+
+            // The head sits on the end of the arc and points the way the arc runs (clockwise, so the angle grows)
+            var angle = endAngle * MathF.PI / 180f;
+            var end = new PointF(centreX + radius * MathF.Cos(angle), centreY + radius * MathF.Sin(angle));
+            var ahead = new PointF(-MathF.Sin(angle), MathF.Cos(angle));
+            var outward = new PointF(MathF.Cos(angle), MathF.Sin(angle));
+            using var head = new SolidBrush(blue);
+            g.FillPolygon(head, new PointF[]
+            {
+                new(end.X + ahead.X * 2.7f, end.Y + ahead.Y * 2.7f),
+                new(end.X + outward.X * 2.4f, end.Y + outward.Y * 2.4f),
+                new(end.X - outward.X * 2.4f, end.Y - outward.Y * 2.4f),
+            });
+        });
+
         // ── Remove empty folders ──────────────────────────────────────────
         // A pale, hollow folder with a red cross badge
         public static Bitmap RemoveEmptyFolders() => DrawOnBitmap(g =>

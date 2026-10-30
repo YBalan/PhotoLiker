@@ -41,7 +41,8 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
         await DoubleClicks();      // a double click on a row of the three dialogs opens the photo or the folder
         await UnreadableList();    // empty photo files are listed, and move to Deleted\Unreadable
         await RemoveEmptyFolders(); // it makes folders in the demo folder and removes them again
-        await FindDuplicates();     // last: it makes photos in the demo folder, moves them away and brings them back
+        await FindDuplicates();     // it makes photos in the demo folder, moves them away and brings them back
+        await Rotate();             // last: it turns demo photos and makes two files in the demo folder, which it removes again
     }
 
     // ── 1. the folder opens, in dark mode ───────────────────────────────────────────────────────
@@ -1182,6 +1183,107 @@ internal sealed class Tour(DrivenForm form, string folder, string? screenshotFol
     }
 
     private static List<Button> Buttons(Control root) => Controls<Button>(root);
+
+    // ── 15. Rotate ──────────────────────────────────────────────────────────────────────────────
+
+    private async Task Rotate()
+    {
+        checks.Step("15. Rotate: the button in the right corner of the status bar turns the photo a quarter clockwise and saves it in its file");
+
+        var button = (ToolStripButton)form.StatusBarItem("rotateToolStripButton");
+        var strip = form.Find<StatusStrip>("statusStrip1");
+        checks.That(button.Image is not null && button.Enabled && button.ToolTipText!.Contains("clockwise"), "the status bar has a Rotate button with an icon and a tooltip");
+        checks.That(strip.Items.Cast<ToolStripItem>().Last() == button && button.Bounds.Right > strip.ClientSize.Width - 30,
+            $"it is the last item, in the right corner (its right edge is at {button.Bounds.Right} of {strip.ClientSize.Width})");
+
+        bool ShownAs(int width, int height) => PhotoShown() && form.Viewer.Image!.Width == width && form.Viewer.Image.Height == height;
+
+        // A photo that has the orientation already (the demo photos say 1): two bytes change, and nothing else
+        await GoTo(0);
+        var path = form.Config.CurrentFilePath;
+        var original = File.ReadAllBytes(path);
+        var info = new FileInfo(path);
+        var (written, created) = (info.LastWriteTimeUtc, info.CreationTimeUtc);
+        var (width, height) = (form.Viewer.Image!.Width, form.Viewer.Image.Height);
+        checks.That(width != height && JpegOrientation.Read(new MemoryStream(original)) == 1, $"the first photo is {width} x {height} and has the orientation 1");
+
+        button.PerformClick();
+        checks.That(await Until(() => ShownAs(height, width) && form.Status.Contains("rotated clockwise and saved")), $"the click shows the photo turned, {form.Viewer.Image?.Width} x {form.Viewer.Image?.Height} ({form.Status})");
+        var turned = File.ReadAllBytes(path);
+        checks.That(JpegOrientation.Read(new MemoryStream(turned)) == 6, "the file says 6 now (a quarter clockwise)");
+        checks.That(turned.Length == original.Length && Enumerable.Range(0, turned.Length).Count(i => turned[i] != original[i]) <= 2, "it has the size it had, and not more than two bytes are other");
+        checks.That(File.GetLastWriteTimeUtc(path) == written && File.GetCreationTimeUtc(path) == created, "the dates of the file are the ones it had");
+        checks.That(form.Config.Files[0].Length == original.Length, "the list still knows it by its size");
+
+        for (var i = 0; i < 3; i++)
+        {
+            var wasWidth = form.Viewer.Image!.Width;
+            button.PerformClick();
+            await Until(() => PhotoShown() && form.Viewer.Image!.Width != wasWidth);
+        }
+        checks.That(await Until(() => ShownAs(width, height)) && File.ReadAllBytes(path).SequenceEqual(original), "four clicks give the photo and the file back as they were");
+
+        // A photo that has none: the flag is added, the file is a little larger, and its copy in the Liked folder follows it
+        var date = new DateTime(2025, 7, 11, 9, 0, 0, DateTimeKind.Utc);
+        var scan = Path.Combine(folder, "rot-scan.jpg");
+        File.WriteAllBytes(scan, MakeJpeg(77));
+        File.SetCreationTimeUtc(scan, date);
+        File.SetLastWriteTimeUtc(scan, date);
+        var png = Path.Combine(folder, "rot-note.png");
+        using (var note = new Bitmap(40, 30))
+            note.Save(png, ImageFormat.Png);
+
+        var extensions = form.Config.Extensions;
+        if (!extensions.Contains(".png"))
+            await ChangeSetting("Extensions", new[] { ".jpg", ".png" });
+        form.Press(Keys.F5);
+        checks.That(await Until(() => form.Config.Files.Any(f => f.OriginalFilePath == scan) && form.Config.Files.Any(f => f.OriginalFilePath == png) && PhotoShown()), "a JPEG without any EXIF, and a PNG, are added to the folder and listed");
+
+        await GoTo(form.Config.Files.FindIndex(f => f.OriginalFilePath == scan));
+        var scanIndex = form.Config.CurrentIndex;
+        var oldCopy = Path.Combine(_likedFolder, CopyNameAt(scanIndex));
+        form.Press(Keys.Space);
+        checks.That(await Until(() => File.Exists(oldCopy) && form.Config.LikedFile == oldCopy), "Space likes it: the copy is named with the id of the photo");
+
+        var scanBytes = File.ReadAllBytes(scan);
+        (width, height) = (form.Viewer.Image!.Width, form.Viewer.Image.Height);
+        button.PerformClick();
+        checks.That(await Until(() => ShownAs(height, width) && File.ReadAllBytes(scan).Length > scanBytes.Length), $"the click turns it ({form.Status})");
+        checks.That(form.Status.Contains("no orientation flag"), "and the status says the flag was added");
+        var scanTurned = File.ReadAllBytes(scan);
+        checks.That(JpegOrientation.Read(new MemoryStream(scanTurned)) == 6 && scanTurned.Length == scanBytes.Length + 36, $"the file has the flag, and 36 bytes more ({scanTurned.Length - scanBytes.Length})");
+        checks.That(File.GetLastWriteTimeUtc(scan) == date && File.GetCreationTimeUtc(scan) == date, "its dates are the ones it had");
+        checks.That(form.Config.Files[scanIndex].Length == scanTurned.Length, "the list knows its new size");
+
+        // The id of the copy is made from the size, which is other now: the copy has the new name, and is still the copy of the photo
+        var newCopy = Path.Combine(_likedFolder, CopyNameAt(scanIndex));
+        checks.That(newCopy != oldCopy && File.Exists(newCopy) && !File.Exists(oldCopy), $"the copy in the Liked folder was renamed ({Path.GetFileName(newCopy)})");
+        checks.That(form.Config.LikedFile == newCopy && form.Config.SavedInFolders.SequenceEqual(["Liked"]), "the photo is still shown as liked");
+        form.Press(Keys.Space);
+        checks.That(await Until(() => !File.Exists(newCopy) && form.Config.LikedFile == string.Empty), "and Space takes that copy away again");
+
+        for (var i = 0; i < 3; i++)
+        {
+            var wasWidth = form.Viewer.Image!.Width;
+            button.PerformClick();
+            await Until(() => PhotoShown() && form.Viewer.Image!.Width != wasWidth);
+        }
+        checks.That(await Until(() => ShownAs(width, height)) && JpegOrientation.Read(new MemoryStream(File.ReadAllBytes(scan))) == 1, "three more clicks bring it back upright; they are two bytes each, as the file has the flag now");
+
+        // Not a JPEG: nothing is written
+        await GoTo(form.Config.Files.FindIndex(f => f.OriginalFilePath == png));
+        var pngBytes = File.ReadAllBytes(png);
+        button.PerformClick();
+        checks.That(await Until(() => form.Status.Contains("is not a JPEG")) && File.ReadAllBytes(png).SequenceEqual(pngBytes), $"a PNG is left alone ({form.Status})");
+
+        // Nothing of this step stays
+        File.Delete(scan);
+        File.Delete(png);
+        if (!extensions.Contains(".png"))
+            await ChangeSetting("Extensions", extensions);
+        form.Press(Keys.F5);
+        checks.That(await Until(() => form.Config.Files.All(f => f.OriginalFilePath != scan && f.OriginalFilePath != png) && PhotoShown()), "the two files are removed again");
+    }
 
     // ── what the tour leaves behind, checked after the window is closed ─────────────────────────
 

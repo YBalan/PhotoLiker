@@ -168,6 +168,52 @@ namespace PhotoLiker.Search
             }
         }
 
+        /// <summary>
+        /// A photo was turned by the app (only its EXIF orientation changed, see <see cref="JpegOrientation"/>): the boxes of its faces, given
+        /// as fractions of the upright photo, turn with it, so they stay on the faces. If the file got another size (the orientation had to
+        /// be added) and the index knew the old one, the index takes the new one over: the picture is the one that was analyzed, and "Update
+        /// index" would otherwise take the photo for a changed one and analyze it again.
+        /// </summary>
+        public void Turn(string fullPath, int clockwiseQuarterTurns, long previousLength, long newLength)
+        {
+            if (!TryGetRelativePath(fullPath, out var relative))
+                return;
+
+            var turns = ((clockwiseQuarterTurns % 4) + 4) % 4;
+            lock (_gate)
+            {
+                if (!_photos.TryGetValue(relative, out var photo))
+                    return;
+
+                var boxes = photo.Faces.Select(face => (Face: face, Box: TurnBox(face.X, face.Y, face.Width, face.Height, turns))).ToList();
+                var takeLength = photo.Length == previousLength && newLength != previousLength;
+
+                using var transaction = _db.BeginTransaction();
+                foreach (var (face, box) in boxes)
+                {
+                    Execute(
+                        "UPDATE faces SET x = $x, y = $y, w = $w, h = $h WHERE id = $id",
+                        ("$x", box.X), ("$y", box.Y), ("$w", box.Width), ("$h", box.Height), ("$id", face.Id));
+                }
+                if (takeLength)
+                    Execute("UPDATE photos SET length = $length WHERE id = $id", ("$length", newLength), ("$id", photo.Id));
+                transaction.Commit();
+
+                foreach (var (face, box) in boxes)
+                    (face.X, face.Y, face.Width, face.Height) = (box.X, box.Y, box.Width, box.Height);
+                if (takeLength)
+                    photo.Length = newLength;
+            }
+        }
+
+        /// <summary>The box (fractions of the photo) after the photo is turned clockwise by quarter turns: the point (x, y) goes to (1 - y, x).</summary>
+        internal static (float X, float Y, float Width, float Height) TurnBox(float x, float y, float width, float height, int quarterTurns)
+        {
+            for (var i = 0; i < quarterTurns; i++)
+                (x, y, width, height) = (1f - (y + height), x, height, width);
+            return (x, y, width, height);
+        }
+
         public void Remove(IReadOnlyCollection<string> relativePaths)
         {
             if (relativePaths.Count == 0)
