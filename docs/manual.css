@@ -1,0 +1,217 @@
+/* The look of the user manual (manual.en.html, manual.uk.html). One file for both languages; follows the light or dark setting of the system. */
+
+:root {
+  --bg: #ffffff;
+  --surface: #f4f6f8;
+  --text: #1f2328;
+  --muted: #5a6572;
+  --border: #d3dae1;
+  --accent: #0b64c0;
+  --accent-soft: #e4f0fc;
+  --key-bg: #ffffff;
+  --note-bg: #fff6dc;
+  --note-border: #e6c25a;
+  --tip-bg: #e6f5ea;
+  --tip-border: #62b57a;
+  --shadow: 0 1px 3px rgba(20, 30, 40, 0.18);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15181c;
+    --surface: #1d2126;
+    --text: #e2e6ea;
+    --muted: #a0abb7;
+    --border: #353c44;
+    --accent: #66adf2;
+    --accent-soft: #1b2f44;
+    --key-bg: #2a3037;
+    --note-bg: #34301d;
+    --note-border: #8a7430;
+    --tip-bg: #1d3325;
+    --tip-border: #3f8a58;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+a { color: var(--accent); }
+
+.wrap { max-width: 78rem; margin: 0 auto; padding: 0 1rem; }
+
+/* ── top bar ───────────────────────────────────────────────── */
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.top .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.2rem;
+}
+
+.brand { font-weight: 700; font-size: 1.1rem; }
+.brand small { font-weight: 400; color: var(--muted); margin-left: 0.5rem; }
+
+.lang a {
+  display: inline-block;
+  padding: 0.25rem 0.8rem;
+  border: 1px solid var(--accent);
+  border-radius: 1rem;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.lang a:hover { background: var(--accent-soft); }
+
+/* ── page: contents on the left, text on the right ─────────── */
+
+.layout { display: block; padding-top: 1.5rem; padding-bottom: 4rem; }
+
+.toc {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+.toc strong { display: block; margin-bottom: 0.3rem; }
+.toc ol { margin: 0; padding-left: 1.4rem; }
+.toc li { margin: 0.15rem 0; }
+.toc a { text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+@media (min-width: 62rem) {
+  .layout { display: grid; grid-template-columns: 16rem minmax(0, 1fr); gap: 2.5rem; align-items: start; }
+
+  .toc {
+    position: sticky;
+    top: 4.5rem;
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+    margin-bottom: 0;
+  }
+}
+
+main { min-width: 0; max-width: 52rem; }
+
+h1 { font-size: 2.1rem; line-height: 1.2; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 3rem 0 0.8rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.15rem; margin: 1.8rem 0 0.4rem; }
+
+.lead { font-size: 1.1rem; color: var(--muted); margin-top: 0; }
+
+p, ul, ol, table, figure { margin-top: 0; margin-bottom: 1rem; }
+li { margin: 0.25rem 0; }
+
+/* ── keys ──────────────────────────────────────────────────── */
+
+kbd {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--key-bg);
+  font: 0.88em/1.4 Consolas, "Cascadia Mono", monospace;
+  white-space: nowrap;
+}
+
+code {
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  background: var(--surface);
+  font: 0.9em Consolas, "Cascadia Mono", monospace;
+}
+
+/* ── tables ────────────────────────────────────────────────── */
+
+table { border-collapse: collapse; width: 100%; font-size: 0.97rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.45rem 0.7rem; border: 1px solid var(--border); }
+th { background: var(--surface); }
+td:first-child { white-space: nowrap; }
+table.wide-first td:first-child { white-space: normal; }
+
+.table-scroll { overflow-x: auto; }
+
+/* ── pictures ──────────────────────────────────────────────── */
+
+figure { margin-left: 0; margin-right: 0; }
+
+figure img, .pair img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+figcaption { margin-top: 0.4rem; font-size: 0.9rem; color: var(--muted); }
+
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.pair figure { margin: 0; }
+
+/* ── boxes ─────────────────────────────────────────────────── */
+
+.note, .tip {
+  margin: 1rem 0;
+  padding: 0.6rem 1rem;
+  border-left: 4px solid;
+  border-radius: 4px;
+}
+
+.note { background: var(--note-bg); border-color: var(--note-border); }
+.tip { background: var(--tip-bg); border-color: var(--tip-border); }
+.note p:last-child, .tip p:last-child { margin-bottom: 0; }
+
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+
+.steps > li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 2.6rem;
+  margin: 0.8rem 0;
+}
+
+.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.9rem;
+}
+
+footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.9rem; }
+
+@media print {
+  .top, .toc { display: none; }
+  .layout { display: block; }
+  figure, table { break-inside: avoid; }
+}

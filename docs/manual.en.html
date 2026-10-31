@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PhotoLiker: user manual</title>
+<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <span class="brand">PhotoLiker <small>User manual</small></span>
+    <nav class="lang" aria-label="Language"><a href="manual.ua.html" hreflang="uk" lang="uk">Українська</a></nav>
+  </div>
+</header>
+
+<div class="layout wrap">
+
+<nav class="toc" aria-label="Contents">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#install">Installing</a></li>
+    <li><a href="#start">First steps</a></li>
+    <li><a href="#window">The window</a></li>
+    <li><a href="#keys">Keyboard and mouse</a></li>
+    <li><a href="#toolbar">The toolbar</a></li>
+    <li><a href="#groups">Likes and groups</a></li>
+    <li><a href="#delete">Deleting photos</a></li>
+    <li><a href="#rotate">Rotating photos</a></li>
+    <li><a href="#settings">Settings</a></li>
+    <li><a href="#order">Order of the photos</a></li>
+    <li><a href="#big-folders">Big folders</a></li>
+    <li><a href="#exif">EXIF and GPS</a></li>
+    <li><a href="#tools">Tidying up: dates, empty folders, duplicates</a></li>
+    <li><a href="#video">Making a video</a></li>
+    <li><a href="#search">Searching the photos</a></li>
+    <li><a href="#theme">Dark and light theme</a></li>
+    <li><a href="#files">What PhotoLiker keeps, and where</a></li>
+    <li><a href="#about">About box and this manual</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<h1>PhotoLiker</h1>
+<p class="lead">Go through your photos quickly, keep the ones you like, and find any photo again.</p>
+
+<p>PhotoLiker is a program for Windows. You open a folder of photos, flip through them with the arrow keys, press
+<kbd>Space</kbd> to <strong>like</strong> a photo, or a letter or number key to sort it into a <strong>group</strong>. A like is a plain
+copy of the photo in another folder, so nothing is hidden in a database and your originals are never changed.</p>
+
+<p>When the folder is a disk full of old photos that you can no longer scroll through, PhotoLiker can look at it once, in the
+background, and then you <strong>search it like the web</strong>: type <q>birthday cake</q> or <q>children on a stage</q>, give
+a person a name once and find every photo they are in. It all runs on your own computer; no photo is ever uploaded.</p>
+
+<figure>
+  <img src="images/01-home.png" alt="The PhotoLiker window with a folder of photos open" width="1486" height="893">
+  <figcaption>PhotoLiker with a folder of photos open (dark theme).</figcaption>
+</figure>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="install">1. Installing</h2>
+
+<p>PhotoLiker needs Windows 10 or 11 (64-bit) and the <a href="https://dotnet.microsoft.com/download/dotnet/10.0">.NET 10 Desktop Runtime</a>.</p>
+
+<ol>
+  <li>Run <code>PhotoLiker-Setup</code>. It installs for you alone and does not ask for administrator rights. If the .NET
+  runtime is missing, setup tells you and can open its download page.</li>
+  <li>Start <strong>Photo Liker</strong> from the Start menu (setup can also put an icon on the desktop). It opens the folder
+  you used last; the first time, use the <strong>Open</strong> button of the toolbar to pick a folder of photos.</li>
+  <li>Optional: click <strong>Register Context Menu</strong> in the toolbar once. From then on, right-click any folder in
+  Windows Explorer and choose <strong>Open in Photo Liker</strong>. The same button removes the entry again.</li>
+</ol>
+
+<p>Uninstalling removes the program and that context-menu entry. Your photos, your likes and your settings are not touched.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="start">2. First steps</h2>
+
+<ol class="steps">
+  <li>Open a folder of photos. The first photo is shown, with a strip of small pictures (thumbnails) on the right.</li>
+  <li>Press <kbd>→</kbd> (Right arrow) to see the next photo.</li>
+  <li>Press <kbd>Space</kbd> to like the photo. It is copied to a folder called <code>Liked</code>, and a green check appears on it.
+  Press <kbd>Space</kbd> again and the copy is removed.</li>
+  <li>Press <kbd>←</kbd> (Left arrow) to go back.</li>
+</ol>
+
+<div class="pair">
+  <figure>
+    <img src="images/02-next-photo.png" alt="The next photo" width="1486" height="893">
+    <figcaption><kbd>→</kbd>: the next photo.</figcaption>
+  </figure>
+  <figure>
+    <img src="images/03-liked.png" alt="A liked photo with a green check" width="1486" height="893">
+    <figcaption><kbd>Space</kbd>: the photo is liked. It gets a green check, in the viewer and on its thumbnail.</figcaption>
+  </figure>
+</div>
+
+<div class="tip"><p>The keys only work on the photo. While you type in a text box (the search box, or a value in the settings
+table) they are the box's own. Click the photo, a thumbnail or the empty space around the photo, and the keys work on the
+photo again.</p></div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="window">3. The window</h2>
+
+<ul>
+  <li><strong>Toolbar</strong> (top left): the buttons described in <a href="#toolbar">The toolbar</a>.</li>
+  <li><strong>Settings table</strong> (left): how far you are (<code>CurrentIndex</code>, <code>TotalFiles</code>), the current file,
+  and the settings of the folder. Select a row and the pane under the table explains it.</li>
+  <li><strong>Photo information</strong> (lower left): the data the camera wrote into the photo, see <a href="#exif">EXIF and GPS</a>.</li>
+  <li><strong>Search strip</strong> (above the photo): indexing and searching, see <a href="#search">Searching the photos</a>.</li>
+  <li><strong>The photo</strong> (centre). A green check in its top-left corner means it is liked or in a group, and the folders it is
+  saved in are listed next to the check. The bottom-left corner lists your groups.</li>
+  <li><strong>Thumbnails</strong> (right). Click one to jump to that photo.</li>
+  <li><strong>Status bar</strong> (bottom): what the program just did. At the right it has the <strong>Maps</strong> link, when the
+  photo has a position, and the <strong>Rotate</strong> button.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="keys">4. Keyboard and mouse</h2>
+
+<div class="table-scroll">
+<table class="wide-first">
+  <thead><tr><th>Input</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><kbd>→</kbd> / <kbd>←</kbd></td><td>Next / previous photo. Clicking a thumbnail jumps to it.</td></tr>
+    <tr><td><kbd>Home</kbd> / <kbd>End</kbd></td><td>The first / the last photo of the list (of the search results, while they are shown).</td></tr>
+    <tr><td><kbd>PageDown</kbd> / <kbd>PageUp</kbd></td><td>The first photo of the next / the previous month. The status bar names the month.</td></tr>
+    <tr><td><kbd>Space</kbd></td><td>Like the photo (copy it to the <code>Liked</code> folder), or remove the copy again.</td></tr>
+    <tr><td><kbd>Delete</kbd></td><td>Move the photo to the <code>Deleted</code> folder and show the next one (see <a href="#delete">Deleting photos</a>).</td></tr>
+    <tr><td><kbd>1</kbd>–<kbd>9</kbd>, <kbd>A</kbd>–<kbd>Z</kbd></td><td>Save the photo in a group, or take it out again (see <a href="#groups">Likes and groups</a>).</td></tr>
+    <tr><td><kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>9</kbd>, <kbd>Alt</kbd>+<kbd>A</kbd>–<kbd>Z</kbd></td><td>While search results are shown: save <em>all</em> of them in the group, after telling you how many photos that is and asking.</td></tr>
+    <tr><td><kbd>0</kbd></td><td>Fit the photo to the viewer (after zooming in).</td></tr>
+    <tr><td><kbd>F1</kbd></td><td>Open the About box (see <a href="#about">About box and this manual</a>).</td></tr>
+    <tr><td><kbd>F2</kbd> / <kbd>F3</kbd></td><td>Open this manual in Ukrainian / in English.</td></tr>
+    <tr><td><kbd>F5</kbd></td><td>List the folder again from scratch (see <a href="#big-folders">Big folders</a>).</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger.</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+mouse wheel</td><td>Over the photo: zoom, then drag to move the picture. Over the thumbnails: change their size.</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Close the search results.</td></tr>
+    <tr><td><kbd>Enter</kbd> in the search box</td><td>Search.</td></tr>
+    <tr><td><kbd>Shift</kbd>+drag over the photo</td><td>Mark a face the program missed (with the face icon switched on).</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The same list is in the About box (the <strong>Help</strong> button).</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="toolbar">5. The toolbar</h2>
+
+<ul>
+  <li><strong>Open</strong>: pick a folder of photos.</li>
+  <li><strong>Copy</strong>: copy the shown photo to the clipboard (the same as <kbd>Ctrl</kbd>+<kbd>C</kbd>).</li>
+  <li><strong>Dark / Light</strong>: switch the theme, see <a href="#theme">Dark and light theme</a>.</li>
+  <li><strong>Open Source Folder</strong> and <strong>Open Liked Folder</strong>: show the photo folder or the Liked folder in Windows Explorer.</li>
+  <li><strong>Load Liked Folder</strong>: open the Liked folder as a photo folder of its own, to look at what you picked.</li>
+  <li><strong>Generate Video</strong>: make a video of your photos, see <a href="#video">Making a video</a>.</li>
+  <li><strong>Align dates</strong>, <strong>Remove empty folders</strong>, <strong>Find duplicates</strong>: see <a href="#tools">Tidying up</a>.</li>
+  <li><strong>Register Context Menu</strong> / <strong>Unregister Context Menu</strong>: add or remove <em>Open in Photo Liker</em> in the right-click menu of folders.</li>
+  <li><strong>Help</strong> (the question mark): the About box, with the keys and this manual.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="groups">6. Likes and groups</h2>
+
+<p>Besides liking a photo, you can sort it into groups: family, trips, prints, whatever you need. Press a key from
+<kbd>1</kbd>–<kbd>9</kbd> or <kbd>A</kbd>–<kbd>Z</kbd> (without <kbd>Ctrl</kbd>, <kbd>Alt</kbd> or <kbd>Shift</kbd>) and a copy of the photo
+is saved in the folder <code>A - Group</code>, <code>3 - Group</code> and so on, inside the Liked folder. The folder is made when
+it is first needed. Press the same key again and the copy is removed. Liking with <kbd>Space</kbd> is separate: a photo can be
+liked and in any number of groups.</p>
+
+<figure>
+  <img src="images/05-groups.png" alt="A photo that is liked and in the groups 1 and A" width="1486" height="893">
+  <figcaption>A photo that is liked and in groups <code>1</code> and <code>A</code>. The folders are listed next to the green check,
+  and the legend in the bottom-left corner shows which key saves where.</figcaption>
+</figure>
+
+<ul>
+  <li><strong>Name your groups.</strong> Rename a group folder in Explorer, as long as the new name still starts with the same
+  key and <code>- Group</code>: <code>A - Group Family</code> is used for <kbd>A</kbd> from then on. The legend shows the names.</li>
+  <li><strong>Where is this photo saved?</strong> The <code>SavedInFolders</code> row of the settings table lists every folder that holds a copy of
+  the shown photo.</li>
+  <li><strong>All the search results at once.</strong> While results are shown, <kbd>Alt</kbd>+<kbd>A</kbd> (or any group key) saves every
+  one of them in the group. Nothing is copied until you agree: a box tells how many photos and how many MB that is. A
+  progress bar shows the copying and <strong>Cancel</strong> stops it. If the group has no folder yet, it is named after the search,
+  for instance <code>A - Group children on a stage</code>. This only ever adds copies; it never removes one.</li>
+  <li><strong>Names of the copies.</strong> A copy gets a short code in its name, <code>IMG_0001 [3f9a1c2e].jpg</code>, so that photos of
+  different folders that have the same file name (every camera has its own <code>IMG_0001.jpg</code>) never overwrite each other's copies.</li>
+  <li><kbd>0</kbd> is not a group: it fits the photo to the viewer.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="delete">7. Deleting photos</h2>
+
+<p><kbd>Delete</kbd> moves the shown photo into a folder named <code>Deleted</code> inside the photo folder, and shows the next one.
+<strong>Nothing is erased.</strong> The photo keeps its place below the photo folder (<code>314CANON\IMG_0001.jpg</code> goes to
+<code>Deleted\314CANON\IMG_0001.jpg</code>). To put a photo back, move it out of <code>Deleted</code> in Explorer; the next time the
+folder is listed it is there again. To look at what is in it, open the <code>Deleted</code> folder with the folder button.</p>
+
+<p>The <code>Deleted</code> folder is left out when the photos are listed, and the search index does not look at it. The copies
+of the photo in the Liked and group folders stay where they are.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="rotate">8. Rotating photos</h2>
+
+<p>The <strong>Rotate</strong> button in the right corner of the status bar turns the shown photo a quarter clockwise and saves that in
+its file. Press it again for the next quarter. It works on JPEG files (<code>.jpg</code>, <code>.jpeg</code>); for another kind of
+file the status bar says so and nothing is written.</p>
+
+<ul>
+  <li><strong>Nothing is lost.</strong> The picture is not decoded and written again; only the note in the file that tells every
+  viewer (this program, Windows, phones, browsers) how to turn the picture is changed. You can rotate as often as you like.</li>
+  <li>The dates of the file stay as they were.</li>
+  <li>The copies of the photo in the Liked and group folders are not turned: they are the photo as it was when you liked it.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="settings">9. Settings</h2>
+
+<p>The settings table at the top left shows the progress, the current file and the settings of the folder. Every row has a
+description: select it and the pane under the table says what it is for.</p>
+
+<figure>
+  <img src="images/06-settings.png" alt="The settings table, LikedFolder selected with its ... button" width="424" height="450">
+  <figcaption>The settings table, with the <strong>LikedFolder</strong> row selected.</figcaption>
+</figure>
+
+<div class="table-scroll">
+<table class="wide-first">
+  <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><strong>LikedFolder</strong></td><td>Where liked photos are copied. By default the folder <code>Liked</code> inside the photo folder. Click the <strong>…</strong> button for a folder picker.</td></tr>
+    <tr><td><strong>GoThroughSubFolders</strong></td><td>Also list the photos in the subfolders. The Liked folder itself is left out.</td></tr>
+    <tr><td><strong>Extensions</strong></td><td>The kinds of file that count as photos, separated by <code>;</code> or <code>,</code>, each with its dot: <code>.jpg; .png</code>.</td></tr>
+    <tr><td><strong>SortOrder</strong></td><td>The order of the photos, see <a href="#order">Order of the photos</a>.</td></tr>
+    <tr><td><strong>CacheSize</strong></td><td>How many photos on each side of the shown one are kept ready in memory, so that the arrow keys feel instant.</td></tr>
+    <tr><td><strong>ThumbnailSize</strong></td><td>Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the thumbnails changes it.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>CurrentIndex</strong> is the number of the shown photo, counted from 0: type another number into it to jump to that
+photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong> and the other rows
+that show information cannot be changed.</p>
+
+<h3>Picking a folder</h3>
+<p>The <strong>…</strong> button of <strong>LikedFolder</strong> opens the Windows folder dialog. Cancelling keeps the old value.</p>
+
+<figure>
+  <img src="images/07-folder-picker.png" alt="The folder dialog opened from the LikedFolder row" width="946" height="533">
+  <figcaption>The folder dialog. (The left pane of the dialog is blurred in this picture.)</figcaption>
+</figure>
+
+<h3>Changes that list the folder again</h3>
+<p>Changing <strong>GoThroughSubFolders</strong>, <strong>Extensions</strong> or <strong>SortOrder</strong> lists the folder again at once, and the photo
+you are looking at stays selected if it is still in the list. The other settings need no listing: a new <strong>LikedFolder</strong> is
+used from the next like.</p>
+
+<div class="pair">
+  <figure>
+    <img src="images/08-subfolders-on.png" alt="GoThroughSubFolders switched on" width="1486" height="893">
+    <figcaption><strong>GoThroughSubFolders</strong> on: 8 photos instead of 5. The window title names the subfolder of the shown photo.</figcaption>
+  </figure>
+  <figure>
+    <img src="images/09-extensions.png" alt="Extensions set to .jpg; .png" width="1486" height="893">
+    <figcaption>Adding <code>.png</code> to <strong>Extensions</strong> brings the PNG files in.</figcaption>
+  </figure>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="order">10. Order of the photos</h2>
+
+<p><strong>SortOrder</strong> decides the order of the list, and so where the arrow keys, <kbd>Home</kbd>, <kbd>End</kbd> and
+<kbd>PageDown</kbd> / <kbd>PageUp</kbd> take you:</p>
+
+<ul>
+  <li><strong>OldestFirst</strong> (the default) and <strong>NewestFirst</strong> go by the date each file was <em>created</em>. That date comes
+  with the listing of the folder, so sorting costs nothing, even on a network drive.</li>
+  <li><strong>ByName</strong> goes by the name of the file, the way Explorer lists a folder: case does not matter, and numbers count as
+  numbers, so <code>IMG_2</code> comes before <code>IMG_10</code>.</li>
+  <li><strong>Random</strong> shuffles the photos. It is a <em>new</em> order every time the photos are listed (when you open the folder again,
+  press <kbd>F5</kbd>, search, or make a video).</li>
+  <li><strong>None</strong> does not sort: the photos come in the order the disk gives them. It is the quickest on a folder with very many photos.</li>
+</ul>
+
+<div class="note"><p>The created date is when the file appeared on that disk. A photo copied from a card or another disk usually has the date of
+the copy, not of the shot, so a folder copied in one go is in the order it was copied. <a href="#tools">Align dates</a> sets
+the dates of the files to the dates the photos were taken.</p></div>
+
+<p>The results of a <a href="#search">search</a> follow the same setting, but go by the date the photos were taken, which the index knows
+for every photo.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="big-folders">11. Big folders</h2>
+
+<p>Listing a folder on a network drive is slow: the more subfolders, the longer it takes (6.6 seconds for 16,000 photos in 985 folders
+on a home router; minutes for a big archive). So PhotoLiker keeps the list.</p>
+
+<ul>
+  <li>The <strong>first</strong> time a folder is opened it is listed, and the list is saved on this computer.</li>
+  <li>From then on the folder <strong>opens at once</strong> from the saved list, and while you already look at the photos, the program
+  checks in the background what has changed. When it is done, new photos are in the list, photos that went are out, the photo you look
+  at stays where it is, and the status bar tells what was found.</li>
+  <li>A photo that another program changes <em>in place</em> is not noticed by that check. <kbd>F5</kbd> lists the folder from scratch.</li>
+  <li>The saved lists are only a convenience. You can delete them at any time; the folders are then listed again.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="exif">12. EXIF and GPS</h2>
+
+<p>The grid below the settings shows what the camera wrote into the shown photo (EXIF): make and model, exposure, flash, the date the
+photo was taken, and more, in groups. Select a row and the pane under the grid explains it in plain words. The <strong>All Metadata</strong>
+row under <em>Debug</em> holds everything as text.</p>
+
+<p>If the photo has a <strong>position</strong>, it is shown as coordinates, altitude and so on, and the <strong>Map Link</strong> row and the
+<strong>Maps</strong> link at the right of the status bar open the place in Google Maps.</p>
+
+<figure>
+  <img src="images/10-metadata-gps.png" alt="The photo information grid with the decoded GPS data" width="1486" height="893">
+  <figcaption>The photo information grid with the position of the photo.</figcaption>
+</figure>
+
+<ul>
+  <li>Dates are shown with the month as a word, <code>14 Aug 2025 09:12:07</code>.</li>
+  <li><strong>Date Taken (Original)</strong> is when the picture was shot. <strong>Date Last Saved</strong> is when a program last saved the
+  photo; a photo that was turned or edited later shows that day there. PhotoLiker (search by date, the order of the list, Align dates)
+  goes by the first.</li>
+  <li>The <strong>File Date</strong> row is not EXIF: it is the date of the file on the disk. It ends with <code>(= Date Taken (Original))</code>
+  when the file has the date of the shot, and with <code>(≠ Date Taken (Original))</code> when it has not (a copied file gets the day of the copy).</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="tools">13. Tidying up: dates, empty folders, duplicates</h2>
+
+<p>Three buttons of the toolbar tidy a photo folder. They all work the same way: they <strong>look first and show you what they would do</strong>,
+nothing is changed until you press the button that does it, and what they move is moved, not erased.</p>
+
+<h3>Align dates</h3>
+<p>A photo copied from a card, a phone or an old disk has the day of the copy as the date of its file, and the real date only sits
+inside it (EXIF). <strong>Align dates</strong> sets the dates of the files to the date taken, so that Explorer, other programs and the
+order of the list (<strong>SortOrder</strong> goes by the created date) agree with the camera.</p>
+
+<ul>
+  <li>The dialog reads the start of each file and shows <strong>Will change</strong> (with the date taken and the dates now), and the lists of
+  photos that <strong>Already match</strong>, have <strong>No usable EXIF date</strong> or are <strong>Unreadable</strong>. For tens of thousands of photos
+  that takes minutes, and you can stop it.</li>
+  <li>The ticks choose what is set: the <em>created</em> date and the <em>modified</em> date of the file (on), and, if you wish, the other dates
+  inside the photo (off).</li>
+  <li>Select a photo and press <kbd>Space</kbd> to leave it out of the run. Double-click a row to look at the photo.</li>
+  <li><strong>Photos without a usable date.</strong> A camera that lost its clock writes <code>2001-01-01</code>; such dates are not believed. Select those
+  photos and press <strong>Use a date…</strong> to give them one: the date the photo has, the date in the name of its folder
+  (<code>2015-05-01</code>, <code>01.05.2015 Anna</code>), the date of the file, or one you type.</li>
+  <li><strong>Change N photos</strong> does it, and the copies in the Liked and group folders get the same dates. Every run writes a log in the photo
+  folder, and <strong>Undo last run…</strong> puts the dates back.</li>
+</ul>
+
+<h3>Remove empty folders</h3>
+<p>Moving and deleting photos leaves empty folders behind, and Windows leaves thumbnail caches (<code>Thumbs.db</code>) in the ones it showed.
+The button lists the folders that hold nothing of use: nothing at all, or only thumbnail files, or only other folders like that.
+Everything is ticked; press <strong>Remove N folders</strong> to delete them.</p>
+
+<ul>
+  <li>The rule is strict: any other file keeps its folder and every folder above it. The <code>Deleted</code> folder, the Liked folder and
+  its groups, and system and NAS folders are left alone. The photo folder itself is never removed.</li>
+  <li>Unticking a folder unticks the folders above it; ticking one ticks those inside it. Double-click a row to open the folder in Explorer.</li>
+  <li><strong>Photos that cannot be read.</strong> A second list holds damaged photos and empty (0-byte) photo files, found while the folders were
+  looked at. It starts unticked. Tick the ones to go and press <strong>Move N to Deleted\Unreadable</strong>: they are moved, not erased.</li>
+</ul>
+
+<h3>Find duplicates</h3>
+<p>Photos get copied: a card into a folder named for the day, the same card again, a folder of discards. <strong>Find duplicates</strong> finds
+photos that show <em>exactly the same picture</em> in different folders, keeps one of each, and moves the other copies to
+<code>Deleted\Duplicated</code> inside the photo folder, with the path they had.</p>
+
+<ul>
+  <li>The file name does not matter, and neither does a rating or a keyword added to the photo later: the picture decides.
+  <em>Compare all of the picture</em> is slower and leaves no doubt.</li>
+  <li><strong>Which copy stays</strong> is decided by the folder, the way you would have done it by hand: a folder named for a date
+  (<code>2014-11-23</code>) or with a name of its own (<code>Crete trip</code>) beats a camera folder (<code>100NIKON</code>, <code>314CANON</code>);
+  anything inside <code>Deleted</code> or <code>Trash</code> loses; a file whose name says it is a copy (<code>IMG_5407 - Copy.JPG</code>, <code>IMG_5407 (2).JPG</code>) loses.
+  Copies that still tie are left to you and are never moved until you choose.</li>
+  <li>Every row says why. Select a photo and press <strong>Keep this one</strong> to make it the one that stays, or <strong>Leave group alone</strong>.
+  At least one copy of every group always stays. Double-click a row to see the picture.</li>
+  <li><strong>Move N photos</strong> does it; the run is logged and <strong>Undo last run…</strong> puts the copies back. Photos in the Liked and group
+  folders are never looked at: they are copies on purpose.</li>
+</ul>
+
+<div class="note"><p>Do not tidy a folder while it is being indexed for search: stop the indexing first.</p></div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="video">14. Making a video</h2>
+
+<p>The <strong>Generate Video</strong> button turns photos into a video: each photo is shown for a moment, one after the other, optionally behind
+a title picture and with a song under it. Nothing else has to be installed.</p>
+
+<ol class="steps">
+  <li>
+    <strong>Pick the photos.</strong> The video is made of the photos of one folder. The easy way is to <em>like</em> the ones you want with
+    <kbd>Space</kbd> (or sort them into groups, and make one video per group), then open the dialog.
+  </li>
+  <li>
+    <strong>Click Generate Video</strong>, the button with the film icon in the toolbar. The dialog opens at once.
+    <figure><img src="images/12-generate-video-button.png" alt="The Generate Video button in the toolbar" width="422" height="25"></figure>
+  </li>
+  <li>
+    <strong>Choose the photos and the order.</strong> <strong>Photos from</strong> lists <strong>Current</strong> (what the window shows now: the folder, or the search
+    results), <strong>Liked</strong> and each group folder, every one with its number of photos. <strong>Sort order</strong> sets the order in the video: oldest
+    first, newest first, by name, random, or as listed. The <strong>Output folder</strong> follows the choice, so the video lands next to the photos it was made of;
+    <strong>Output file name</strong> is its name.
+    <figure><img src="images/13-generate-video-dialog.png" alt="The Generate Video dialog as it opens" width="536" height="634"></figure>
+  </li>
+  <li>
+    <strong>A title picture (optional).</strong> <strong>Cover</strong>: click <strong>Browse…</strong>, pick a picture and a preview shows it.
+    The cover is the first picture of the video whatever the order is; <strong>Shown for (sec)</strong> is how long it stays (3 seconds to begin with).
+    <strong>Clear</strong> takes it away.
+  </li>
+  <li>
+    <strong>A song (optional).</strong> <strong>Audio</strong>: click <strong>Browse…</strong> and pick an mp3, m4a, wav, flac, ogg or any other sound file.
+    <strong>Play audio</strong> and <strong>Stop</strong> let you listen to it first, and its length is shown (<code>Length: 3:25</code>). A song longer than the
+    video is cut where the video ends; a shorter one is played over and over.
+  </li>
+  <li>
+    <strong>How long each photo is shown.</strong> <strong>Frame time range (sec)</strong>: <strong>Start</strong> is the time of the first photo, <strong>End</strong> the time of the last, and the photos
+    in between go in even steps. <strong>Use random</strong> gives every photo a time of its own between the two. <strong>Video length</strong> tells how long the video will
+    be, and what becomes of the song, and follows every change you make.
+    <figure><img src="images/14-generate-video-settings.png" alt="The dialog with a cover, a song and the times filled in" width="536" height="634"></figure>
+  </li>
+  <li>
+    <strong>Repeat or once (needs a song).</strong> <em>Photos: Repeat</em> shows the photos over and over until a long song ends, instead of cutting the song.
+    <em>Audio: Once</em> plays a short song once and leaves the rest of the video silent.
+  </li>
+  <li>
+    <strong>Size and quality.</strong> <strong>Resolution</strong> is the size of the video (1920 × 1080 is Full HD; <strong>Use first image</strong> takes the size of the first photo).
+    <strong>Video codec</strong>: <code>libx264</code> plays everywhere, <code>libx265</code> makes smaller files that not every player reads. <strong>Quality (CRF)</strong>: lower is better and bigger; 23 is a good start.
+  </li>
+  <li>
+    <strong>Click Generate.</strong> The dialog grows to show a progress bar and the log. Photos that have gone from the disk since the folder was listed are left out, and
+    photos taken with the phone held upright are turned the right way. When the log says <em>Video generation completed</em>, the video is in the output folder
+    and <strong>Play</strong> opens it.
+    <figure><img src="images/15-generate-video-done.png" alt="The finished video" width="842" height="784"></figure>
+  </li>
+</ol>
+
+<div class="tip"><p>The video length is shown before you start, so you can try the times and the order of the photos first, and only press <strong>Generate</strong>
+when it is what you want.</p></div>
+
+<p><strong>If something is not right.</strong> <em>No photos in this folder:</em> like some photos first, or pick <strong>Current</strong>. <em>A message that ffmpeg was not found:</em> reinstall
+PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe</code> on your <code>PATH</code>.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="search">15. Searching the photos</h2>
+
+<p>For a library of thousands of old photos on a disk or a NAS, PhotoLiker can look at every photo once and then answer questions about
+them. Nothing is uploaded: the analysis runs on this computer, and your photos are only read, never changed.</p>
+
+<ol class="steps">
+  <li><strong>Index photos</strong> (in the strip above the photo) analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the time
+  left. You can go on browsing, stop it (the button turns into <strong>Stop indexing</strong>) and continue later: only new or changed photos are done again. The search works as soon
+  as the first photos are in. The first time, the program asks before it downloads the AI models (about 650 MB).</li>
+  <li><strong>Search</strong> by describing what you look for: <code>children on a stage</code>, <code>snow</code>, <code>a dog</code>, <code>autumn leaves</code>. Type it into the search box and press
+  <kbd>Enter</kbd> or click the magnifier. The results replace the folder in the viewer: browse, like and group them like any photos. <kbd>Esc</kbd> or
+  <strong>Close results</strong> goes back. <strong>More like this</strong> finds photos that look like the shown one. Describe in English. A photo that is in the library
+  several times is shown once.</li>
+  <li><strong>Dates.</strong> Put a date into the search box, alone or with other words: <code>September 1</code> (that day in every year), <code>September 2009</code>, <code>2009-09-01</code>,
+  <code>2009</code>, <code>2009-2011</code>, <code>beach September 2009</code>, <code>Mom 2005</code>. Month names are English. The window title says how the date was understood.</li>
+  <li><strong>Faces.</strong> Switch on the face icon (the last button of the strip) to see the faces found in the shown photo. Click a face to say who it is (<strong>New person…</strong> or someone
+  you named before), to find all photos of that person, or to delete a wrong face (a doll, a poster). Typing a person's name into the search box finds their photos. A dashed
+  yellow box with a name and a question mark is a guess (<q>looks like Mom</q>): click it to confirm. For a face the program missed, hold <kbd>Shift</kbd> and drag a box around it.
+  Names you give in one folder are known in the others, too.</li>
+</ol>
+
+<h3>Good to know</h3>
+<ul>
+  <li><strong>Speed.</strong> On a 6-core desktop processor indexing does about three photos per second (20,000 photos: roughly two hours). A network drive can be slower.
+  No graphics card is needed.</li>
+  <li><strong>Dates of the photos.</strong> The date comes from the camera (EXIF). If it is missing or cannot be believed (before 1995, in the future, or a camera that
+  lost its clock), the date the file was created is used, and the status bar says how many results are dated that way.</li>
+  <li><strong>Another computer.</strong> Use <strong>I/E &gt; Export index…</strong> (the first button of the strip) to save the index in a file, and <strong>I/E &gt; Import index…</strong> on the other computer.</li>
+  <li><strong>Visual C++ runtime.</strong> The AI models need the current Microsoft Visual C++ runtime. It comes with Windows updates, or install the
+  <em>Visual C++ Redistributable (x64)</em> if loading the models stops with a message that says so.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="theme">16. Dark and light theme</h2>
+
+<p>The theme button of the toolbar switches between the two. The choice is remembered for each folder.</p>
+
+<figure>
+  <img src="images/11-light-theme.png" alt="The light theme" width="1486" height="893">
+  <figcaption>The light theme.</figcaption>
+</figure>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="files">17. What PhotoLiker keeps, and where</h2>
+
+<ul>
+  <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
+  photo you stopped at), so every folder opens the way you left it, on any computer. The paths in it are relative, so the folder can be moved or shared.
+  <code>photo-liker-people.json</code> holds the names you gave to faces. These are the only files PhotoLiker adds to your folder, besides the logs of Align
+  dates and Find duplicates.</li>
+  <li><strong>The Liked folder</strong> (by default inside the photo folder) and its group folders: your copies.</li>
+  <li><strong>The <code>Deleted</code> folder</strong> inside the photo folder: the photos you removed, and the duplicates and unreadable photos that were moved.</li>
+  <li><strong>On this computer</strong>, in <code>%LocalAppData%\PhotoLiker</code>: the saved lists of folders, the search index, the AI models, the people of all
+  your folders and the last folder you opened. All of it except the models can be rebuilt, so deleting it only costs the time to make it again.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="about">18. About box and this manual</h2>
+
+<p>The <strong>Help</strong> button (the question mark) at the end of the toolbar, or the <kbd>F1</kbd> key, opens the About box: the version and build date of the program, the
+keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and two buttons that open this manual, in English or in Ukrainian.
+You do not need the box for that: <kbd>F3</kbd> opens the English manual and <kbd>F2</kbd> the Ukrainian one, from the main window.</p>
+
+<figure>
+  <img src="images/16-about.png" alt="The About box with the keys and the manual buttons" width="608" height="472">
+  <figcaption>The About box.</figcaption>
+</figure>
+
+<footer>
+  PhotoLiker is free software under the MIT licence.
+  <a href="https://github.com/YBalan/PhotoLiker">github.com/YBalan/PhotoLiker</a>
+</footer>
+
+</main>
+</div>
+
+</body>
+</html>

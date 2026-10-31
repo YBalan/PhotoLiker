@@ -11,6 +11,8 @@ namespace SmokeTour;
 ///   dotnet run --project tools/SmokeTour -- --screenshots docs/images     checks and screenshots for the README
 ///   --demo-folder &lt;path&gt;   where the demo photos go (recreated every run; default: PhotoLikerDemo\Holiday on the drive of the repo)
 ///   --keep                 leave the demo folder behind
+///   --only-dialogs         instead of the tour: like four photos, make a video in the Generate Video dialog and open the About box
+///                          (the pictures of the user manual and of docs/how-to-generate-video.md, in a minute or so)
 ///
 /// The window takes the screen for about a minute (it is photographed as it is on screen, and one step clicks and types
 /// for real): leave the mouse and the keyboard alone.
@@ -22,6 +24,7 @@ internal static class Program
     {
         var screenshots = ValueOf(args, "--screenshots");
         var keep = args.Contains("--keep");
+        var onlyDialogs = args.Contains("--only-dialogs");
         var demoFolder = Path.GetFullPath(ValueOf(args, "--demo-folder") ?? DefaultDemoFolder());
 
         // Keep the real %LocalAppData%\PhotoLiker (last folder, crash log) out of this. Has to happen before anything reads AppPaths.
@@ -59,7 +62,7 @@ internal static class Program
         {
             try
             {
-                await tour.Run();
+                await (onlyDialogs ? tour.RunDialogs() : tour.Run());
             }
             catch (Exception ex)
             {
@@ -73,13 +76,16 @@ internal static class Program
 
         Application.Run(form);
 
-        try
+        if (!onlyDialogs)
         {
-            tour.VerifySavedSettings();
-        }
-        catch (Exception ex)
-        {
-            checks.Fail("reading the saved settings: " + ex.Message);
+            try
+            {
+                tour.VerifySavedSettings();
+            }
+            catch (Exception ex)
+            {
+                checks.Fail("reading the saved settings: " + ex.Message);
+            }
         }
 
         checks.Step("12. Nothing leaked");

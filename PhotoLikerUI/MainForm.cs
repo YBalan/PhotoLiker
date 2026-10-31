@@ -699,14 +699,12 @@
 #endif
         }
 
-        private void HelpToolStripButton_Click(object? sender, EventArgs e)
+        private void HelpToolStripButton_Click(object? sender, EventArgs e) => ShowAbout();
+
+        private void ShowAbout()
         {
-            MessageBox.Show(
-                this,
-                string.Format(MainFormStrings.AboutMessageFormat, AppVersionInfo.Version, AppVersionInfo.BuildDate),
-                MainFormStrings.AboutTitle,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            using var dialog = new AboutDialog(_currentConfig.IsDarkTheme);
+            dialog.ShowDialog(this);
         }
 
         private void UpdateGpsLink(MetadataWrapper metadata)
@@ -737,6 +735,20 @@
             {
                 CloseSearchResults();
                 return true;
+            }
+
+            // The help keys do not type anything, so they work in a text box as well
+            switch (keyData)
+            {
+                case Keys.F1:
+                    ShowAbout();
+                    return true;
+                case Keys.F2:
+                    UserManualLauncher.Open(this, UserManual.Ukrainian);
+                    return true;
+                case Keys.F3:
+                    UserManualLauncher.Open(this, UserManual.English);
+                    return true;
             }
 
             // Typing in the search box (or any text box) is not a command for the viewer: Space, the arrows and the letters are its own

@@ -16,7 +16,10 @@ namespace PhotoLikerUI
         private const string NotThere = "it is not there any more";
 
         /// <summary>Opens the photo in the viewer Windows has for it.</summary>
-        public static string? Photo(string path) =>
+        public static string? Photo(string path) => Document(path);
+
+        /// <summary>Opens the file in the program Windows has for it (a page of the manual in the browser).</summary>
+        public static string? Document(string path) =>
             File.Exists(path) ? Start(new ProcessStartInfo(path) { UseShellExecute = true }) : NotThere;
 
         /// <summary>Opens the folder in File Explorer.</summary>

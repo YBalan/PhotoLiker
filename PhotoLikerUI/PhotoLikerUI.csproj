@@ -30,6 +30,18 @@
     </Content>
   </ItemGroup>
 
+  <!-- The user manual (docs\manual.en.html, docs\manual.ua.html, docs\manual.css) and the pictures of docs\images that it shows go into
+       Manual\ next to the program, where the About box looks for them. Publishing copies them as well, so the zip and the installer
+       (which packs the published folder) have them. In the repository the pages find the same pictures at images\. -->
+  <ItemGroup>
+    <Content Include="..\docs\manual.*" Link="Manual\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\docs\images\*.png" Link="Manual\images\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <ItemGroup>
     <None Update="ffmpeg\ffmpeg.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
