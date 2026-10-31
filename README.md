@@ -14,6 +14,8 @@ find every photo they are in. It all runs on your own computer, no photo is ever
 - [Happy path walkthrough](#happy-path-walkthrough)
   - [Keyboard and mouse](#keyboard-and-mouse)
   - [Toolbar](#toolbar)
+    - [Generate Video](#generate-video)
+  - [About box](#about-box)
 - [Settings](#settings)
   - [Folder picker](#folder-picker)
   - [Changes that reload the folder](#changes-that-reload-the-folder)
@@ -29,6 +31,7 @@ find every photo they are in. It all runs on your own computer, no photo is ever
 - [Dark and light theme](#dark-and-light-theme)
 - [Photo search](#photo-search)
 - [Settings file](#settings-file)
+- [User manual](#user-manual)
 - [Project layout](#project-layout)
 - [Development](#development)
   - [Smoke tour](#smoke-tour)
@@ -69,6 +72,8 @@ PhotoLiker needs Windows 10/11 (x64) and the [.NET 10 Desktop Runtime](https://d
 The **Register Context Menu** button of the toolbar adds *Open in Photo Liker* to the right-click menu of folders (current
 user only, no administrator rights). The same button removes it again.
 
+The installer and the zip also carry the [user manual](#user-manual), in English and Ukrainian: it opens from the **About** box.
+
 ## Happy path walkthrough
 
 1. Launch the app with a photo folder loaded.
@@ -95,6 +100,8 @@ user only, no administrator rights). The same button removes it again.
 | <kbd>1</kbd>-<kbd>9</kbd>, <kbd>A</kbd>-<kbd>Z</kbd> | Save the photo in a group, or take it out again (see [Groups](#groups)). |
 | <kbd>Alt</kbd>+<kbd>1</kbd>-<kbd>9</kbd> (also on the numpad), <kbd>Alt</kbd>+<kbd>A</kbd>-<kbd>Z</kbd> | While search results are shown: save *all* of them in the group, after telling how many photos and MB that is and asking. A group without a folder gets one named after the search (see [Groups](#groups)). |
 | <kbd>0</kbd> | Fit the image to the viewer (after zooming in). |
+| <kbd>F1</kbd> | Open the [About box](#about-box). |
+| <kbd>F2</kbd> / <kbd>F3</kbd> | Open the [user manual](#user-manual) in Ukrainian / in English, in the browser. F1-F3 also work while you type into a text box. |
 | <kbd>F5</kbd> | List the folder again from scratch instead of from the saved list (see [Big folders open at once](#big-folders-open-at-once)). |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
 | <kbd>Ctrl</kbd>+mouse wheel | Over the photo: zoom, then drag to pan. Over the thumbnail strip: change the size of the thumbnails. |
@@ -105,33 +112,92 @@ work on the photo again.
 
 ### Toolbar
 
-Open a photo folder, copy the photo, *About* (version and build date), register the folder context menu, switch the
-theme, open the photo folder or the Liked folder in Explorer, load the Liked folder as a photo folder of its own, and
-**Generate Video**: turn photos into a video with ffmpeg (a copy of `ffmpeg.exe` ships with the app; otherwise
-the one on your `PATH` is used). The dialog opens at once. *Photos from* picks the photos: **Current** (the loaded ones: the
-folder, or the search results), **Liked** (the copies in the Liked folder), or one of the group folders that are in the Liked
-folder (`A - Group`, `3 - Group Family`, ... each is listed under its own name, once the dialog has looked them up). It starts
-on **Liked**, and every entry shows its number of photos, "Liked (123)" (the folders are counted in the background, one after
-the other, so a count shows `...` until it is known). The *Output folder* follows the pick: the folder of the
-photos, or the Liked or group folder; one that you typed or browsed to is left alone.
-*Sort order* decides the order of the photos in the video: oldest first, newest first (by file date, as the *SortOrder*
-setting does; a copy in Liked or a group goes by the date of its photo, not by when it was liked), by name (as Explorer
-lists them, `IMG_2` before `IMG_10`), random (a new order for each video) or as listed. It starts as the *SortOrder* setting. The dialog follows the dark theme
-of the window. You also choose resolution, the time each photo is shown, codec (H.264 / H.265) and quality.
-Photos that have gone from the disk since they were listed are left out.
-The photos come out the way the app shows them, turned upright by their EXIF orientation. ffmpeg is told not to turn
-them itself (ffmpeg 7.1 also turned the photos that come after a turned one, so landscape photos came out as portrait), so
-before it starts, each photo that has to be turned or mirrored is copied upright, no bigger than the video frame, into a
-temporary folder that is removed when the video is done; the log says how many. Photos that GDI+ cannot read are left as they are.
-*Audio (optional)* puts a sound under the video: **Browse...** picks the file (mp3, m4a, wav, flac, ogg... anything ffmpeg can read), **Play audio**
-and **Stop** let you listen to it first (ffmpeg makes a WAV of the first 10 minutes of it in a temporary folder, which is removed when the dialog
-closes), **Clear** takes it away again. An audio that is shorter than the video is played over and over until the video ends; a longer one
-is cut where the video ends. Only the sound of the file is used, not the cover picture of a music file.
-**Align dates** (the calendar with the green equals sign) makes the dates of the photo files the date the photo was taken,
-see [Aligning file dates](#aligning-file-dates). **Remove empty folders** (a folder with a red cross) lists the folders that hold
-no photos and removes them, see [Removing empty folders](#removing-empty-folders). **Find duplicates** (two overlapping photos)
-finds photos that are the same file in different folders and moves the copies in the worse folders away, see
-[Finding duplicates](#finding-duplicates).
+| Button | What it does |
+|---|---|
+| **Open** | Open a photo folder. |
+| **Copy** | Copy the shown photo to the clipboard (the same as <kbd>Ctrl</kbd>+<kbd>C</kbd>). |
+| **Dark** / **Light** | Switch the theme, see [Dark and light theme](#dark-and-light-theme). |
+| **Open Source Folder**, **Open Liked Folder** | Show the photo folder, or the Liked folder, in File Explorer. |
+| **Load Liked Folder** | Load the Liked folder as a photo folder of its own. |
+| **Generate Video** | Turn photos into a video with ffmpeg, see [Generate Video](#generate-video). |
+| **Align dates** (the calendar with the green equals sign) | Make the dates of the photo files the date the photo was taken, see [Aligning file dates](#aligning-file-dates). |
+| **Remove empty folders** (a folder with a red cross) | List the folders that hold no photos and remove them, see [Removing empty folders](#removing-empty-folders). |
+| **Find duplicates** (two overlapping photos) | Find photos that are the same file in different folders and move the copies in the worse folders away, see [Finding duplicates](#finding-duplicates). |
+| **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
+| **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
+
+#### Generate Video
+
+Turns photos into a video with ffmpeg. A copy of `ffmpeg.exe` ships with the app; otherwise the one on your `PATH` is used. The dialog opens
+at once and follows the dark theme of the window. A step by step walkthrough with screenshots is in
+[How to make a video of your photos](docs/how-to-generate-video.md).
+
+- **Photos from** picks the photos:
+  - **Current**: the loaded ones, the folder or the search results;
+  - **Liked**: the copies in the Liked folder;
+  - one of the **group folders** that are in the Liked folder (`A - Group`, `3 - Group Family`, ...), each listed under its own name once
+    the dialog has looked them up.
+
+  It starts on **Liked**, and every entry shows its number of photos, "Liked (123)" (the folders are counted in the background, one after
+  the other, so a count shows `...` until it is known).
+- **Output folder** follows the pick: the folder of the photos, or the Liked or group folder. One that you typed or browsed to is left alone.
+- **Sort order** is the order of the photos in the video. It starts as the *SortOrder* setting.
+  - Oldest first, newest first: by file date, as the *SortOrder* setting does. A copy in Liked or a group goes by the date of its photo, not by
+    when it was liked.
+  - By name: as Explorer lists them, `IMG_2` before `IMG_10`.
+  - Random: a new order for each video.
+  - As listed.
+- **Resolution**, **Video codec** (H.264 / H.265) and **Quality (CRF)**.
+- **Frame time range** gives the time of the first photo (*Start*) and of the last (*End*), the others in steps between them.
+  **Use random** instead gives each photo a time of its own, picked at random between the two (it does not matter which of them is the larger).
+  The times are drawn in the dialog, when you tick the box and whenever you pick another folder in *Photos from* (tick it off and on to
+  draw again), so that *Video length* is the sum of the times that were drawn and the video gets exactly those times. Changing *Start* or *End*
+  moves the same draw along, and making another video from the same dialog gives the same times.
+- **Cover (optional)** opens the video with a picture of your choice.
+  - **Browse...** picks it, and a preview shows it (small, and upright, as it will look).
+  - *Shown for (sec)* is how long it stays on screen. The *Frame time range* is spread over the photos only, the cover is not part of it.
+  - **Clear** takes it away again.
+  - The cover is the first picture of the video whatever the sort order is, and a photo that is the cover as well is shown once, as the cover.
+- **Audio (optional)** puts a sound under the video.
+  - **Browse...** picks the file (mp3, m4a, wav, flac, ogg... anything ffmpeg can read). Only the sound of the file is used, not the cover
+    picture of a music file.
+  - **Play audio** and **Stop** let you listen to it first (ffmpeg makes a WAV of the first 10 minutes of it in a temporary folder, which is
+    removed when the dialog closes). **Clear** takes it away again.
+  - The length of the audio is shown beside it (`Length: 3:25`; ffmpeg reads it, `unknown` if the file has none).
+  - A longer audio is cut where the video ends (unless the photos repeat for it, see below), and a shorter one is played over and over
+    until the video ends (or once, see below).
+- **Repeat or once** has a box for the photos and one for the audio (both are off without an audio file). Each one matters when the other is the longer.
+  - **Photos: Once** plays the photos once, so that a longer audio is cut.
+  - **Photos: Repeat** plays them over and over, in the same order and with the same times, until the audio ends, when the audio is longer than
+    the cover and the photos once through. The audio is then played once and ends the video, and the cover is shown only at the start.
+  - **Audio: Repeat** (the default) plays an audio that is shorter than the photos over and over until they end.
+  - **Audio: Once** plays it once and the rest of the video is silent (the video is as long as the photos either way).
+  - An audio whose length is not known (`Length: unknown`) is not repeated for.
+- **Video length** is how long the video will be with the settings as they are: the photos of the picked folder with the time of each, plus the
+  cover (with the photos set to **Repeat** and a longer audio: the length of the audio). It follows every change at once, and, when an audio is
+  chosen, says what becomes of it (cut, played over and over, played once and then silence, about as long as the video, or how many times the
+  photos play). It is exact for the photos it counts: photos that have gone from the disk since they were listed are not taken off, and the video
+  is a few hundredths of a second longer than the times add up to.
+
+How the photos are prepared:
+
+- Photos that have gone from the disk since they were listed are left out.
+- The photos come out the way the app shows them, turned upright by their EXIF orientation. ffmpeg is told not to turn them itself (ffmpeg 7.1
+  also turned the photos that come after a turned one, so landscape photos came out as portrait), so before it starts, each photo that has to be
+  turned or mirrored is copied upright, no bigger than the video frame, into a temporary folder that is removed when the video is done; the log says
+  how many. Photos that GDI+ cannot read are left as they are.
+- ffmpeg also cannot join pictures of different kinds (a PNG followed by JPEG files gives a video of one frame, without an error), so when the
+  pictures are not all of one kind, say PNG photos among JPEG ones or a PNG cover, those that are not JPEG are copied as JPEG the same way.
+
+### About box
+
+The **Help** button (the question mark, last on the toolbar) or <kbd>F1</kbd> opens the About box: the version and build date, the list of
+keys and mouse moves of the window (the table under [Keyboard and mouse](#keyboard-and-mouse), without the explanations; keep the two
+in step: the list is `AboutStrings.Shortcuts`), and two buttons, **User manual (English)** and **Посібник користувача (українською)**, that open the
+[user manual](#user-manual) in the browser. The box follows the dark theme of the window. If the page is not beside the program (a build
+that did not copy it) a message says where it should be.
+
+![The About box](docs/images/16-about.png)
 
 ## Settings
 
@@ -602,6 +668,24 @@ was opened), `people.json` (the people named in all folders, see above) and `cra
 error). Set the environment variable `PHOTOLIKER_DATA_DIR` to keep them somewhere else; the tests do that, so running them
 leaves your own files alone.
 
+## User manual
+
+The user manual is two HTML pages for people who do not read READMEs: [docs/manual.en.html](docs/manual.en.html) in English and
+[docs/manual.ua.html](docs/manual.ua.html) in Ukrainian, with [docs/manual.css](docs/manual.css) for the look (it follows the light or
+dark setting of Windows) and the screenshots of `docs/images`. They are written from this README without the technical details (no
+file formats, ids, ffmpeg workarounds, project layout or development), with the same sections in both languages.
+
+- **In the package.** `PhotoLikerUI.csproj` copies the pages and the PNG files of `docs\images` to `Manual\` and `Manual\images\` next to the
+  program, so a build, a publish, the zip and the installer (which packs the published folder) all have them, and the pages find their
+  pictures at `images\` both there and in the repository.
+- **From the program.** The [About box](#about-box) opens `Manual\manual.en.html` or `Manual\manual.ua.html` (`UserManual.Find` in Core) in the
+  default browser, and so do <kbd>F3</kbd> (English) and <kbd>F2</kbd> (Ukrainian) in the main window.
+- **File names.** The suffix of a page is the one `UserManual` uses (`en`, `ua`); the page itself says `lang="uk"`, which is the code of the
+  Ukrainian language (`ua` is the country), so that browsers and screen readers know the language.
+- **Keeping it up to date.** The manual is not generated: when a feature changes, change this README, the pages (both languages) and, for the
+  keys, `AboutStrings.Shortcuts`. A new screenshot goes to `docs/images` (the file name decides where the pages show it).
+- **Another language.** Copy `manual.en.html` to `manual.<code>.html`, translate it, add a button to the About box and `UserManual`.
+
 ## Project layout
 
 | Project | What it is |
@@ -614,7 +698,7 @@ leaves your own files alone.
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizer, image and face geometry, index, people file, search. They need no models. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script and `build-installer.ps1`. |
-| `docs` | Screenshots and a small sample folder of photos. |
+| `docs` | Screenshots, the [user manual](#user-manual) pages, [a how-to for Generate Video](docs/how-to-generate-video.md) and a small sample folder of photos. |
 
 ## Development
 
@@ -677,6 +761,16 @@ every step:
 ```powershell
 dotnet run -c Release --project tools\SmokeTour                              # the checks only
 dotnet run -c Release --project tools\SmokeTour -- --screenshots docs\images # and the screenshots of this README
+```
+
+`--only-dialogs` runs another, shorter tour instead (on a fresh demo folder, about a minute): it likes four photos, takes a picture of the
+toolbar button, makes a video in the real Generate Video dialog with a cover (a title card it draws) and a song (a tone that ffmpeg makes)
+and photographs the dialog empty, filled in and done, then opens the About box and checks that it lists the keys and that both pages of the
+[user manual](#user-manual) are beside the program, and that <kbd>F1</kbd> opens the box and <kbd>F2</kbd> / <kbd>F3</kbd> hand the Ukrainian / English page
+to the browser (the tour takes that call instead, so no browser is launched). Its pictures are `12-generate-video-button` to `16-about` of `docs\images`:
+
+```powershell
+dotnet run -c Release --project tools\SmokeTour -- --only-dialogs --screenshots docs\images
 ```
 
 The exit code is 0 when every check passed. The window is photographed as it is on screen, and the last step clicks and

@@ -11,7 +11,7 @@ namespace SmokeTour;
 /// One run through the app, in dark mode, the way a person would use it. Every step checks what happened and, when a
 /// screenshot folder is given, takes the picture the README shows for it.
 /// </summary>
-internal sealed class Tour(DrivenForm form, string folder, string? screenshotFolder, Checks checks)
+internal sealed partial class Tour(DrivenForm form, string folder, string? screenshotFolder, Checks checks)
 {
     private const int SidePanelWidth = 430;      // wider than the default so the setting names are readable
     private const int SettingsGridHeight = 450;   // tall enough for all thirteen rows

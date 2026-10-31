@@ -36,7 +36,6 @@ namespace PhotoLikerUI
 
         // About (Help button)
         public const string AboutTitle                   = "About PhotoLiker";
-        public const string AboutMessageFormat           = "PhotoLiker\n\nVersion: {0}\nBuild date: {1:yyyy-MM-dd HH:mm:ss}";
 
         // Image loading / cache
         public const string ImageLoading                 = "Loading...";

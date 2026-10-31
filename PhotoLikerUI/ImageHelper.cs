@@ -78,6 +78,39 @@ namespace PhotoLikerUI
             return CreateThumbnail(source, thumbSize);
         }
 
+        /// <summary>
+        /// Decodes a picture, upright, just to show it no bigger than <paramref name="maxSize"/> (it is not enlarged), and says how big it
+        /// is in full. Safe to call from any thread.
+        /// </summary>
+        internal static (Bitmap Preview, Size FullSize) LoadPreview(string path, Size maxSize)
+        {
+            using var stream = new MemoryStream(FileReading.ReadAllBytesShared(path), writable: false);
+            using var source = Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: true);
+
+            var rotateFlip = GetRotateFlip(source);
+            if (rotateFlip != RotateFlipType.RotateNoneFlipNone)
+                source.RotateFlip(rotateFlip);
+
+            var scale = Math.Min(1d, Math.Min((double)maxSize.Width / source.Width, (double)maxSize.Height / source.Height));
+            var width = Math.Max(1, (int)Math.Round(source.Width * scale));
+            var height = Math.Max(1, (int)Math.Round(source.Height * scale));
+
+            var preview = new Bitmap(width, height);
+            try
+            {
+                using var g = Graphics.FromImage(preview);
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.DrawImage(source, 0, 0, width, height);
+                return (preview, new Size(source.Width, source.Height));
+            }
+            catch
+            {
+                preview.Dispose();
+                throw;
+            }
+        }
+
         internal static Bitmap CreateThumbnail(Image source, int size)
         {
             var bmp = new Bitmap(size, size);
