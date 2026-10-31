@@ -118,15 +118,38 @@ photos, or the Liked or group folder; one that you typed or browsed to is left a
 setting does; a copy in Liked or a group goes by the date of its photo, not by when it was liked), by name (as Explorer
 lists them, `IMG_2` before `IMG_10`), random (a new order for each video) or as listed. It starts as the *SortOrder* setting. The dialog follows the dark theme
 of the window. You also choose resolution, the time each photo is shown, codec (H.264 / H.265) and quality.
+The *Frame time range* gives the time of the first photo (*Start*) and of the last (*End*), the others in steps between them;
+**Use random** instead gives each photo a time of its own, picked at random between the two (it does not matter which of them is the
+larger). The times are drawn in the dialog, when you tick the box and whenever you pick another folder in *Photos from* (tick it off and on to
+draw again), so that *Video length* is the sum of the times that were drawn and the video gets exactly those times; changing *Start* or *End*
+moves the same draw along, and making another video from the same dialog gives the same times.
 Photos that have gone from the disk since they were listed are left out.
 The photos come out the way the app shows them, turned upright by their EXIF orientation. ffmpeg is told not to turn
 them itself (ffmpeg 7.1 also turned the photos that come after a turned one, so landscape photos came out as portrait), so
 before it starts, each photo that has to be turned or mirrored is copied upright, no bigger than the video frame, into a
 temporary folder that is removed when the video is done; the log says how many. Photos that GDI+ cannot read are left as they are.
+ffmpeg also cannot join pictures of different kinds (a PNG followed by JPEG files gives a video of one frame, without an error), so
+when the pictures are not all of one kind, say PNG photos among JPEG ones or a PNG cover, those that are not JPEG are copied as JPEG the same way.
+*Cover (optional)* opens the video with a picture of your choice: **Browse...** picks it, a preview shows it (small, and upright, as it will
+look), *Shown for (sec)* is how long it stays on screen (the *Frame time range* is spread over the photos only, the cover is not part of it) and
+**Clear** takes it away again. The cover is the first picture of the video whatever the sort order is, and a photo that is the cover as well is
+shown once, as the cover.
 *Audio (optional)* puts a sound under the video: **Browse...** picks the file (mp3, m4a, wav, flac, ogg... anything ffmpeg can read), **Play audio**
 and **Stop** let you listen to it first (ffmpeg makes a WAV of the first 10 minutes of it in a temporary folder, which is removed when the dialog
-closes), **Clear** takes it away again. An audio that is shorter than the video is played over and over until the video ends; a longer one
-is cut where the video ends. Only the sound of the file is used, not the cover picture of a music file.
+closes), **Clear** takes it away again. A longer audio is cut where the video ends (unless the photos repeat for it, see below), and
+a shorter one is played over and over until the video ends (or once, see below). Only the sound of the file is used, not the cover picture of
+a music file. The length of the audio is shown beside it (`Length: 3:25`; ffmpeg reads it, `unknown` if the file has none).
+*Repeat or once* has a box for the photos and one for the audio (both are off without an audio file); each one matters when the other is the
+longer. **Photos: Once** plays the photos once, so that a longer audio is cut. **Photos: Repeat** plays them over and over, in the same
+order and with the same times, until the audio ends, when the audio is longer than the cover and the photos once through; the audio is then
+played once and ends the video, and the cover is shown only at the start. **Audio: Repeat** (the default) plays an audio that is shorter than
+the photos over and over until they end. **Audio: Once** plays it once and the rest of the video is silent (the video is as long as the photos
+either way). An audio whose length is not known (`Length: unknown`) is not repeated for.
+*Video length* is how long the video will be with the settings as they are: the photos of the picked folder with the time of each, plus the
+cover (with the photos set to **Repeat** and a longer audio: the length of the audio). It follows every change at once, and, when an audio is
+chosen, says what becomes of it (cut, played over and over, played once and then silence, about as long as the video, or how many times the
+photos play). It is exact for the photos it counts; photos that
+have gone from the disk since they were listed are not taken off, and the video is a few hundredths of a second longer than the times add up to.
 **Align dates** (the calendar with the green equals sign) makes the dates of the photo files the date the photo was taken,
 see [Aligning file dates](#aligning-file-dates). **Remove empty folders** (a folder with a red cross) lists the folders that hold
 no photos and removes them, see [Removing empty folders](#removing-empty-folders). **Find duplicates** (two overlapping photos)

@@ -9,6 +9,10 @@ namespace PhotoLikerUI
     /// so landscape photos came out as portrait (see <see cref="VideoGenerationService.BuildFfmpegArguments"/>). Each photo that has to
     /// be turned or mirrored is copied upright, and no bigger than the video frame (ffmpeg would make it that size anyway, and the
     /// copies stay small), into a temporary folder that goes away with this object. The other photos are used where they are.
+    /// <para>
+    /// The same goes for files that are not all of one kind (say a PNG cover and JPEG photos): ffmpeg takes the decoder of the first for
+    /// all and ends in a video of one frame. Then every file that is not a JPEG is copied as a JPEG, so that they are alike.
+    /// </para>
     /// </summary>
     internal sealed class UprightPhotos : IDisposable
     {
@@ -16,11 +20,12 @@ namespace PhotoLikerUI
 
         private readonly string? _folder;
 
-        private UprightPhotos(IReadOnlyList<string> files, string? folder, int turned, int failed)
+        private UprightPhotos(IReadOnlyList<string> files, string? folder, int turned, int converted, int failed)
         {
             Files = files;
             _folder = folder;
             Turned = turned;
+            Converted = converted;
             Failed = failed;
         }
 
@@ -30,19 +35,25 @@ namespace PhotoLikerUI
         /// <summary>How many photos have an upright copy.</summary>
         public int Turned { get; }
 
-        /// <summary>How many photos had to be turned but could not be copied; they are used as stored.</summary>
+        /// <summary>How many photos have a JPEG copy only because the photos are not all JPEG files (and do not have to be turned).</summary>
+        public int Converted { get; }
+
+        /// <summary>How many photos had to be copied but could not be; they are used as stored.</summary>
         public int Failed { get; }
 
-        /// <param name="reportProgress">Percent of the photos that are looked at, from any thread.</param>
+        /// <param name="reportProgress">
+        /// Percent of the photos that are looked at, from any thread; again from 0 for the copies, if any have to be made.
+        /// </param>
         public static Task<UprightPhotos> CreateAsync(IReadOnlyList<string> files, int frameWidth, int frameHeight, Action<int> reportProgress) =>
             Task.Run(() => Create(files, frameWidth, frameHeight, reportProgress));
 
         internal static UprightPhotos Create(IReadOnlyList<string> files, int frameWidth, int frameHeight, Action<int> reportProgress)
         {
             var result = new string[files.Count];
+            var looks = new Look[files.Count];
             string? folder = null;
             var gate = new object();
-            int turned = 0, failed = 0, done = 0;
+            int turned = 0, converted = 0, failed = 0, done = 0;
 
             try
             {
@@ -51,21 +62,37 @@ namespace PhotoLikerUI
                 Parallel.For(0, files.Count, options, i =>
                 {
                     result[i] = files[i];
+                    looks[i] = LookAt(files[i]);
+
+                    var count = Interlocked.Increment(ref done);
+                    if (count == files.Count || count % 25 == 0)
+                        reportProgress(count * 100 / files.Count);
+                });
+
+                // Photos GDI+ does not know (WebP, HEIC) say nothing about the kind: they are left to ffmpeg either way
+                var mixed = looks.Where(look => look.Format is not null).Select(look => look.Format).Distinct().Skip(1).Any();
+                var copies = Enumerable.Range(0, files.Count)
+                    .Where(i => looks[i].Turned || (mixed && looks[i].Format is { } format && format != ImageFormat.Jpeg.Guid))
+                    .ToList();
+
+                done = 0;
+                Parallel.ForEach(copies, options, i =>
+                {
                     try
                     {
-                        if (IsTurned(files[i]))
+                        string target;
+                        lock (gate)
                         {
-                            string target;
-                            lock (gate)
-                            {
-                                folder ??= Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "photoliker_upright_" + Guid.NewGuid().ToString("N"))).FullName;
-                                target = Path.Combine(folder, $"{i:D6}.jpg");
-                            }
-
-                            SaveUpright(files[i], target, frameWidth, frameHeight);
-                            result[i] = target;
-                            Interlocked.Increment(ref turned);
+                            folder ??= Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "photoliker_upright_" + Guid.NewGuid().ToString("N"))).FullName;
+                            target = Path.Combine(folder, $"{i:D6}.jpg");
                         }
+
+                        SaveUpright(files[i], target, frameWidth, frameHeight);
+                        result[i] = target;
+                        if (looks[i].Turned)
+                            Interlocked.Increment(ref turned);
+                        else
+                            Interlocked.Increment(ref converted);
                     }
                     catch (Exception)
                     {
@@ -73,8 +100,8 @@ namespace PhotoLikerUI
                     }
 
                     var count = Interlocked.Increment(ref done);
-                    if (count == files.Count || count % 25 == 0)
-                        reportProgress(count * 100 / files.Count);
+                    if (count == copies.Count || count % 25 == 0)
+                        reportProgress(count * 100 / copies.Count);
                 });
             }
             catch
@@ -83,22 +110,25 @@ namespace PhotoLikerUI
                 throw;
             }
 
-            return new UprightPhotos(result, folder, turned, failed);
+            return new UprightPhotos(result, folder, turned, converted, failed);
         }
 
-        /// <summary>Whether the photo's EXIF orientation turns or mirrors it. Only the start of the file is read.</summary>
-        private static bool IsTurned(string path)
+        /// <summary>How a photo is stored: the kind of file GDI+ takes it for (null: it does not know it), and whether it has to be turned.</summary>
+        private readonly record struct Look(Guid? Format, bool Turned);
+
+        /// <summary>Only the start of the file is read.</summary>
+        private static Look LookAt(string path)
         {
             try
             {
                 using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize: 1 << 16);
                 using var image = Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: false);
-                return ImageHelper.GetRotateFlip(image) != RotateFlipType.RotateNoneFlipNone;
+                return new Look(image.RawFormat.Guid, ImageHelper.GetRotateFlip(image) != RotateFlipType.RotateNoneFlipNone);
             }
             catch (Exception ex) when (ex is ArgumentException or IOException or OutOfMemoryException or UnauthorizedAccessException)
             {
                 // Not a photo GDI+ knows: ffmpeg is left to say what it makes of it
-                return false;
+                return new Look(null, false);
             }
         }
 

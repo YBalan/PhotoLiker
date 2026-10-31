@@ -491,13 +491,11 @@
                     _currentConfig.Extensions,
                     _currentConfig.SortOrder,
                     _currentConfig.IsDarkTheme,
-                    (options, sourceFiles, appendOutput, reportProgress) => VideoGenerationService.GenerateAsync(
-                        sourceFiles,
+                    (options, sequence, appendOutput, reportProgress) => VideoGenerationService.GenerateAsync(
+                        sequence,
                         options.OutputPath,
                         options.WidthPixels,
                         options.HeightPixels,
-                        options.StartFrameTimeSeconds,
-                        options.EndFrameTimeSeconds,
                         options.VideoCodec,
                         options.Crf,
                         options.AudioPath,

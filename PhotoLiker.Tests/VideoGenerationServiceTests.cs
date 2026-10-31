@@ -160,30 +160,41 @@ public class VideoGenerationServiceTests
         Assert.Equal(44100 * 2 * 2, AudioDecoder.WavBytesPerSecond);
     }
 
-    // ── BuildFrameDurations ─────────────────────────────────────────────────
-
     [Fact]
-    public void BuildFrameDurations_NoFiles_NoDurations()
+    public void AudioDecoder_ReadsTheLengthByOnlyOpeningTheFile()
     {
-        Assert.Empty(VideoGenerationService.BuildFrameDurations(0, 1, 3));
+        var arguments = AudioDecoder.BuildDurationArguments(@"C:\music\song.mp3");
+
+        Assert.Equal("-hide_banner -i \"C:\\music\\song.mp3\"", arguments);
+    }
+
+    [Theory]
+    [InlineData("  Duration: 00:03:25.12, start: 0.025057, bitrate: 128 kb/s", 205.12)]
+    [InlineData("  Duration: 01:02:15.00, start: 0.000000, bitrate: 320 kb/s", 3735)]
+    [InlineData("  Duration: 00:00:00.50, start: 0.000000, bitrate: 705 kb/s", 0.5)]
+    [InlineData("  Duration: 12:00:00.00, start: 0.000000", 43200)]
+    public void AudioDecoder_ParseDuration_ReadsTheLengthFfmpegTells(string line, double seconds)
+    {
+        var text = $"Input #0, mp3, from 'song.mp3':\n  Metadata:\n    title           : A song\n{line}\n  Stream #0:0: Audio: mp3, 44100 Hz, stereo, fltp, 128 kb/s\nAt least one output file must be specified\n";
+
+        Assert.Equal(seconds, AudioDecoder.ParseDuration(text)!.Value.TotalSeconds, precision: 3);
     }
 
     [Fact]
-    public void BuildFrameDurations_OneFile_ShowsForTheStartTime()
+    public void AudioDecoder_ParseDuration_TakesTheFirstLength_NotATagThatHasOne()
     {
-        Assert.Equal([2.0], VideoGenerationService.BuildFrameDurations(1, 2, 5));
+        var text = "Input #0, matroska,webm, from 'a.mka':\n  Duration: 00:02:00.00, start: 0.000000, bitrate: 96 kb/s\n  Stream #0:0: Audio: opus\n    Metadata:\n      DURATION        : 00:09:09.000000000\n";
+
+        Assert.Equal(120, AudioDecoder.ParseDuration(text)!.Value.TotalSeconds);
     }
 
-    [Fact]
-    public void BuildFrameDurations_SeveralFiles_GoLinearlyFromStartToEnd()
+    [Theory]
+    [InlineData("  Duration: N/A, bitrate: N/A")]
+    [InlineData("song.txt: Invalid data found when processing input")]
+    [InlineData("")]
+    public void AudioDecoder_ParseDuration_NoLength_IsNull(string text)
     {
-        Assert.Equal([1.0, 2.0, 3.0], VideoGenerationService.BuildFrameDurations(3, 1, 3));
-    }
-
-    [Fact]
-    public void BuildFrameDurations_CanGetShorter()
-    {
-        Assert.Equal([3.0, 2.0, 1.0], VideoGenerationService.BuildFrameDurations(3, 3, 1));
+        Assert.Null(AudioDecoder.ParseDuration(text));
     }
 
     // ── BuildFfmpegConcatFile ───────────────────────────────────────────────
