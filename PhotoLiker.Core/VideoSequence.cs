@@ -12,5 +12,10 @@ namespace PhotoLiker.Core
     {
         /// <summary>The photos are repeated until they are longer than the audio, which is played once and ends the video.</summary>
         public bool AudioEndsVideo => Audio == AudioPlayback.OnceEndsVideo;
+
+        /// <summary>
+        /// Where the audio ends the video (the photos are listed past it, and are cut there), or null when the photos end it.
+        /// </summary>
+        public double? AudioEndSeconds => AudioEndsVideo ? ExpectedSeconds : null;
     }
 }

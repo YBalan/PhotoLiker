@@ -452,6 +452,26 @@ public class VideoSequenceTests
         Assert.Equal(AudioPlayback.OnceEndsVideo, sequence.Audio);
         Assert.True(sequence.AudioEndsVideo);
         Assert.Equal(20, sequence.ExpectedSeconds);
+        // The photos are listed past the audio: the video is cut where it ends
+        Assert.Equal(20, sequence.AudioEndSeconds);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void BuildSequence_PhotosSetToOnce_EndTheVideo_NothingIsCutAtTheAudio(bool repeatAudio)
+    {
+        // The audio, 20 s, is longer than the photos (6 s), and is the one that is cut, where they end
+        var sequence = VideoGenerationService.BuildSequence(Photos(3), null, 0, 2, 2, null, repeatToAudio: false, repeatAudio, audioSeconds: 20);
+
+        Assert.Null(sequence.AudioEndSeconds);
+    }
+
+    [Fact]
+    public void BuildSequence_AnAudioShorterThanThePhotos_IsNotAnEndTimeEither()
+    {
+        Assert.Null(VideoGenerationService.BuildSequence(Photos(3), null, 0, 2, 2, null, true, true, audioSeconds: 3).AudioEndSeconds);
+        Assert.Null(VideoGenerationService.BuildSequence(Photos(3), null, 0, 2, 2, null, true, false, audioSeconds: 3).AudioEndSeconds);
     }
 
     [Theory]
@@ -479,8 +499,8 @@ public class VideoSequenceTests
 
     // ── the ffmpeg arguments ────────────────────────────────────────────────
 
-    private static string Arguments(string? audio, AudioPlayback playback) =>
-        VideoGenerationService.BuildFfmpegArguments(@"C:\t\list.txt", @"C:\v\out.mp4", 640, 360, "libx264", 23, audio, playback);
+    private static string Arguments(string? audio, AudioPlayback playback, double? endSeconds = null) =>
+        VideoGenerationService.BuildFfmpegArguments(@"C:\t\list.txt", @"C:\v\out.mp4", 640, 360, "libx264", 23, audio, playback, endSeconds);
 
     [Fact]
     public void BuildFfmpegArguments_Loop_PlaysTheAudioOverAndOver_AndTheShorterOfTheTwoEndsTheVideo()
@@ -513,7 +533,42 @@ public class VideoSequenceTests
         Assert.DoesNotContain("-stream_loop", arguments);
         Assert.DoesNotContain("apad", arguments);
         Assert.Contains("-shortest", arguments);
+        Assert.DoesNotContain(" -t ", arguments); // without an end time given there is nothing to cut at
         Assert.EndsWith("\"C:\\v\\out.mp4\"", arguments);
+    }
+
+    [Fact]
+    public void BuildFfmpegArguments_AnEndTime_CutsTheVideoThere_ForShortestAloneLetsPhotosRunOnForMinutes()
+    {
+        var arguments = Arguments(@"C:\a\song.mp3", AudioPlayback.OnceEndsVideo, 325.2);
+
+        Assert.Contains(" -shortest -t 325.2 ", arguments);
+        // An output option: after the inputs, before the file it is for
+        Assert.True(arguments.IndexOf(" -t 325.2", StringComparison.Ordinal) > arguments.IndexOf("-i \"C:\\a\\song.mp3\"", StringComparison.Ordinal));
+        Assert.EndsWith("\"C:\\v\\out.mp4\"", arguments);
+    }
+
+    [Fact]
+    public void BuildFfmpegArguments_AnEndTime_IsWrittenWithADotAndAtMostMilliseconds_WhateverTheCulture()
+    {
+        var before = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("uk-UA");
+
+            Assert.Contains(" -t 1234.568 ", Arguments(@"C:\a\song.mp3", AudioPlayback.OnceEndsVideo, 1234.5678));
+            Assert.Contains(" -t 20 ", Arguments(@"C:\a\song.mp3", AudioPlayback.OnceEndsVideo, 20));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = before;
+        }
+    }
+
+    [Fact]
+    public void BuildFfmpegArguments_AnEndTime_WithoutAudio_IsNotUsed()
+    {
+        Assert.DoesNotContain(" -t ", Arguments(null, AudioPlayback.OnceEndsVideo, 30));
     }
 
     [Theory]

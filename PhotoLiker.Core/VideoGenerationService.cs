@@ -62,7 +62,7 @@ namespace PhotoLiker.Core
                 var concatContent = BuildFfmpegConcatFile(sequence.Files, sequence.Durations);
                 File.WriteAllText(listFilePath, concatContent);
 
-                var arguments = BuildFfmpegArguments(listFilePath, outputPath, width, height, codec, crf, audioPath, sequence.Audio);
+                var arguments = BuildFfmpegArguments(listFilePath, outputPath, width, height, codec, crf, audioPath, sequence.Audio, sequence.AudioEndSeconds);
                 var ffmpegExecutablePath = ResolveFfmpegExecutablePath();
 
                 using var process = new System.Diagnostics.Process
@@ -136,14 +136,28 @@ namespace PhotoLiker.Core
         /// so that a shorter one does not end the video, and <c>-shortest</c> ends the video with the photos. <see cref="AudioPlayback.OnceEndsVideo"/>:
         /// it is played once and the photos are longer than it, so that <c>-shortest</c> ends the video with it.
         /// </param>
+        /// <param name="endSeconds">
+        /// Where the video is cut (<c>-t</c>), for photos that are listed past the end of the audio. <c>-shortest</c> alone does not end
+        /// them there: it matches the two streams within 10 seconds of buffering, and photos are far apart (a frame every few seconds),
+        /// so the photos run on for a minute or more after the audio has stopped, and by a different time at each run. Null: not cut.
+        /// </param>
         internal static string BuildFfmpegArguments(
-            string listFilePath, string outputPath, int width, int height, string codec, int crf, string? audioPath = null, AudioPlayback audio = AudioPlayback.Loop)
+            string listFilePath,
+            string outputPath,
+            int width,
+            int height,
+            string codec,
+            int crf,
+            string? audioPath = null,
+            AudioPlayback audio = AudioPlayback.Loop,
+            double? endSeconds = null)
         {
             var scaleFilter = $"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2";
             var hasAudio = !string.IsNullOrWhiteSpace(audioPath);
             var audioInput = hasAudio ? $"{(audio == AudioPlayback.Loop ? " -stream_loop -1" : string.Empty)} -i \"{audioPath}\"" : string.Empty;
+            var cutAt = hasAudio && endSeconds is { } end ? $" -t {end.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}" : string.Empty;
             var audioOutput = hasAudio
-                ? $" -map 0:v:0 -map 1:a:0{(audio == AudioPlayback.OnceThenSilence ? " -af apad" : string.Empty)} -c:a aac -b:a 192k -shortest"
+                ? $" -map 0:v:0 -map 1:a:0{(audio == AudioPlayback.OnceThenSilence ? " -af apad" : string.Empty)} -c:a aac -b:a 192k -shortest{cutAt}"
                 : string.Empty;
 
             return $"-y -f concat -safe 0 -noautorotate -i \"{listFilePath}\"{audioInput} -vf \"{scaleFilter}\"{audioOutput} -c:v {codec} -crf {crf} -pix_fmt yuv420p -progress pipe:1 -nostats \"{outputPath}\"";
