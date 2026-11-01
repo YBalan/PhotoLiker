@@ -16,8 +16,7 @@ public class PhotoIndexTests : IDisposable
     {
         var photo = new IndexedPhoto(path, length: 1000, modifiedTicks: 5000)
         {
-            Clip = clip,
-            ClipVersion = 1,
+            Clips = Vectors.Clips(clip),
             FaceVersion = 1,
         };
         photo.Faces = [.. faces.Select(f => new IndexedFace(photo, f.X, f.Y, f.W, f.H, 0.9f, manual: false, f.Embedding))];
@@ -38,7 +37,7 @@ public class PhotoIndexTests : IDisposable
         Assert.NotNull(photo);
         Assert.Equal(1000, photo.Length);
         Assert.Equal(5000, photo.ModifiedTicks);
-        Assert.Equal(clip, photo.Clip);
+        Assert.Equal(clip, photo.VectorOf(ClipModels.Default.Id));
         var saved = Assert.Single(photo.Faces);
         Assert.Equal(0.3f, saved.Width);
         Assert.Equal(face, saved.Embedding);
@@ -54,7 +53,7 @@ public class PhotoIndexTests : IDisposable
         index.Save([Photo("one.jpg", Vectors.Unit(5), (0, 0, 0.2f, 0.2f, Vectors.Unit(3)))]);
 
         var photo = index.Find("one.jpg")!;
-        Assert.Equal(Vectors.Unit(5), photo.Clip);
+        Assert.Equal(Vectors.Unit(5), photo.VectorOf(ClipModels.Default.Id));
         Assert.Single(photo.Faces);
         Assert.Equal(1, index.FaceCount);
         Assert.Equal(1, index.PhotoCount);
@@ -239,7 +238,7 @@ public class PhotoIndexTests : IDisposable
     public void APhotoThatFailed_IsRememberedAsFailed_WithoutAVector()
     {
         using var index = PhotoIndex.Open(_photos.Path, IndexFile);
-        index.Save([new IndexedPhoto("broken.jpg", 1, 1) { Failure = "not a picture", ClipVersion = 1, FaceVersion = 1 }]);
+        index.Save([new IndexedPhoto("broken.jpg", 1, 1) { Failure = "not a picture", FaceVersion = 1 }]);
 
         Assert.Equal(1, index.FailedCount);
         Assert.Equal(0, index.PhotoCount);
@@ -404,7 +403,7 @@ public class FolderIndexTests : IDisposable
     private IndexedPhoto Add(string path, float[]? clip, params float[][] faceVectors)
     {
         // A size of its own: photos of one size, time and picture are copies of one photo, which a search shows once
-        var photo = new IndexedPhoto(path, length: 10 + _added++, modifiedTicks: 20) { Clip = clip, ClipVersion = 1, FaceVersion = 1 };
+        var photo = new IndexedPhoto(path, length: 10 + _added++, modifiedTicks: 20) { Clips = Vectors.Clips(clip), FaceVersion = 1 };
         photo.Faces = [.. faceVectors.Select((v, i) => new IndexedFace(photo, 0.1f + 0.3f * i, 0.2f, 0.2f, 0.2f, 0.9f, manual: false, v))];
         _search.Index.Save([photo]);
         return photo;

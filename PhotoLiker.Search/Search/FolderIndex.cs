@@ -10,7 +10,8 @@ namespace PhotoLiker.Search
     /// matched well and these are only the closest photos.
     /// </summary>
     /// <param name="Dates">The date the search was limited to, if the text had one.</param>
-    public sealed record SearchResult(string Description, IReadOnlyList<SearchHit> Hits, int SearchedPhotos, bool Weak = false, DateFilter? Dates = null)
+    /// <param name="OtherModelPhotos">Photos a text or "More like this" search could not look at because they have not been through the folder's model yet (indexing makes its vector; they may have the vectors of other models).</param>
+    public sealed record SearchResult(string Description, IReadOnlyList<SearchHit> Hits, int SearchedPhotos, bool Weak = false, DateFilter? Dates = null, int OtherModelPhotos = 0)
     {
         /// <summary>Hits whose date is the date of the file because the camera's date was missing or wrong.</summary>
         public int FileDated => Hits.Count(h => h.DateSource == DateSource.File);
@@ -72,8 +73,9 @@ namespace PhotoLiker.Search
         public const float MinSameScore = 0.9999f;
 
         /// <summary>
-        /// A text search shows photos that score at least this much (the cosine of CLIP's text and photo vectors: real
-        /// matches are around 0.25 to 0.35, photos that merely resemble the words 0.2 to 0.23), and not further below the best than the band.
+        /// A text search shows photos that score at least this much (the cosine of CLIP B/32's text and photo vectors: real
+        /// matches are around 0.25 to 0.35, photos that merely resemble the words 0.2 to 0.23; the other models' cosines are put on
+        /// the same scale, see <see cref="ClipModelInfo.TextScore"/>), and not further below the best than the band.
         /// These are the cutoffs with the precision slider in the middle, see <see cref="SearchTuning"/>.
         /// </summary>
         public const float MinTextScore = 0.23f;
@@ -95,6 +97,13 @@ namespace PhotoLiker.Search
         public PeopleLibrary People { get; }
         public string Folder => Index.Root;
 
+        /// <summary>
+        /// The model that matches words with photos in this folder (<see cref="Settings.SearchModel"/>): the one indexing makes vectors with and
+        /// text and "More like this" searches use. They only see the photos that have a vector of this model, so after the model is changed they
+        /// find nothing new until indexing has made the vectors again. Searches by date and by person do not depend on it.
+        /// </summary>
+        public ClipModelInfo ClipModel { get; set; } = ClipModels.Default;
+
         public static FolderIndex Open(string folder) => Open(folder, SearchPaths.SharedPeopleFile);
 
         /// <param name="sharedPeopleFile">Where the people of all folders are collected; null keeps the people of this folder to itself.</param>
@@ -104,7 +113,7 @@ namespace PhotoLiker.Search
         public Task<IndexSummary> IndexAsync(
             ModelHub models, string? excludedFolder, IReadOnlyCollection<string> extensions,
             IProgress<IndexProgress>? progress, CancellationToken cancellationToken) =>
-            IndexingJob.RunAsync(Index, models, excludedFolder, extensions, progress, cancellationToken);
+            IndexingJob.RunAsync(Index, models, ClipModel, excludedFolder, extensions, progress, cancellationToken);
 
         // ── searching ──────────────────────────────────────────────────────
 
@@ -150,33 +159,39 @@ namespace PhotoLiker.Search
         public SearchResult SearchText(ModelHub models, string text, SearchTuning? tuning = null) =>
             SearchText(models, text, dates: null, tuning ?? SearchTuning.Default);
 
-        private SearchResult SearchText(ModelHub models, string text, DateFilter? dates, SearchTuning tuning) =>
-            RankText(Describe($"\"{text}\"", dates), models.TextEncoder.Encode(text), dates, tuning);
+        private SearchResult SearchText(ModelHub models, string text, DateFilter? dates, SearchTuning tuning)
+        {
+            var model = ClipModel; // the vector of the words and the vectors of the photos must be of the same model
+            return RankText(Describe($"\"{text}\"", dates), models.TextEncoder(model).Encode(text), dates, tuning, model);
+        }
 
         /// <summary>The photos whose picture fits the vector of a text, see <see cref="SearchTuning.TextCutoff"/> for how many.</summary>
-        internal SearchResult RankText(string description, float[] query, DateFilter? dates, SearchTuning tuning)
+        /// <param name="model">The model that made the vector of the text; null is the folder's.</param>
+        internal SearchResult RankText(string description, float[] query, DateFilter? dates, SearchTuning tuning, ClipModelInfo? model = null)
         {
-            var indexed = Index.Snapshot().Where(p => p.Clip is not null).ToList();
-            var photos = OnePerPhoto(indexed.Where(p => dates is null || dates.Matches(p.Date.Taken)));
+            model ??= ClipModel;
+            var indexed = WithVectorOf(model);
+            var photos = OnePerPhoto(indexed.Where(p => dates is null || dates.Matches(p.Date.Taken)), model);
 
-            var scored = photos.Select(p => (Photo: p, Score: VectorMath.Dot(query, p.Clip!))).OrderByDescending(s => s.Score).ToList();
+            var otherModel = Index.PhotoCount - indexed.Count;
+            var scored = photos.Select(p => (Photo: p, Score: model.TextScore(VectorMath.Dot(query, p.VectorOf(model.Id)!)))).OrderByDescending(s => s.Score).ToList();
             if (scored.Count == 0)
-                return new SearchResult(description, [], indexed.Count, Dates: dates);
+                return new SearchResult(description, [], indexed.Count, Dates: dates, OtherModelPhotos: otherModel);
 
             var cutoff = tuning.TextCutoff(scored[0].Score);
             var hits = scored.TakeWhile(s => s.Score >= cutoff).Select(s => ToHit(s.Photo, s.Score)).ToList();
             if (hits.Count > 0)
-                return new SearchResult(description, hits, indexed.Count, Dates: dates);
+                return new SearchResult(description, hits, indexed.Count, Dates: dates, OtherModelPhotos: otherModel);
 
             var closest = scored.Take(WeakResultCount).Select(s => ToHit(s.Photo, s.Score)).ToList();
-            return new SearchResult(description, closest, indexed.Count, Weak: true, Dates: dates);
+            return new SearchResult(description, closest, indexed.Count, Weak: true, Dates: dates, OtherModelPhotos: otherModel);
         }
 
         /// <summary>The photos taken at a time, oldest first. No limit on the number: this is browsing, like the folder.</summary>
         private SearchResult SearchDates(DateFilter dates)
         {
-            var indexed = Index.Snapshot().Where(p => p.Clip is not null).ToList();
-            var hits = OnePerPhoto(indexed.Where(p => dates.Matches(p.Date.Taken)))
+            var indexed = Index.Snapshot().Where(p => p.HasVector).ToList(); // of any model: dates need no vectors
+            var hits = OnePerPhoto(indexed.Where(p => dates.Matches(p.Date.Taken)), ClipModel)
                 .OrderBy(p => p.Date.Taken)
                 .ThenBy(p => p.RelativePath, StringComparer.OrdinalIgnoreCase)
                 .Select(p => ToHit(p, 0f))
@@ -186,21 +201,26 @@ namespace PhotoLiker.Search
 
         private static string Describe(string what, DateFilter? dates) => dates is null ? what : $"{what}, {dates.Describe()}";
 
+        /// <summary>Whether "More like this" works for this photo: it is in the index with a vector of the folder's model.</summary>
+        public bool CanSearchSimilar(string fullPath) =>
+            Index.FindFullPath(fullPath)?.VectorOf(ClipModel.Id) is not null;
+
         public SearchResult SearchSimilar(string fullPath, SearchTuning? tuning = null)
         {
+            var model = ClipModel;
             var photo = Index.FindFullPath(fullPath);
             var title = $"like {Path.GetFileName(fullPath)}";
-            if (photo?.Clip is null)
+            if (photo?.VectorOf(model.Id) is not { } shown)
                 return Empty(title);
 
             var minScore = (tuning ?? SearchTuning.Default).MinSimilarScore;
-            var photos = Index.Snapshot().Where(p => p.Clip is not null).ToList();
-            var hits = OnePerPhoto(photos).Select(p => (Photo: p, Score: VectorMath.Dot(photo.Clip, p.Clip!)))
+            var photos = WithVectorOf(model);
+            var hits = OnePerPhoto(photos, model).Select(p => (Photo: p, Score: model.SimilarScore(VectorMath.Dot(shown, p.VectorOf(model.Id)!))))
                 .Where(s => s.Score >= minScore)
                 .OrderByDescending(s => s.Score)
                 .Select(s => ToHit(s.Photo, s.Score))
                 .ToList();
-            return new SearchResult(title, hits, photos.Count);
+            return new SearchResult(title, hits, photos.Count, OtherModelPhotos: Index.PhotoCount - photos.Count);
         }
 
         public SearchResult SearchPerson(string name, SearchTuning? tuning = null) =>
@@ -214,7 +234,7 @@ namespace PhotoLiker.Search
         {
             var photos = Index.Snapshot();
             var hits = new List<SearchHit>();
-            foreach (var photo in OnePerPhoto(photos.Where(p => dates is null || dates.Matches(p.Date.Taken))))
+            foreach (var photo in OnePerPhoto(photos.Where(p => dates is null || dates.Matches(p.Date.Taken)), ClipModel))
             {
                 var best = 0f;
                 foreach (var face in photo.Faces)
@@ -237,7 +257,7 @@ namespace PhotoLiker.Search
         /// and the same picture (<see cref="MinSameScore"/>: two different photos of a burst can share size and second). Of the
         /// copies the one that is not itself a saved copy ("name [id].jpg") stays, then the first by path, so it is the same one every time.
         /// </summary>
-        private static List<IndexedPhoto> OnePerPhoto(IEnumerable<IndexedPhoto> photos)
+        private static List<IndexedPhoto> OnePerPhoto(IEnumerable<IndexedPhoto> photos, ClipModelInfo model)
         {
             var kept = new List<IndexedPhoto>();
             var copiesOf = new Dictionary<(long Length, long Second), List<int>>();
@@ -247,7 +267,7 @@ namespace PhotoLiker.Search
                 if (!copiesOf.TryGetValue(key, out var sameSize))
                     copiesOf[key] = sameSize = [];
 
-                var twin = sameSize.FindIndex(i => IsSamePicture(kept[i], photo));
+                var twin = sameSize.FindIndex(i => IsSamePicture(kept[i], photo, model.Id));
                 if (twin < 0)
                 {
                     sameSize.Add(kept.Count);
@@ -261,8 +281,15 @@ namespace PhotoLiker.Search
             return kept;
         }
 
-        private static bool IsSamePicture(IndexedPhoto a, IndexedPhoto b) =>
-            a.Clip is null || b.Clip is null || VectorMath.Dot(a.Clip, b.Clip) >= MinSameScore;
+        // Vectors of different models can not be compared: the pictures are compared by the vectors of one model that has been through both
+        // (the folder's if it has), and photos that have none in common are told by size and time alone
+        private static bool IsSamePicture(IndexedPhoto a, IndexedPhoto b, string preferredModelId)
+        {
+            var common = a.Clips.ContainsKey(preferredModelId) && b.Clips.ContainsKey(preferredModelId)
+                ? preferredModelId
+                : a.Clips.Keys.FirstOrDefault(b.Clips.ContainsKey);
+            return common is null || VectorMath.Dot(a.Clips[common].Values, b.Clips[common].Values) >= MinSameScore;
+        }
 
         private static bool Prefer(IndexedPhoto candidate, IndexedPhoto kept)
         {
@@ -345,6 +372,10 @@ namespace PhotoLiker.Search
         }
 
         // ── helpers ────────────────────────────────────────────────────────
+
+        /// <summary>The photos that have a vector of this model, i.e. the ones a text search can look through.</summary>
+        private List<IndexedPhoto> WithVectorOf(ClipModelInfo model) =>
+            [.. Index.Snapshot().Where(p => p.Clips.ContainsKey(model.Id))];
 
         private SearchHit ToHit(IndexedPhoto photo, float score) =>
             new(Index.ToFullPath(photo.RelativePath), photo.Length, new DateTime(photo.ModifiedTicks, DateTimeKind.Utc), score, photo.Date.Source, photo.Date.Taken);

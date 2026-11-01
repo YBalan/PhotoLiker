@@ -29,8 +29,7 @@ public class ResultsTests : IDisposable
     {
         var photo = new IndexedPhoto(path, length ?? 1000 + _added++, modifiedSeconds * TimeSpan.TicksPerSecond)
         {
-            Clip = clip,
-            ClipVersion = 1,
+            Clips = Vectors.Clips(clip),
             FaceVersion = 1,
             Date = new PhotoDate(taken, taken is null ? DateSource.None : DateSource.Exif, PhotoDates.Version),
         };

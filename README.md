@@ -557,13 +557,14 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
 1. **Index photos** analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the
    time left. You can keep browsing, stop it (the button turns into **Stop indexing**) and continue later: only new or
    changed photos are done again. The search box works as soon as the first photos are in the index.
-   The first time, the AI models are downloaded (about 650 MB, you are asked first).
+   The first time, the AI models are downloaded (about 900 MB for the standard search model, you are asked first).
 2. **Search** by describing what you look for: `children on a stage`, `snow`, `a dog`, `autumn leaves`. Type it into the
    search box and press <kbd>Enter</kbd> or click the magnifier icon. The results replace
    the folder in the viewer, and the keyboard focus moves to the photo, so the keys work at once: browse, like and group
    them like any photos (<kbd>Alt</kbd>+a group key groups all of them, see [Groups](#groups)). If nothing is found the focus stays in the
    search box, to change the words. <kbd>Esc</kbd> or **Close results** goes
-   back. **More like this** finds photos that look like the one shown. Descriptions work in English.
+   back. **More like this** finds photos that look like the one shown. Descriptions work in English; the **Model** box (see 6) can be
+   set to a model that understands other languages.
    There is no limit to the number of photos a search shows (a text search shows the photos that match well, however many that is).
    Each photo is shown once: a photo that is in the library several times (a card copied into two folders, its copy in a group
    folder) is one result. Copies are photos of the same size, saved at the same second and showing the same picture, the way the
@@ -594,6 +595,32 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
    ![The strip with results open and the slider at Wide: more photos, looser matches](docs/images/18-search-wide.png)
 
    ![The same search with the slider at Precise: fewer photos, closer matches](docs/images/19-search-precise.png)
+6. **Model**: the box at the right end of the strip chooses the model that matches words with photos; each line of the list gives the name, the vendor in brackets and the languages the model understands. The choice is kept for each folder
+   in its `photo-liker-config.json` (`SearchModel`: `clip-vit-b32`, `siglip2-b16` or `xlmr-vit-b32`; a name the app does not know reads
+   as `clip-vit-b32`). The numbers below are from a test with 300 photos and their 1,500 descriptions (Flickr30k): how often the right
+   photo was the first result, and one of the first ten.
+
+   ![The model box with its list open](docs/images/20-search-model.png)
+
+   | Model | First | In the first 10 | Speed of the model | Download | Understands |
+   |---|---|---|---|---|---|
+   | **CLIP B/32** (OpenAI) | 74 % | 97 % | 21 photos/s | 610 MB | English |
+   | **SigLIP 2 B/16** (Google) | 88 % | 99.5 % | 5 photos/s | 1.5 GB | English and Russian well, Ukrainian less well |
+   | **XLM-R B/32** (LAION) | 78 % | 97.5 % | 16 photos/s | 1.5 GB | about a hundred languages, Ukrainian and Russian included |
+
+   (The speed is the photo model alone, 6 threads, small photos; a real run is also limited by how fast the photos are read and
+   decoded.) CLIP B/32 is the standard: the fastest and the smallest download. SigLIP 2 finds the right photo most often, at about
+   four times the indexing time. XLM-R is as fast as CLIP, a little better in English, and the one for descriptions in Ukrainian
+   or Russian: in the [Immich project's benchmark](https://docs.immich.app/features/search) of the same models it finds 76 % for
+   Ukrainian against 65 % for SigLIP 2 B/16 (Russian: 76 % against 81 %, English: 77 % against 85 %, CLIP B/32 70 %).
+   The results of different models can not be compared, so each model has to go through the photos once: **Update index** does it,
+   and only that: the faces, the names of the people and the dates are kept, and so are the results of the models you used before,
+   so going back to one of them costs nothing (a model's results take 2 to 3 KB per photo in the index). The strip says how far it is
+   ("3,000 of 12,345 photos for SigLIP 2 B/16"); until it is done a description or **More like this** only looks at the photos that
+   are done (the status bar says how many were left out), while dates and people work on all of them. Stopping and continuing works as always, and the box is locked
+   while photos are being analyzed. The first time a model is used it is downloaded, after asking.
+   The scores of every model are put on the scale the cutoffs and the **Precision** slider were made for (from the same test), so the
+   middle of the slider finds about as many photos with each; on your own library you may still want to move it.
 
 | Input | What it does |
 |---|---|
@@ -622,7 +649,7 @@ needs no models and takes about a minute per 2,000 photos on a network drive.
 
 What is kept where:
 
-- **The index** (what was found in each photo, and when it was taken) is a cache in `%LocalAppData%\PhotoLiker\index`, one file per photo folder.
+- **The index** (what was found in each photo, and when it was taken, with one vector for each search model that has been through it) is a cache in `%LocalAppData%\PhotoLiker\index`, one file per photo folder.
   It can always be rebuilt, so deleting it only costs the time of indexing again. Your photos are only read, never changed
   (except by [Align dates](#aligning-file-dates), which you press yourself).
   To use it on another computer (or to index on the faster one), choose **I/E > Export index...** (the first button of the
@@ -640,9 +667,11 @@ What is kept where:
   go into this folder's file. The file of a folder stays the truth about that folder (delete it and the folder's people are
   gone from the shared file the next time the folder is opened), the shared one is a copy that can be deleted any time.
   Folders you named people in before this existed join it when you open them once (no indexing needed).
-- **The models** are in `%LocalAppData%\PhotoLiker\models`: CLIP ViT-B/32 (OpenAI, MIT licence) to match words with photos, and
+- **The models** are in `%LocalAppData%\PhotoLiker\models`, a folder for each, downloaded when they are first needed: to match
+  words with photos CLIP ViT-B/32 (OpenAI, MIT licence, the standard), SigLIP 2 Base/16 (Google, Apache 2.0) and XLM-RoBERTa with ViT-B/32 (LAION,
+  MIT licence) (see **Model** above; the last two are ONNX exports of the Immich project, fixed to one revision), and
   InsightFace's SCRFD and ArcFace (`buffalo_l`) to find and recognize faces. The InsightFace models are free for
-  non-commercial use only, which fits a private photo library.
+  non-commercial use only, which fits a private photo library. Delete the folder of a model you do not use to get its space back.
 
 ## Settings file
 
@@ -674,7 +703,8 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
 shared between machines that may run different versions. The spelling `GoThroughSubFolders` (used by the MAUI app) is read
 as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized. `SortOrder` is written by name
 (`OldestFirst`, `NewestFirst`, `ByName`, `Random` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
-as `OldestFirst` and does not spoil the rest of the file.
+as `OldestFirst` and does not spoil the rest of the file. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
+settings of the [photo search](#photo-search).
 
 Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that
 was opened), `people.json` (the people named in all folders, see above) and `crash.log` (the stack trace of an unexpected
@@ -708,7 +738,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app). |
-| `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizer, image and face geometry, index, people file, search. They need no models. |
+| `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script and `build-installer.ps1`. |
 | `docs` | Screenshots, the [user manual](#user-manual) pages, [a how-to for Generate Video](docs/how-to-generate-video.md) and a small sample folder of photos. |

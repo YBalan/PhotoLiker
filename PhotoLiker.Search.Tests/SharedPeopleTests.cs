@@ -247,7 +247,7 @@ public class SharedPeopleSearchTests : IDisposable
     private static IndexedPhoto Add(FolderIndex search, string path, params float[][] faceVectors)
     {
         // A size of its own: photos of one size, time and picture are copies of one photo, which a search shows once
-        var photo = new IndexedPhoto(path, length: 10 + Interlocked.Increment(ref _added), modifiedTicks: 20) { Clip = Vectors.Unit(1), ClipVersion = 1, FaceVersion = 1 };
+        var photo = new IndexedPhoto(path, length: 10 + Interlocked.Increment(ref _added), modifiedTicks: 20) { Clips = Vectors.Clips(Vectors.Unit(1)), FaceVersion = 1 };
         photo.Faces = [.. faceVectors.Select((v, i) => new IndexedFace(photo, 0.1f + 0.3f * i, 0.2f, 0.2f, 0.2f, 0.9f, manual: false, v))];
         search.Index.Save([photo]);
         return photo;

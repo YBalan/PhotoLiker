@@ -39,10 +39,28 @@ internal sealed class TempFolder : IDisposable
 
 internal static class Vectors
 {
+    /// <summary>The vectors of a photo that has been through one model (the default unless told otherwise), with the current version.</summary>
+    public static IReadOnlyDictionary<string, ClipVector> Clips(float[] vector, ClipModelInfo? model = null) =>
+        new Dictionary<string, ClipVector> { [(model ?? ClipModels.Default).Id] = new(vector, IndexingJob.ClipVersion) };
+
+    /// <summary>Like <see cref="Clips(float[], ClipModelInfo?)"/>, for a unit vector of that model that starts with the given numbers.</summary>
+    public static IReadOnlyDictionary<string, ClipVector> Clips(ClipModelInfo model, params float[] leading) => Clips(Unit(model, leading), model);
+
+    /// <summary>A unit vector of the size of a vector of that model that starts with the given numbers.</summary>
+    public static float[] Unit(ClipModelInfo model, params float[] leading)
+    {
+        var vector = new float[model.Dimensions];
+        leading.CopyTo(vector, 0);
+        var norm = MathF.Sqrt(vector.Sum(v => v * v));
+        for (var i = 0; i < vector.Length; i++)
+            vector[i] /= norm;
+        return vector;
+    }
+
     /// <summary>A unit vector of the size of a CLIP / face vector that starts with the given numbers.</summary>
     public static float[] Unit(params float[] leading)
     {
-        var vector = new float[ClipImageEncoder.Dimensions];
+        var vector = new float[ClipModels.Default.Dimensions];
         leading.CopyTo(vector, 0);
         var norm = MathF.Sqrt(vector.Sum(v => v * v));
         for (var i = 0; i < vector.Length; i++)

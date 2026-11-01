@@ -30,6 +30,7 @@ namespace PhotoLikerUI
             [nameof(Settings.ThumbnailSize)]  = [Category(SettingsCategory), Describe(SettingsStrings.ThumbnailSize)],
             [nameof(Settings.IsDarkTheme)]    = [Category(SettingsCategory), Hidden],
             [nameof(Settings.SearchPrecision)] = [Category(SettingsCategory), Hidden], // the slider of the search strip
+            [nameof(Settings.SearchModel)]    = [Category(SettingsCategory), Hidden], // the combo box at the right end of the search strip
 
             [nameof(Settings.WindowLeft)]     = [Category(WindowCategory), Hidden],
             [nameof(Settings.WindowTop)]      = [Category(WindowCategory), Hidden],

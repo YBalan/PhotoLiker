@@ -488,7 +488,7 @@ public class IndexStampTests : IDisposable
         var info = new FileInfo(file);
         return new IndexedPhoto(Path.GetFileName(file), info.Length, info.LastWriteTimeUtc.Ticks)
         {
-            Clip = Vectors.Unit(1), ClipVersion = IndexingJob.ClipVersion, FaceVersion = IndexingJob.FaceVersion,
+            Clips = Vectors.Clips(Vectors.Unit(1)), FaceVersion = IndexingJob.FaceVersion,
             Date = new PhotoDate(new DateTime(2009, 9, 1, 14, 30, 0), DateSource.Exif, PhotoDates.Version),
         };
     }
@@ -516,7 +516,7 @@ public class IndexStampTests : IDisposable
         // Without the models, any photo that is taken for changed would make this fail
         using var reopened = PhotoIndex.Open(_photos.Path, dbFile);
         Assert.Equal(new FileInfo(file).LastWriteTimeUtc.Ticks, reopened.Find("a.jpg")!.ModifiedTicks);
-        var summary = await IndexingJob.RunAsync(reopened, _models, null, [".jpg"], null, CancellationToken.None);
+        var summary = await IndexingJob.RunAsync(reopened, _models, ClipModels.Default, null, [".jpg"], null, CancellationToken.None);
         Assert.Equal(0, summary.Indexed);
         Assert.Equal(0, summary.Failed);
     }

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Photo search: CLIP embeddings for text search, face detection and recognition for people, kept in an SQLite index.
+    Photo search: CLIP-like embeddings (CLIP, SigLIP 2, XLM-R) for text search, face detection and recognition for people, kept in an SQLite index.
     Everything runs on this machine with ONNX Runtime. WPF is only used for its WIC image decoder.
   -->
   <PropertyGroup>
@@ -16,6 +16,7 @@
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.2" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="2.0.1" />
   </ItemGroup>
 
   <ItemGroup>

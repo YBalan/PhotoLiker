@@ -32,6 +32,14 @@ namespace PhotoLiker.Core
         public const int MaxSearchPrecision = 100;
         public const int DefaultSearchPrecision = 50;
 
+        /// <summary>
+        /// The model that matches words with photos, by the id the search library gives it ("clip-vit-b32", "siglip2-b16", ...). An id
+        /// that is not known (a file from a newer version, a typo) counts as <see cref="DefaultSearchModel"/>. The index of the folder holds
+        /// the photos' vectors of one model at a time, so another model needs the photos to be analyzed again.
+        /// </summary>
+        public string SearchModel { get; set; } = DefaultSearchModel;
+        public const string DefaultSearchModel = "clip-vit-b32";
+
         // Main window of the WinForms app
         public int    WindowLeft     { get; set; } = 100;
         public int    WindowTop      { get; set; } = 100;
