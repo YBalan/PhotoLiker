@@ -23,6 +23,12 @@ namespace PhotoLikerUI
         private string _resultsRequest = string.Empty;   // what was searched for; names a group folder that Alt + a group key makes
         private string _returnFile = string.Empty;
 
+        // The last search, kept so that the precision slider can run it again with other cutoffs. Cleared when the results are closed or another folder is shown.
+        private Func<SearchTuning, SearchResult>? _repeatSearch;
+        private bool _syncingPrecision;
+        private readonly System.Windows.Forms.Timer _precisionTimer = new() { Interval = MainFormConstants.PrecisionSettleMs };
+        private readonly ToolTip _precisionTip = new();
+
         // Faces of the shown photo
         private IReadOnlyList<FaceLabel> _faces = [];
         private FaceLabel? _hoverFace;
@@ -38,6 +44,8 @@ namespace PhotoLikerUI
         private ToolStripButton _closeResultsButton = null!;
         private ToolStripButton _similarButton = null!;
         private ToolStripButton _facesButton = null!;
+        private TrackBar _precisionBar = null!;
+        private ToolStripControlHost _precisionHost = null!;
         private ToolStripDropDownButton _transferButton = null!;
         private ToolStripMenuItem _exportItem = null!;
         private ToolStripMenuItem _importItem = null!;
@@ -108,6 +116,30 @@ namespace PhotoLikerUI
                 pictureBox1.Invalidate();
             };
 
+            // Wide to precise: how much the searches let through (the cutoffs are in SearchTuning), kept in the folder's settings file
+            _precisionBar = new TrackBar
+            {
+                Minimum = 0,
+                Maximum = Settings.MaxSearchPrecision,
+                Value = Settings.DefaultSearchPrecision,
+                SmallChange = 5,
+                LargeChange = 10,
+                TickStyle = TickStyle.None,
+                TabStop = false, // the arrow keys are the viewer's
+                AutoSize = false,
+                Size = new Size(MainFormConstants.PrecisionSliderWidth, 22),
+            };
+            _precisionBar.ValueChanged += PrecisionBar_ValueChanged;
+            _precisionBar.MouseUp += (_, _) => FocusViewer();
+            _precisionTimer.Tick += PrecisionTimer_Tick;
+            _precisionHost = new ToolStripControlHost(_precisionBar)
+            {
+                Name = "precisionToolStripSlider",
+                AutoSize = false,
+                Size = new Size(MainFormConstants.PrecisionSliderWidth + 6, 24),
+            };
+            UpdatePrecisionTooltip();
+
             _exportItem = new ToolStripMenuItem(SearchStrings.ExportIndexMenu) { Name = "exportIndexMenuItem" };
             _exportItem.Click += (_, _) => ExportIndex();
             _importItem = new ToolStripMenuItem(SearchStrings.ImportIndexMenu) { Name = "importIndexMenuItem" };
@@ -128,6 +160,10 @@ namespace PhotoLikerUI
                 _indexButton, _indexProgress, _indexLabel,
                 new ToolStripSeparator(),
                 _searchBox, _searchButton, _closeResultsButton, _similarButton, _facesButton,
+                new ToolStripSeparator(),
+                new ToolStripLabel(SearchStrings.PrecisionWide) { Name = "precisionWideToolStripLabel" },
+                _precisionHost,
+                new ToolStripLabel(SearchStrings.PrecisionPrecise) { Name = "precisionPreciseToolStripLabel" },
             ]);
             splitContainer3.Panel1.Controls.Add(strip);
 
@@ -171,6 +207,8 @@ namespace PhotoLikerUI
             _searchBox.Enabled = searchable;
             _searchButton.Enabled = searchable;
             _facesButton.Enabled = searchable;
+            _precisionBar.Enabled = searchable;
+            ShowSearchPrecision();
             _closeResultsButton.Visible = _resultsActive;
             _transferButton.Enabled = folderKnown;
             _exportItem.Enabled = searchable && !_transferBusy;
@@ -200,6 +238,7 @@ namespace PhotoLikerUI
             _resultsActive = false;
             _resultsTitle = string.Empty;
             _resultsRequest = string.Empty;
+            _repeatSearch = null;
             var folder = _currentConfig.CurrentFolder;
             var generation = ++_attachGeneration;
 
@@ -433,12 +472,38 @@ namespace PhotoLikerUI
                 return;
             }
 
+            _repeatSearch = tuning => search.Search(_models, text, tuning);
+            await RepeatSearchAsync();
+        }
+
+        private void RunSimilarSearch()
+        {
+            if (_folderSearch is not { } search || pictureBox1.Tag is not string file)
+                return;
+
+            if (search.Index.FindFullPath(file)?.Clip is null)
+            {
+                SetStatus(SearchStrings.StatusSimilarNotIndexed);
+                return;
+            }
+
+            _repeatSearch = tuning => search.SearchSimilar(file, tuning);
+            _ = RepeatSearchAsync();
+        }
+
+        /// <summary>Runs the last search (<see cref="_repeatSearch"/>) with the cutoffs of the precision slider and shows what it found.</summary>
+        private async Task RepeatSearchAsync()
+        {
+            if (_repeatSearch is not { } repeat || _folderSearch is not { } search)
+                return;
+
+            var tuning = SearchTuning.For(_currentConfig.SearchPrecision);
             var generation = ++_searchGeneration;
             SetStatus(SearchStrings.StatusSearching);
             SearchResult result;
             try
             {
-                result = await Task.Run(() => search.Search(_models, text));
+                result = await Task.Run(() => repeat(tuning));
             }
             catch (Exception ex)
             {
@@ -450,18 +515,54 @@ namespace PhotoLikerUI
                 await ShowResultsAsync(result);
         }
 
-        private void RunSimilarSearch()
+        // ── the precision slider ───────────────────────────────────────────
+
+        private void PrecisionBar_ValueChanged(object? sender, EventArgs e)
         {
-            if (_folderSearch is not { } search || pictureBox1.Tag is not string file)
+            if (_syncingPrecision)
                 return;
 
-            var result = search.SearchSimilar(file);
-            if (result.Hits.Count == 0)
-            {
-                SetStatus(SearchStrings.StatusSimilarNotIndexed);
+            _currentConfig.SearchPrecision = _precisionBar.Value;
+            UpdatePrecisionTooltip();
+
+            // Dragging passes through many values: the search is repeated once the slider rests
+            _precisionTimer.Stop();
+            _precisionTimer.Start();
+        }
+
+        private async void PrecisionTimer_Tick(object? sender, EventArgs e)
+        {
+            _precisionTimer.Stop();
+            if (!string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder))
+                SaveSettingsToJson();
+
+            await RepeatSearchAsync();
+        }
+
+        /// <summary>Puts the slider where the settings of the shown folder have it (each folder keeps its own value).</summary>
+        private void ShowSearchPrecision()
+        {
+            var precision = Math.Clamp(_currentConfig.SearchPrecision, 0, Settings.MaxSearchPrecision);
+            if (_precisionBar.Value == precision)
                 return;
+
+            _syncingPrecision = true;
+            try
+            {
+                _precisionBar.Value = precision;
             }
-            _ = ShowResultsAsync(result);
+            finally
+            {
+                _syncingPrecision = false;
+            }
+            UpdatePrecisionTooltip();
+        }
+
+        private void UpdatePrecisionTooltip()
+        {
+            var tuning = SearchTuning.For(_precisionBar.Value);
+            _precisionTip.SetToolTip(_precisionBar, string.Format(
+                SearchStrings.PrecisionTooltipFormat, _precisionBar.Value, tuning.MinTextScore, tuning.TextScoreBand, tuning.MinSimilarScore, tuning.MinFaceScore));
         }
 
         /// <summary>Shows the photos that were found in place of the folder, so that they can be browsed, liked and grouped like any photos.</summary>
@@ -539,6 +640,8 @@ namespace PhotoLikerUI
             _resultsActive = false;
             _resultsTitle = string.Empty;
             _resultsRequest = string.Empty;
+            _repeatSearch = null;
+            _precisionTimer.Stop();
             if (!string.IsNullOrEmpty(_returnFile))
                 _currentConfig.CurrentFilePath = _returnFile;
 
@@ -839,8 +942,10 @@ namespace PhotoLikerUI
             if (_folderSearch is not { } search)
                 return;
 
-            var result = label.Confirmed && label.Name is not null ? search.SearchPerson(label.Name) : search.SearchPerson(label.Face, label.Name);
-            _ = ShowResultsAsync(result);
+            _repeatSearch = tuning => label.Confirmed && label.Name is not null
+                ? search.SearchPerson(label.Name, tuning)
+                : search.SearchPerson(label.Face, label.Name, tuning);
+            _ = RepeatSearchAsync();
         }
 
         /// <summary>Pop-up menus are not part of the form's control tree, so the theme is applied to them when they open.</summary>
@@ -1003,6 +1108,8 @@ namespace PhotoLikerUI
         {
             _attachGeneration++;
             _searchGeneration++;
+            _precisionTimer.Dispose();
+            _precisionTip.Dispose();
             _folderSearch?.Dispose();
             if (!ReferenceEquals(_indexingSearch, _folderSearch))
                 _indexingSearch?.Dispose();

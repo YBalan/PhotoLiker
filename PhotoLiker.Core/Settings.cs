@@ -27,6 +27,11 @@ namespace PhotoLiker.Core
         public int    ThumbnailSize  { get; set; } = 110;
         public bool   IsDarkTheme    { get; set; } = false;
 
+        /// <summary>How strict the photo search is, 0 (wide: more photos, looser matches) to <see cref="MaxSearchPrecision"/> (precise: fewer, closer matches).</summary>
+        public int    SearchPrecision { get; set; } = DefaultSearchPrecision;
+        public const int MaxSearchPrecision = 100;
+        public const int DefaultSearchPrecision = 50;
+
         // Main window of the WinForms app
         public int    WindowLeft     { get; set; } = 100;
         public int    WindowTop      { get; set; } = 100;

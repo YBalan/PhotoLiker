@@ -74,6 +74,7 @@ namespace PhotoLiker.Search
         /// <summary>
         /// A text search shows photos that score at least this much (the cosine of CLIP's text and photo vectors: real
         /// matches are around 0.25 to 0.35, photos that merely resemble the words 0.2 to 0.23), and not further below the best than the band.
+        /// These are the cutoffs with the precision slider in the middle, see <see cref="SearchTuning"/>.
         /// </summary>
         public const float MinTextScore = 0.23f;
         public const float TextScoreBand = 0.06f;
@@ -111,25 +112,28 @@ namespace PhotoLiker.Search
         /// The name of a person finds the photos of that person; anything else is described in words. A date in the text
         /// ("beach September 2009", "Mom 2005", "September 1") limits the search to the photos taken then; a date alone lists them, oldest first.
         /// </summary>
-        public SearchResult Search(ModelHub models, string text)
+        /// <param name="tuning">How much the search lets through; null is the default (see <see cref="SearchTuning"/>).</param>
+        public SearchResult Search(ModelHub models, string text, SearchTuning? tuning = null)
         {
             text = text.Trim();
             if (text.Length == 0)
                 return Empty(string.Empty);
 
+            tuning ??= SearchTuning.Default;
+
             // A name wins over everything, also one that reads like a date or a month
             if (People.TryFindName(text, out var name))
-                return SearchPerson(name);
+                return SearchPerson(name, tuning);
 
             var query = DateQuery.Parse(text);
             if (query.Dates is not { } dates)
-                return SearchText(models, text);
+                return SearchText(models, text, dates: null, tuning);
 
             if (query.Words.Length == 0)
                 return SearchDates(dates);
             if (People.TryFindName(query.Words, out name))
-                return SearchFaces(Describe(name, dates), People.ExamplesOf(name), dates);
-            return SearchText(models, query.Words, dates);
+                return SearchFaces(Describe(name, dates), People.ExamplesOf(name), tuning, dates);
+            return SearchText(models, query.Words, dates, tuning);
         }
 
         /// <summary>Whether answering a text needs the text model: a name, or nothing but a date, does not.</summary>
@@ -143,12 +147,15 @@ namespace PhotoLiker.Search
             return words.Length > 0 && !People.TryFindName(words, out _);
         }
 
-        public SearchResult SearchText(ModelHub models, string text) => SearchText(models, text, dates: null);
+        public SearchResult SearchText(ModelHub models, string text, SearchTuning? tuning = null) =>
+            SearchText(models, text, dates: null, tuning ?? SearchTuning.Default);
 
-        private SearchResult SearchText(ModelHub models, string text, DateFilter? dates)
+        private SearchResult SearchText(ModelHub models, string text, DateFilter? dates, SearchTuning tuning) =>
+            RankText(Describe($"\"{text}\"", dates), models.TextEncoder.Encode(text), dates, tuning);
+
+        /// <summary>The photos whose picture fits the vector of a text, see <see cref="SearchTuning.TextCutoff"/> for how many.</summary>
+        internal SearchResult RankText(string description, float[] query, DateFilter? dates, SearchTuning tuning)
         {
-            var description = Describe($"\"{text}\"", dates);
-            var query = models.TextEncoder.Encode(text);
             var indexed = Index.Snapshot().Where(p => p.Clip is not null).ToList();
             var photos = OnePerPhoto(indexed.Where(p => dates is null || dates.Matches(p.Date.Taken)));
 
@@ -156,7 +163,7 @@ namespace PhotoLiker.Search
             if (scored.Count == 0)
                 return new SearchResult(description, [], indexed.Count, Dates: dates);
 
-            var cutoff = Math.Max(MinTextScore, scored[0].Score - TextScoreBand);
+            var cutoff = tuning.TextCutoff(scored[0].Score);
             var hits = scored.TakeWhile(s => s.Score >= cutoff).Select(s => ToHit(s.Photo, s.Score)).ToList();
             if (hits.Count > 0)
                 return new SearchResult(description, hits, indexed.Count, Dates: dates);
@@ -179,30 +186,31 @@ namespace PhotoLiker.Search
 
         private static string Describe(string what, DateFilter? dates) => dates is null ? what : $"{what}, {dates.Describe()}";
 
-        public SearchResult SearchSimilar(string fullPath)
+        public SearchResult SearchSimilar(string fullPath, SearchTuning? tuning = null)
         {
             var photo = Index.FindFullPath(fullPath);
             var title = $"like {Path.GetFileName(fullPath)}";
             if (photo?.Clip is null)
                 return Empty(title);
 
+            var minScore = (tuning ?? SearchTuning.Default).MinSimilarScore;
             var photos = Index.Snapshot().Where(p => p.Clip is not null).ToList();
             var hits = OnePerPhoto(photos).Select(p => (Photo: p, Score: VectorMath.Dot(photo.Clip, p.Clip!)))
-                .Where(s => s.Score >= MinSimilarScore)
+                .Where(s => s.Score >= minScore)
                 .OrderByDescending(s => s.Score)
                 .Select(s => ToHit(s.Photo, s.Score))
                 .ToList();
             return new SearchResult(title, hits, photos.Count);
         }
 
-        public SearchResult SearchPerson(string name) =>
-            SearchFaces($"{name}", People.ExamplesOf(name));
+        public SearchResult SearchPerson(string name, SearchTuning? tuning = null) =>
+            SearchFaces($"{name}", People.ExamplesOf(name), tuning ?? SearchTuning.Default);
 
         /// <summary>The photos with a face that looks like this one.</summary>
-        public SearchResult SearchPerson(IndexedFace face, string? name) =>
-            SearchFaces(name ?? "this person", [face.Embedding]);
+        public SearchResult SearchPerson(IndexedFace face, string? name, SearchTuning? tuning = null) =>
+            SearchFaces(name ?? "this person", [face.Embedding], tuning ?? SearchTuning.Default);
 
-        private SearchResult SearchFaces(string description, IReadOnlyList<float[]> examples, DateFilter? dates = null)
+        private SearchResult SearchFaces(string description, IReadOnlyList<float[]> examples, SearchTuning tuning, DateFilter? dates = null)
         {
             var photos = Index.Snapshot();
             var hits = new List<SearchHit>();
@@ -214,7 +222,7 @@ namespace PhotoLiker.Search
                     foreach (var example in examples)
                         best = Math.Max(best, VectorMath.Dot(example, face.Embedding));
                 }
-                if (best >= PeopleLibrary.DefaultMatchThreshold)
+                if (best >= tuning.MinFaceScore)
                     hits.Add(ToHit(photo, best));
             }
 

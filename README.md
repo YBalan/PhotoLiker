@@ -552,6 +552,8 @@ The theme button of the toolbar switches between the two. The choice is stored i
 For a library of thousands of old photos on a NAS, PhotoLiker can look at every photo once (**Index photos**, in the strip
 above the viewer) and then answer questions about them. Nothing is uploaded: the analysis runs on this computer.
 
+![The search strip above the viewer, dark theme: the index menu, Index photos, the search box, More like this, the faces icon and the precision slider](docs/images/17-search-bar.png)
+
 1. **Index photos** analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the
    time left. You can keep browsing, stop it (the button turns into **Stop indexing**) and continue later: only new or
    changed photos are done again. The search box works as soon as the first photos are in the index.
@@ -581,6 +583,17 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
    of a person into the search box finds their photos, best match first. A dashed yellow box with a name and a question
    mark is a guess ("looks like Mom"); click it to confirm. A face the program missed (small, turned away, dark): hold
    <kbd>Shift</kbd> and drag a box around it.
+5. **Precision**: the slider at the right end of the strip (**Wide** to **Precise**) sets how strict the searches are. To the
+   left they let more photos through (looser matches), to the right fewer (closer matches); the middle is the standard. It moves
+   the cutoffs of all the searches together: how well a photo must fit the words and how far below the best one it may be,
+   how alike a photo must be for **More like this**, and how close a face must be for the photos of a person. Moving it repeats
+   the last search at once, so you can widen a search that found too little or narrow one that found too much. Hold the mouse
+   over the slider to see the cutoffs it stands for. The position is kept for each folder in its `photo-liker-config.json` (`SearchPrecision`,
+   0 to 100, 50 is the standard). Faces named in the photo (the yellow "looks like Mom?" boxes) are not affected.
+
+   ![The strip with results open and the slider at Wide: more photos, looser matches](docs/images/18-search-wide.png)
+
+   ![The same search with the slider at Precise: fewer photos, closer matches](docs/images/19-search-precise.png)
 
 | Input | What it does |
 |---|---|
