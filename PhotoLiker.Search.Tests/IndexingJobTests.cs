@@ -29,12 +29,15 @@ public class IndexingJobTests : IDisposable
         try { File.Delete(SearchPaths.IndexFile(_photos.Path)); } catch { /* best effort */ }
     }
 
-    private static string RealModelsFolder() =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PhotoLiker", "models");
+    /// <summary>The models the app downloaded, or the folder named by PHOTOLIKER_TEST_MODELS (e.g. one that also holds the other search models).</summary>
+    internal static string RealModelsFolder() =>
+        Environment.GetEnvironmentVariable("PHOTOLIKER_TEST_MODELS") is { Length: > 0 } custom
+            ? custom
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PhotoLiker", "models");
 
-    private bool ModelsAvailable => _models.IsDownloaded;
+    private bool ModelsAvailable => _models.IsDownloaded(ClipModels.Default);
 
-    private static byte[] SolidJpeg(byte blue, byte green, byte red, int size = 160)
+    internal static byte[] SolidJpeg(byte blue, byte green, byte red, int size = 160)
     {
         var pixels = new byte[size * size * 3];
         for (var i = 0; i < size * size; i++)

@@ -21,6 +21,7 @@
   <strong>Contents</strong>
   <ol>
     <li><a href="#install">Installing</a></li>
+    <li><a href="#search">Searching the photos</a></li>
     <li><a href="#start">First steps</a></li>
     <li><a href="#window">The window</a></li>
     <li><a href="#keys">Keyboard and mouse</a></li>
@@ -34,7 +35,6 @@
     <li><a href="#exif">EXIF and GPS</a></li>
     <li><a href="#tools">Tidying up: dates, empty folders, duplicates</a></li>
     <li><a href="#video">Making a video</a></li>
-    <li><a href="#search">Searching the photos</a></li>
     <li><a href="#theme">Dark and light theme</a></li>
     <li><a href="#files">What PhotoLiker keeps, and where</a></li>
     <li><a href="#about">About box and this manual</a></li>
@@ -44,15 +44,16 @@
 <main>
 
 <h1>PhotoLiker</h1>
-<p class="lead">Go through your photos quickly, keep the ones you like, and find any photo again.</p>
+<p class="lead">Find any photo in a big library by describing it, and go through your photos quickly to keep the ones you like.</p>
 
-<p>PhotoLiker is a program for Windows. You open a folder of photos, flip through them with the arrow keys, press
-<kbd>Space</kbd> to <strong>like</strong> a photo, or a letter or number key to sort it into a <strong>group</strong>. A like is a plain
-copy of the photo in another folder, so nothing is hidden in a database and your originals are never changed.</p>
+<p>PhotoLiker is a program for Windows. When the folder is a disk full of old photos that you can no longer scroll through,
+PhotoLiker can look at it once, in the background, and then you <strong>search it like the web</strong>: type <q>birthday cake</q> or
+<q>children on a stage</q>, give a person a name once and find every photo they are in, or combine them (<q>Mom playing guitar 2005</q>).
+It all runs on your own computer; no photo is ever uploaded. See <a href="#search">Searching the photos</a>.</p>
 
-<p>When the folder is a disk full of old photos that you can no longer scroll through, PhotoLiker can look at it once, in the
-background, and then you <strong>search it like the web</strong>: type <q>birthday cake</q> or <q>children on a stage</q>, give
-a person a name once and find every photo they are in. It all runs on your own computer; no photo is ever uploaded.</p>
+<p>And for going through photos quickly: you open a folder, flip through it with the arrow keys, press <kbd>Space</kbd> to
+<strong>like</strong> a photo, or a letter or number key to sort it into a <strong>group</strong>. A like is a plain copy of the photo in
+another folder, so nothing is hidden in a database and your originals are never changed.</p>
 
 <figure>
   <img src="images/01-home.png" alt="The PhotoLiker window with a folder of photos open" width="1486" height="893">
@@ -76,7 +77,67 @@ a person a name once and find every photo they are in. It all runs on your own c
 <p>Uninstalling removes the program and that context-menu entry. Your photos, your likes and your settings are not touched.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="start">2. First steps</h2>
+<h2 id="search">2. Searching the photos</h2>
+
+<p>Searching is what PhotoLiker is mostly for. For a library of thousands of old photos on a disk or a NAS, PhotoLiker can look at every photo once and then answer questions about
+them. Nothing is uploaded: the analysis runs on this computer, and your photos are only read, never changed.</p>
+
+<figure><img src="images/17-search-bar.png" alt="The strip above the photo: the index menu, Index photos, the search box, More like this, the faces icon and the precision slider" width="920" height="27"></figure>
+
+<ol class="steps">
+  <li><strong>Index photos</strong> (in the strip above the photo) analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the time
+  left. You can go on browsing, stop it (the button turns into <strong>Stop indexing</strong>) and continue later: only new or changed photos are done again. The search works as soon
+  as the first photos are in. The first time, the program asks before it downloads the AI models (about 900 MB for the standard search model).</li>
+  <li><strong>Search</strong> by describing what you look for: <code>children on a stage</code>, <code>snow</code>, <code>a dog</code>, <code>autumn leaves</code>. Type it into the search box and press
+  <kbd>Enter</kbd> or click the magnifier. The results replace the folder in the viewer: browse, like and group them like any photos. <kbd>Esc</kbd> or
+  <strong>Close results</strong> goes back. <strong>More like this</strong> finds photos that look like the shown one. Describe in English (another model, see <strong>Model</strong> below, understands other languages). A photo that is in the library
+  several times is shown once.</li>
+  <li><strong>Dates.</strong> Put a date into the search box, alone or with other words: <code>September 1</code> (that day in every year), <code>September 2009</code>, <code>2009-09-01</code>,
+  <code>2009</code>, <code>2009-2011</code>, <code>beach September 2009</code>, <code>Mom 2005</code>, <code>Mom playing guitar 2005</code>. Month names are English. The window title says how the date was understood.</li>
+  <li><strong>Faces.</strong> Switch on the face icon (the last button of the strip) to see the faces found in the shown photo. Click a face to say who it is (<strong>New person…</strong> or someone
+  you named before), to find all photos of that person, or to delete a wrong face (a doll, a poster). Typing a person's name into the search box finds their photos. A name can be combined with words, a date or other names, anywhere in the text:
+  <code>Yurii playing guitar</code> finds the photos of Yurii that fit the words, <code>Mom and Dad on the beach 2009</code> the photos in which both are, taken in 2009, that fit the words.
+  Who is in a photo comes from the faces, so it works with every model; the words are matched by the chosen model. A text in double quotes is only words. A dashed
+  yellow box with a name and a question mark is a guess (<q>looks like Mom</q>): click it to confirm. For a face the program missed, hold <kbd>Shift</kbd> and drag a box around it.
+  Names you give in one folder are known in the others, too.</li>
+  <li><strong>Precision.</strong> The slider at the right end of the strip (<strong>Wide</strong> to <strong>Precise</strong>) sets how strict the searches are: to the left they let more photos through
+  (looser matches), to the right fewer (closer matches), the middle is the standard. It applies to a description, to <strong>More like this</strong> and to the photos of a person. Moving it repeats the
+  last search at once, so you can widen a search that found too little or narrow one that found too much. Hold the mouse over it to see the numbers. Each folder keeps its own position
+  (<code>SearchPrecision</code> in its <code>photo-liker-config.json</code>).
+    <figure><img src="images/18-search-wide.png" alt="The strip with results open and the slider at Wide" width="997" height="27"><figcaption>The slider at <strong>Wide</strong>: more photos, looser matches.</figcaption></figure>
+    <figure><img src="images/19-search-precise.png" alt="The strip with results open and the slider at Precise" width="997" height="27"><figcaption>The same search at <strong>Precise</strong>: fewer photos, closer matches.</figcaption></figure>
+  </li>
+  <li><strong>Model.</strong> The box at the right end of the strip chooses the model that matches words with photos; each line of the list gives the name, the vendor in brackets and the languages the model understands. Each folder keeps its own choice
+  (<code>SearchModel</code> in its <code>photo-liker-config.json</code>). The numbers are from a test with 300 photos and their 1,500 descriptions: how often the right photo was the first result,
+  and one of the first ten.
+    <figure><img src="images/20-search-model.png" alt="The model box with its list open" width="831" height="105"><figcaption>The model box.</figcaption></figure>
+    <table class="wide-first">
+      <tr><th>Model</th><th>First</th><th>In the first 10</th><th>Speed of the model</th><th>Download</th><th>Understands</th></tr>
+      <tr><td><strong>CLIP B/32</strong> (OpenAI)</td><td>74 %</td><td>97 %</td><td>21 photos/s</td><td>610 MB</td><td>English</td></tr>
+      <tr><td><strong>SigLIP 2 B/16</strong> (Google)</td><td>88 %</td><td>99.5 %</td><td>5 photos/s</td><td>1.5 GB</td><td>English and Russian well, Ukrainian less well</td></tr>
+      <tr><td><strong>XLM-R B/32</strong> (LAION)</td><td>78 %</td><td>97.5 %</td><td>16 photos/s</td><td>1.5 GB</td><td>about a hundred languages, Ukrainian and Russian included</td></tr>
+    </table>
+    CLIP B/32 is the standard: the fastest and the smallest download. SigLIP 2 finds the right photo most often, at about four times the indexing time. XLM-R is as fast as CLIP, a little better in English,
+    and the one for descriptions in Ukrainian or Russian. (The speed is the photo model alone; a real run is also limited by how fast the photos are read.)
+    Each model has to go through the photos once: <strong>Update index</strong> does it, and only that: the faces, the names of the people and the dates are kept, and so are the results of the models you used before, so going back to one of them costs nothing.
+    The strip says how far it is (<q>3,000 of 12,345 photos for SigLIP 2 B/16</q>); until it is done a description or <strong>More like this</strong> only looks at the photos that are done, while dates and people work on all of them.
+    The box is locked while photos are being analyzed. The first time a model is used, the program asks before it downloads it.
+  </li>
+</ol>
+
+<h3>Good to know</h3>
+<ul>
+  <li><strong>Speed.</strong> On a 6-core desktop processor indexing does about three photos per second (20,000 photos: roughly two hours). A network drive can be slower.
+  No graphics card is needed.</li>
+  <li><strong>Dates of the photos.</strong> The date comes from the camera (EXIF). If it is missing or cannot be believed (before 1995, in the future, or a camera that
+  lost its clock), the date the file was created is used, and the status bar says how many results are dated that way.</li>
+  <li><strong>Another computer.</strong> Use <strong>I/E &gt; Export index…</strong> (the first button of the strip) to save the index in a file, and <strong>I/E &gt; Import index…</strong> on the other computer.</li>
+  <li><strong>Visual C++ runtime.</strong> The AI models need the current Microsoft Visual C++ runtime. It comes with Windows updates, or install the
+  <em>Visual C++ Redistributable (x64)</em> if loading the models stops with a message that says so.</li>
+</ul>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="start">3. First steps</h2>
 
 <ol class="steps">
   <li>Open a folder of photos. The first photo is shown, with a strip of small pictures (thumbnails) on the right.</li>
@@ -102,7 +163,7 @@ table) they are the box's own. Click the photo, a thumbnail or the empty space a
 photo again.</p></div>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="window">3. The window</h2>
+<h2 id="window">4. The window</h2>
 
 <ul>
   <li><strong>Toolbar</strong> (top left): the buttons described in <a href="#toolbar">The toolbar</a>.</li>
@@ -118,7 +179,7 @@ photo again.</p></div>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="keys">4. Keyboard and mouse</h2>
+<h2 id="keys">5. Keyboard and mouse</h2>
 
 <div class="table-scroll">
 <table class="wide-first">
@@ -147,7 +208,7 @@ photo again.</p></div>
 <p>The same list is in the About box (the <strong>Help</strong> button).</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="toolbar">5. The toolbar</h2>
+<h2 id="toolbar">6. The toolbar</h2>
 
 <ul>
   <li><strong>Open</strong>: pick a folder of photos.</li>
@@ -162,7 +223,7 @@ photo again.</p></div>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="groups">6. Likes and groups</h2>
+<h2 id="groups">7. Likes and groups</h2>
 
 <p>Besides liking a photo, you can sort it into groups: family, trips, prints, whatever you need. Press a key from
 <kbd>1</kbd>–<kbd>9</kbd> or <kbd>A</kbd>–<kbd>Z</kbd> (without <kbd>Ctrl</kbd>, <kbd>Alt</kbd> or <kbd>Shift</kbd>) and a copy of the photo
@@ -191,7 +252,7 @@ liked and in any number of groups.</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="delete">7. Deleting photos</h2>
+<h2 id="delete">8. Deleting photos</h2>
 
 <p><kbd>Delete</kbd> moves the shown photo into a folder named <code>Deleted</code> inside the photo folder, and shows the next one.
 <strong>Nothing is erased.</strong> The photo keeps its place below the photo folder (<code>314CANON\IMG_0001.jpg</code> goes to
@@ -202,7 +263,7 @@ folder is listed it is there again. To look at what is in it, open the <code>Del
 of the photo in the Liked and group folders stay where they are.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="rotate">8. Rotating photos</h2>
+<h2 id="rotate">9. Rotating photos</h2>
 
 <p>The <strong>Rotate</strong> button in the right corner of the status bar turns the shown photo a quarter clockwise and saves that in
 its file. Press it again for the next quarter. It works on JPEG files (<code>.jpg</code>, <code>.jpeg</code>); for another kind of
@@ -216,7 +277,7 @@ file the status bar says so and nothing is written.</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="settings">9. Settings</h2>
+<h2 id="settings">10. Settings</h2>
 
 <p>The settings table at the top left shows the progress, the current file and the settings of the folder. Every row has a
 description: select it and the pane under the table says what it is for.</p>
@@ -269,7 +330,7 @@ used from the next like.</p>
 </div>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="order">10. Order of the photos</h2>
+<h2 id="order">11. Order of the photos</h2>
 
 <p><strong>SortOrder</strong> decides the order of the list, and so where the arrow keys, <kbd>Home</kbd>, <kbd>End</kbd> and
 <kbd>PageDown</kbd> / <kbd>PageUp</kbd> take you:</p>
@@ -292,7 +353,7 @@ the dates of the files to the dates the photos were taken.</p></div>
 for every photo.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="big-folders">11. Big folders</h2>
+<h2 id="big-folders">12. Big folders</h2>
 
 <p>Listing a folder on a network drive is slow: the more subfolders, the longer it takes (6.6 seconds for 16,000 photos in 985 folders
 on a home router; minutes for a big archive). So PhotoLiker keeps the list.</p>
@@ -307,7 +368,7 @@ on a home router; minutes for a big archive). So PhotoLiker keeps the list.</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="exif">12. EXIF and GPS</h2>
+<h2 id="exif">13. EXIF and GPS</h2>
 
 <p>The grid below the settings shows what the camera wrote into the shown photo (EXIF): make and model, exposure, flash, the date the
 photo was taken, and more, in groups. Select a row and the pane under the grid explains it in plain words. The <strong>All Metadata</strong>
@@ -331,7 +392,7 @@ row under <em>Debug</em> holds everything as text.</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="tools">13. Tidying up: dates, empty folders, duplicates</h2>
+<h2 id="tools">14. Tidying up: dates, empty folders, duplicates</h2>
 
 <p>Three buttons of the toolbar tidy a photo folder. They all work the same way: they <strong>look first and show you what they would do</strong>,
 nothing is changed until you press the button that does it, and what they move is moved, not erased.</p>
@@ -389,7 +450,7 @@ photos that show <em>exactly the same picture</em> in different folders, keeps o
 <div class="note"><p>Do not tidy a folder while it is being indexed for search: stop the indexing first.</p></div>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="video">14. Making a video</h2>
+<h2 id="video">15. Making a video</h2>
 
 <p>The <strong>Generate Video</strong> button turns photos into a video: each photo is shown for a moment, one after the other, optionally behind
 a title picture and with a song under it. Nothing else has to be installed.</p>
@@ -447,48 +508,6 @@ when it is what you want.</p></div>
 
 <p><strong>If something is not right.</strong> <em>No photos in this folder:</em> like some photos first, or pick <strong>Current</strong>. <em>A message that ffmpeg was not found:</em> reinstall
 PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe</code> on your <code>PATH</code>.</p>
-
-<!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="search">15. Searching the photos</h2>
-
-<p>For a library of thousands of old photos on a disk or a NAS, PhotoLiker can look at every photo once and then answer questions about
-them. Nothing is uploaded: the analysis runs on this computer, and your photos are only read, never changed.</p>
-
-<figure><img src="images/17-search-bar.png" alt="The strip above the photo: the index menu, Index photos, the search box, More like this, the faces icon and the precision slider" width="920" height="27"></figure>
-
-<ol class="steps">
-  <li><strong>Index photos</strong> (in the strip above the photo) analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the time
-  left. You can go on browsing, stop it (the button turns into <strong>Stop indexing</strong>) and continue later: only new or changed photos are done again. The search works as soon
-  as the first photos are in. The first time, the program asks before it downloads the AI models (about 650 MB).</li>
-  <li><strong>Search</strong> by describing what you look for: <code>children on a stage</code>, <code>snow</code>, <code>a dog</code>, <code>autumn leaves</code>. Type it into the search box and press
-  <kbd>Enter</kbd> or click the magnifier. The results replace the folder in the viewer: browse, like and group them like any photos. <kbd>Esc</kbd> or
-  <strong>Close results</strong> goes back. <strong>More like this</strong> finds photos that look like the shown one. Describe in English. A photo that is in the library
-  several times is shown once.</li>
-  <li><strong>Dates.</strong> Put a date into the search box, alone or with other words: <code>September 1</code> (that day in every year), <code>September 2009</code>, <code>2009-09-01</code>,
-  <code>2009</code>, <code>2009-2011</code>, <code>beach September 2009</code>, <code>Mom 2005</code>. Month names are English. The window title says how the date was understood.</li>
-  <li><strong>Faces.</strong> Switch on the face icon (the last button of the strip) to see the faces found in the shown photo. Click a face to say who it is (<strong>New person…</strong> or someone
-  you named before), to find all photos of that person, or to delete a wrong face (a doll, a poster). Typing a person's name into the search box finds their photos. A dashed
-  yellow box with a name and a question mark is a guess (<q>looks like Mom</q>): click it to confirm. For a face the program missed, hold <kbd>Shift</kbd> and drag a box around it.
-  Names you give in one folder are known in the others, too.</li>
-  <li><strong>Precision.</strong> The slider at the right end of the strip (<strong>Wide</strong> to <strong>Precise</strong>) sets how strict the searches are: to the left they let more photos through
-  (looser matches), to the right fewer (closer matches), the middle is the standard. It applies to a description, to <strong>More like this</strong> and to the photos of a person. Moving it repeats the
-  last search at once, so you can widen a search that found too little or narrow one that found too much. Hold the mouse over it to see the numbers. Each folder keeps its own position
-  (<code>SearchPrecision</code> in its <code>photo-liker-config.json</code>).
-    <figure><img src="images/18-search-wide.png" alt="The strip with results open and the slider at Wide" width="997" height="27"><figcaption>The slider at <strong>Wide</strong>: more photos, looser matches.</figcaption></figure>
-    <figure><img src="images/19-search-precise.png" alt="The strip with results open and the slider at Precise" width="997" height="27"><figcaption>The same search at <strong>Precise</strong>: fewer photos, closer matches.</figcaption></figure>
-  </li>
-</ol>
-
-<h3>Good to know</h3>
-<ul>
-  <li><strong>Speed.</strong> On a 6-core desktop processor indexing does about three photos per second (20,000 photos: roughly two hours). A network drive can be slower.
-  No graphics card is needed.</li>
-  <li><strong>Dates of the photos.</strong> The date comes from the camera (EXIF). If it is missing or cannot be believed (before 1995, in the future, or a camera that
-  lost its clock), the date the file was created is used, and the status bar says how many results are dated that way.</li>
-  <li><strong>Another computer.</strong> Use <strong>I/E &gt; Export index…</strong> (the first button of the strip) to save the index in a file, and <strong>I/E &gt; Import index…</strong> on the other computer.</li>
-  <li><strong>Visual C++ runtime.</strong> The AI models need the current Microsoft Visual C++ runtime. It comes with Windows updates, or install the
-  <em>Visual C++ Redistributable (x64)</em> if loading the models stops with a message that says so.</li>
-</ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="theme">16. Dark and light theme</h2>

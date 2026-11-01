@@ -4,8 +4,8 @@ using System.Text.RegularExpressions;
 
 namespace PhotoLiker.Search
 {
-    /// <summary>The byte-pair tokenizer of OpenAI CLIP (vocab.json + merges.txt), a port of its simple_tokenizer.</summary>
-    public sealed class ClipTokenizer
+    /// <summary>The byte-pair tokenizer of OpenAI CLIP (vocab.json + merges.txt), a port of its simple_tokenizer. Its ids are not padded: the model takes any length up to 77.</summary>
+    public sealed class ClipTokenizer : ITextTokenizer
     {
         public const int StartOfText = 49406;
         public const int EndOfText = 49407;

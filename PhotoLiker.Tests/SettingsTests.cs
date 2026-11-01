@@ -257,6 +257,56 @@ public class SettingsTests : IDisposable
         Assert.Equal((20, 80), (Settings.Load(_tempDir).SearchPrecision, Settings.Load(other).SearchPrecision));
     }
 
+    // ── SearchModel in the file ─────────────────────────────────────────────
+
+    [Fact]
+    public void SearchModel_IsTheFirstModel_UnlessTheFolderSaysOtherwise()
+    {
+        Assert.Equal("clip-vit-b32", new Settings().SearchModel);
+
+        // A file from before there was a choice
+        File.WriteAllText(Settings.GetFilePath(_tempDir), """{ "CacheSize": 30 }""");
+
+        Assert.Equal("clip-vit-b32", Settings.Load(_tempDir).SearchModel);
+    }
+
+    [Theory]
+    [InlineData("clip-vit-b32")]
+    [InlineData("siglip2-b16")]
+    [InlineData("xlmr-vit-b32")]
+    public void SearchModel_IsSavedInTheFoldersFile_AndReadBack(string model)
+    {
+        new Settings { CurrentFolder = _tempDir, SearchModel = model }.Save(_tempDir);
+
+        Assert.Contains($"\"SearchModel\": \"{model}\"", File.ReadAllText(Settings.GetFilePath(_tempDir)));
+        Assert.Equal(model, Settings.Load(_tempDir).SearchModel);
+    }
+
+    [Fact]
+    public void EachFolder_KeepsItsOwnSearchModel()
+    {
+        var other = Path.Combine(_tempDir, "other");
+        Directory.CreateDirectory(other);
+
+        new Settings { CurrentFolder = _tempDir, SearchModel = "siglip2-b16" }.Save(_tempDir);
+        new Settings { CurrentFolder = other, SearchModel = "xlmr-vit-b32" }.Save(other);
+
+        Assert.Equal(("siglip2-b16", "xlmr-vit-b32"), (Settings.Load(_tempDir).SearchModel, Settings.Load(other).SearchModel));
+    }
+
+    [Fact]
+    public void ASearchModelThisVersionDoesNotKnow_IsKeptInTheFile_WhenOtherSettingsAreSaved()
+    {
+        File.WriteAllText(Settings.GetFilePath(_tempDir), """{ "SearchModel": "model-of-a-newer-version" }""");
+
+        var settings = Settings.Load(_tempDir);
+        settings.CacheSize = 40;
+        settings.Save(_tempDir);
+
+        Assert.Equal("model-of-a-newer-version", Settings.Load(_tempDir).SearchModel);
+        Assert.Equal(40, Settings.Load(_tempDir).CacheSize);
+    }
+
     // ── GoThroughSubFolders in the file ─────────────────────────────────────
 
     [Fact]

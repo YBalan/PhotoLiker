@@ -134,6 +134,9 @@ namespace PhotoLikerUI
         public const int    PrecisionSettleMs            = 300;
         public const int    PrecisionSliderWidth         = 100;
 
+        // The combo box with the search model, at the right end of the search strip
+        public const int    ModelBoxPadding              = 30; // the drop-down arrow and the margins, added to the width of the longest line
+
         // Decoded photos kept in memory around the current one (a 24MP photo is ~96 MB decoded)
         public const long MaxCachedImageBytes            = 2L * 1024 * 1024 * 1024;
 

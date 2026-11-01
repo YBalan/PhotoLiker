@@ -1,16 +1,17 @@
 # PhotoLiker
 
-PhotoLiker is a Windows desktop photo triage tool for quickly browsing images and marking favorites.
-Open a folder, flip through it with the arrow keys, press <kbd>Space</kbd> to like a photo or a letter/number key to sort it
-into a group. Likes are plain copies of the files, so nothing is hidden in a database.
+PhotoLiker is a Windows desktop tool for finding your photos again and sorting out the good ones. When the folder is a NAS
+full of old photos you can no longer scroll through, let PhotoLiker index it once in the background and then **search it like
+the web**: type "birthday cake" or "children on a stage", name a person once and find every photo they are in, or combine them
+("Mom playing guitar 2005"). It all runs on your own computer, no photo is ever uploaded. See [Photo search](#photo-search).
 
-And when the folder is a NAS full of old photos you can no longer scroll through, let PhotoLiker index it once in the
-background and then **search it like the web**: type "birthday cake" or "children on a stage", or name a person once and
-find every photo they are in. It all runs on your own computer, no photo is ever uploaded.
+And for going through photos quickly: open a folder, flip through it with the arrow keys, press <kbd>Space</kbd> to like a
+photo or a letter/number key to sort it into a group. Likes are plain copies of the files, so nothing is hidden in a database.
 
 ## Contents
 
 - [Install](#install)
+- [Photo search](#photo-search)
 - [Happy path walkthrough](#happy-path-walkthrough)
   - [Keyboard and mouse](#keyboard-and-mouse)
   - [Toolbar](#toolbar)
@@ -29,7 +30,6 @@ find every photo they are in. It all runs on your own computer, no photo is ever
 - [Removing empty folders](#removing-empty-folders)
 - [Finding duplicates](#finding-duplicates)
 - [Dark and light theme](#dark-and-light-theme)
-- [Photo search](#photo-search)
 - [Settings file](#settings-file)
 - [User manual](#user-manual)
 - [Project layout](#project-layout)
@@ -73,6 +73,139 @@ The **Register Context Menu** button of the toolbar adds *Open in Photo Liker* t
 user only, no administrator rights). The same button removes it again.
 
 The installer and the zip also carry the [user manual](#user-manual), in English and Ukrainian: it opens from the **About** box.
+
+## Photo search
+
+Searching is what PhotoLiker is mostly for. For a library of thousands of old photos on a NAS, PhotoLiker can look at every photo once (**Index photos**, in the strip
+above the viewer) and then answer questions about them. Nothing is uploaded: the analysis runs on this computer.
+
+![The search strip above the viewer, dark theme: the index menu, Index photos, the search box, More like this, the faces icon and the precision slider](docs/images/17-search-bar.png)
+
+1. **Index photos** analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the
+   time left. You can keep browsing, stop it (the button turns into **Stop indexing**) and continue later: only new or
+   changed photos are done again. The search box works as soon as the first photos are in the index.
+   The first time, the AI models are downloaded (about 900 MB for the standard search model, you are asked first).
+2. **Search** by describing what you look for: `children on a stage`, `snow`, `a dog`, `autumn leaves`. Type it into the
+   search box and press <kbd>Enter</kbd> or click the magnifier icon. The results replace
+   the folder in the viewer, and the keyboard focus moves to the photo, so the keys work at once: browse, like and group
+   them like any photos (<kbd>Alt</kbd>+a group key groups all of them, see [Groups](#groups)). If nothing is found the focus stays in the
+   search box, to change the words. <kbd>Esc</kbd> or **Close results** goes
+   back. **More like this** finds photos that look like the one shown. Descriptions work in English; the **Model** box (see 6) can be
+   set to a model that understands other languages.
+   There is no limit to the number of photos a search shows (a text search shows the photos that match well, however many that is).
+   Each photo is shown once: a photo that is in the library several times (a card copied into two folders, its copy in a group
+   folder) is one result. Copies are photos of the same size, saved at the same second and showing the same picture, the way the
+   name of a copy in a group folder is made (see [Groups](#groups)); of them the one that is not itself a saved copy stays, then
+   the first by path. A copy whose file time was changed on the way is not recognised here, **Find duplicates** deals with those.
+   The results are in the order of **SortOrder**: `OldestFirst` and `NewestFirst` by the date the photos were taken (the EXIF
+   date, see below; the folder itself goes by the date the file was created because that costs nothing there), `ByName` by the
+   name of the file, `Random` shuffled, `None` as the search ranks them, best match first.
+3. **Dates**: put a date into the search box to look at when the photos were taken, alone or together with the rest of the
+   search: `September 1` (that day in every year), `September 2009`, `1 Sep 2009`, `2009-09-01`, `2009`, `2009-2011`,
+   `beach September 2009`, `Mom 2005`, `Mom playing guitar 2005`. A date alone lists the photos oldest first (or as **SortOrder** says), like every search without a limit. Month names are English;
+   a short name (`sep`, `dec`) needs a day or a year with it, and a text in double quotes is searched as words only.
+   The window title says how the date was understood.
+4. **Faces**: switch the face icon (the smiling face in scanner brackets, last button of the strip) on to see the faces
+   found in the shown photo. Click a face to say who it is (**New person...**
+   or one you named before), to find all photos of that person, or to delete a wrong face (dolls, posters). Typing the name
+   of a person into the search box finds their photos, best match first. A name can be combined with words, a date or other
+   names, anywhere in the text: `Yurii playing guitar` finds the photos of Yurii that fit the words (ranked like any description,
+   so the precision slider and the model apply to the words), `Mom and Dad on the beach 2009` the photos in which both have a
+   face of their own, taken in 2009, that fit the words. Who is in a photo comes from the faces, so it works the same with every
+   model; the words are matched by the chosen model, so they only look at the photos it has been through (the status bar says how
+   many of the person's photos were left out). A name counts as a whole word in any case (`Yurii's` too), the longest name wins
+   (`Grandma Olga` is not `Olga`), and "with", "and", "on" at the ends of the rest are dropped. A text in double quotes is only words:
+   `"Yurii playing guitar"` does not look for Yurii. A dashed yellow box with a name and a question
+   mark is a guess ("looks like Mom"); click it to confirm. A face the program missed (small, turned away, dark): hold
+   <kbd>Shift</kbd> and drag a box around it.
+5. **Precision**: the slider at the right end of the strip (**Wide** to **Precise**) sets how strict the searches are. To the
+   left they let more photos through (looser matches), to the right fewer (closer matches); the middle is the standard. It moves
+   the cutoffs of all the searches together: how well a photo must fit the words and how far below the best one it may be,
+   how alike a photo must be for **More like this**, and how close a face must be for the photos of a person. Moving it repeats
+   the last search at once, so you can widen a search that found too little or narrow one that found too much. Hold the mouse
+   over the slider to see the cutoffs it stands for. The position is kept for each folder in its `photo-liker-config.json` (`SearchPrecision`,
+   0 to 100, 50 is the standard). Faces named in the photo (the yellow "looks like Mom?" boxes) are not affected.
+
+   ![The strip with results open and the slider at Wide: more photos, looser matches](docs/images/18-search-wide.png)
+
+   ![The same search with the slider at Precise: fewer photos, closer matches](docs/images/19-search-precise.png)
+6. **Model**: the box at the right end of the strip chooses the model that matches words with photos; each line of the list gives the name, the vendor in brackets and the languages the model understands. The choice is kept for each folder
+   in its `photo-liker-config.json` (`SearchModel`: `clip-vit-b32`, `siglip2-b16` or `xlmr-vit-b32`; a name the app does not know reads
+   as `clip-vit-b32`). The numbers below are from a test with 300 photos and their 1,500 descriptions (Flickr30k): how often the right
+   photo was the first result, and one of the first ten.
+
+   ![The model box with its list open](docs/images/20-search-model.png)
+
+   | Model | First | In the first 10 | Speed of the model | Download | Understands |
+   |---|---|---|---|---|---|
+   | **CLIP B/32** (OpenAI) | 74 % | 97 % | 21 photos/s | 610 MB | English |
+   | **SigLIP 2 B/16** (Google) | 88 % | 99.5 % | 5 photos/s | 1.5 GB | English and Russian well, Ukrainian less well |
+   | **XLM-R B/32** (LAION) | 78 % | 97.5 % | 16 photos/s | 1.5 GB | about a hundred languages, Ukrainian and Russian included |
+
+   (The speed is the photo model alone, 6 threads, small photos; a real run is also limited by how fast the photos are read and
+   decoded.) CLIP B/32 is the standard: the fastest and the smallest download. SigLIP 2 finds the right photo most often, at about
+   four times the indexing time. XLM-R is as fast as CLIP, a little better in English, and the one for descriptions in Ukrainian
+   or Russian: in the [Immich project's benchmark](https://docs.immich.app/features/search) of the same models it finds 76 % for
+   Ukrainian against 65 % for SigLIP 2 B/16 (Russian: 76 % against 81 %, English: 77 % against 85 %, CLIP B/32 70 %).
+   The results of different models can not be compared, so each model has to go through the photos once: **Update index** does it,
+   and only that: the faces, the names of the people and the dates are kept, and so are the results of the models you used before,
+   so going back to one of them costs nothing (a model's results take 2 to 3 KB per photo in the index). The strip says how far it is
+   ("3,000 of 12,345 photos for SigLIP 2 B/16"); until it is done a description or **More like this** only looks at the photos that
+   are done (the status bar says how many were left out), while dates and people work on all of them. Stopping and continuing works as always, and the box is locked
+   while photos are being analyzed. The first time a model is used it is downloaded, after asking.
+   The scores of every model are put on the scale the cutoffs and the **Precision** slider were made for (from the same test), so the
+   middle of the slider finds about as many photos with each; on your own library you may still want to move it.
+
+| Input | What it does |
+|---|---|
+| Click / right click on a face | The menu of the face: name it, find the person, delete it. |
+| <kbd>Shift</kbd>+drag over the photo | Mark a face that was not found (with the face icon on). |
+| <kbd>Enter</kbd> in the search box | Search. |
+| <kbd>Esc</kbd> | Close the results. |
+
+The models need the current Microsoft Visual C++ runtime (it comes with Windows updates, or as the *Visual C++
+Redistributable* x64). PhotoLiker loads the one of Windows first thing when it starts: some programs (the shell extension of
+TortoiseGit, for one) put an old private copy of it into every program that opens a file or folder dialog, and ONNX Runtime
+does not just fail with that, it takes the whole program down (`0xC0000005` while loading the models). If an old copy is
+there all the same, loading the models stops with a message that says so.
+
+How long indexing takes depends mostly on the processor and on how fast the photos can be read: on a 6-core desktop
+processor it is about three photos per second (20,000 photos: roughly two hours), a network drive can be slower. It does
+not need a graphics card.
+
+Where the date of a photo comes from: the EXIF date of the camera. If that is missing or cannot be believed, the date the file
+was created is used instead (for photos copied off a camera or a card that is about the day they were copied), and the status
+bar says how many of the results are dated that way. A camera date is not believed when it is before 1995 or in the future, or
+when it is on January 1 before noon (an old camera that lost its clock starts again there, and writes `2001-01-01` into every
+photo) and the file was not created at about that time (two days, for a time zone); a real photo of New Year's night is
+kept. An index made before dates were kept gets them when you press **Update index**: that reads only the start of each file,
+needs no models and takes about a minute per 2,000 photos on a network drive.
+
+What is kept where:
+
+- **The index** (what was found in each photo, and when it was taken, with one vector for each search model that has been through it) is a cache in `%LocalAppData%\PhotoLiker\index`, one file per photo folder.
+  It can always be rebuilt, so deleting it only costs the time of indexing again. Your photos are only read, never changed
+  (except by [Align dates](#aligning-file-dates), which you press yourself).
+  To use it on another computer (or to index on the faster one), choose **I/E > Export index...** (the first button of the
+  strip: import / export), bring the `.plindex` file over, open the same photos there (whatever the drive letter) and choose
+  **I/E > Import index...**.
+  **Update index** then brings it up to date: photos whose size and date are the same are not analyzed again. The models
+  are downloaded there on first use, or copy the `models` folder (below) along.
+- **The names you give** are kept in `photo-liker-people.json` in the photo folder, next to the photos: the face examples of each
+  person. It is the only new file in your folder, it is plain JSON, and a rebuilt index finds the same people again.
+  The people of all your folders are also collected in `%LocalAppData%\PhotoLiker\people.json`, so a folder you open and index
+  for the first time already knows the people you named in the others: their names are in the list of the face menu and
+  the search box, typing one finds the photos of that person in this folder, and a face that looks like one of them is
+  offered as "Looks like ...". Names are matched without caring about case, so *Mom* in two folders is one person.
+  A face named in another folder is only an example here, it is not marked as named: the faces you confirm in this folder
+  go into this folder's file. The file of a folder stays the truth about that folder (delete it and the folder's people are
+  gone from the shared file the next time the folder is opened), the shared one is a copy that can be deleted any time.
+  Folders you named people in before this existed join it when you open them once (no indexing needed).
+- **The models** are in `%LocalAppData%\PhotoLiker\models`, a folder for each, downloaded when they are first needed: to match
+  words with photos CLIP ViT-B/32 (OpenAI, MIT licence, the standard), SigLIP 2 Base/16 (Google, Apache 2.0) and XLM-RoBERTa with ViT-B/32 (LAION,
+  MIT licence) (see **Model** above; the last two are ONNX exports of the Immich project, fixed to one revision), and
+  InsightFace's SCRFD and ArcFace (`buffalo_l`) to find and recognize faces. The InsightFace models are free for
+  non-commercial use only, which fits a private photo library. Delete the folder of a model you do not use to get its space back.
 
 ## Happy path walkthrough
 
@@ -547,103 +680,6 @@ The theme button of the toolbar switches between the two. The choice is stored i
 
 ![The light theme](docs/images/11-light-theme.png)
 
-## Photo search
-
-For a library of thousands of old photos on a NAS, PhotoLiker can look at every photo once (**Index photos**, in the strip
-above the viewer) and then answer questions about them. Nothing is uploaded: the analysis runs on this computer.
-
-![The search strip above the viewer, dark theme: the index menu, Index photos, the search box, More like this, the faces icon and the precision slider](docs/images/17-search-bar.png)
-
-1. **Index photos** analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the
-   time left. You can keep browsing, stop it (the button turns into **Stop indexing**) and continue later: only new or
-   changed photos are done again. The search box works as soon as the first photos are in the index.
-   The first time, the AI models are downloaded (about 650 MB, you are asked first).
-2. **Search** by describing what you look for: `children on a stage`, `snow`, `a dog`, `autumn leaves`. Type it into the
-   search box and press <kbd>Enter</kbd> or click the magnifier icon. The results replace
-   the folder in the viewer, and the keyboard focus moves to the photo, so the keys work at once: browse, like and group
-   them like any photos (<kbd>Alt</kbd>+a group key groups all of them, see [Groups](#groups)). If nothing is found the focus stays in the
-   search box, to change the words. <kbd>Esc</kbd> or **Close results** goes
-   back. **More like this** finds photos that look like the one shown. Descriptions work in English.
-   There is no limit to the number of photos a search shows (a text search shows the photos that match well, however many that is).
-   Each photo is shown once: a photo that is in the library several times (a card copied into two folders, its copy in a group
-   folder) is one result. Copies are photos of the same size, saved at the same second and showing the same picture, the way the
-   name of a copy in a group folder is made (see [Groups](#groups)); of them the one that is not itself a saved copy stays, then
-   the first by path. A copy whose file time was changed on the way is not recognised here, **Find duplicates** deals with those.
-   The results are in the order of **SortOrder**: `OldestFirst` and `NewestFirst` by the date the photos were taken (the EXIF
-   date, see below; the folder itself goes by the date the file was created because that costs nothing there), `ByName` by the
-   name of the file, `Random` shuffled, `None` as the search ranks them, best match first.
-3. **Dates**: put a date into the search box to look at when the photos were taken, alone or together with the rest of the
-   search: `September 1` (that day in every year), `September 2009`, `1 Sep 2009`, `2009-09-01`, `2009`, `2009-2011`,
-   `beach September 2009`, `Mom 2005`. A date alone lists the photos oldest first (or as **SortOrder** says), like every search without a limit. Month names are English;
-   a short name (`sep`, `dec`) needs a day or a year with it, and a text in double quotes is searched as words only.
-   The window title says how the date was understood.
-4. **Faces**: switch the face icon (the smiling face in scanner brackets, last button of the strip) on to see the faces
-   found in the shown photo. Click a face to say who it is (**New person...**
-   or one you named before), to find all photos of that person, or to delete a wrong face (dolls, posters). Typing the name
-   of a person into the search box finds their photos, best match first. A dashed yellow box with a name and a question
-   mark is a guess ("looks like Mom"); click it to confirm. A face the program missed (small, turned away, dark): hold
-   <kbd>Shift</kbd> and drag a box around it.
-5. **Precision**: the slider at the right end of the strip (**Wide** to **Precise**) sets how strict the searches are. To the
-   left they let more photos through (looser matches), to the right fewer (closer matches); the middle is the standard. It moves
-   the cutoffs of all the searches together: how well a photo must fit the words and how far below the best one it may be,
-   how alike a photo must be for **More like this**, and how close a face must be for the photos of a person. Moving it repeats
-   the last search at once, so you can widen a search that found too little or narrow one that found too much. Hold the mouse
-   over the slider to see the cutoffs it stands for. The position is kept for each folder in its `photo-liker-config.json` (`SearchPrecision`,
-   0 to 100, 50 is the standard). Faces named in the photo (the yellow "looks like Mom?" boxes) are not affected.
-
-   ![The strip with results open and the slider at Wide: more photos, looser matches](docs/images/18-search-wide.png)
-
-   ![The same search with the slider at Precise: fewer photos, closer matches](docs/images/19-search-precise.png)
-
-| Input | What it does |
-|---|---|
-| Click / right click on a face | The menu of the face: name it, find the person, delete it. |
-| <kbd>Shift</kbd>+drag over the photo | Mark a face that was not found (with the face icon on). |
-| <kbd>Enter</kbd> in the search box | Search. |
-| <kbd>Esc</kbd> | Close the results. |
-
-The models need the current Microsoft Visual C++ runtime (it comes with Windows updates, or as the *Visual C++
-Redistributable* x64). PhotoLiker loads the one of Windows first thing when it starts: some programs (the shell extension of
-TortoiseGit, for one) put an old private copy of it into every program that opens a file or folder dialog, and ONNX Runtime
-does not just fail with that, it takes the whole program down (`0xC0000005` while loading the models). If an old copy is
-there all the same, loading the models stops with a message that says so.
-
-How long indexing takes depends mostly on the processor and on how fast the photos can be read: on a 6-core desktop
-processor it is about three photos per second (20,000 photos: roughly two hours), a network drive can be slower. It does
-not need a graphics card.
-
-Where the date of a photo comes from: the EXIF date of the camera. If that is missing or cannot be believed, the date the file
-was created is used instead (for photos copied off a camera or a card that is about the day they were copied), and the status
-bar says how many of the results are dated that way. A camera date is not believed when it is before 1995 or in the future, or
-when it is on January 1 before noon (an old camera that lost its clock starts again there, and writes `2001-01-01` into every
-photo) and the file was not created at about that time (two days, for a time zone); a real photo of New Year's night is
-kept. An index made before dates were kept gets them when you press **Update index**: that reads only the start of each file,
-needs no models and takes about a minute per 2,000 photos on a network drive.
-
-What is kept where:
-
-- **The index** (what was found in each photo, and when it was taken) is a cache in `%LocalAppData%\PhotoLiker\index`, one file per photo folder.
-  It can always be rebuilt, so deleting it only costs the time of indexing again. Your photos are only read, never changed
-  (except by [Align dates](#aligning-file-dates), which you press yourself).
-  To use it on another computer (or to index on the faster one), choose **I/E > Export index...** (the first button of the
-  strip: import / export), bring the `.plindex` file over, open the same photos there (whatever the drive letter) and choose
-  **I/E > Import index...**.
-  **Update index** then brings it up to date: photos whose size and date are the same are not analyzed again. The models
-  are downloaded there on first use, or copy the `models` folder (below) along.
-- **The names you give** are kept in `photo-liker-people.json` in the photo folder, next to the photos: the face examples of each
-  person. It is the only new file in your folder, it is plain JSON, and a rebuilt index finds the same people again.
-  The people of all your folders are also collected in `%LocalAppData%\PhotoLiker\people.json`, so a folder you open and index
-  for the first time already knows the people you named in the others: their names are in the list of the face menu and
-  the search box, typing one finds the photos of that person in this folder, and a face that looks like one of them is
-  offered as "Looks like ...". Names are matched without caring about case, so *Mom* in two folders is one person.
-  A face named in another folder is only an example here, it is not marked as named: the faces you confirm in this folder
-  go into this folder's file. The file of a folder stays the truth about that folder (delete it and the folder's people are
-  gone from the shared file the next time the folder is opened), the shared one is a copy that can be deleted any time.
-  Folders you named people in before this existed join it when you open them once (no indexing needed).
-- **The models** are in `%LocalAppData%\PhotoLiker\models`: CLIP ViT-B/32 (OpenAI, MIT licence) to match words with photos, and
-  InsightFace's SCRFD and ArcFace (`buffalo_l`) to find and recognize faces. The InsightFace models are free for
-  non-commercial use only, which fits a private photo library.
-
 ## Settings file
 
 Each photo folder keeps its settings in `photo-liker-config.json` inside the folder, so every folder remembers its own
@@ -674,7 +710,8 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
 shared between machines that may run different versions. The spelling `GoThroughSubFolders` (used by the MAUI app) is read
 as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized. `SortOrder` is written by name
 (`OldestFirst`, `NewestFirst`, `ByName`, `Random` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
-as `OldestFirst` and does not spoil the rest of the file.
+as `OldestFirst` and does not spoil the rest of the file. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
+settings of the [photo search](#photo-search).
 
 Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that
 was opened), `people.json` (the people named in all folders, see above) and `crash.log` (the stack trace of an unexpected
@@ -708,7 +745,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app). |
-| `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizer, image and face geometry, index, people file, search. They need no models. |
+| `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script and `build-installer.ps1`. |
 | `docs` | Screenshots, the [user manual](#user-manual) pages, [a how-to for Generate Video](docs/how-to-generate-video.md) and a small sample folder of photos. |

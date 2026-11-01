@@ -429,7 +429,7 @@ public class PhotoIndexDatesTests : IDisposable
     }
 
     private static IndexedPhoto Photo(string path, PhotoDate? date = null) =>
-        new(path, length: 1000, modifiedTicks: 5000) { Clip = Vectors.Unit(1), ClipVersion = 1, FaceVersion = 1, Date = date ?? PhotoDate.NotRead };
+        new(path, length: 1000, modifiedTicks: 5000) { Clips = Vectors.Clips(Vectors.Unit(1)), FaceVersion = 1, Date = date ?? PhotoDate.NotRead };
 
     [Fact]
     public void AnIndexMadeBeforeDatesWereKept_IsKept_AndGetsPlaceForThem()
@@ -456,7 +456,7 @@ public class PhotoIndexDatesTests : IDisposable
         using (var index = PhotoIndex.Open(_photos.Path, IndexFile))
         {
             var photo = index.Find("old.jpg")!;
-            Assert.Equal(Vectors.Unit(1, 2), photo.Clip);       // the work of hours is still there
+            Assert.Equal(Vectors.Unit(1, 2), photo.VectorOf(ClipModels.Default.Id));       // the work of hours is still there
             Assert.Equal(PhotoDate.NotRead, photo.Date);
             Assert.Equal(1, index.DatesPending);
 
@@ -495,7 +495,7 @@ public class PhotoIndexDatesTests : IDisposable
 
         using var reopened = PhotoIndex.Open(_photos.Path, IndexFile);
         var again = reopened.Find("a.jpg")!;
-        Assert.Equal(Vectors.Unit(1), again.Clip);
+        Assert.Equal(Vectors.Unit(1), again.VectorOf(ClipModels.Default.Id));
         Assert.True(Assert.Single(again.Faces).Manual);
         Assert.Equal(new DateTime(2009, 9, 1), again.Date.Taken);
     }
@@ -526,8 +526,7 @@ public class DateSearchTests : IDisposable
         // A size of its own: photos of one size, time and picture are copies of one photo, which a search shows once
         var photo = new IndexedPhoto(path, length: 10 + _added++, modifiedTicks: 20)
         {
-            Clip = Vectors.Unit(1),
-            ClipVersion = 1,
+            Clips = Vectors.Clips(Vectors.Unit(1)),
             FaceVersion = 1,
             Date = new PhotoDate(taken, taken is null ? DateSource.None : source, PhotoDates.Version),
         };
@@ -649,7 +648,7 @@ public class DateIndexingTests : IDisposable
         var info = new FileInfo(file);
         return new IndexedPhoto(relative, info.Length, info.LastWriteTimeUtc.Ticks)
         {
-            Clip = Vectors.Unit(1), ClipVersion = IndexingJob.ClipVersion, FaceVersion = IndexingJob.FaceVersion,
+            Clips = Vectors.Clips(Vectors.Unit(1)), FaceVersion = IndexingJob.FaceVersion,
         };
     }
 
@@ -671,7 +670,7 @@ public class DateIndexingTests : IDisposable
         index.Save([Indexed("a.jpg", exif), Indexed("sub/b.jpg", reset), Indexed("c.jpg", bare)]);
         Assert.Equal(3, index.DatesPending);
 
-        var summary = await IndexingJob.RunAsync(index, _models, null, [".jpg"], null, CancellationToken.None);
+        var summary = await IndexingJob.RunAsync(index, _models, ClipModels.Default, null, [".jpg"], null, CancellationToken.None);
 
         Assert.Equal(3, summary.DatesRead);
         Assert.Equal(0, summary.Indexed);
@@ -682,7 +681,7 @@ public class DateIndexingTests : IDisposable
         Assert.Equal(new PhotoDate(new DateTime(2010, 5, 5, 12, 0, 0, DateTimeKind.Utc).ToLocalTime(), DateSource.File, PhotoDates.Version), index.Find("sub/b.jpg")!.Date);
         Assert.Equal(new PhotoDate(new DateTime(2011, 6, 6, 12, 0, 0, DateTimeKind.Utc).ToLocalTime(), DateSource.File, PhotoDates.Version), index.Find("c.jpg")!.Date);
 
-        var again = await IndexingJob.RunAsync(index, _models, null, [".jpg"], null, CancellationToken.None);
+        var again = await IndexingJob.RunAsync(index, _models, ClipModels.Default, null, [".jpg"], null, CancellationToken.None);
         Assert.Equal(0, again.DatesRead); // nothing is read twice
     }
 
@@ -697,11 +696,11 @@ public class DateIndexingTests : IDisposable
         index.Save([photo]);
         var reports = new List<IndexProgress>();
 
-        await IndexingJob.RunAsync(index, _models, null, [".jpg"], new SynchronousProgress(reports.Add), CancellationToken.None);
+        await IndexingJob.RunAsync(index, _models, ClipModels.Default, null, [".jpg"], new SynchronousProgress(reports.Add), CancellationToken.None);
 
         Assert.Contains(reports, r => r.Phase == IndexPhase.ReadingDates && r.Done == 1 && r.Total == 1);
         var saved = index.Find("a.jpg")!;
-        Assert.Equal(Vectors.Unit(1), saved.Clip);
+        Assert.Equal(Vectors.Unit(1), saved.VectorOf(ClipModels.Default.Id));
         Assert.Single(saved.Faces);
     }
 
@@ -716,12 +715,12 @@ public class DateIndexingTests : IDisposable
         // Locked so that it can not be opened for reading (a share mode of none)
         using (new FileStream(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
         {
-            var locked = await IndexingJob.RunAsync(index, _models, null, [".jpg"], null, CancellationToken.None);
+            var locked = await IndexingJob.RunAsync(index, _models, ClipModels.Default, null, [".jpg"], null, CancellationToken.None);
             Assert.Equal(0, locked.DatesRead);
             Assert.Equal(1, index.DatesPending);
         }
 
-        var free = await IndexingJob.RunAsync(index, _models, null, [".jpg"], null, CancellationToken.None);
+        var free = await IndexingJob.RunAsync(index, _models, ClipModels.Default, null, [".jpg"], null, CancellationToken.None);
         Assert.Equal(1, free.DatesRead);
         Assert.Equal(0, index.DatesPending);
     }

@@ -46,7 +46,15 @@ namespace PhotoLiker.Search
 
         // ── what is in the index ───────────────────────────────────────────
 
-        public int PhotoCount { get { lock (_gate) return _photos.Values.Count(p => p.Clip is not null); } }
+        /// <summary>How many photos have been through at least one model.</summary>
+        public int PhotoCount { get { lock (_gate) return _photos.Values.Count(p => p.HasVector); } }
+
+        /// <summary>How many photos have a vector of this model, i.e. can be searched with it.</summary>
+        public int CountWithModel(string clipModelId)
+        {
+            lock (_gate)
+                return _photos.Values.Count(p => p.Clips.ContainsKey(clipModelId));
+        }
 
         public int FaceCount { get { lock (_gate) return _photos.Values.Sum(p => p.Faces.Count); } }
 
@@ -63,7 +71,7 @@ namespace PhotoLiker.Search
         }
 
         /// <summary>Photos whose date has not been worked out by the current rules yet (an index made before dates were kept): "Update index" reads them.</summary>
-        public int DatesPending { get { lock (_gate) return _photos.Values.Count(p => p.Clip is not null && p.Date.Version < PhotoDates.Version); } }
+        public int DatesPending { get { lock (_gate) return _photos.Values.Count(p => p.HasVector && p.Date.Version < PhotoDates.Version); } }
 
         /// <summary>All photos at this moment; later changes do not show in the array.</summary>
         public IndexedPhoto[] Snapshot()
@@ -112,6 +120,9 @@ namespace PhotoLiker.Search
                 foreach (var photo in photos)
                 {
                     photo.Id = UpsertPhoto(photo);
+                    Execute("DELETE FROM clips WHERE photo_id = $photo", ("$photo", photo.Id));
+                    foreach (var (model, clip) in photo.Clips)
+                        InsertClip(photo.Id, model, clip);
                     Execute("DELETE FROM faces WHERE photo_id = $photo", ("$photo", photo.Id));
                     foreach (var face in photo.Faces)
                         face.Id = InsertFace(photo.Id, face);
@@ -305,7 +316,10 @@ namespace PhotoLiker.Search
                 if (Scalar(db, "SELECT value FROM meta WHERE key = 'schema'") as string != SchemaVersion.ToString())
                     throw new InvalidDataException("This index was made by another version of PhotoLiker and can not be used.");
 
-                var photos = Convert.ToInt32(Scalar(db, "SELECT COUNT(*) FROM photos WHERE clip IS NOT NULL"));
+                // A file made before the vectors of several models were kept has them in the photos table
+                var photos = Convert.ToInt32(Scalar(db, Scalar(db, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'clips'") is long and > 0
+                    ? "SELECT COUNT(DISTINCT photo_id) FROM clips"
+                    : "SELECT COUNT(*) FROM photos WHERE clip IS NOT NULL"));
                 var faces = Convert.ToInt32(Scalar(db, "SELECT COUNT(*) FROM faces"));
                 var from = Scalar(db, "SELECT value FROM meta WHERE key = 'exported_root'") as string;
                 DateTime? at = DateTime.TryParse(Scalar(db, "SELECT value FROM meta WHERE key = 'exported_at'") as string, null,
@@ -358,26 +372,23 @@ namespace PhotoLiker.Search
             var current = read.ExecuteScalar() as string;
             if (current != SchemaVersion.ToString())
             {
+                Execute("DROP TABLE IF EXISTS clips");
                 Execute("DROP TABLE IF EXISTS faces");
                 Execute("DROP TABLE IF EXISTS photos");
                 Execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema', $v)", ("$v", SchemaVersion.ToString()));
             }
 
-            Execute("""
-                CREATE TABLE IF NOT EXISTS photos (
-                    id INTEGER PRIMARY KEY,
-                    path TEXT NOT NULL UNIQUE COLLATE NOCASE,
-                    length INTEGER NOT NULL,
-                    modified INTEGER NOT NULL,
-                    clip BLOB,
-                    clip_version INTEGER NOT NULL,
-                    face_version INTEGER NOT NULL,
-                    failure TEXT,
-                    taken INTEGER,
-                    taken_source INTEGER NOT NULL DEFAULT 0,
-                    date_version INTEGER NOT NULL DEFAULT 0)
-                """);
+            Execute(CreatePhotosTable("photos"));
             AddMissingColumns();
+            Execute("""
+                CREATE TABLE IF NOT EXISTS clips (
+                    photo_id INTEGER NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
+                    model TEXT NOT NULL,
+                    version INTEGER NOT NULL,
+                    vector BLOB NOT NULL,
+                    PRIMARY KEY (photo_id, model))
+                """);
+            MoveSingleVectors();
             Execute("""
                 CREATE TABLE IF NOT EXISTS faces (
                     id INTEGER PRIMARY KEY,
@@ -410,24 +421,95 @@ namespace PhotoLiker.Search
                 Execute("ALTER TABLE photos ADD COLUMN date_version INTEGER NOT NULL DEFAULT 0");
         }
 
+        private static string CreatePhotosTable(string name) => $"""
+            CREATE TABLE IF NOT EXISTS {name} (
+                id INTEGER PRIMARY KEY,
+                path TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                length INTEGER NOT NULL,
+                modified INTEGER NOT NULL,
+                face_version INTEGER NOT NULL,
+                failure TEXT,
+                taken INTEGER,
+                taken_source INTEGER NOT NULL DEFAULT 0,
+                date_version INTEGER NOT NULL DEFAULT 0)
+            """;
+
+        /// <summary>
+        /// An index file made when a photo had room for one vector (columns of the photos table, with the model's id in one of them in
+        /// the first versions that had a choice of models, and none before: those are vectors of the first model) is brought to the
+        /// table of vectors, one row per photo and model. Nothing is lost: the vectors are copied first, then the photos table is made
+        /// again without the old columns (one pass; dropping the columns one by one rewrote the table three times, 22 seconds for
+        /// 16,000 photos instead of 3), all in one transaction, so a file that fails halfway is the old file. The photos keep their ids,
+        /// which is what the faces and the vectors refer to.
+        /// </summary>
+        private void MoveSingleVectors()
+        {
+            var have = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var info = _db.CreateCommand())
+            {
+                info.CommandText = "PRAGMA table_info(photos)";
+                using var reader = info.ExecuteReader();
+                while (reader.Read())
+                    have.Add(reader.GetString(1));
+            }
+            if (!have.Contains("clip"))
+                return;
+
+            var model = have.Contains("clip_model") ? "clip_model" : $"'{ClipModels.Default.Id}'";
+            var version = have.Contains("clip_version") ? "clip_version" : "1";
+
+            // With the foreign keys on, dropping the old photos table would delete its faces and vectors with it (set outside a transaction)
+            Execute("PRAGMA foreign_keys = OFF");
+            try
+            {
+                using var transaction = _db.BeginTransaction();
+                Execute($"INSERT OR REPLACE INTO clips (photo_id, model, version, vector) SELECT id, {model}, {version}, clip FROM photos WHERE clip IS NOT NULL");
+                Execute(CreatePhotosTable("photos_new"));
+                Execute("""
+                    INSERT INTO photos_new (id, path, length, modified, face_version, failure, taken, taken_source, date_version)
+                    SELECT id, path, length, modified, face_version, failure, taken, taken_source, date_version FROM photos
+                    """);
+                Execute("DROP TABLE photos");
+                Execute("ALTER TABLE photos_new RENAME TO photos");
+                Execute("DELETE FROM faces WHERE photo_id NOT IN (SELECT id FROM photos)"); // there should be none: they could not be loaded anyway
+                transaction.Commit();
+            }
+            finally
+            {
+                Execute("PRAGMA foreign_keys = ON");
+            }
+        }
+
         private void Load()
         {
             var byId = new Dictionary<long, IndexedPhoto>();
 
+            var clips = new Dictionary<long, Dictionary<string, ClipVector>>();
+            using (var command = _db.CreateCommand())
+            {
+                command.CommandText = "SELECT photo_id, model, version, vector FROM clips";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    if (!clips.TryGetValue(reader.GetInt64(0), out var ofPhoto))
+                        clips[reader.GetInt64(0)] = ofPhoto = [];
+                    ofPhoto[reader.GetString(1)] = new ClipVector(VectorMath.ToFloats((byte[])reader[3]), reader.GetInt32(2));
+                }
+            }
+
             using (var photos = _db.CreateCommand())
             {
-                photos.CommandText = "SELECT id, path, length, modified, clip, clip_version, face_version, failure, taken, taken_source, date_version FROM photos";
+                photos.CommandText = "SELECT id, path, length, modified, face_version, failure, taken, taken_source, date_version FROM photos";
                 using var reader = photos.ExecuteReader();
                 while (reader.Read())
                 {
                     var photo = new IndexedPhoto(reader.GetString(1), reader.GetInt64(2), reader.GetInt64(3))
                     {
                         Id = reader.GetInt64(0),
-                        Clip = reader.IsDBNull(4) ? null : VectorMath.ToFloats((byte[])reader[4]),
-                        ClipVersion = reader.GetInt32(5),
-                        FaceVersion = reader.GetInt32(6),
-                        Failure = reader.IsDBNull(7) ? null : reader.GetString(7),
-                        Date = new PhotoDate(reader.IsDBNull(8) ? null : new DateTime(reader.GetInt64(8)), (DateSource)reader.GetInt32(9), reader.GetInt32(10)),
+                        Clips = clips.TryGetValue(reader.GetInt64(0), out var ofPhoto) ? ofPhoto : IndexedPhoto.NoClips,
+                        FaceVersion = reader.GetInt32(4),
+                        Failure = reader.IsDBNull(5) ? null : reader.GetString(5),
+                        Date = new PhotoDate(reader.IsDBNull(6) ? null : new DateTime(reader.GetInt64(6)), (DateSource)reader.GetInt32(7), reader.GetInt32(8)),
                     };
                     byId[photo.Id] = photo;
                     _photos[photo.RelativePath] = photo;
@@ -462,11 +544,10 @@ namespace PhotoLiker.Search
         {
             using var command = _db.CreateCommand();
             command.CommandText = """
-                INSERT INTO photos (path, length, modified, clip, clip_version, face_version, failure, taken, taken_source, date_version)
-                VALUES ($path, $length, $modified, $clip, $clipVersion, $faceVersion, $failure, $taken, $takenSource, $dateVersion)
+                INSERT INTO photos (path, length, modified, face_version, failure, taken, taken_source, date_version)
+                VALUES ($path, $length, $modified, $faceVersion, $failure, $taken, $takenSource, $dateVersion)
                 ON CONFLICT(path) DO UPDATE SET
-                    length = excluded.length, modified = excluded.modified, clip = excluded.clip,
-                    clip_version = excluded.clip_version, face_version = excluded.face_version, failure = excluded.failure,
+                    length = excluded.length, modified = excluded.modified, face_version = excluded.face_version, failure = excluded.failure,
                     taken = excluded.taken, taken_source = excluded.taken_source, date_version = excluded.date_version
                 RETURNING id
                 """;
@@ -476,12 +557,15 @@ namespace PhotoLiker.Search
             command.Parameters.AddWithValue("$path", photo.RelativePath);
             command.Parameters.AddWithValue("$length", photo.Length);
             command.Parameters.AddWithValue("$modified", photo.ModifiedTicks);
-            command.Parameters.AddWithValue("$clip", photo.Clip is null ? DBNull.Value : VectorMath.ToBytes(photo.Clip));
-            command.Parameters.AddWithValue("$clipVersion", photo.ClipVersion);
             command.Parameters.AddWithValue("$faceVersion", photo.FaceVersion);
             command.Parameters.AddWithValue("$failure", (object?)photo.Failure ?? DBNull.Value);
             return (long)command.ExecuteScalar()!;
         }
+
+        private void InsertClip(long photoId, string model, ClipVector clip) =>
+            Execute(
+                "INSERT INTO clips (photo_id, model, version, vector) VALUES ($photo, $model, $version, $vector)",
+                ("$photo", photoId), ("$model", model), ("$version", clip.Version), ("$vector", VectorMath.ToBytes(clip.Values)));
 
         private long InsertFace(long photoId, IndexedFace face)
         {

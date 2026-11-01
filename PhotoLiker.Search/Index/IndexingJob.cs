@@ -16,7 +16,11 @@ namespace PhotoLiker.Search
     /// </remarks>
     public static class IndexingJob
     {
-        /// <summary>Raised when the models change in a way that makes old vectors useless: everything is then done again.</summary>
+        /// <summary>
+        /// Raised when the way a photo is prepared or analyzed changes so that old vectors are useless: each model's vectors are then made
+        /// again when that model is next indexed. Another model is not a new version: a photo keeps a vector for every model that has been
+        /// through it (<see cref="IndexedPhoto.Clips"/>), and a model is only run on the photos that lack its vector, while their faces are kept.
+        /// </summary>
         public const int ClipVersion = 1;
         public const int FaceVersion = 1;
 
@@ -30,10 +34,12 @@ namespace PhotoLiker.Search
         private static readonly TimeSpan SaveInterval = TimeSpan.FromSeconds(2);
         private static readonly TimeSpan ReportInterval = TimeSpan.FromMilliseconds(250);
 
+        /// <param name="clipModel">The model that matches words with photos: the photos that lack its vector get one (the vectors of other models stay).</param>
         /// <param name="excludedFolder">A folder to leave out, e.g. the liked folder with its copies.</param>
         public static async Task<IndexSummary> RunAsync(
             PhotoIndex index,
             ModelHub models,
+            ClipModelInfo clipModel,
             string? excludedFolder,
             IReadOnlyCollection<string> extensions,
             IProgress<IndexProgress>? progress,
@@ -45,7 +51,7 @@ namespace PhotoLiker.Search
             var found = await Task.Run(() => PhotoScanner.Scan(index.Root, recursive: true, extensions, excludedFolder), cancellationToken);
 
             var removed = RemoveVanished(index, found);
-            var (work, dateWork) = ListWork(index, found);
+            var (work, dateWork) = ListWork(index, found, clipModel);
 
             // Photos that are indexed but have no date yet (an index made before dates were kept): quick, needs no models
             var datesRead = 0;
@@ -55,22 +61,37 @@ namespace PhotoLiker.Search
             if (work.Count == 0 || cancellationToken.IsCancellationRequested)
                 return new IndexSummary(0, 0, 0, removed, clock.Elapsed, cancellationToken.IsCancellationRequested, DatesRead: datesRead);
 
-            if (!models.IsDownloaded)
-                await models.EnsureDownloadedAsync(new DownloadReporter(progress), cancellationToken);
+            // Only the models this work takes: another model for the photos' vectors does not need the face models, and the other way round
+            var needClip = work.Any(w => w.NeedClip);
+            var needFaces = work.Any(w => w.NeedFaces);
+            await models.EnsureDownloadedAsync(needClip ? clipModel : null, needFaces, new DownloadReporter(progress), cancellationToken);
 
             progress?.Report(new IndexProgress(IndexPhase.LoadingModels, "Loading the models...", 0, work.Count, 0, 0, 0, null));
-            await Task.Run(() =>
+            ClipImageEncoder? imageEncoder = null;
+            try
             {
-                _ = models.ImageEncoder;
-                _ = models.Detector;
-                _ = models.Embedder;
-            }, cancellationToken);
+                await Task.Run(() =>
+                {
+                    // With no faces to look for, the processor is the photo model's alone
+                    if (needClip)
+                        imageEncoder = models.CreateImageEncoder(clipModel, needFaces ? models.Threads.Clip : models.Threads.ClipAlone);
+                    if (needFaces)
+                    {
+                        _ = models.Detector;
+                        _ = models.Embedder;
+                    }
+                }, cancellationToken);
 
-            var pipeline = new Pipeline(index, models, work, progress);
-            await Task.Run(() => pipeline.Run(cancellationToken), CancellationToken.None);
+                var pipeline = new Pipeline(index, models, clipModel, imageEncoder, work, progress);
+                await Task.Run(() => pipeline.Run(cancellationToken), CancellationToken.None);
 
-            return new IndexSummary(pipeline.Done - pipeline.Failed, pipeline.Failed, pipeline.Faces, removed, clock.Elapsed,
-                cancellationToken.IsCancellationRequested, pipeline.Times, datesRead);
+                return new IndexSummary(pipeline.Done - pipeline.Failed, pipeline.Failed, pipeline.Faces, removed, clock.Elapsed,
+                    cancellationToken.IsCancellationRequested, pipeline.Times, datesRead);
+            }
+            finally
+            {
+                imageEncoder?.Dispose();
+            }
         }
 
         /// <summary>Forgets the photos that are gone from the disk. Not when nothing was found: the folder may just be unreachable.</summary>
@@ -91,14 +112,19 @@ namespace PhotoLiker.Search
             return vanished.Count;
         }
 
+        /// <summary>What a run would do for the photos that are found (for tests): which photos, and whether each needs a new vector and/or its faces.</summary>
+        internal static IReadOnlyList<(string RelativePath, bool Clip, bool Faces)> PlanFor(PhotoIndex index, IEnumerable<PhotoFile> found, ClipModelInfo clipModel) =>
+            [.. ListWork(index, found, clipModel).Work.Select(w => (w.RelativePath, w.NeedClip, w.NeedFaces))];
+
         /// <summary>A photo that is indexed and unchanged, and only lacks its date.</summary>
         private sealed record DateWork(PhotoFile File, IndexedPhoto Photo);
 
         /// <summary>
-        /// The photos that are not indexed yet, changed since, or were indexed by older models, in path order; and apart from
-        /// them the photos that only need their date read (which does not take the models, so it is a separate, quick job).
+        /// The photos that are not indexed yet, changed since, were indexed by older models, or lack the vector of this model
+        /// (then only that vector is made, the faces and the other models' vectors stay), in path order; and apart from them the photos
+        /// that only need their date read (which does not take the models, so it is a separate, quick job).
         /// </summary>
-        private static (List<WorkItem> Work, List<DateWork> DateWork) ListWork(PhotoIndex index, IEnumerable<PhotoFile> found)
+        private static (List<WorkItem> Work, List<DateWork> DateWork) ListWork(PhotoIndex index, IEnumerable<PhotoFile> found, ClipModelInfo clipModel)
         {
             var work = new List<WorkItem>();
             var dateWork = new List<DateWork>();
@@ -110,7 +136,9 @@ namespace PhotoLiker.Search
                 var existing = index.Find(relative);
                 var unchanged = existing is not null && existing.Length == file.Length && existing.ModifiedTicks == file.LastWriteTimeUtc.Ticks;
 
-                var needClip = !unchanged || existing!.ClipVersion < ClipVersion;
+                // A photo that could not be read stays unreadable whatever the model is, it is not tried again for another one
+                var needClip = !unchanged
+                    || (existing!.Failure is null && !(existing.Clips.TryGetValue(clipModel.Id, out var vector) && vector.Version >= ClipVersion));
                 var needFaces = !unchanged || existing!.FaceVersion < FaceVersion;
                 if (needClip || needFaces)
                     work.Add(new WorkItem(file, relative, unchanged ? existing : null, needClip, needFaces)); // its date is read on the way
@@ -218,6 +246,8 @@ namespace PhotoLiker.Search
         {
             private readonly PhotoIndex _index;
             private readonly ModelHub _models;
+            private readonly ClipModelInfo _clipModel;
+            private readonly ClipImageEncoder? _imageEncoder; // null when no photo needs a new vector
             private readonly IReadOnlyList<WorkItem> _work;
             private readonly IProgress<IndexProgress>? _progress;
 
@@ -241,10 +271,12 @@ namespace PhotoLiker.Search
 
             private static TimeSpan Elapsed(long ticks) => TimeSpan.FromSeconds(ticks / (double)Stopwatch.Frequency);
 
-            public Pipeline(PhotoIndex index, ModelHub models, IReadOnlyList<WorkItem> work, IProgress<IndexProgress>? progress)
+            public Pipeline(PhotoIndex index, ModelHub models, ClipModelInfo clipModel, ClipImageEncoder? imageEncoder, IReadOnlyList<WorkItem> work, IProgress<IndexProgress>? progress)
             {
                 _index = index;
                 _models = models;
+                _clipModel = clipModel;
+                _imageEncoder = imageEncoder;
                 _work = work;
                 _progress = progress;
             }
@@ -345,7 +377,7 @@ namespace PhotoLiker.Search
                         item.FileBytes = null;
 
                         if (item.NeedClip)
-                            item.ClipInput = ClipImageEncoder.Prepare(photo);
+                            item.ClipInput = ClipImageEncoder.Prepare(photo, _clipModel);
                         if (item.NeedFaces)
                         {
                             (item.DetectInput, item.DetectScale) = FaceDetector.Prepare(photo);
@@ -372,8 +404,8 @@ namespace PhotoLiker.Search
 
             private void EncodeClip(CancellationToken token)
             {
-                var encoder = _models.ImageEncoder;
-                var buffer = new float[ClipBatchSize * ClipImageEncoder.InputLength];
+                var length = _clipModel.InputLength;
+                var buffer = new float[ClipBatchSize * length];
                 var batch = new List<WorkItem>(ClipBatchSize);
 
                 foreach (var first in _forClip.GetConsumingEnumerable(token))
@@ -387,9 +419,9 @@ namespace PhotoLiker.Search
                     try
                     {
                         for (var i = 0; i < batch.Count; i++)
-                            Array.Copy(batch[i].ClipInput!, 0, buffer, i * ClipImageEncoder.InputLength, ClipImageEncoder.InputLength);
+                            Array.Copy(batch[i].ClipInput!, 0, buffer, i * length, length);
 
-                        var vectors = encoder.Encode(buffer, batch.Count);
+                        var vectors = _imageEncoder!.Encode(buffer, batch.Count);
                         for (var i = 0; i < batch.Count; i++)
                             batch[i].Clip = vectors[i];
                     }
@@ -412,15 +444,12 @@ namespace PhotoLiker.Search
 
             private void FindFaces(CancellationToken token)
             {
-                var detector = _models.Detector;
-                var embedder = _models.Embedder;
-
                 foreach (var item in _forFaces.GetConsumingEnumerable(token))
                 {
                     var started = Stopwatch.GetTimestamp();
                     try
                     {
-                        item.Faces = DetectAndEmbed(item, detector, embedder);
+                        item.Faces = DetectAndEmbed(item, _models.Detector, _models.Embedder);
                         Interlocked.Add(ref _faceTicks, Stopwatch.GetTimestamp() - started);
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
@@ -518,16 +547,20 @@ namespace PhotoLiker.Search
             }
 
             /// <summary>The photo as it goes into the index; null if there is nothing to store (a failed read, or a failure that must not replace good data).</summary>
-            private static IndexedPhoto? Build(WorkItem item)
+            private IndexedPhoto? Build(WorkItem item)
             {
                 var existing = item.Existing;
                 if (item.Failure is not null && (item.Transient || existing is not null))
                     return null;
 
+                // The vectors of the other models stay (an unchanged photo has an existing one), this model's is made or replaced
+                var clips = new Dictionary<string, ClipVector>(existing?.Clips ?? IndexedPhoto.NoClips);
+                if (item.Failure is null && item.NeedClip && item.Clip is not null)
+                    clips[_clipModel.Id] = new ClipVector(item.Clip, ClipVersion);
+
                 var photo = new IndexedPhoto(item.RelativePath, item.File.Length, item.File.LastWriteTimeUtc.Ticks)
                 {
-                    Clip = item.Failure is not null ? null : item.NeedClip ? item.Clip : existing?.Clip,
-                    ClipVersion = ClipVersion,
+                    Clips = item.Failure is not null ? IndexedPhoto.NoClips : clips,
                     FaceVersion = FaceVersion,
                     Failure = item.Failure,
                     Date = item.Date,

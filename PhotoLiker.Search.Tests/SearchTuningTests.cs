@@ -28,8 +28,7 @@ public class SearchTuningTests : IDisposable
     {
         var photo = new IndexedPhoto(path, 1000 + _added++, 1000 * TimeSpan.TicksPerSecond)
         {
-            Clip = clip,
-            ClipVersion = 1,
+            Clips = Vectors.Clips(clip),
             FaceVersion = 1,
             Date = new PhotoDate(null, DateSource.None, PhotoDates.Version),
         };

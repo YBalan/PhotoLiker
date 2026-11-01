@@ -24,7 +24,7 @@ public class IndexTransferTests : IDisposable
 
     private static IndexedPhoto Photo(string path, float[] clip, params float[][] faces)
     {
-        var photo = new IndexedPhoto(path, length: 1000, modifiedTicks: 5000) { Clip = clip, ClipVersion = 1, FaceVersion = 1 };
+        var photo = new IndexedPhoto(path, length: 1000, modifiedTicks: 5000) { Clips = Vectors.Clips(clip), FaceVersion = 1 };
         photo.Faces = [.. faces.Select((v, i) => new IndexedFace(photo, 0.1f * (i + 1), 0.2f, 0.1f, 0.1f, 0.9f, manual: i == 1, v))];
         return photo;
     }
@@ -53,7 +53,7 @@ public class IndexTransferTests : IDisposable
         Assert.Equal(3, imported.PhotoCount);
         Assert.Equal(2, imported.FaceCount);
         var one = imported.Find("2009/one.jpg")!;
-        Assert.Equal(Vectors.Unit(1, 2), one.Clip);
+        Assert.Equal(Vectors.Unit(1, 2), one.VectorOf(ClipModels.Default.Id));
         Assert.Equal([false, true], one.Faces.Select(f => f.Manual));
         Assert.Equal(Path.Combine(_target.Path, "2009", "one.jpg"), imported.ToFullPath(one.RelativePath)); // the paths follow the folder
     }

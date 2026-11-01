@@ -5,66 +5,63 @@ namespace PhotoLiker.Search
     /// <summary>How much of a model download is done.</summary>
     public sealed record DownloadProgress(string Name, long Done, long Total);
 
-    /// <summary>Where the model files are on disk once they have been downloaded.</summary>
-    public sealed record ModelPaths(
-        string ClipVision, string ClipText, string ClipVocab, string ClipMerges,
-        string FaceDetector, string FaceEmbedder);
-
     /// <summary>
-    /// The models are not shipped with the app (together they are about 650 MB), they are downloaded the first time
-    /// a folder is indexed:
-    /// CLIP ViT-B/32 (OpenAI, MIT licence, ONNX export by Xenova) for text search, and the "buffalo_l" pack of InsightFace
-    /// (SCRFD face detector and ArcFace recognizer; free for non-commercial use only) for faces.
+    /// The models are not shipped with the app, they are downloaded the first time they are needed (a folder is indexed): the files of
+    /// the model that matches words with photos (<see cref="ClipModels"/>, 0.6 to 1.5 GB each, only the ones that are chosen), and the
+    /// "buffalo_l" pack of InsightFace (SCRFD face detector and ArcFace recognizer, about 190 MB once unpacked; free for non-commercial
+    /// use only) for faces.
     /// </summary>
     public static class ModelFiles
     {
-        private const string ClipRepository = "https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/";
         private const string FacePackUrl = "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip";
+        public const int FacePackMegabytes = 281; // the pack is bigger than the two models that are taken out of it
 
-        private const string ClipFolderName = "clip-vit-b32";
         private const string FaceFolderName = "insightface-buffalo_l";
 
         private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(90) };
 
-        public static ModelPaths PathsIn(string modelsFolder) => new(
-            Path.Combine(modelsFolder, ClipFolderName, "vision_model.onnx"),
-            Path.Combine(modelsFolder, ClipFolderName, "text_model.onnx"),
-            Path.Combine(modelsFolder, ClipFolderName, "vocab.json"),
-            Path.Combine(modelsFolder, ClipFolderName, "merges.txt"),
-            Path.Combine(modelsFolder, FaceFolderName, "det_10g.onnx"),
-            Path.Combine(modelsFolder, FaceFolderName, "w600k_r50.onnx"));
+        public static string PathOf(string modelsFolder, ClipModelInfo model, ModelFile file) =>
+            Path.Combine(modelsFolder, model.FolderName, file.Name);
 
-        public static bool ClipPresent(ModelPaths paths) =>
-            File.Exists(paths.ClipVision) && File.Exists(paths.ClipText) && File.Exists(paths.ClipVocab) && File.Exists(paths.ClipMerges);
+        public static string FaceDetectorPath(string modelsFolder) => Path.Combine(modelsFolder, FaceFolderName, "det_10g.onnx");
 
-        public static bool FacesPresent(ModelPaths paths) => File.Exists(paths.FaceDetector) && File.Exists(paths.FaceEmbedder);
+        public static string FaceEmbedderPath(string modelsFolder) => Path.Combine(modelsFolder, FaceFolderName, "w600k_r50.onnx");
 
-        /// <summary>Downloads whatever of the models is missing.</summary>
-        public static async Task EnsureAsync(ModelPaths paths, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
+        public static bool ClipPresent(string modelsFolder, ClipModelInfo model) =>
+            model.Files.All(file => File.Exists(PathOf(modelsFolder, model, file)));
+
+        public static bool FacesPresent(string modelsFolder) =>
+            File.Exists(FaceDetectorPath(modelsFolder)) && File.Exists(FaceEmbedderPath(modelsFolder));
+
+        /// <summary>About how much has to be downloaded for these, in megabytes (0: nothing is missing).</summary>
+        public static int MissingMegabytes(string modelsFolder, ClipModelInfo? model, bool faces) =>
+            (model is not null && !ClipPresent(modelsFolder, model) ? model.Megabytes : 0)
+            + (faces && !FacesPresent(modelsFolder) ? FacePackMegabytes : 0);
+
+        /// <summary>Downloads whatever is missing of the files of <paramref name="model"/> (if given) and of the face models (if wanted).</summary>
+        public static async Task EnsureAsync(string modelsFolder, ClipModelInfo? model, bool faces, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
         {
-            if (!ClipPresent(paths))
+            if (model is not null)
             {
-                await DownloadAsync(ClipRepository + "onnx/vision_model.onnx", paths.ClipVision, progress, cancellationToken);
-                await DownloadAsync(ClipRepository + "onnx/text_model.onnx", paths.ClipText, progress, cancellationToken);
-                await DownloadAsync(ClipRepository + "vocab.json", paths.ClipVocab, progress, cancellationToken);
-                await DownloadAsync(ClipRepository + "merges.txt", paths.ClipMerges, progress, cancellationToken);
+                foreach (var file in model.Files)
+                    await DownloadAsync(file.Url, PathOf(modelsFolder, model, file), $"{model.Title} {file.Name}", progress, cancellationToken);
             }
 
-            if (!FacesPresent(paths))
-                await DownloadFacePackAsync(paths, progress, cancellationToken);
+            if (faces && !FacesPresent(modelsFolder))
+                await DownloadFacePackAsync(modelsFolder, progress, cancellationToken);
         }
 
-        private static async Task DownloadFacePackAsync(ModelPaths paths, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
+        private static async Task DownloadFacePackAsync(string modelsFolder, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
         {
-            var folder = Path.GetDirectoryName(paths.FaceDetector)!;
+            var folder = Path.GetDirectoryName(FaceDetectorPath(modelsFolder))!;
             var zip = Path.Combine(folder, "buffalo_l.zip");
-            await DownloadAsync(FacePackUrl, zip, progress, cancellationToken);
+            await DownloadAsync(FacePackUrl, zip, "buffalo_l.zip", progress, cancellationToken);
 
             try
             {
                 using var archive = ZipFile.OpenRead(zip);
-                Extract(archive, "det_10g.onnx", paths.FaceDetector);
-                Extract(archive, "w600k_r50.onnx", paths.FaceEmbedder);
+                Extract(archive, "det_10g.onnx", FaceDetectorPath(modelsFolder));
+                Extract(archive, "w600k_r50.onnx", FaceEmbedderPath(modelsFolder));
             }
             finally
             {
@@ -82,14 +79,13 @@ namespace PhotoLiker.Search
             File.Move(partial, destination, overwrite: true);
         }
 
-        private static async Task DownloadAsync(string url, string destination, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
+        private static async Task DownloadAsync(string url, string destination, string name, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
         {
             if (File.Exists(destination))
                 return;
 
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             var partial = destination + ".part";
-            var name = Path.GetFileName(destination);
 
             using (var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
             {

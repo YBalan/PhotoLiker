@@ -46,6 +46,8 @@ namespace PhotoLikerUI
         private ToolStripButton _facesButton = null!;
         private TrackBar _precisionBar = null!;
         private ToolStripControlHost _precisionHost = null!;
+        private ToolStripComboBox _modelBox = null!;
+        private bool _syncingModel;
         private ToolStripDropDownButton _transferButton = null!;
         private ToolStripMenuItem _exportItem = null!;
         private ToolStripMenuItem _importItem = null!;
@@ -140,6 +142,23 @@ namespace PhotoLikerUI
             };
             UpdatePrecisionTooltip();
 
+            // The model that matches words with photos, kept in the folder's settings file (Settings.SearchModel)
+            _modelBox = new ToolStripComboBox
+            {
+                Name = "searchModelToolStripComboBox",
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                AutoSize = false,
+            };
+            foreach (var model in ClipModels.All)
+                _modelBox.Items.Add(new ModelChoice(model));
+            // As wide as the longest line (name, vendor, languages), so that the box shows the chosen line whole; the list opens as wide
+            _modelBox.Width = _modelBox.Items.Cast<object>().Max(item => TextRenderer.MeasureText(item.ToString(), _modelBox.Font).Width)
+                + MainFormConstants.ModelBoxPadding;
+            _modelBox.ComboBox.DropDownWidth = _modelBox.Width;
+            _modelBox.SelectedIndex = 0;
+            _modelBox.SelectedIndexChanged += ModelBox_SelectedIndexChanged;
+            _modelBox.DropDownClosed += (_, _) => FocusViewer(); // the arrow keys are the viewer's, not the combo box's
+
             _exportItem = new ToolStripMenuItem(SearchStrings.ExportIndexMenu) { Name = "exportIndexMenuItem" };
             _exportItem.Click += (_, _) => ExportIndex();
             _importItem = new ToolStripMenuItem(SearchStrings.ImportIndexMenu) { Name = "importIndexMenuItem" };
@@ -164,6 +183,9 @@ namespace PhotoLikerUI
                 new ToolStripLabel(SearchStrings.PrecisionWide) { Name = "precisionWideToolStripLabel" },
                 _precisionHost,
                 new ToolStripLabel(SearchStrings.PrecisionPrecise) { Name = "precisionPreciseToolStripLabel" },
+                new ToolStripSeparator(),
+                new ToolStripLabel(SearchStrings.ModelLabel) { Name = "searchModelToolStripLabel" },
+                _modelBox,
             ]);
             splitContainer3.Panel1.Controls.Add(strip);
 
@@ -187,6 +209,8 @@ namespace PhotoLikerUI
             var indexing = _indexCts is not null;
             var index = _folderSearch?.Index;
             var photoCount = index?.PhotoCount ?? 0;
+            var model = SearchModel;
+            var photosOfModel = index?.CountWithModel(model.Id) ?? 0;
 
             _indexButton.Enabled = folderKnown;
             _indexButton.Text = indexing ? SearchStrings.StopIndexButton : photoCount > 0 ? SearchStrings.UpdateIndexButton : SearchStrings.IndexButton;
@@ -196,10 +220,14 @@ namespace PhotoLikerUI
             if (!indexing)
             {
                 var failed = index?.FailedCount ?? 0;
+                var partly = photoCount > 0 && photosOfModel < photoCount; // some photos have not been through the chosen model yet
                 _indexLabel.Text = photoCount == 0 ? SearchStrings.NotIndexed
+                    : partly ? string.Format(SearchStrings.IndexedForModelFormat, photosOfModel, photoCount, model.Title)
                     : failed > 0 ? string.Format(SearchStrings.IndexedWithFailuresFormat, photoCount, index!.FaceCount, failed)
                     : string.Format(SearchStrings.IndexedFormat, photoCount, index!.FaceCount);
-                _indexLabel.ToolTipText = _indexLabel.Text;
+                _indexLabel.ToolTipText = partly
+                    ? string.Format(SearchStrings.IndexedForModelTooltipFormat, photosOfModel, photoCount, model.Title, index!.FaceCount)
+                    : _indexLabel.Text;
             }
 
             // Searching works as soon as the first photos are in the index, also while the rest is still being done
@@ -209,6 +237,8 @@ namespace PhotoLikerUI
             _facesButton.Enabled = searchable;
             _precisionBar.Enabled = searchable;
             ShowSearchPrecision();
+            ShowSearchModel();
+            _modelBox.Enabled = folderKnown && !indexing; // not while photos are being analyzed: they would end up with two models
             _closeResultsButton.Visible = _resultsActive;
             _transferButton.Enabled = folderKnown;
             _exportItem.Enabled = searchable && !_transferBusy;
@@ -217,7 +247,7 @@ namespace PhotoLikerUI
         }
 
         private void UpdateSimilarEnabled() =>
-            _similarButton.Enabled = pictureBox1.Tag is string file && _folderSearch?.Index.FindFullPath(file)?.Clip is not null;
+            _similarButton.Enabled = pictureBox1.Tag is string file && _folderSearch?.CanSearchSimilar(file) == true;
 
         private void UpdateAutoComplete()
         {
@@ -321,8 +351,10 @@ namespace PhotoLikerUI
                 return;
             }
 
-            if (!_models.IsDownloaded &&
-                MessageBox.Show(this, SearchStrings.DownloadQuestion, SearchStrings.DownloadTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+            var model = SearchModel;
+            if (_models.MissingMegabytes(model) is > 0 and var missing &&
+                MessageBox.Show(this, SearchStrings.DownloadQuestionFor(model, !_models.ClipDownloaded(model), !_models.FacesDownloaded, missing),
+                    SearchStrings.DownloadTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
 
             var cancellation = _indexCts = new CancellationTokenSource();
@@ -333,6 +365,7 @@ namespace PhotoLikerUI
             try
             {
                 index = _folderSearch is { } shown && SameFolder(shown.Folder, folder) ? shown : await Task.Run(() => FolderIndex.Open(folder));
+                index.ClipModel = model;
                 _indexingSearch = index;
 
                 // The user may have opened another folder while the index file was loading
@@ -466,10 +499,19 @@ namespace PhotoLikerUI
                 return;
 
             // The name of a person is searched in the faces, and a date in the dates: neither needs the text model
-            if (!_models.ClipDownloaded && search.NeedsTextModel(text))
+            if (search.NeedsTextModel(text))
             {
-                SetStatus(SearchStrings.StatusModelMissing);
-                return;
+                var model = SearchModel;
+                if (search.Index.CountWithModel(model.Id) == 0)
+                {
+                    SetStatus(string.Format(SearchStrings.StatusNothingForModelFormat, model.Title));
+                    return;
+                }
+                if (!_models.ClipDownloaded(model))
+                {
+                    SetStatus(string.Format(SearchStrings.StatusModelMissingFormat, model.Title, SearchStrings.Size(model.Megabytes)));
+                    return;
+                }
             }
 
             _repeatSearch = tuning => search.Search(_models, text, tuning);
@@ -481,9 +523,11 @@ namespace PhotoLikerUI
             if (_folderSearch is not { } search || pictureBox1.Tag is not string file)
                 return;
 
-            if (search.Index.FindFullPath(file)?.Clip is null)
+            if (!search.CanSearchSimilar(file))
             {
-                SetStatus(SearchStrings.StatusSimilarNotIndexed);
+                SetStatus(search.Index.FindFullPath(file)?.HasVector is not true
+                    ? SearchStrings.StatusSimilarNotIndexed
+                    : string.Format(SearchStrings.StatusSimilarOtherModelFormat, SearchModel.Title));
                 return;
             }
 
@@ -513,6 +557,69 @@ namespace PhotoLikerUI
 
             if (generation == _searchGeneration && ReferenceEquals(search, _folderSearch))
                 await ShowResultsAsync(result);
+        }
+
+        // ── the search model ───────────────────────────────────────────────
+
+        /// <summary>The model that matches words with photos in the shown folder: the one its settings file names, the default if it names none we know.</summary>
+        private ClipModelInfo SearchModel => ClipModels.Find(_currentConfig.SearchModel);
+
+        private sealed record ModelChoice(ClipModelInfo Model)
+        {
+            public override string ToString() => SearchStrings.ModelName(Model);
+        }
+
+        /// <summary>Makes the combo box, and the index of the shown folder, follow the settings of the shown folder (each folder keeps its own model).</summary>
+        private void ShowSearchModel()
+        {
+            var model = SearchModel;
+            if (_folderSearch is { } search && !ReferenceEquals(search.ClipModel, model))
+                search.ClipModel = model;
+
+            var position = ClipModels.All.ToList().FindIndex(m => m.Id == model.Id);
+            if (_modelBox.SelectedIndex != position)
+            {
+                _syncingModel = true;
+                try
+                {
+                    _modelBox.SelectedIndex = position;
+                }
+                finally
+                {
+                    _syncingModel = false;
+                }
+            }
+            _modelBox.ToolTipText = SearchStrings.ModelBoxTooltip + "\n\n" + SearchStrings.ModelDescription(model) + "\n\n"
+                + string.Format(_models.ClipDownloaded(model) ? SearchStrings.ModelDownloadedFormat : SearchStrings.ModelToDownloadFormat, SearchStrings.Size(model.Megabytes));
+        }
+
+        private void ModelBox_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (_syncingModel || _modelBox.SelectedItem is not ModelChoice { Model: var model } || model.Id == SearchModel.Id)
+                return;
+
+            _currentConfig.SearchModel = model.Id;
+            if (!string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder))
+                SaveSettingsToJson();
+
+            if (_folderSearch is { } search)
+                search.ClipModel = model;
+
+            // What is shown was found with the other model, and the last search would be repeated with this one
+            _repeatSearch = null;
+            _searchGeneration++; // a search that is still running was made with the other model: its result is not shown
+            _precisionTimer.Stop();
+            CloseSearchResults();
+            _models.ReleaseTextEncodersExcept(model); // the text half of a model is up to 1.1 GB in memory
+            UpdateSearchControls();
+
+            var total = _folderSearch?.Index.PhotoCount ?? 0;
+            var done = _folderSearch?.Index.CountWithModel(model.Id) ?? 0;
+            var download = _models.ClipDownloaded(model) ? string.Empty : string.Format(SearchStrings.StatusModelDownloadNoteFormat, SearchStrings.Size(model.Megabytes));
+            SetStatus(total == 0 ? string.Format(SearchStrings.StatusModelEmptyFormat, model.Title, download)
+                : done == total ? string.Format(SearchStrings.StatusModelReadyFormat, model.Title, total)
+                : done == 0 ? string.Format(SearchStrings.StatusModelNoneFormat, model.Title, total, download)
+                : string.Format(SearchStrings.StatusModelPartFormat, model.Title, done, total, download));
         }
 
         // ── the precision slider ───────────────────────────────────────────
@@ -573,7 +680,7 @@ namespace PhotoLikerUI
 
             if (result.Hits.Count == 0)
             {
-                SetStatus(string.Format(SearchStrings.StatusNothingFound, result.Description) + DateNotes(result));
+                SetStatus(string.Format(SearchStrings.StatusNothingFound, result.Description) + DateNotes(result) + ModelNotes(result));
                 return;
             }
 
@@ -608,7 +715,7 @@ namespace PhotoLikerUI
                 _indexByPath[files[i].OriginalFilePath] = i;
 
             UpdateSearchControls();
-            SetStatus(string.Format(SearchStrings.StatusResultsShown, result.Description, files.Count, result.SearchedPhotos) + DateNotes(result));
+            SetStatus(string.Format(SearchStrings.StatusResultsShown, result.Description, files.Count, result.SearchedPhotos) + DateNotes(result) + ModelNotes(result));
             LoadFirstPhoto(files[0].OriginalFilePath);
             settingsPropertyGrid.Refresh();
 
@@ -630,6 +737,10 @@ namespace PhotoLikerUI
                 notes += string.Format(SearchStrings.StatusDatesPendingNote, pending);
             return notes;
         }
+
+        /// <summary>That a text search left out photos because they are analyzed for another search model than the one chosen now.</summary>
+        private static string ModelNotes(SearchResult result) =>
+            result.OtherModelPhotos > 0 ? string.Format(SearchStrings.StatusOtherModelNoteFormat, result.OtherModelPhotos) : string.Empty;
 
         /// <summary>Leaves the results and shows the folder again, at the photo that was shown before.</summary>
         private void CloseSearchResults()

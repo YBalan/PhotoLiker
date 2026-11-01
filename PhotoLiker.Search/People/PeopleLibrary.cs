@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace PhotoLiker.Search
 {
@@ -110,6 +111,44 @@ namespace PhotoLiker.Search
             }
             name = string.Empty;
             return false;
+        }
+
+        // Words that join a name to the rest of a description ("Mom with a guitar", "on the beach with Mom and Dad") and are no use to the search
+        private static readonly Regex EdgeLinks = new(
+            @"^(?:(?:with|and|in|on|at|near|by|of)(?:\s+|$))+|(?:\s+(?:with|and|in|on|at|near|by|of))+$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// Takes the names of known people out of a description: "Yurii playing guitar" gives the name Yurii and the words "playing guitar".
+        /// A name counts as a whole word (also with 's: "Yurii's guitar"), in any case, anywhere in the text; the longest name goes first, so
+        /// that "Grandma Olga" is not taken for "Olga". Each name is taken once. Words that only join the names to the rest ("with", "and", "on")
+        /// are dropped from the ends of what is left.
+        /// </summary>
+        /// <param name="names">The names taken out, as they were first typed, in the order they stand in the text.</param>
+        /// <returns>The text without the names: a description, or nothing. The text as it was if it has no name.</returns>
+        public string TakeNames(string text, List<string> names)
+        {
+            List<(string Name, int At)> found = [];
+            lock (_gate)
+            {
+                foreach (var known in KnownNames().Where(n => n.Trim().Length > 0).OrderByDescending(n => n.Length))
+                {
+                    var name = Regex.Match(text, $@"(?<![\p{{L}}\p{{N}}]){Regex.Escape(known.Trim())}(?:['’]s)?(?![\p{{L}}\p{{N}}])",
+                        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+                    if (!name.Success)
+                        continue;
+
+                    found.Add((known, name.Index));
+                    text = text.Remove(name.Index, name.Length).Insert(name.Index, new string(' ', name.Length)); // the places of the others stay
+                }
+            }
+
+            if (found.Count == 0)
+                return text;
+
+            names.AddRange(found.OrderBy(f => f.At).Select(f => f.Name));
+            text = Regex.Replace(text, @"\s+", " ").Trim();
+            return EdgeLinks.Replace(text, string.Empty).Trim();
         }
 
         /// <summary>The vectors of the faces the user has named <paramref name="name"/>, in this folder and in the others.</summary>
