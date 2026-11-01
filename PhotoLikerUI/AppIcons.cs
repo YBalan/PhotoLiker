@@ -169,6 +169,14 @@ namespace PhotoLikerUI
             });
         });
 
+        // The same arrow the other way round: it runs three quarters of a circle counterclockwise
+        public static Bitmap RotateCounterClockwise()
+        {
+            var bitmap = RotateClockwise();
+            bitmap.RotateFlip(RotateFlipType.RotateNoneFlipX);
+            return bitmap;
+        }
+
         // ── Remove empty folders ──────────────────────────────────────────
         // A pale, hollow folder with a red cross badge
         public static Bitmap RemoveEmptyFolders() => DrawOnBitmap(g =>

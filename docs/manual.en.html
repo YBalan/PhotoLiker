@@ -197,6 +197,7 @@ photo again.</p></div>
     <tr><td><kbd>F2</kbd> / <kbd>F3</kbd></td><td>Open this manual in Ukrainian / in English.</td></tr>
     <tr><td><kbd>F5</kbd></td><td>List the folder again from scratch (see <a href="#big-folders">Big folders</a>).</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger.</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd></td><td>Rotate the photo a quarter clockwise / counterclockwise and save it (see <a href="#rotate">Rotating photos</a>).</td></tr>
     <tr><td><kbd>Ctrl</kbd>+mouse wheel</td><td>Over the photo: zoom, then drag to move the picture. Over the thumbnails: change their size.</td></tr>
     <tr><td><kbd>Esc</kbd></td><td>Close the search results.</td></tr>
     <tr><td><kbd>Enter</kbd> in the search box</td><td>Search.</td></tr>
@@ -265,15 +266,18 @@ of the photo in the Liked and group folders stay where they are.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="rotate">9. Rotating photos</h2>
 
-<p>The <strong>Rotate</strong> button in the right corner of the status bar turns the shown photo a quarter clockwise and saves that in
-its file. Press it again for the next quarter. It works on JPEG files (<code>.jpg</code>, <code>.jpeg</code>); for another kind of
+<p>The two <strong>Rotate</strong> buttons in the right corner of the status bar turn the shown photo a quarter counterclockwise (the first)
+or clockwise (the last) and save that in its file; <kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd> do the same. Press again for the next quarter. It works on JPEG files (<code>.jpg</code>, <code>.jpeg</code>); for another kind of
 file the status bar says so and nothing is written.</p>
 
 <ul>
   <li><strong>Nothing is lost.</strong> The picture is not decoded and written again; only the note in the file that tells every
   viewer (this program, Windows, phones, browsers) how to turn the picture is changed. You can rotate as often as you like.</li>
-  <li>The dates of the file stay as they were.</li>
-  <li>The copies of the photo in the Liked and group folders are not turned: they are the photo as it was when you liked it.</li>
+  <li>The photo's <strong>Date Taken (Original)</strong> and the dates of its file (created and modified) become one moment: the date taken
+  the camera wrote in the photo, as with <strong>Align dates</strong>; a photo that has no believable one gets the date of its file
+  written into it as its date taken. The status bar says when the drive did not keep a date.</li>
+  <li>The copies of the photo in the Liked and group folders are not turned: they are the photo as it was when you liked it. They
+  get the new dates of the photo, so they are still shown as its copies.</li>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
@@ -389,6 +393,10 @@ row under <em>Debug</em> holds everything as text.</p>
   goes by the first.</li>
   <li>The <strong>File Date</strong> row is not EXIF: it is the date of the file on the disk. It ends with <code>(= Date Taken (Original))</code>
   when the file has the date of the shot, and with <code>(≠ Date Taken (Original))</code> when it has not (a copied file gets the day of the copy).</li>
+  <li><strong>The date rows can be edited</strong> in a JPEG: <strong>Date Taken (Original)</strong>, <strong>Date Time Digitized</strong>,
+  <strong>Date Last Saved</strong> and <strong>File Date</strong>. Type a date (<code>2015-05-01 14:30:00</code>, <code>01.05.2015 14:30</code>; a day alone
+  is taken at noon) or press the <code>…</code> button of the row and pick one. The photo is saved with it. A new Date Taken (Original) is also given to
+  the dates of the file; File Date changes the file only. A photo with no date taken shows <code>(none)</code> there: type a date and it gets one.</li>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
@@ -411,7 +419,8 @@ order of the list (<strong>SortOrder</strong> goes by the created date) agree wi
   <li>Select a photo and press <kbd>Space</kbd> to leave it out of the run. Double-click a row to look at the photo.</li>
   <li><strong>Photos without a usable date.</strong> A camera that lost its clock writes <code>2001-01-01</code>; such dates are not believed. Select those
   photos and press <strong>Use a date…</strong> to give them one: the date the photo has, the date in the name of its folder
-  (<code>2015-05-01</code>, <code>01.05.2015 Anna</code>), the date of the file, or one you type.</li>
+  (<code>2015-05-01</code>, <code>01.05.2015 Anna</code>), the date of the file, or one you type. The date is also written into the photo as its
+  <strong>Date Taken (Original)</strong> (a tick, on by default), also where the photo had no place for it: its file then grows a little, and Undo takes it out again.</li>
   <li><strong>Change N photos</strong> does it, and the copies in the Liked and group folders get the same dates. Every run writes a log in the photo
   folder, and <strong>Undo last run…</strong> puts the dates back.</li>
 </ul>

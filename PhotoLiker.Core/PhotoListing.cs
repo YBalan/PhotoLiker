@@ -195,10 +195,10 @@ namespace PhotoLiker.Core
         }
 
         /// <summary>
-        /// The app changed this photo itself and its file has another size now (its date of change is kept, see <see cref="JpegOrientation"/>).
+        /// The app changed this photo itself (see <see cref="JpegOrientation"/>): its file may have another size now, and the dates it was given.
         /// The folder keeps the time it had, as with <see cref="Remove"/>: the next <see cref="Verify"/> finds it changed and lists it again.
         /// </summary>
-        public void Resize(string photoPath, long length)
+        public void Update(string photoPath, long length, DateTime lastWriteUtc, DateTime creationUtc)
         {
             var relative = RelativeFolderOf(photoPath);
             var name = Path.GetFileName(photoPath);
@@ -211,11 +211,15 @@ namespace PhotoLiker.Core
                     return;
 
                 var index = Array.FindIndex(folder.Photos, p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
-                if (index < 0 || folder.Photos[index].Length == length)
+                if (index < 0)
+                    return;
+
+                var listed = folder.Photos[index] with { Length = length, WrittenTicks = lastWriteUtc.Ticks, CreatedTicks = creationUtc.Ticks };
+                if (listed == folder.Photos[index])
                     return;
 
                 var photos = (ListedPhoto[])folder.Photos.Clone();
-                photos[index] = photos[index] with { Length = length };
+                photos[index] = listed;
                 _folders[relative] = folder with { Photos = photos };
                 _needsSave = true;
             }

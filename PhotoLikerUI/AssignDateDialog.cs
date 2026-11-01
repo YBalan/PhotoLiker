@@ -19,6 +19,7 @@ namespace PhotoLikerUI
         private readonly DateTimePicker _picker = new() { Format = DateTimePickerFormat.Custom, CustomFormat = DateAlignmentStrings.PickerFormat, Width = 210 };
         private readonly Label _fileWarning = new() { Text = DateAlignmentStrings.AssignFileWarning, AutoSize = true, MaximumSize = new Size(560, 0) };
         private readonly Label _noPlace = new() { AutoSize = true, MaximumSize = new Size(560, 0) };
+        private readonly CheckBox _writeTaken = new() { Text = DateAlignmentStrings.AssignWriteTaken, AutoSize = true, MaximumSize = new Size(570, 0), Checked = true };
         private readonly Button _ok = new() { Text = DateAlignmentStrings.AssignOk, AutoSize = true, MinimumSize = new Size(110, 28), DialogResult = DialogResult.OK };
         private readonly Button _cancel = new() { Text = DateAlignmentStrings.AssignCancel, AutoSize = true, MinimumSize = new Size(80, 28), DialogResult = DialogResult.Cancel };
 
@@ -36,7 +37,7 @@ namespace PhotoLikerUI
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            ClientSize = new Size(610, 470);
+            ClientSize = new Size(610, 520);
 
             _sources =
             [
@@ -63,6 +64,7 @@ namespace PhotoLikerUI
             _scopeAll.CheckedChanged += (_, _) => UpdatePreview();
             foreach (var source in _sources)
                 source.Button.CheckedChanged += (_, _) => UpdatePreview();
+            _writeTaken.CheckedChanged += (_, _) => UpdatePreview();
             _picker.ValueChanged += (_, _) =>
             {
                 _sources[3].Button.Checked = true;
@@ -72,7 +74,7 @@ namespace PhotoLikerUI
             AcceptButton = _ok;
             CancelButton = _cancel;
             ThemeManager.Apply(this, dark);
-            foreach (Control control in Controls.Cast<Control>().SelectMany(Flatten).Where(c => c is Label or RadioButton))
+            foreach (Control control in Controls.Cast<Control>().SelectMany(Flatten).Where(c => c is Label or RadioButton or CheckBox))
                 control.BackColor = Color.Transparent;
             UpdatePreview();
         }
@@ -80,6 +82,9 @@ namespace PhotoLikerUI
         public DateChoice Choice => _sources.FirstOrDefault(s => s.Button.Checked).Choice;
 
         public DateTime Typed => _picker.Value;
+
+        /// <summary>The date is also written into the photos as their Date Taken (Original), where they have no place for it too.</summary>
+        public bool WriteTaken => _writeTaken.Checked;
 
         /// <summary>The photos it is for: the ones that were selected, or all that have no usable date.</summary>
         public IReadOnlyList<PhotoDateFacts> Scope() => _scopeSelected.Checked ? _selected : _all;
@@ -120,7 +125,10 @@ namespace PhotoLikerUI
                 }
             }
 
-            _noPlace.Margin = new Padding(3, 14, 3, 0);
+            _writeTaken.Margin = new Padding(3, 16, 3, 0);
+            panel.Controls.Add(_writeTaken);
+
+            _noPlace.Margin = new Padding(3, 8, 3, 0);
             panel.Controls.Add(_noPlace);
 
             var buttons = new FlowLayoutPanel { Dock = DockStyle.Bottom, FlowDirection = FlowDirection.RightToLeft, Height = 44, Padding = new Padding(10, 6, 10, 6) };
@@ -146,7 +154,7 @@ namespace PhotoLikerUI
                     : string.Format(DateAlignmentStrings.AssignCountFormat, found.Count, scope.Count, DateText.Display(found[0]));
             }
 
-            var noPlace = scope.Count(f => f.Exif.OriginalOffset is null && f.Exif.DigitizedOffset is null && f.Exif.ModifiedOffset is null);
+            var noPlace = _writeTaken.Checked ? 0 : scope.Count(f => f.Exif.OriginalOffset is null && f.Exif.DigitizedOffset is null && f.Exif.ModifiedOffset is null);
             _noPlace.Text = noPlace > 0 ? string.Format(DateAlignmentStrings.AssignNoPlaceFormat, noPlace) : string.Empty;
             _ok.Enabled = scope.Count > 0 && scope.Any(f => DateSources.Resolve(Choice, f, _root, _picker.Value, _now) is not null);
         }

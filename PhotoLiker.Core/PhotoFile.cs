@@ -6,12 +6,13 @@ namespace PhotoLiker.Core
         public string LikedFilePath { get; set; } = LikedFilePath;
 
         // Size and timestamp from the folder listing; they tell same-named photos in different folders apart.
-        // The size changes when the app adds the orientation to a photo it turns (see JpegOrientation); the time never does.
+        // The size changes when the app adds the orientation to a photo it turns (see JpegOrientation); the times change when it gives
+        // that photo its date taken for them.
         public long Length { get; set; }
-        public DateTime LastWriteTimeUtc { get; init; }
+        public DateTime LastWriteTimeUtc { get; set; }
 
         // When the file was put on this disk (a copy or an import gets the date of the copy), also from the folder listing
-        public DateTime CreationTimeUtc { get; init; }
+        public DateTime CreationTimeUtc { get; set; }
 
         public override string ToString()
         {

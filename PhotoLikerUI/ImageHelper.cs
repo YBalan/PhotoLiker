@@ -6,6 +6,7 @@ namespace PhotoLikerUI
     public static class ImageHelper
     {
         private const int ExifOrientationId = 0x0112; // 274
+        private const int DateTakenId = 0x9003;
 
         public static Image LoadImageWithCorrectOrientation(string path)
         {
@@ -157,9 +158,17 @@ namespace PhotoLikerUI
             FriendlyImageMetadata.FromProperties(
                 image.PropertyItems.Select(p => new RawExifProperty(p.Id, p.Type, p.Value))).Entries;
 
-        /// <summary>The EXIF entries and, next to them, the dates of the file itself (read here, off the UI thread).</summary>
-        private static IReadOnlyList<MetadataEntry> WithFileDate(string path, IReadOnlyList<MetadataEntry> exif) =>
-            FileDateRow.Create(path, exif) is { } row ? [.. exif, row] : exif;
+        /// <summary>
+        /// The EXIF entries and, next to them, the dates of the file itself (read here, off the UI thread). A JPEG that has no Date Taken
+        /// (Original) gets an empty row for it, so that the grid can give it one.
+        /// </summary>
+        private static IReadOnlyList<MetadataEntry> WithFileDate(string path, IReadOnlyList<MetadataEntry> exif)
+        {
+            if (JpegOrientation.IsJpeg(path) && !exif.Any(e => e.TagId == DateTakenId))
+                exif = [.. exif, new MetadataEntry(DateTakenId, ExifTagMap.Tags[DateTakenId], ImageHelperStrings.NoDateShown)];
+
+            return FileDateRow.Create(path, exif) is { } row ? [.. exif, row] : exif;
+        }
 
         /// <summary>How the stored pixels are turned and mirrored to show the photo upright, by its EXIF orientation.</summary>
         internal static RotateFlipType GetRotateFlip(Image img)

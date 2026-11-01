@@ -16,6 +16,8 @@ namespace PhotoLiker.Core
         public const string CategoryUnknown       = "6. Unknown";
         public const string CategoryDebug         = "7. Debug";
         public const string UnknownPrefix         = "Unknown";
+        public const string NotADateFormat        = "'{0}' needs a date and a time, for example 2015-05-01 14:30:00 or 01.05.2015 14:30 (a day alone is taken at noon).";
+        public const string NoDateShown           = "(none)";
 
         // GPS decoded format strings
         public const string GpsDecimalDegreesFormat = "{0:0.######}°";

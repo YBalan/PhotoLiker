@@ -42,7 +42,8 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         await UnreadableList();    // empty photo files are listed, and move to Deleted\Unreadable
         await RemoveEmptyFolders(); // it makes folders in the demo folder and removes them again
         await FindDuplicates();     // it makes photos in the demo folder, moves them away and brings them back
-        await Rotate();             // last: it turns demo photos and makes two files in the demo folder, which it removes again
+        await Rotate();             // it turns demo photos and makes two files in the demo folder, which it removes again
+        await EditDates();          // last: it gives demo photos other dates and makes a file in the demo folder, which it removes again
     }
 
     // ── 1. the folder opens, in dark mode ───────────────────────────────────────────────────────
@@ -953,7 +954,12 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         checks.That(radios.Any(r => r.Text == "The 1 selected" && r.Checked) && radios.Any(r => r.Text == "All 2 photos without a usable date"), "for the selected photo, or for all of them");
         checks.That(labels.Any(t => t.StartsWith("none of 1 has one")), $"it says that the photo has no EXIF date of its own to take ({string.Join(" | ", labels.Where(t => t.Contains("of 1")))})");
         checks.That(labels.Any(t => t.Contains("1 of 1, for example 01 May 2015 12:00:00")), "and that its folder gives 01 May 2015 at noon");
-        checks.That(labels.Any(t => t.Contains("only their file dates can be set")), "and that EXIF has no place for a date in these photos");
+        var writeTaken = Controls<CheckBox>(chooser).Single(c => c.Text.StartsWith("Write it into the photo as its Date Taken (Original)"));
+        checks.That(writeTaken.Checked && !labels.Any(t => t.Contains("only their file dates can be set")),
+            "the date is also written into the photo as its Date Taken (Original) by default, so it does not matter that these photos have no place for a date");
+        writeTaken.Checked = false;
+        checks.That(Controls<Label>(chooser).Any(t => t.Text.Contains("only their file dates can be set")), "without that tick it says that EXIF has no place for a date in these photos, and only their file dates can be set");
+        writeTaken.Checked = true;
         checks.That(radios.First(r => r.Text.StartsWith("The date in the name of its folder")).Checked == false, "the source is for the person to choose");
         radios.First(r => r.Text.StartsWith("The date in the name of its folder")).Checked = true;
         chooser.TopMost = true; // the window behind it is topmost for the photographs, and would cover it
@@ -994,6 +1000,13 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
             "the photo of the dated folder has 01 May 2015, 12:00 as its file dates");
         checks.That(Close(File.GetCreationTime(P(@"Somewhere\b.jpg")), new DateTime(2012, 7, 14, 9, 30, 0)) && Close(File.GetLastWriteTime(P(@"Somewhere\b.jpg")), new DateTime(2012, 7, 14, 9, 30, 0)),
             "and the other one the date that was typed");
+        DateTime? TakenIn(string path)
+        {
+            using var stream = File.OpenRead(path);
+            return PhotoLiker.Search.ExifReader.Read(stream).Original;
+        }
+        checks.That(TakenIn(P(@"2015-05-01\a.jpg")) == new DateTime(2015, 5, 1, 12, 0, 0) && TakenIn(P(@"Somewhere\b.jpg")) == new DateTime(2012, 7, 14, 9, 30, 0),
+            "both photos have the date as their Date Taken (Original) now: they had no place for it, and got one");
 
         Buttons(dialog).First(b => b.Text == "Close").PerformClick();
         await Until(() => FindDialog("DateAlignmentDialog") is null);
@@ -1191,10 +1204,13 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         checks.Step("15. Rotate: the button in the right corner of the status bar turns the photo a quarter clockwise and saves it in its file");
 
         var button = (ToolStripButton)form.StatusBarItem("rotateToolStripButton");
+        var backButton = (ToolStripButton)form.StatusBarItem("rotateCounterClockwiseToolStripButton");
         var strip = form.Find<StatusStrip>("statusStrip1");
         checks.That(button.Image is not null && button.Enabled && button.ToolTipText!.Contains("clockwise"), "the status bar has a Rotate button with an icon and a tooltip");
-        checks.That(strip.Items.Cast<ToolStripItem>().Last() == button && button.Bounds.Right > strip.ClientSize.Width - 30,
-            $"it is the last item, in the right corner (its right edge is at {button.Bounds.Right} of {strip.ClientSize.Width})");
+        checks.That(backButton.Image is not null && backButton.Enabled && backButton.ToolTipText!.Contains("counterclockwise"), "and a button for the other way, with an icon and a tooltip");
+        var items = strip.Items.Cast<ToolStripItem>().ToList();
+        checks.That(items.Last() == button && items[^2] == backButton && button.Bounds.Right > strip.ClientSize.Width - 30,
+            $"the counterclockwise button comes before the clockwise one, which is the last item, in the right corner (its right edge is at {button.Bounds.Right} of {strip.ClientSize.Width})");
 
         bool ShownAs(int width, int height) => PhotoShown() && form.Viewer.Image!.Width == width && form.Viewer.Image.Height == height;
 
@@ -1202,18 +1218,39 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         await GoTo(0);
         var path = form.Config.CurrentFilePath;
         var original = File.ReadAllBytes(path);
-        var info = new FileInfo(path);
-        var (written, created) = (info.LastWriteTimeUtc, info.CreationTimeUtc);
+        var taken = PhotoLiker.Search.DateAlignment.DatesForSaving(path, DateTime.Now)?.FileUtc; // the demo photos have a date taken
         var (width, height) = (form.Viewer.Image!.Width, form.Viewer.Image.Height);
         checks.That(width != height && JpegOrientation.Read(new MemoryStream(original)) == 1, $"the first photo is {width} x {height} and has the orientation 1");
+
+        // Its copy in the Liked folder has an id made from the size and the date of change, which turning gives the date taken
+        var wasLiked = form.Config.LikedFile != string.Empty;
+        if (!wasLiked)
+        {
+            form.Press(Keys.Space);
+            checks.That(await Until(() => form.Config.LikedFile != string.Empty), "the first photo is liked, to see its copy follow the turn");
+        }
+        var copyBefore = form.Config.LikedFile;
+        checks.Note($"id before the turn {CopyName.IdOf(form.Config.Files[0])}, the dates of the file {File.GetLastWriteTimeUtc(path):u}");
 
         button.PerformClick();
         checks.That(await Until(() => ShownAs(height, width) && form.Status.Contains("rotated clockwise and saved")), $"the click shows the photo turned, {form.Viewer.Image?.Width} x {form.Viewer.Image?.Height} ({form.Status})");
         var turned = File.ReadAllBytes(path);
         checks.That(JpegOrientation.Read(new MemoryStream(turned)) == 6, "the file says 6 now (a quarter clockwise)");
         checks.That(turned.Length == original.Length && Enumerable.Range(0, turned.Length).Count(i => turned[i] != original[i]) <= 2, "it has the size it had, and not more than two bytes are other");
-        checks.That(File.GetLastWriteTimeUtc(path) == written && File.GetCreationTimeUtc(path) == created, "the dates of the file are the ones it had");
+        checks.That(taken is not null && File.GetLastWriteTimeUtc(path) == taken && File.GetCreationTimeUtc(path) == taken, $"the dates of the file are the date taken ({taken})");
         checks.That(form.Config.Files[0].Length == original.Length, "the list still knows it by its size");
+        checks.That(form.Config.Files[0].LastWriteTimeUtc == taken && form.Config.Files[0].CreationTimeUtc == taken, "and so are the dates the list knows it by");
+
+        // Whether its id changed with the date or not, the copy has the name of the photo now, the dates of it, and is still its copy
+        var copyNow = Path.Combine(_likedFolder, CopyNameAt(0));
+        checks.That(File.Exists(copyNow) && (copyNow == copyBefore || !File.Exists(copyBefore)), $"the copy in the Liked folder has the name of the photo now ({Path.GetFileName(copyNow)})");
+        checks.That(File.GetLastWriteTimeUtc(copyNow) == taken, "and the date of change of the photo");
+        checks.That(form.Config.LikedFile == copyNow && form.Config.SavedInFolders.SequenceEqual(["Liked"]), "the photo is still shown as liked");
+        if (!wasLiked)
+        {
+            form.Press(Keys.Space);
+            checks.That(await Until(() => !File.Exists(copyNow) && form.Config.LikedFile == string.Empty), "and Space takes that copy away again");
+        }
 
         for (var i = 0; i < 3; i++)
         {
@@ -1222,6 +1259,21 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
             await Until(() => PhotoShown() && form.Viewer.Image!.Width != wasWidth);
         }
         checks.That(await Until(() => ShownAs(width, height)) && File.ReadAllBytes(path).SequenceEqual(original), "four clicks give the photo and the file back as they were");
+
+        // The other way: its button, and Ctrl - / Ctrl + (the plus of the numpad too)
+        backButton.PerformClick();
+        checks.That(await Until(() => ShownAs(height, width) && form.Status.Contains("rotated counterclockwise and saved")), $"the counterclockwise button shows the photo turned the other way ({form.Status})");
+        checks.That(JpegOrientation.Read(new MemoryStream(File.ReadAllBytes(path))) == 8, "the file says 8 (a quarter counterclockwise)");
+        form.Press(Keys.Control | Keys.Oemplus);
+        checks.That(await Until(() => ShownAs(width, height)) && JpegOrientation.Read(new MemoryStream(File.ReadAllBytes(path))) == 1, "Ctrl + turns it clockwise, back upright");
+        form.Press(Keys.Control | Keys.OemMinus);
+        checks.That(await Until(() => ShownAs(height, width)) && JpegOrientation.Read(new MemoryStream(File.ReadAllBytes(path))) == 8, "Ctrl - turns it counterclockwise");
+        form.Press(Keys.Control | Keys.Shift | Keys.Oemplus);
+        checks.That(await Until(() => ShownAs(width, height)), "Ctrl Shift + (the plus of a keyboard that needs Shift) turns it clockwise");
+        form.Press(Keys.Control | Keys.Subtract);
+        checks.That(await Until(() => ShownAs(height, width)), "Ctrl and the minus of the numpad turn it counterclockwise");
+        form.Press(Keys.Control | Keys.Add);
+        checks.That(await Until(() => ShownAs(width, height) && File.ReadAllBytes(path).SequenceEqual(original)), "and the plus of the numpad clockwise: the file is as it was");
 
         // A photo that has none: the flag is added, the file is a little larger, and its copy in the Liked folder follows it
         var date = new DateTime(2025, 7, 11, 9, 0, 0, DateTimeKind.Utc);
@@ -1251,8 +1303,11 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         checks.That(await Until(() => ShownAs(height, width) && File.ReadAllBytes(scan).Length > scanBytes.Length), $"the click turns it ({form.Status})");
         checks.That(form.Status.Contains("no orientation flag"), "and the status says the flag was added");
         var scanTurned = File.ReadAllBytes(scan);
-        checks.That(JpegOrientation.Read(new MemoryStream(scanTurned)) == 6 && scanTurned.Length == scanBytes.Length + 36, $"the file has the flag, and 36 bytes more ({scanTurned.Length - scanBytes.Length})");
+        checks.That(JpegOrientation.Read(new MemoryStream(scanTurned)) == 6 && scanTurned.Length > scanBytes.Length, $"the file has the flag, and {scanTurned.Length - scanBytes.Length} bytes more (the block of the flag and the date taken)");
         checks.That(File.GetLastWriteTimeUtc(scan) == date && File.GetCreationTimeUtc(scan) == date, "its dates are the ones it had");
+        using (var stream = File.OpenRead(scan))
+            checks.That(PhotoLiker.Search.ExifReader.Read(stream).Original == PhotoLiker.Search.PhotoDates.FileTime(date), "and it has no date taken of its own, so the date of its file was written into it as its date taken");
+        checks.That(form.Status.Contains("had no date taken"), "which the status says");
         checks.That(form.Config.Files[scanIndex].Length == scanTurned.Length, "the list knows its new size");
 
         // The id of the copy is made from the size, which is other now: the copy has the new name, and is still the copy of the photo
@@ -1268,13 +1323,110 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
             button.PerformClick();
             await Until(() => PhotoShown() && form.Viewer.Image!.Width != wasWidth);
         }
-        checks.That(await Until(() => ShownAs(width, height)) && JpegOrientation.Read(new MemoryStream(File.ReadAllBytes(scan))) == 1, "three more clicks bring it back upright; they are two bytes each, as the file has the flag now");
+        checks.That(await Until(() => ShownAs(width, height)) && JpegOrientation.Read(new MemoryStream(File.ReadAllBytes(scan))) == 1, "three more clicks bring it back upright; they are two bytes each, as the file has the flag and the date now");
 
         // Not a JPEG: nothing is written
         await GoTo(form.Config.Files.FindIndex(f => f.OriginalFilePath == png));
         var pngBytes = File.ReadAllBytes(png);
         button.PerformClick();
         checks.That(await Until(() => form.Status.Contains("is not a JPEG")) && File.ReadAllBytes(png).SequenceEqual(pngBytes), $"a PNG is left alone ({form.Status})");
+
+        // Nothing of this step stays
+        File.Delete(scan);
+        File.Delete(png);
+        if (!extensions.Contains(".png"))
+            await ChangeSetting("Extensions", extensions);
+        form.Press(Keys.F5);
+        checks.That(await Until(() => form.Config.Files.All(f => f.OriginalFilePath != scan && f.OriginalFilePath != png) && PhotoShown()), "the two files are removed again");
+    }
+
+    // ── 16. Edit the dates in the metadata grid ─────────────────────────────────────────────────
+
+    private async Task EditDates()
+    {
+        checks.Step("16. The date rows of the metadata grid can be edited: the photo is saved with the new date");
+
+        var picked = new DateTime(2010, 5, 1, 12, 0, 0);
+        var pickedUtc = DateTime.SpecifyKind(picked, DateTimeKind.Local).ToUniversalTime();
+
+        PropertyDescriptor Descriptor(string row) => DrivenForm.Row(form.MetadataGrid, row).PropertyDescriptor!;
+        void Type(string row, string text) => Descriptor(row).SetValue(form.MetadataGrid.SelectedObject, text);
+        string Shown(string row)
+        {
+            // The grid is empty for a moment while the photo is read again after it was saved
+            try { return form.MetadataGrid.SelectedObject is MetadataWrapper ? DrivenForm.Row(form.MetadataGrid, row).Value as string ?? string.Empty : string.Empty; }
+            catch (Exception ex) when (ex is NullReferenceException or InvalidOperationException) { return string.Empty; }
+        }
+
+        // A photo that has a date taken: the date rows can be edited, the others cannot
+        await GoTo(0);
+        var path = form.Config.CurrentFilePath;
+        await Until(() => form.MetadataGrid.SelectedObject is MetadataWrapper);
+        checks.That(!Descriptor("Date Taken (Original)").IsReadOnly && !Descriptor("File Date").IsReadOnly, "the Date Taken (Original) and File Date rows can be edited");
+        checks.That(Descriptor("Make").IsReadOnly, "the other rows cannot (Make)");
+        checks.That(Descriptor("Date Taken (Original)").Attributes.OfType<EditorAttribute>().Any(), "the date rows have a '...' button with a date picker");
+
+        // Typing the date taken: the photo is saved with it, and the file gets it too
+        var before = new FileInfo(path).Length;
+        Type("Date Taken (Original)", "2010-05-01 12:00:00");
+        checks.That(await Until(() => Shown("Date Taken (Original)") == "01 May 2010 12:00:00" && PhotoShown()), $"the row shows the new date ({Shown("Date Taken (Original)")}; {form.Status})");
+        using (var stream = File.OpenRead(path))
+            checks.That(PhotoLiker.Search.ExifReader.Read(stream).Original == picked, "the file says it");
+        checks.That(new FileInfo(path).Length == before, "it was written in place: the size is the same");
+        checks.That(File.GetLastWriteTimeUtc(path) == pickedUtc && File.GetCreationTimeUtc(path) == pickedUtc, "and the dates of the file are the same moment");
+        checks.That(Shown("File Date").EndsWith("(= Date Taken (Original))"), $"the File Date row says so ({Shown("File Date")})");
+        checks.That(form.Config.Files[0].LastWriteTimeUtc == pickedUtc, "the list knows the photo by its new date");
+
+        // The File Date row: the dates of the file, nothing inside the photo
+        Type("File Date", "02.01.2011 03:04:05");
+        var fileDate = DateTime.SpecifyKind(new DateTime(2011, 1, 2, 3, 4, 5), DateTimeKind.Local).ToUniversalTime();
+        checks.That(await Until(() => Shown("File Date").EndsWith("(≠ Date Taken (Original))") && PhotoShown()), $"the File Date row takes a date typed day first, and now differs from the date taken ({Shown("File Date")})");
+        checks.That(File.GetLastWriteTimeUtc(path) == fileDate && File.GetCreationTimeUtc(path) == fileDate, "both dates of the file are it");
+        using (var stream = File.OpenRead(path))
+            checks.That(PhotoLiker.Search.ExifReader.Read(stream).Original == picked, "and the date taken inside the photo is not touched");
+
+        // Not a date: the grid refuses, and nothing is written
+        var stamp = File.GetLastWriteTimeUtc(path);
+        var refused = false;
+        try { Type("Date Taken (Original)", "yesterday"); }
+        catch (FormatException ex) { refused = ex.Message.Contains("needs a date"); }
+        checks.That(refused && File.GetLastWriteTimeUtc(path) == stamp, "a text that is not a date is refused with a message, and nothing is written");
+
+        // A JPEG without a date taken: the row is there, empty, and the date is added
+        var scan = Path.Combine(folder, "edit-scan.jpg");
+        File.WriteAllBytes(scan, MakeJpeg(79));
+        var extensions = form.Config.Extensions;
+        form.Press(Keys.F5);
+        checks.That(await Until(() => form.Config.Files.Any(f => f.OriginalFilePath == scan) && PhotoShown()), "a JPEG without any EXIF is added to the folder");
+        await GoTo(form.Config.Files.FindIndex(f => f.OriginalFilePath == scan));
+        await Until(() => form.MetadataGrid.SelectedObject is MetadataWrapper);
+        checks.That(Shown("Date Taken (Original)") == "(none)" && !Descriptor("Date Taken (Original)").IsReadOnly, $"its Date Taken (Original) row is there and empty ({Shown("Date Taken (Original)")}), and can be edited");
+
+        var scanIndex = form.Config.CurrentIndex;
+        var oldCopy = Path.Combine(_likedFolder, CopyNameAt(scanIndex));
+        form.Press(Keys.Space);
+        checks.That(await Until(() => File.Exists(oldCopy) && form.Config.LikedFile == oldCopy), "Space likes it");
+
+        var size = new FileInfo(scan).Length;
+        Type("Date Taken (Original)", "14 Aug 2009 18:30:00");
+        checks.That(await Until(() => Shown("Date Taken (Original)") == "14 Aug 2009 18:30:00" && PhotoShown()), $"the date is added ({Shown("Date Taken (Original)")}; {form.Status})");
+        checks.That(new FileInfo(scan).Length > size && Shown("File Date").EndsWith("(= Date Taken (Original))"), "the photo has the block now, and its file dates are the date taken");
+        var newCopy = Path.Combine(_likedFolder, CopyNameAt(scanIndex));
+        checks.That(newCopy != oldCopy && File.Exists(newCopy) && !File.Exists(oldCopy) && form.Config.LikedFile == newCopy, $"its Liked copy was renamed to the new id and is still shown as liked ({Path.GetFileName(newCopy)})");
+        form.Press(Keys.Space);
+        checks.That(await Until(() => !File.Exists(newCopy) && form.Config.LikedFile == string.Empty), "and Space takes that copy away again");
+
+        // A PNG has dates to look at, not to edit
+        var png = Path.Combine(folder, "edit-note.png");
+        using (var note = new Bitmap(40, 30))
+            note.Save(png, ImageFormat.Png);
+        if (!form.Config.Extensions.Contains(".png"))
+            await ChangeSetting("Extensions", new[] { ".jpg", ".png" });
+        form.Press(Keys.F5);
+        checks.That(await Until(() => form.Config.Files.Any(f => f.OriginalFilePath == png) && PhotoShown()), "a PNG is added to the folder");
+        await GoTo(form.Config.Files.FindIndex(f => f.OriginalFilePath == png));
+        await Until(() => form.MetadataGrid.SelectedObject is MetadataWrapper);
+        checks.That(Descriptor("File Date").IsReadOnly, "its File Date row cannot be edited");
 
         // Nothing of this step stays
         File.Delete(scan);
