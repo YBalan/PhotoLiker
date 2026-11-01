@@ -220,6 +220,43 @@ public class SettingsTests : IDisposable
         Assert.True(settings.IsDarkTheme);
     }
 
+    // ── SearchPrecision in the file ─────────────────────────────────────────
+
+    [Fact]
+    public void SearchPrecision_IsTheMiddleOfTheSlider_UnlessTheFolderSaysOtherwise()
+    {
+        Assert.Equal(50, new Settings().SearchPrecision);
+
+        // A file from before the slider existed
+        File.WriteAllText(Settings.GetFilePath(_tempDir), """{ "CacheSize": 30 }""");
+
+        Assert.Equal(50, Settings.Load(_tempDir).SearchPrecision);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(25)]
+    [InlineData(100)]
+    public void SearchPrecision_IsSavedInTheFoldersFile_AndReadBack(int precision)
+    {
+        new Settings { CurrentFolder = _tempDir, SearchPrecision = precision }.Save(_tempDir);
+
+        Assert.Contains($"\"SearchPrecision\": {precision}", File.ReadAllText(Settings.GetFilePath(_tempDir)));
+        Assert.Equal(precision, Settings.Load(_tempDir).SearchPrecision);
+    }
+
+    [Fact]
+    public void EachFolder_KeepsItsOwnSearchPrecision()
+    {
+        var other = Path.Combine(_tempDir, "other");
+        Directory.CreateDirectory(other);
+
+        new Settings { CurrentFolder = _tempDir, SearchPrecision = 20 }.Save(_tempDir);
+        new Settings { CurrentFolder = other, SearchPrecision = 80 }.Save(other);
+
+        Assert.Equal((20, 80), (Settings.Load(_tempDir).SearchPrecision, Settings.Load(other).SearchPrecision));
+    }
+
     // ── GoThroughSubFolders in the file ─────────────────────────────────────
 
     [Fact]

@@ -69,6 +69,13 @@ namespace PhotoLikerUI
         public const string CloseResultsTooltip          = "Back to the folder (Esc)";
         public const string FacesButton                  = "Faces";
         public const string FacesTooltip                 = "Show the faces of the photo. Click a face to name it or to find the person; hold Shift and drag over a face the program missed.";
+        public const string PrecisionWide                = "Wide";
+        public const string PrecisionPrecise             = "Precise";
+        public const string PrecisionTooltipFormat       =
+            "How strict the search is: {0} of 100 (50 is the standard).\n" +
+            "Left: more photos, looser matches. Right: fewer photos, closer matches. Moving it repeats the last search; the value is kept in the folder's settings file.\n" +
+            "Now a description finds photos that score at least {1:0.00} and are within {2:0.00} of the best one, " +
+            "More like this finds photos at least {3:0.00} alike, a person is a face at least {4:0.00} close.";
         public const string StatusSearching              = "Searching...";
         public const string StatusNothingFound           = "Nothing found for {0}.";
         public const string StatusSearchError            = "Search failed: {0}";

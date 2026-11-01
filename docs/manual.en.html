@@ -454,6 +454,8 @@ PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe<
 <p>For a library of thousands of old photos on a disk or a NAS, PhotoLiker can look at every photo once and then answer questions about
 them. Nothing is uploaded: the analysis runs on this computer, and your photos are only read, never changed.</p>
 
+<figure><img src="images/17-search-bar.png" alt="The strip above the photo: the index menu, Index photos, the search box, More like this, the faces icon and the precision slider" width="920" height="27"></figure>
+
 <ol class="steps">
   <li><strong>Index photos</strong> (in the strip above the photo) analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the time
   left. You can go on browsing, stop it (the button turns into <strong>Stop indexing</strong>) and continue later: only new or changed photos are done again. The search works as soon
@@ -468,6 +470,13 @@ them. Nothing is uploaded: the analysis runs on this computer, and your photos a
   you named before), to find all photos of that person, or to delete a wrong face (a doll, a poster). Typing a person's name into the search box finds their photos. A dashed
   yellow box with a name and a question mark is a guess (<q>looks like Mom</q>): click it to confirm. For a face the program missed, hold <kbd>Shift</kbd> and drag a box around it.
   Names you give in one folder are known in the others, too.</li>
+  <li><strong>Precision.</strong> The slider at the right end of the strip (<strong>Wide</strong> to <strong>Precise</strong>) sets how strict the searches are: to the left they let more photos through
+  (looser matches), to the right fewer (closer matches), the middle is the standard. It applies to a description, to <strong>More like this</strong> and to the photos of a person. Moving it repeats the
+  last search at once, so you can widen a search that found too little or narrow one that found too much. Hold the mouse over it to see the numbers. Each folder keeps its own position
+  (<code>SearchPrecision</code> in its <code>photo-liker-config.json</code>).
+    <figure><img src="images/18-search-wide.png" alt="The strip with results open and the slider at Wide" width="997" height="27"><figcaption>The slider at <strong>Wide</strong>: more photos, looser matches.</figcaption></figure>
+    <figure><img src="images/19-search-precise.png" alt="The strip with results open and the slider at Precise" width="997" height="27"><figcaption>The same search at <strong>Precise</strong>: fewer photos, closer matches.</figcaption></figure>
+  </li>
 </ol>
 
 <h3>Good to know</h3>
