@@ -48,7 +48,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - **Likes and groups**: copy the current photo to a `Liked` folder, or into `1 - Group` ... `Z - Group` folders under it.
 - **Delete** moves the photo to a `Deleted` folder inside the photo folder; nothing is erased, and the scan leaves that
   folder out.
-- **Rotate** turns the shown photo a quarter clockwise from the button in the right corner of the status bar and saves
+- **Rotate** turns the shown photo a quarter clockwise (or counterclockwise, with the button before it; <kbd>Ctrl</kbd>+<kbd>+</kbd> and <kbd>Ctrl</kbd>+<kbd>-</kbd>) from the buttons in the right corner of the status bar and saves
   it in its file, without losing anything (see [Rotating photos](#rotating-photos)).
 - **Settings grid** next to the photo, with a folder picker for the liked folder. Changing which photos are listed,
   or in what order, reloads the folder at once.
@@ -237,6 +237,7 @@ What is kept where:
 | <kbd>F2</kbd> / <kbd>F3</kbd> | Open the [user manual](#user-manual) in Ukrainian / in English, in the browser. F1-F3 also work while you type into a text box. |
 | <kbd>F5</kbd> | List the folder again from scratch instead of from the saved list (see [Big folders open at once](#big-folders-open-at-once)). |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
+| <kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd> | Rotate the photo a quarter clockwise / counterclockwise and save it (see [Rotating photos](#rotating-photos)). The plus of the main keyboard (with or without <kbd>Shift</kbd>) and the numpad keys both work. |
 | <kbd>Ctrl</kbd>+mouse wheel | Over the photo: zoom, then drag to pan. Over the thumbnail strip: change the size of the thumbnails. |
 
 Keys are ignored while you type into a text box: the value you are editing in a grid, the search box. A click on the
@@ -471,8 +472,10 @@ while you type into a text box.
 
 ## Rotating photos
 
-The button in the right corner of the status bar turns the shown photo a quarter clockwise and saves that in its file; press
-it again for the next quarter. It works on JPEG files (`.jpg`, `.jpeg`); with another kind of file the status bar says so and
+The two buttons in the right corner of the status bar turn the shown photo a quarter counterclockwise (the first) or clockwise
+(the last) and save that in its file; press again for the next quarter. <kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd>
+do the same (the plus and minus of the numpad, and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>=</kbd> on a keyboard that makes the plus with <kbd>Shift</kbd>,
+work too). It works on JPEG files (`.jpg`, `.jpeg`); with another kind of file the status bar says so and
 nothing is written.
 
 A JPEG is not decoded and written again: that would lose a little of the picture each time. What changes is its **orientation**,
@@ -486,12 +489,18 @@ bytes instead of a new file.
   block, a copy of its directory with the entry in it at the end of the block (nothing the block points to moves, maker notes
   included). That file is written next to the old one and replaces it, so it is a little larger. A block that is almost 64 KB
   full has no room for the entry; the photo is then left as it is and the status bar says why.
-- The **dates of the file** (created, modified) stay as they were: the app knows a photo by its size and its date of change, and
-  its order in the list may go by them. If the drive does not keep a date that is set, the status bar tells.
-- The copies of the photo in the Liked and group folders are not turned; they are the photo as it was when it was liked. When the
-  size of the photo changed (the second case) they are renamed to the new id (see [Groups](#groups)), so they are
-  still shown as its copies. The saved list of the folder and the search index take over the new size, and the boxes of the faces
-  in the index turn with the photo, so "Update index" does not analyze it again.
+- The **Date Taken (Original)** of the photo and the **dates of its file** (created, modified) become one moment: the date taken
+  the photo has when the app believes it (the EXIF date, by the rules of [Aligning file dates](#aligning-file-dates)), else the
+  date of its file (created, else modified), which is then **written into the photo** as its Date Taken (Original) as well, so a
+  photo that had none (a scan) ends with the two equal, and the **File Date** row says `(= Date Taken (Original))`. A photo that has
+  no date at all to go by keeps the dates it had. The dates of the file are set again after the write (writing moves them to now),
+  and if the drive does not keep a date that is set, the status bar tells.
+- The copies of the photo in the Liked and group folders are not turned; they are the photo as it was when it was liked. The app
+  knows a photo by its size and its date of change, so when either changed (the orientation was added, or the file got the date
+  taken) the copies get the dates of the photo and are renamed to the new id (see [Groups](#groups)), and are still shown as its
+  copies. The saved list of the folder and the search index take over the new size and date, and the boxes of the faces in the
+  index turn with the photo, so "Update index" does not analyze it again. The list is not sorted again until the folder is
+  listed anew (<kbd>F5</kbd>).
 
 ## Big folders open at once
 
@@ -543,6 +552,14 @@ date of the file on the disk, created and, if different, modified. It ends with 
 time of shooting that the camera wrote into the photo and with `(≠ Date Taken (Original))` when it has not (a copied file gets
 the day of the copy); the note names the row it was compared with, and that one is never *Date Last Saved*.
 
+**Editing the dates.** In a JPEG the date rows of the grid can be edited: **Date Taken (Original)**, **Date Time Digitized**,
+**Date Last Saved** and **File Date**. Type a date (`2015-05-01 14:30:00`, `01.05.2015 14:30`, `14 Aug 2025 09:12:07`; a day alone is
+taken at noon; always day first or year first) or press the `...` button of the row and pick one. The photo is saved with it: a new
+*Date Taken (Original)* is also given to the dates of the file, the other EXIF dates change only themselves, and *File Date* sets
+created and modified both and nothing inside the photo. A photo that has no Date Taken shows `(none)` in that row, and typing a
+date there adds one (its Exif block grows a little). The copies in the Liked and group folders follow, as with Rotate, and the
+search index takes over the new date. Rows of a PNG or another kind of file are read-only.
+
 Two EXIF dates look alike and are not. **Date Taken (Original)** (in the EXIF rows) is when the picture was shot. **Date Last Saved**
 (in the Image rows, EXIF's `DateTime`) is when a program last saved the photo: a photo that was turned or edited in Windows Photo
 Viewer shows that day there, months after it was shot. Everything in PhotoLiker (search by date, the order of the list, Align dates) goes by the first.
@@ -582,8 +599,12 @@ from there, and what it would be:
 - *This date*: one you type.
 
 The photos then count as having that date taken: they move to **Will change** (marked "(given)") and are changed like the others,
-with the file dates set to it, and the dates inside the photo too if that is ticked, which replaces the date that was not
-believed. A photo that has no place for a date inside it (no EXIF at all) only gets its file dates, which is also the date the
+with the file dates set to it, and, if *Write it into the photo as its Date Taken (Original)* is ticked in the question (it is by
+default), the date written into the photo as its Date Taken (Original): replacing the date that was not believed, or added to a
+photo that has none (no EXIF at all, or no date in it), whose Exif block then grows a little and whose file is written anew. That
+makes the date a date of the photo itself and not only of its file. **Undo last run** takes it out again: the log keeps the old block
+of the photo. The copies in the Liked and group folders get the new dates and, as the size of the photo changed, the new id in
+their names. Without the tick a photo that has no place for a date inside it only gets its file dates, which is also the date the
 app goes by for it (the date of its file). "Forget the date given" in the right-click menu takes a date back; a given date is
 not kept after the dialog closes, and the run is logged and can be undone like any other.
 
@@ -783,9 +804,14 @@ every step:
   **SortOrder** lists the same photos oldest first, newest first or as the disk gives them, keeping the shown photo;
 - <kbd>Delete</kbd> moves the photo (keeping its subfolder) to `Deleted`, shows the next one, and the folder is not listed
   again, also with the subfolders on; with the list emptied nothing is shown and the keys do nothing;
-- **Rotate**, the button in the right corner of the status bar, turns a photo that has an orientation by two bytes, four clicks give
-  the file back byte for byte, the dates of the file stay; a JPEG without any EXIF gets the flag, and its copy in the Liked folder
-  is renamed and still found (Space takes it away); a PNG is left alone;
+- **Rotate**, the two buttons in the right corner of the status bar (counterclockwise first) and <kbd>Ctrl</kbd>+<kbd>+</kbd> /
+  <kbd>Ctrl</kbd>+<kbd>-</kbd> (also with <kbd>Shift</kbd>, and the numpad keys), turn a photo that has an orientation by two bytes,
+  four clicks give the file back byte for byte, the dates of the file become the date taken (and its Liked copy is renamed to the new
+  id and still found); a JPEG without any EXIF gets the flag and the date of its file written into it as its Date Taken, and its
+  copy in the Liked folder is renamed and still found (Space takes it away); a PNG is left alone;
+- **the date rows of the metadata grid** can be edited: a typed date becomes the Date Taken (Original) of the photo and the dates of
+  its file, in place; the File Date row changes the file only; a text that is no date is refused; a JPEG without a date taken shows
+  `(none)` and gets one added (its Liked copy is renamed to the new id); the rows of a PNG are read-only;
 - the EXIF and GPS rows are there, the map link is offered, every row of both grids has a description, and the **File Date**
   row says the file date is not the date taken;
 - a folder opens from its saved list (one photo is taken out of the file to tell), <kbd>F5</kbd> lists it again, and a folder
@@ -793,7 +819,8 @@ every step:
 - **Align dates** opens its dialog, lists what would change without touching anything, sets the dates of the files (and of the
   copies in the Liked folders), leaves a log, sorts the list by the date taken, and finds nothing left to do the second time;
 - photos that have no usable EXIF date can be given one (from their folder name, or typed): they move from **No usable EXIF
-  date** to **Will change**, are marked "(given)", and get their file dates;
+  date** to **Will change**, are marked "(given)", and get their file dates and, by default, the date as their Date Taken (Original),
+  added to the photo although it had no place for it;
 - **Remove empty folders** also lists photos that can not be read (here empty files), unticked, moves the ticked ones to
   `Deleted\Unreadable` and leaves a real photo and an empty note alone; looking again then finds the folder that is empty now;
 - a double click with the real mouse on a row of the three dialogs reaches the right photo or folder (it is deleted first, so that

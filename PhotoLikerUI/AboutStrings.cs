@@ -29,6 +29,7 @@ namespace PhotoLikerUI
             ("F3",                  "User manual in English"),
             ("F5",                  "List the folder again"),
             ("Ctrl+C",              "Copy the photo to the clipboard"),
+            ("Ctrl+ / Ctrl-",       "Rotate the photo a quarter clockwise / counterclockwise and save it"),
             ("Ctrl+mouse wheel",    "Zoom the photo (drag to pan); over the strip: thumbnail size"),
             ("Esc",                 "Close the search results"),
             ("Enter",               "In the search box: search"),

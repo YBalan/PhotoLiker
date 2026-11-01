@@ -47,7 +47,8 @@ namespace PhotoLikerUI
         private readonly ToolStripMenuItem _forgetItem = new(DateAlignmentStrings.ForgetMenu);
         private readonly ToolStripMenuItem _openItem = new(ShellOpen.OpenMenu);
         private readonly ToolStripMenuItem _showItem = new(ShellOpen.ShowMenu);
-        private readonly Dictionary<string, DateTime> _assigned = new(StringComparer.OrdinalIgnoreCase); // dates taken given to photos that have none that is believed
+        // dates taken given to photos that have none that is believed, and whether each is also written into the photo as its Date Taken (Original)
+        private readonly Dictionary<string, (DateTime Date, bool WriteTaken)> _assigned = new(StringComparer.OrdinalIgnoreCase);
 
         // What the scan found, and what the ticks make of it
         private PhotoDateFacts[] _facts = [];
@@ -348,7 +349,9 @@ namespace PhotoLikerUI
         private void Replan(bool preferChange = false)
         {
             var options = CurrentOptions();
-            _entries = [.. _facts.Select(f => DateAlignment.Plan(f, options, _assigned.TryGetValue(f.Path, out var given) ? given : null))];
+            _entries = [.. _facts.Select(f => _assigned.TryGetValue(f.Path, out var given)
+                ? DateAlignment.Plan(f, options, given.Date, given.WriteTaken)
+                : DateAlignment.Plan(f, options))];
 
             Array.Clear(_counts);
             foreach (var entry in _entries)
@@ -544,7 +547,7 @@ namespace PhotoLikerUI
             {
                 if (DateSources.Resolve(dialog.Choice, _facts[i], _folder, dialog.Typed, now) is { } date)
                 {
-                    _assigned[_facts[i].Path] = date;
+                    _assigned[_facts[i].Path] = (date, dialog.WriteTaken);
                     given++;
                 }
                 else
@@ -632,6 +635,9 @@ namespace PhotoLikerUI
 
                 Changed |= report.Photos.Count > 0;
                 _status.Text = DescribeRun(report) + indexNote;
+
+                // A photo that got a date taken added has another size, and its copies another name: what is known of them follows
+                await FollowChangedSizesAsync(report);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -656,7 +662,7 @@ namespace PhotoLikerUI
         {
             var parts = string.Empty;
             if (report.Copies > 0)
-                parts += string.Format(DateAlignmentStrings.CopiesPart, report.Copies);
+                parts += string.Format(DateAlignmentStrings.CopiesPart, report.Copies) + (report.Renamed > 0 ? string.Format(DateAlignmentStrings.RenamedPart, report.Renamed) : string.Empty);
             if (report.Failures.Count > 0)
                 parts += string.Format(DateAlignmentStrings.FailedPart, report.Failures.Count);
             if (report.NotKept > 0)
@@ -708,6 +714,7 @@ namespace PhotoLikerUI
                     _status.Text += string.Format(DateAlignmentStrings.FailedPart, report.Failures.Count);
 
                 await LookAtAgainAsync(report.Photos.Select(p => p.Path));
+                await FollowChangedSizesAsync(report);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
@@ -747,6 +754,39 @@ namespace PhotoLikerUI
             }
         }
 
+        /// <summary>
+        /// A photo that got a date taken added (or had it taken out again) has another size, which its copies in the liked and group folders
+        /// carry in their names: the photos the dialog keeps for finding the copies get the new size and times, and the libraries of the copies
+        /// are read again if a copy was renamed. The photos are looked at again, since the places of their dates moved.
+        /// </summary>
+        private async Task FollowChangedSizesAsync(DateAlignmentReport report)
+        {
+            var resized = report.Photos.Where(p => p.Length != p.PreviousLength).ToList();
+            foreach (var done in report.Photos)
+            {
+                if (_photos.TryGetValue(done.Path, out var photo))
+                {
+                    photo.Length = done.Length;
+                    photo.LastWriteTimeUtc = done.ModifiedUtc;
+                    photo.CreationTimeUtc = done.CreatedUtc;
+                }
+            }
+
+            if (resized.Count > 0)
+                await LookAtAgainAsync(resized.Select(p => p.Path));
+
+            if (report.Renamed > 0 && !IsDisposed)
+            {
+                var liked = _likedFolder;
+                var (library, groups) = await Task.Run(() => (LikedLibrary.Scan(liked), string.IsNullOrWhiteSpace(liked) ? null : GroupLibrary.Scan(liked)));
+                if (!IsDisposed)
+                {
+                    _liked = library;
+                    _groups = groups;
+                }
+            }
+        }
+
         /// <summary>Tells the index of the folder that the photos are the same, so that "Update index" does not analyze them again.</summary>
         private async Task<string> UpdateIndexAsync(IReadOnlyList<AlignedFile> photos)
         {
@@ -756,7 +796,19 @@ namespace PhotoLikerUI
             var stamps = photos.Select(p => (p.Path, p.PreviousModifiedUtc.Ticks, p.ModifiedUtc.Ticks)).ToArray();
             try
             {
-                await Task.Run(() => _index.UpdateStamps(stamps));
+                await Task.Run(() =>
+                {
+                    _index.UpdateStamps(stamps);
+                    var now = DateTime.Now;
+                    foreach (var p in photos)
+                    {
+                        // The picture is the one that was analyzed; a date taken that was written or taken out changes the date the index has
+                        if (p.Length != p.PreviousLength)
+                            _index.Turn(p.Path, 0, p.PreviousLength, p.Length);
+                        if (p.Written.HasFlag(ExifDateFields.Original) || p.Length != p.PreviousLength)
+                            _index.RefreshDate(p.Path, p.CreatedUtc, p.ModifiedUtc, now);
+                    }
+                });
                 return string.Empty;
             }
             catch (Exception ex)

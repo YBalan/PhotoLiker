@@ -126,6 +126,51 @@ public class JpegOrientationTests : IDisposable
     }
 
     [Fact]
+    public void TheResult_SaysWhatDatesTheFileHasNow()
+    {
+        var path = Save(TestJpeg.Build(orientation: 1));
+
+        var result = JpegOrientation.TurnClockwise(path);
+
+        Assert.Equal(Created, result.CreatedUtc);
+        Assert.Equal(Taken, result.LastWriteUtc);
+    }
+
+    [Theory]
+    [InlineData(1)]    // two bytes are changed in place
+    [InlineData(null)] // the file is written anew
+    public void GivenADate_BothDatesOfTheFileBecomeIt(int? orientation)
+    {
+        var path = Save(TestJpeg.Build(orientation: orientation));
+        var date = new DateTime(2009, 9, 1, 12, 30, 0, DateTimeKind.Utc);
+
+        var result = JpegOrientation.TurnClockwise(path, fileDatesUtc: date);
+
+        Assert.True(result.DateKept);
+        Assert.Equal(date, File.GetLastWriteTimeUtc(path));
+        Assert.Equal(date, File.GetCreationTimeUtc(path));
+        Assert.Equal(date, result.LastWriteUtc);
+        Assert.Equal(date, result.CreatedUtc);
+        Assert.Equal(6, JpegOrientation.Read(new MemoryStream(File.ReadAllBytes(path))));
+    }
+
+    [Fact]
+    public void GivenADate_APhotoThatIsNotTurned_IsNotWritten_ButGetsTheDates()
+    {
+        var original = TestJpeg.Build(orientation: 6);
+        var path = Save(original);
+        var date = new DateTime(2009, 9, 1, 12, 30, 0, DateTimeKind.Utc);
+
+        var result = JpegOrientation.TurnClockwise(path, quarterTurns: 0, fileDatesUtc: date);
+
+        Assert.Equal(original, File.ReadAllBytes(path));
+        Assert.Equal(date, File.GetLastWriteTimeUtc(path));
+        Assert.Equal(date, File.GetCreationTimeUtc(path));
+        Assert.Equal(date, result.LastWriteUtc);
+        Assert.False(result.Rewritten);
+    }
+
+    [Fact]
     public void TurningFourTimes_GivesTheSameFileBack()
     {
         var original = TestJpeg.Build(orientation: 1);
@@ -321,7 +366,10 @@ internal static class TestJpeg
     /// <param name="orientation">The orientation in the directory; none when null.</param>
     /// <param name="exif">Whether the photo has an Exif block at all.</param>
     /// <param name="padding">Bytes of data in the block that nothing points to, to make it large.</param>
-    public static byte[] Build(int? orientation = null, bool exif = true, bool jfif = false, bool bigEndian = false, int padding = 0)
+    /// <param name="original">DateTimeOriginal in the Exif directory (which the photo then has); none when null.</param>
+    /// <param name="digitized">DateTimeDigitized in the Exif directory; none when null.</param>
+    public static byte[] Build(int? orientation = null, bool exif = true, bool jfif = false, bool bigEndian = false, int padding = 0,
+        string? original = null, string? digitized = null)
     {
         using var jpeg = new MemoryStream();
         jpeg.Write([0xFF, 0xD8]);
@@ -333,7 +381,7 @@ internal static class TestJpeg
 
         if (exif)
         {
-            var tiff = Tiff(orientation, bigEndian, padding);
+            var tiff = Tiff(orientation, bigEndian, padding, original, digitized);
             var length = 2 + 6 + tiff.Length;
             jpeg.Write([0xFF, 0xE1, (byte)(length >> 8), (byte)length]);
             jpeg.Write("Exif\0\0"u8);
@@ -345,11 +393,15 @@ internal static class TestJpeg
         return jpeg.ToArray();
     }
 
-    // Directory 0: Make (0x010F, in the entry), [Orientation (0x0112)], DateTime (0x0132, text elsewhere in the block)
-    private static byte[] Tiff(int? orientation, bool big, int padding)
+    // Directory 0: Make (0x010F, in the entry), [Orientation (0x0112)], DateTime (0x0132, text elsewhere in the block), [Exif directory
+    // (0x8769) with DateTimeOriginal (0x9003) and DateTimeDigitized (0x9004)]
+    private static byte[] Tiff(int? orientation, bool big, int padding, string? original = null, string? digitized = null)
     {
-        var entries = 2 + (orientation is null ? 0 : 1);
+        var exifEntries = (original is null ? 0 : 1) + (digitized is null ? 0 : 1);
+        var entries = 2 + (orientation is null ? 0 : 1) + (exifEntries > 0 ? 1 : 0);
         var dataAt = 8 + 2 + entries * 12 + 4;
+        var exifAt = dataAt + 20;                           // behind the text of DateTime
+        var exifTextAt = exifAt + 2 + exifEntries * 12 + 4; // behind the Exif directory
         using var tiff = new MemoryStream();
 
         void U16(int value) => tiff.Write(big ? [(byte)(value >> 8), (byte)value] : new[] { (byte)value, (byte)(value >> 8) });
@@ -368,9 +420,32 @@ internal static class TestJpeg
             U16(0x0112); U16(3); U32(1); U16(value); U16(0);
         }
         U16(0x0132); U16(2); U32(20); U32((uint)dataAt);
+        if (exifEntries > 0)
+        {
+            U16(0x8769); U16(4); U32(1); U32((uint)exifAt);
+        }
         U32(0);
 
         tiff.Write(System.Text.Encoding.ASCII.GetBytes(DateTimeText + "\0"));
+        if (exifEntries > 0)
+        {
+            U16(exifEntries);
+            var textAt = exifTextAt;
+            if (original is not null)
+            {
+                U16(0x9003); U16(2); U32(20); U32((uint)textAt);
+                textAt += 20;
+            }
+            if (digitized is not null)
+            {
+                U16(0x9004); U16(2); U32(20); U32((uint)textAt);
+            }
+            U32(0);
+            if (original is not null)
+                tiff.Write(System.Text.Encoding.ASCII.GetBytes(original + "\0"));
+            if (digitized is not null)
+                tiff.Write(System.Text.Encoding.ASCII.GetBytes(digitized + "\0"));
+        }
         tiff.Write(new byte[padding]);
         return tiff.ToArray();
     }
@@ -415,6 +490,66 @@ internal static class TestJpeg
                 return System.Text.Encoding.ASCII.GetString(jpeg, tiff + (int)U32(jpeg, entry + 8, big), 19);
         }
         throw new InvalidOperationException("No DateTime entry.");
+    }
+
+    /// <summary>The tags of the directory that the Exif pointer of directory 0 leads to, in the order the directory has them; null if there is none.</summary>
+    public static List<ushort>? ExifIfdTags(byte[] jpeg)
+    {
+        var (tiff, big, exifIfd) = ExifIfdAt(jpeg);
+        return exifIfd is null ? null : [.. Enumerable.Range(0, U16(jpeg, exifIfd.Value, big)).Select(i => U16(jpeg, exifIfd.Value + 2 + i * 12, big))];
+    }
+
+    /// <summary>The text of a date in the Exif directory, found through the directories the way a reader finds it; null if the photo has none.</summary>
+    public static string? ReadExifDate(byte[] jpeg, ushort tag)
+    {
+        var (tiff, big, exifIfd) = ExifIfdAt(jpeg);
+        if (exifIfd is not { } ifd)
+            return null;
+
+        for (var i = 0; i < U16(jpeg, ifd, big); i++)
+        {
+            var entry = ifd + 2 + i * 12;
+            if (U16(jpeg, entry, big) == tag)
+                return System.Text.Encoding.ASCII.GetString(jpeg, tiff + (int)U32(jpeg, entry + 8, big), 19);
+        }
+        return null;
+    }
+
+    /// <summary>Where entry <paramref name="tag"/> of directory 0 is, counted from the start of the TIFF data.</summary>
+    public static uint Ifd0EntryAt(byte[] jpeg, ushort tag)
+    {
+        var tiff = FindExif(jpeg)!.Value.ExifPayloadAt + 6;
+        var big = jpeg[tiff] == 'M';
+        var ifd0 = (int)U32(jpeg, tiff + 4, big);
+        for (var i = 0; i < U16(jpeg, tiff + ifd0, big); i++)
+        {
+            var entry = ifd0 + 2 + i * 12;
+            if (U16(jpeg, tiff + entry, big) == tag)
+                return (uint)entry;
+        }
+        throw new InvalidOperationException($"No entry {tag:X4}.");
+    }
+
+    /// <summary>Where the Exif directory is, counted from the start of the TIFF data (what the pointer says).</summary>
+    public static uint ExifIfdOffset(byte[] jpeg)
+    {
+        var tiff = FindExif(jpeg)!.Value.ExifPayloadAt + 6;
+        var big = jpeg[tiff] == 'M';
+        return U32(jpeg, tiff + (int)Ifd0EntryAt(jpeg, 0x8769) + 8, big);
+    }
+
+    private static (int Tiff, bool Big, int? ExifIfd) ExifIfdAt(byte[] jpeg)
+    {
+        var tiff = FindExif(jpeg)!.Value.ExifPayloadAt + 6;
+        var big = jpeg[tiff] == 'M';
+        var ifd0 = tiff + (int)U32(jpeg, tiff + 4, big);
+        for (var i = 0; i < U16(jpeg, ifd0, big); i++)
+        {
+            var entry = ifd0 + 2 + i * 12;
+            if (U16(jpeg, entry, big) == 0x8769)
+                return (tiff, big, tiff + (int)U32(jpeg, entry + 8, big));
+        }
+        return (tiff, big, null);
     }
 
     /// <summary>What follows the Exif block (and the other block that comes after it): the picture data.</summary>

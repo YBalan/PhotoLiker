@@ -104,6 +104,46 @@ namespace PhotoLiker.Search
         }
 
         /// <summary>
+        /// The dates a photo gets when the app saves it again (turned, see <c>JpegOrientation</c>): its Date Taken (Original) and the dates of
+        /// its file are one and the same moment.
+        /// </summary>
+        /// <param name="Taken">The date taken, local time of the camera, whole seconds.</param>
+        /// <param name="FileUtc">The same moment as the file system keeps it: both dates of the file become this.</param>
+        /// <param name="WriteTaken">The photo does not say <paramref name="Taken"/> as its Date Taken (Original) yet, so it is written into it.</param>
+        /// <param name="FromFile">The photo has no date taken that is believed, so the date of its file is the date taken.</param>
+        public sealed record SavedDates(DateTime Taken, DateTime FileUtc, bool WriteTaken, bool FromFile);
+
+        /// <summary>
+        /// What the Date Taken (Original) and the dates of the file of a photo should be when it is saved again: the date taken the photo has
+        /// (the EXIF date that <see cref="PhotoDates"/> believes), else the date of its file (created, else changed, as long as it is
+        /// believable) which is then also written into the photo as its date taken. Null when the photo can not be read, or has no date at all
+        /// to go by: it is saved and keeps its dates.
+        /// </summary>
+        /// <param name="now">The present, passed in so that the rules can be tested.</param>
+        public static SavedDates? DatesForSaving(PhotoDateFacts facts, DateTime now)
+        {
+            if (facts.Problem is not null)
+                return null;
+
+            if (facts.Taken is { } taken)
+            {
+                var whole = WholeSeconds(taken);
+                return new SavedDates(whole, ToUtc(whole), WriteTaken: facts.Exif.Dates.Original != whole, FromFile: false);
+            }
+
+            if (DateSources.FromFile(facts, now) is not { } fromFile)
+                return null;
+            var date = WholeSeconds(fromFile);
+            return new SavedDates(date, ToUtc(date), WriteTaken: true, FromFile: true);
+        }
+
+        /// <summary>Looks at the photo at <paramref name="path"/> (the start of the file is read) and decides as <see cref="DatesForSaving(PhotoDateFacts, DateTime)"/>.</summary>
+        public static SavedDates? DatesForSaving(string path, DateTime now) =>
+            DatesForSaving(Inspect(new PhotoFile(path, string.Empty), now), now);
+
+        private static DateTime WholeSeconds(DateTime date) => new(date.Ticks - date.Ticks % TimeSpan.TicksPerSecond, date.Kind);
+
+        /// <summary>
         /// Looks at all the photos, in the order they are given. A stop throws <see cref="OperationCanceledException"/>.
         /// </summary>
         public static PhotoDateFacts[] InspectAll(IReadOnlyList<PhotoFile> files, DateTime now, IProgress<int>? progress, CancellationToken token)
@@ -122,7 +162,8 @@ namespace PhotoLiker.Search
 
         /// <summary>What has to be done to the photo for the options: nothing, a change, or why it is left alone.</summary>
         /// <param name="assigned">The date taken to use if the photo has none that is believed: a date a person gave it, from where it said.</param>
-        public static DateAlignmentEntry Plan(PhotoDateFacts facts, DateAlignmentOptions options, DateTime? assigned = null)
+        /// <param name="writeTaken">Write that date into the photo as its Date Taken (Original), also where the photo has no place for it yet (the Exif block is made larger), whatever the options say.</param>
+        public static DateAlignmentEntry Plan(PhotoDateFacts facts, DateAlignmentOptions options, DateTime? assigned = null, bool writeTaken = false)
         {
             if (facts.Problem is not null)
                 return new DateAlignmentEntry(facts, DateAlignmentStatus.Unreadable, false, false, ExifDateFields.None);
@@ -140,6 +181,8 @@ namespace PhotoLiker.Search
             var created = options.Created && !SameMoment(facts.CreatedUtc, takenUtc);
             var modified = options.Modified && !SameMoment(facts.ModifiedUtc, takenUtc);
             var exif = options.ExifFields ? ExifToWrite(facts.Exif, taken) : ExifDateFields.None;
+            if (given && writeTaken && facts.Exif.Dates.Original != WholeSeconds(taken))
+                exif |= ExifDateFields.Original;
 
             var status = created || modified || exif != ExifDateFields.None ? DateAlignmentStatus.Change : DateAlignmentStatus.Aligned;
             return new DateAlignmentEntry(facts, status, created, modified, exif, given);

@@ -46,7 +46,7 @@ namespace PhotoLiker.Core
         /// <summary>The description of every tag that <see cref="ExifTagMap.Tags"/> names, by tag id.</summary>
         public static readonly IReadOnlyDictionary<int, string> Tags = new Dictionary<int, string>
         {
-            [ExifTagMap.FileDateTagId] = "The date of the file on the disk (created, and modified if different), not of the photo. '= Date Taken (Original)' means it is the time of shooting that the camera wrote into the photo, '≠ Date Taken (Original)' that it is not: a copied file gets the day of the copy. The 'Align dates' button of the toolbar sets it right.",
+            [ExifTagMap.FileDateTagId] = "The date of the file on the disk (created, and modified if different), not of the photo. '= Date Taken (Original)' means it is the time of shooting that the camera wrote into the photo, '≠ Date Taken (Original)' that it is not: a copied file gets the day of the copy. The 'Align dates' button of the toolbar sets it right. You can also edit it here (type a date, or pick one with the '...' button): created and modified both become that date.",
 
             // TIFF baseline
             [0x0100] = "Width of the photo in pixels, as written into the file header.",
@@ -58,7 +58,7 @@ namespace PhotoLiker.Core
             [0x011B] = "Pixels per resolution unit down the photo (usually 72 or 300). It only matters for printing.",
             [0x0128] = "The unit of X Resolution and Y Resolution: 2 = inch, 3 = centimetre.",
             [0x0131] = "The program that made or last saved the file: the firmware of the camera, or an editor such as Photoshop.",
-            [0x0132] = "When the photo was last saved by the camera or a program (EXIF 'DateTime'), no time zone. A photo that was turned or edited later, in Windows Photo Viewer for one, shows that day here; the time of shooting is 'Date Taken (Original)'.",
+            [0x0132] = "When the photo was last saved by the camera or a program (EXIF 'DateTime'), no time zone. A photo that was turned or edited later, in Windows Photo Viewer for one, shows that day here; the time of shooting is 'Date Taken (Original)'. You can edit it (type a date, or the '...' button) in a JPEG: the photo is saved with the new date.",
             [0x0201] = "Where the small preview picture (thumbnail) starts inside the EXIF block, in bytes.",
             [0x0202] = "Size of the small preview picture (thumbnail) in bytes.",
             [0x0213] = "Where the colour samples sit relative to the brightness samples in the JPEG (1 = centred, 2 = co-sited). A technical detail with no visible effect.",
@@ -92,8 +92,8 @@ namespace PhotoLiker.Core
             [0x88A3] = "AI-related data written by the camera app of a Xiaomi phone, in a private format of the maker. Shown as stored.",
             [0x8773] = "The colour profile embedded in the photo, so that programs show its colours right (sRGB, Adobe RGB, ...). Shown as raw bytes.",
             [0x9000] = "The version of the EXIF standard the camera followed: 0230 means 2.30.",
-            [0x9003] = "When the picture was taken, by the camera clock (no time zone). PhotoLiker uses it as the date of the photo (search by date, PageUp / PageDown) unless it is not believable.",
-            [0x9004] = "When the picture was stored as a digital file. For a digital camera the same as when it was taken; for a scan of a film photo, the time of the scan.",
+            [0x9003] = "When the picture was taken, by the camera clock (no time zone). PhotoLiker uses it as the date of the photo (search by date, PageUp / PageDown) unless it is not believable. In a JPEG you can edit it (type a date, or pick one with the '...' button): the photo is saved with it and the dates of the file become the same. A JPEG that has none shows '(none)' and can be given one the same way.",
+            [0x9004] = "When the picture was stored as a digital file. For a digital camera the same as when it was taken; for a scan of a film photo, the time of the scan. You can edit it (type a date, or the '...' button) in a JPEG: the photo is saved with the new date.",
             [0x9010] = "The time zone of 'Date Last Saved' as the difference from UTC, for example +02:00.",
             [0x9011] = "The time zone of the time of shooting ('Date Taken (Original)') as the difference from UTC, for example +02:00.",
             [0x9012] = "The time zone of 'Date Time Digitized' as the difference from UTC, for example +02:00.",

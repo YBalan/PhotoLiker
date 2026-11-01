@@ -75,6 +75,7 @@ namespace PhotoLikerUI
         public const string ApplyDoneFormat              = "Done: {0:N0} photos changed{1}. The log is {2}.";
         public const string ApplyStoppedFormat           = "Stopped: {0:N0} photos changed{1}. The log is {2}.";
         public const string CopiesPart                   = ", and the same dates on {0:N0} copies in the liked and group folders";
+        public const string RenamedPart                  = " ({0:N0} of them renamed to the new id of their photo)";
         public const string FailedPart                   = "; {0:N0} could not be changed (they are marked in the list)";
         public const string NotKeptPart                  = "; for {0:N0} the drive did not keep a date that was written (a network drive may not store the created date)";
         public const string ApplyError                   = "The dates could not be changed: {0}";
@@ -100,7 +101,8 @@ namespace PhotoLikerUI
         public const string AssignTitle                  = "Use a date for photos without a usable EXIF date";
         public const string AssignIntro                  =
             "These photos have no EXIF date that can be believed: none at all, or one that looks like a camera that lost its clock. Say where their date taken comes from. " +
-            "They are then changed like the others: the file dates are set to it, and the dates inside the photo too if that is ticked.";
+            "They are then changed like the others: the file dates are set to it, and it is written into the photo as its Date Taken (Original) if that is ticked.";
+        public const string AssignWriteTaken             = "Write it into the photo as its Date Taken (Original). A photo that has no place for it gets one: its file becomes a little larger (Undo takes it out again).";
         public const string AssignScopeSelected          = "The {0:N0} selected";
         public const string AssignScopeAll               = "All {0:N0} photos without a usable date";
         public const string AssignSourceExif             = "The date the photo has: I know it is right";

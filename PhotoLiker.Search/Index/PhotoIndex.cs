@@ -155,6 +155,24 @@ namespace PhotoLiker.Search
         }
 
         /// <summary>
+        /// The date of a photo whose dates the app changed (a date taken written into it, see <see cref="DateAligner"/>) is worked out again
+        /// from the start of its file, and stored if it is another than the index has. Nothing happens for a photo the index does not know.
+        /// </summary>
+        public void RefreshDate(string fullPath, DateTime createdUtc, DateTime modifiedUtc, DateTime now)
+        {
+            if (FindFullPath(fullPath) is not { } indexed)
+                return;
+
+            var facts = DateAlignment.Inspect(new PhotoFile(fullPath, string.Empty) { CreationTimeUtc = createdUtc, LastWriteTimeUtc = modifiedUtc }, now);
+            if (facts.Problem is not null)
+                return;
+
+            var date = PhotoDates.Resolve(facts.Exif.Dates, PhotoDates.FileTime(createdUtc), PhotoDates.FileTime(modifiedUtc), now);
+            if (date != indexed.Date)
+                SaveDates([(indexed, date)]);
+        }
+
+        /// <summary>
         /// Photos whose file got another date of change while the picture stayed the same (see <see cref="DateAligner"/>) are still
         /// the indexed ones: without this "Update index" would take them for changed photos and analyze them again, which takes hours.
         /// A photo is only taken over if the index knew it by <c>PreviousTicks</c>; one that was already out of date stays so.

@@ -761,6 +761,11 @@
                 CopyCurrentPhotoToClipboard();
                 return true;
             }
+            else if (TryGetRotateKey(keyData, out var quarterTurns))
+            {
+                RotateCurrentPhoto(quarterTurns);
+                return true;
+            }
             else if (keyData == Keys.Space)
             {
                 var currentFile = pictureBox1.Tag as string;
@@ -1413,7 +1418,9 @@
             pictureBox1.Image = entry.Full;
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; // Set the size mode to zoom
 
-            var metadataWrapper = new MetadataWrapper(entry.Metadata);
+            // The dates of a JPEG can be edited in the grid: the photo is saved again with the new date
+            var metadataWrapper = new MetadataWrapper(
+                entry.Metadata, pictureBox1.Tag is string shown && JpegOrientation.IsJpeg(shown) ? PhotoDateEdited : null);
             imageMetaPropertyGrid.SelectedObject = metadataWrapper;
             ScrollPropertyGridToTop(imageMetaPropertyGrid);
             UpdateGpsLink(metadataWrapper);

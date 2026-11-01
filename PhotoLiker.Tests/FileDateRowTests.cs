@@ -154,6 +154,50 @@ public class FileDateRowTests : IDisposable
 
 public class DateTextTests
 {
+    [Theory]
+    [InlineData("2025:08:14 09:12:07", 2025, 8, 14, 9, 12, 7)]
+    [InlineData("14 Aug 2025 09:12:07", 2025, 8, 14, 9, 12, 7)]
+    [InlineData("14 Aug 2025 09:12", 2025, 8, 14, 9, 12, 0)]
+    [InlineData("2025-08-14 09:12:07", 2025, 8, 14, 9, 12, 7)]
+    [InlineData("2025-08-14 09:12", 2025, 8, 14, 9, 12, 0)]
+    [InlineData("2025-08-14T09:12:07", 2025, 8, 14, 9, 12, 7)]
+    [InlineData("14.08.2025 09:12:07", 2025, 8, 14, 9, 12, 7)]
+    [InlineData("14.08.2025 09:12", 2025, 8, 14, 9, 12, 0)]
+    [InlineData("  2025-08-14 09:12:07  ", 2025, 8, 14, 9, 12, 7)]
+    [InlineData("2025-08-14", 2025, 8, 14, 12, 0, 0)]       // a day alone: noon
+    [InlineData("14.08.2025", 2025, 8, 14, 12, 0, 0)]
+    [InlineData("14 Aug 2025", 2025, 8, 14, 12, 0, 0)]
+    [InlineData("2025:08:14", 2025, 8, 14, 12, 0, 0)]
+    public void ATypedDate_IsUnderstoodEitherWay(string text, int year, int month, int day, int hour, int minute, int second)
+    {
+        Assert.True(DateText.TryParseTyped(text, out var date));
+        Assert.Equal(new DateTime(year, month, day, hour, minute, second), date);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("yesterday")]
+    [InlineData("08/14/2025")]           // can be read two ways
+    [InlineData("2025-13-01 10:00:00")]
+    [InlineData("2025-02-30")]
+    [InlineData("(none)")]
+    public void ATextThatIsNoDate_IsNotUnderstood(string? text)
+    {
+        Assert.False(DateText.TryParseTyped(text, out _));
+    }
+
+    [Fact]
+    public void TheFirstShownDate_IsFoundInTheText()
+    {
+        Assert.True(DateText.TryFindDisplayed("created 14 Aug 2025 09:12:07, modified 15 Aug 2025 10:00:00 (≠ Date Taken (Original))", out var date));
+        Assert.Equal(new DateTime(2025, 8, 14, 9, 12, 7), date);
+        Assert.True(DateText.TryFindDisplayed("01 Jan 2015 12:30:00 (= Date Taken (Original))", out date));
+        Assert.Equal(new DateTime(2015, 1, 1, 12, 30, 0), date);
+        Assert.False(DateText.TryFindDisplayed("no date here 12:30:00", out _));
+        Assert.False(DateText.TryFindDisplayed(null, out _));
+    }
+
     [Fact]
     public void ADate_IsShownWithTheMonthAsAWord_InEnglishWhateverTheCulture()
     {
@@ -218,5 +262,57 @@ public class DateTextTests
         Assert.Equal("    :  :     :  :  ", meta.Entries.Single(e => e.TagId == 0x9004).Value.Trim('\0'));
         Assert.Equal("Canon", meta.Entries.Single(e => e.TagId == 0x010F).Value);
         Assert.Equal(new DateTime(2025, 8, 14, 9, 12, 7), FileDateRow.TakenOf(meta.Entries)); // and the rest of the app can still read it
+    }
+}
+
+public class DateRowEditTests
+{
+    private static readonly DateTime Date = new(2009, 9, 1, 14, 30, 5, 600);
+
+    [Theory]
+    [InlineData(0x9003, true)]
+    [InlineData(0x9004, true)]
+    [InlineData(0x0132, true)]
+    [InlineData(ExifTagMap.FileDateTagId, true)]
+    [InlineData(0x010F, false)]   // Make
+    [InlineData(0x9011, false)]   // a time zone, not a date
+    public void OnlyTheDateRows_CanBeEdited(int tag, bool editable)
+    {
+        Assert.Equal(editable, DateRowEdit.IsEditable(tag));
+        Assert.Equal(editable, DateRowEdit.For(tag, Date) is not null);
+    }
+
+    [Fact]
+    public void TheDateTaken_IsAlsoGivenToTheFile()
+    {
+        var edit = DateRowEdit.For(0x9003, Date)!;
+
+        Assert.Equal(new DateTime(2009, 9, 1, 14, 30, 5), edit.Change.Original);
+        Assert.Null(edit.Change.Digitized);
+        Assert.Null(edit.Change.LastSaved);
+        Assert.Equal(DateTimeKind.Utc, edit.FileDatesUtc!.Value.Kind);
+        Assert.Equal(new DateTime(2009, 9, 1, 14, 30, 5), edit.FileDatesUtc.Value.ToLocalTime());
+    }
+
+    [Fact]
+    public void TheOtherDatesInsideThePhoto_ChangeOnlyThemselves()
+    {
+        var digitized = DateRowEdit.For(0x9004, Date)!;
+        Assert.Equal(new DateTime(2009, 9, 1, 14, 30, 5), digitized.Change.Digitized);
+        Assert.Null(digitized.Change.Original);
+        Assert.Null(digitized.FileDatesUtc);
+
+        var saved = DateRowEdit.For(0x0132, Date)!;
+        Assert.Equal(new DateTime(2009, 9, 1, 14, 30, 5), saved.Change.LastSaved);
+        Assert.Null(saved.FileDatesUtc);
+    }
+
+    [Fact]
+    public void TheFileDate_ChangesTheFileAndNothingInsideThePhoto()
+    {
+        var edit = DateRowEdit.For(ExifTagMap.FileDateTagId, Date)!;
+
+        Assert.True(edit.Change.IsEmpty);
+        Assert.Equal(new DateTime(2009, 9, 1, 14, 30, 5), edit.FileDatesUtc!.Value.ToLocalTime());
     }
 }

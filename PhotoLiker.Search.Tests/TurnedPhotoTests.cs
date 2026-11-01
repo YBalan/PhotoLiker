@@ -98,6 +98,54 @@ public class TurnedPhotoTests : IDisposable
         Assert.Equal(Colour(before, before.Width - 3, 2), Colour(after, after.Width - 3, 2));
     }
 
+    private static string? DateTakenByWindows(string path)
+    {
+        using var stream = File.OpenRead(path);
+        var frame = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames[0];
+        return ((BitmapMetadata)frame.Metadata).GetQuery("/app1/ifd/exif/{ushort=36867}") as string;
+    }
+
+    [Theory]
+    [MemberData(nameof(Kinds))]
+    public void ADateTakenThatWasAdded_IsReadByWindowsAndByTheDateReader_AndThePictureIsTheSame(string kind)
+    {
+        var path = PhotoOfKind(kind);
+        var before = Decode(path);
+        var taken = new DateTime(2009, 9, 1, 14, 30, 0);
+
+        var result = JpegExif.Save(path, new ExifChange { Original = taken });
+
+        Assert.Equal("2009:09:01 14:30:00", DateTakenByWindows(path));
+        using (var stream = File.OpenRead(path))
+            Assert.Equal(taken, ExifReader.Read(stream).Original);
+        var after = Decode(path);
+        Assert.Equal(before.Width, after.Width);
+        Assert.Equal(before.Bgr, after.Bgr);
+        Assert.Equal(result.Length, new FileInfo(path).Length);
+    }
+
+    [Theory]
+    [MemberData(nameof(Kinds))]
+    public void ATurnThatAlsoWritesTheDateTaken_ShowsThePhotoTurned_WithTheDate(string kind)
+    {
+        var path = PhotoOfKind(kind);
+        var before = Decode(path);
+        var taken = new DateTime(2009, 9, 1, 14, 30, 0);
+
+        JpegOrientation.TurnClockwise(path, dateTaken: taken);
+        var after = Decode(path);
+
+        Assert.Equal(before.Height, after.Width);
+        Assert.Equal(before.Width, after.Height);
+        Assert.Equal(Colour(before, 2, 2), Colour(after, after.Width - 3, 2));
+        Assert.Equal("2009:09:01 14:30:00", DateTakenByWindows(path));
+
+        // And back the other way: counterclockwise is three quarters clockwise
+        JpegOrientation.TurnClockwise(path, quarterTurns: -1);
+        Assert.Equal(before.Width, Decode(path).Width);
+        Assert.Equal("2009:09:01 14:30:00", DateTakenByWindows(path));
+    }
+
     [Fact]
     public void ThePictureData_IsNotTouched()
     {

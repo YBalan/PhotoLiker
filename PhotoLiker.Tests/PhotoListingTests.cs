@@ -600,17 +600,20 @@ public class PhotoListingTests : IDisposable
         Assert.Equal(300 - 14 + 1, listing.ToPhotoFiles(PhotoSortOrder.None).Count);
     }
 
-    // ── Resize ──────────────────────────────────────────────────────────────
+    // ── Update ──────────────────────────────────────────────────────────────
+
+    private static (DateTime LastWrite, DateTime Created) TimesOf(string path) =>
+        (File.GetLastWriteTimeUtc(path), File.GetCreationTimeUtc(path));
 
     [Fact]
-    public void Resize_GivesThePhotoItsNewSize_AndTheListingIsSaved()
+    public void Update_GivesThePhotoItsNewSize_AndTheListingIsSaved()
     {
         var a = Put("a.jpg", "12345");
-        Put(Path.Combine("sub", "b.jpg"), "123");
+        var b = Put(Path.Combine("sub", "b.jpg"), "123");
         var listing = ScanAndSave();
 
-        listing.Resize(a, 99);
-        listing.Resize(At(Path.Combine("sub", "B.JPG")), 7); // names do not care about case
+        listing.Update(a, 99, TimesOf(a).LastWrite, TimesOf(a).Created);
+        listing.Update(At(Path.Combine("sub", "B.JPG")), 7, TimesOf(b).LastWrite, TimesOf(b).Created); // names do not care about case
 
         var sizes = listing.ToPhotoFiles(PhotoSortOrder.None).ToDictionary(p => Path.GetFileName(p.OriginalFilePath).ToLowerInvariant(), p => p.Length);
         Assert.Equal(99, sizes["a.jpg"]);
@@ -621,30 +624,40 @@ public class PhotoListingTests : IDisposable
     }
 
     [Fact]
-    public void Resize_KeepsTheTimesOfThePhoto()
+    public void Update_GivesThePhotoItsNewTimes_AndKeepsThemWhenTheyAreTheSame()
     {
         var a = Put("a.jpg", "12345");
         File.SetLastWriteTimeUtc(a, Old);
         var listing = ScanAndSave();
         var before = listing.ToPhotoFiles(PhotoSortOrder.None).Single();
 
-        listing.Resize(a, 99);
+        listing.Update(a, before.Length, before.LastWriteTimeUtc, before.CreationTimeUtc);
+        Assert.False(listing.NeedsSave);
+
+        var taken = new DateTime(2015, 6, 7, 8, 9, 10, DateTimeKind.Utc);
+        listing.Update(a, before.Length, taken, taken.AddDays(1));
 
         var after = listing.ToPhotoFiles(PhotoSortOrder.None).Single();
-        Assert.Equal(before.LastWriteTimeUtc, after.LastWriteTimeUtc);
-        Assert.Equal(before.CreationTimeUtc, after.CreationTimeUtc);
+        Assert.Equal(taken, after.LastWriteTimeUtc);
+        Assert.Equal(taken.AddDays(1), after.CreationTimeUtc);
+        Assert.True(listing.NeedsSave);
+        listing.Save();
+        var saved = PhotoListing.Load(Key())!.ToPhotoFiles(PhotoSortOrder.None).Single();
+        Assert.Equal(taken, saved.LastWriteTimeUtc);
+        Assert.Equal(taken.AddDays(1), saved.CreationTimeUtc);
     }
 
     [Fact]
-    public void Resize_ASizeThePhotoHasAlready_OrAPhotoThatIsNotThere_ChangesNothing()
+    public void Update_ASizeAndTimesThePhotoHasAlready_OrAPhotoThatIsNotThere_ChangesNothing()
     {
         var a = Put("a.jpg", "12345");
         var listing = ScanAndSave();
+        var times = TimesOf(a);
 
-        listing.Resize(a, new FileInfo(a).Length);
-        listing.Resize(At("nothing.jpg"), 5);
-        listing.Resize(At(Path.Combine("nowhere", "a.jpg")), 5);
-        listing.Resize(@"C:.jpg", 5);
+        listing.Update(a, new FileInfo(a).Length, times.LastWrite, times.Created);
+        listing.Update(At("nothing.jpg"), 5, times.LastWrite, times.Created);
+        listing.Update(At(Path.Combine("nowhere", "a.jpg")), 5, times.LastWrite, times.Created);
+        listing.Update(@"C:.jpg", 5, times.LastWrite, times.Created);
 
         Assert.Equal(5, listing.ToPhotoFiles(PhotoSortOrder.None).Single().Length);
         Assert.False(listing.NeedsSave);

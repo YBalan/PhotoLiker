@@ -3,29 +3,62 @@ using PhotoLiker.Search;
 namespace PhotoLikerUI
 {
     /// <summary>
-    /// The Rotate button at the right end of the status bar: turns the photo that is shown a quarter clockwise and saves that in its
-    /// file. A JPEG is turned by its EXIF orientation (see <see cref="JpegOrientation"/>), so nothing is decoded or written again.
+    /// The two Rotate buttons at the right end of the status bar, and Ctrl + / Ctrl -: turn the photo that is shown a quarter clockwise
+    /// or counterclockwise and save that in its file. A JPEG is turned by its EXIF orientation (see <see cref="JpegOrientation"/>), so
+    /// nothing is decoded or written again.
     /// </summary>
     public partial class MainForm
     {
+        private const int Clockwise = 1;
+        private const int CounterClockwise = -1;
+
         private ToolStripButton _rotateButton = null!;
+        private ToolStripButton _rotateBackButton = null!;
 
         private void InitializeRotate()
         {
-            _rotateButton = new ToolStripButton(MainFormStrings.RotateButtonText)
-            {
-                Name = "rotateToolStripButton",
-                DisplayStyle = ToolStripItemDisplayStyle.Image, // the text is still the accessible name
-                Image = AppIcons.RotateClockwise(),
-                ToolTipText = MainFormStrings.RotateButtonTooltip,
-            };
-            _rotateButton.Click += (_, _) => RotateCurrentPhoto();
+            _rotateBackButton = NewRotateButton(
+                "rotateCounterClockwiseToolStripButton", MainFormStrings.RotateBackButtonText, MainFormStrings.RotateBackButtonTooltip,
+                AppIcons.RotateCounterClockwise(), CounterClockwise);
+            _rotateButton = NewRotateButton(
+                "rotateToolStripButton", MainFormStrings.RotateButtonText, MainFormStrings.RotateButtonTooltip,
+                AppIcons.RotateClockwise(), Clockwise);
 
-            // Behind the label that takes the space between, so it sits in the right corner
+            // Behind the label that takes the space between, so they sit in the right corner: counterclockwise first, clockwise last
+            statusStrip1.Items.Add(_rotateBackButton);
             statusStrip1.Items.Add(_rotateButton);
         }
 
-        private void RotateCurrentPhoto()
+        private ToolStripButton NewRotateButton(string name, string text, string tooltip, Image image, int quarterTurns)
+        {
+            var button = new ToolStripButton(text)
+            {
+                Name = name,
+                DisplayStyle = ToolStripItemDisplayStyle.Image, // the text is still the accessible name
+                Image = image,
+                ToolTipText = tooltip,
+            };
+            button.Click += (_, _) => RotateCurrentPhoto(quarterTurns);
+            return button;
+        }
+
+        /// <summary>Ctrl + (also Ctrl and the plus of the numpad) turns clockwise, Ctrl - counterclockwise; Shift, which some keyboards need for the plus, is allowed.</summary>
+        private static bool TryGetRotateKey(Keys keyData, out int quarterTurns)
+        {
+            quarterTurns = 0;
+            if ((keyData & Keys.Control) == 0 || (keyData & Keys.Alt) != 0)
+                return false;
+
+            quarterTurns = (keyData & Keys.KeyCode) switch
+            {
+                Keys.Oemplus or Keys.Add => Clockwise,
+                Keys.OemMinus or Keys.Subtract => CounterClockwise,
+                _ => 0,
+            };
+            return quarterTurns != 0;
+        }
+
+        private void RotateCurrentPhoto(int quarterTurns)
         {
             if (pictureBox1.Tag is not string file)
             {
@@ -33,14 +66,15 @@ namespace PhotoLikerUI
                 return;
             }
 
-            _ = RotateAsync(file);
+            _ = RotateAsync(file, quarterTurns);
             FocusViewer(); // the button took the focus; the arrows and Space belong to the photo
         }
 
         /// <summary>Same rules as <see cref="ToggleLikeAsync"/>: the file work runs in the background, and a second press while one is running is ignored.</summary>
-        private Task RotateAsync(string currentFile) => RunFileOperationAsync(currentFile, RotatePhotoAsync);
+        private Task RotateAsync(string currentFile, int quarterTurns) =>
+            RunFileOperationAsync(currentFile, photo => RotatePhotoAsync(photo, quarterTurns));
 
-        private async Task RotatePhotoAsync(PhotoFile photo)
+        private async Task RotatePhotoAsync(PhotoFile photo, int quarterTurns)
         {
             var file = photo.OriginalFilePath;
             var name = Path.GetFileName(file);
@@ -52,24 +86,18 @@ namespace PhotoLikerUI
 
             var files = _currentConfig.Files;
             var searchIndex = _folderSearch?.Index;
-            var previousLength = photo.Length;
-            var lastWriteUtc = photo.LastWriteTimeUtc;
-
-            // The copies in the liked folders carry the id of the photo, which follows from its size
-            var copies = new List<string>();
-            if (!string.IsNullOrEmpty(photo.LikedFilePath))
-                copies.Add(photo.LikedFilePath);
-            if (_groups is { } groups)
-                copies.AddRange(groups.CopiesOf(photo));
+            var before = Snapshot(photo);
+            var copies = CopiesOfPhoto(photo);
 
             SetStatus(string.Format(MainFormStrings.StatusRotating, name));
-            TurnResult turned;
+            ExifSaveResult turned;
+            DateAlignment.SavedDates? dates;
             List<(string Old, string New)> renamed;
             int notRenamed;
             try
             {
                 // On a network share this takes a moment
-                (turned, renamed, notRenamed) = await Task.Run(() => TurnPhoto(file, previousLength, lastWriteUtc, copies, searchIndex));
+                (turned, dates, renamed, notRenamed) = await Task.Run(() => TurnPhoto(before, quarterTurns, copies, searchIndex));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
             {
@@ -77,83 +105,42 @@ namespace PhotoLikerUI
                 return;
             }
 
-            var message = string.Format(MainFormStrings.StatusPhotoRotated, name)
+            var message = string.Format(quarterTurns > 0 ? MainFormStrings.StatusPhotoRotated : MainFormStrings.StatusPhotoRotatedBack, name)
                 + (turned.Rewritten ? MainFormStrings.StatusRotateAdded : string.Empty)
+                + (dates is null ? string.Empty : string.Format(dates.FromFile ? MainFormStrings.StatusRotateTakenFromFile : MainFormStrings.StatusRotateDatesTaken, dates.Taken))
                 + (turned.DateKept ? string.Empty : MainFormStrings.StatusRotateDateNotKept)
                 + (notRenamed > 0 ? string.Format(MainFormStrings.StatusRotateCopiesNotRenamed, notRenamed) : string.Empty);
 
-            // Another folder was opened while the photo was turned: the list is gone, the file is turned and that is all
-            if (!ReferenceEquals(files, _currentConfig.Files))
-            {
-                SetStatus(message);
-                return;
-            }
-
-            photo.Length = turned.Length;
-            foreach (var (old, moved) in renamed)
-            {
-                if (string.Equals(old, photo.LikedFilePath, StringComparison.OrdinalIgnoreCase))
-                {
-                    photo.LikedFilePath = moved;
-                    _liked?.Remove(old);
-                    _liked?.Add(moved, photo);
-                }
-                else
-                {
-                    _groups?.Replace(old, moved, photo);
-                }
-            }
-            _listing?.Resize(file, turned.Length);
-
-            // What is cached of the photo shows it as it was: read it again, from the file, so what is on screen is what was saved
-            _photoCache.Reload(file);
-            if (string.Equals(pictureBox1.Tag as string, file, StringComparison.Ordinal))
-            {
-                _currentConfig.LikedFile = photo.LikedFilePath;
-                ShowLoading();
-                UpdateFaces(); // the boxes of the faces were turned in the index
-                RefreshLikeState();
-            }
-
+            FollowSavedPhotoOnScreen(photo, turned, renamed, files);
             SetStatus(message);
         }
 
-        /// <summary>The file work of a turn: the photo, the copies that go by its size, and the search index. Safe to call from any thread.</summary>
-        private static (TurnResult Result, List<(string Old, string New)> Renamed, int NotRenamed) TurnPhoto(
-            string file, long previousLength, DateTime lastWriteUtc, IReadOnlyList<string> copies, PhotoIndex? searchIndex)
+        /// <summary>
+        /// The file work of a turn: the photo, the copies that go by its size and date, and the search index. Safe to call from any thread.
+        /// The Date Taken (Original) of the photo and the dates of its file become one moment: the date taken the photo has, else the date of
+        /// its file, which is then written into the photo as its date taken (see <see cref="DateAlignment.DatesForSaving(string, DateTime)"/>).
+        /// A photo that has no date at all to go by keeps the dates it has.
+        /// </summary>
+        private static (ExifSaveResult Result, DateAlignment.SavedDates? Dates, List<(string Old, string New)> Renamed, int NotRenamed) TurnPhoto(
+            PhotoFile before, int quarterTurns, IReadOnlyList<string> copies, PhotoIndex? searchIndex)
         {
-            var turned = JpegOrientation.TurnClockwise(file);
-
-            var renamed = new List<(string Old, string New)>();
-            var notRenamed = 0;
-            if (turned.Length != previousLength)
-            {
-                // A photo that got its orientation added is a few bytes larger: it has another id, and so do its copies
-                var now = new PhotoFile(file, string.Empty) { Length = turned.Length, LastWriteTimeUtc = lastWriteUtc };
-                foreach (var copy in copies)
-                {
-                    try
-                    {
-                        if (LikedLibrary.RenameCopy(copy, now) is { } moved)
-                            renamed.Add((copy, moved));
-                    }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                    {
-                        notRenamed++;
-                    }
-                }
-            }
-
+            var dates = DateAlignment.DatesForSaving(before.OriginalFilePath, DateTime.Now);
+            ExifSaveResult turned;
             try
             {
-                searchIndex?.Turn(file, 1, previousLength, turned.Length);
+                turned = JpegOrientation.TurnClockwise(
+                    before.OriginalFilePath, quarterTurns, dates?.FileUtc, dates is { WriteTaken: true } ? dates.Taken : null);
             }
-            catch
+            catch (InvalidDataException) when (dates is { WriteTaken: true })
             {
-                // The faces of this photo are drawn in the old place until the next "Update index"; the photo itself is turned
+                // The Exif block has no room for the date (or is damaged where the date goes) and the file was not touched: a turn
+                // alone may still fit, and is worth more than the date
+                dates = null;
+                turned = JpegOrientation.TurnClockwise(before.OriginalFilePath, quarterTurns);
             }
 
-            return (turned, renamed, notRenamed);
+            var (renamed, notRenamed) = FollowSavedPhotoOnDisk(before, turned, quarterTurns, copies, searchIndex);
+            return (turned, dates, renamed, notRenamed);
         }
     }
 }
