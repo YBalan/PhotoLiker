@@ -119,7 +119,7 @@ namespace PhotoLikerUI
         public const string SearchTooltip                =
             "Describe what you look for, or type the name of a person you have named.\n" +
             "A date limits the search to the photos taken then: September 1 (in every year), September 2009, 2009, 2009-2011.\n" +
-            "Combine them: beach September 2009, Mom 2005. Put the text in quotes to search for the words only.";
+            "Combine them: beach September 2009, Mom 2005, Mom playing guitar, Mom and Dad on the beach. Put the text in quotes to search for the words only.";
         public const string SimilarButton                = "More like this";
         public const string SimilarTooltip               = "Find photos that look like the one shown";
         public const string CloseResultsButton           = "Close results";

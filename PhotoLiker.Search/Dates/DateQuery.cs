@@ -68,13 +68,20 @@ namespace PhotoLiker.Search
 
         private sealed record Found(int Index, int Length, DateFilter Filter);
 
+        /// <summary>Whether a text is in double quotes: it is then taken as it is, no date and no name is looked for in it.</summary>
+        public static bool IsQuoted(string text)
+        {
+            text = text.Trim();
+            return text.Length >= 2 && text[0] == '"' && text[^1] == '"';
+        }
+
         /// <param name="currentYear">The latest year that counts as a year; passed in so that it can be tested.</param>
         public static ParsedQuery Parse(string text, int? currentYear = null)
         {
             var year = currentYear ?? DateTime.Now.Year;
             text = text.Trim();
 
-            if (text.Length >= 2 && text[0] == '"' && text[^1] == '"')
+            if (IsQuoted(text))
                 return new ParsedQuery(text[1..^1].Trim(), null);
 
             var first = FindFirst(text, year, IsoDate, YearRange, IsoMonth, MonthDay, DayMonth, MonthYear, BareMonth, BareYear);

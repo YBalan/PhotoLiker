@@ -117,63 +117,83 @@ namespace PhotoLiker.Search
 
         // ── searching ──────────────────────────────────────────────────────
 
+        /// <summary>What a search text asks for: the people in it (none, one or several), the words that describe the picture (may be none), and the date.</summary>
+        private sealed record SearchPlan(IReadOnlyList<string> Names, string Words, DateFilter? Dates);
+
         /// <summary>
-        /// The name of a person finds the photos of that person; anything else is described in words. A date in the text
-        /// ("beach September 2009", "Mom 2005", "September 1") limits the search to the photos taken then; a date alone lists them, oldest first.
+        /// Reads a search text. The name of a person wins over everything, also one that reads like a date or a month. Otherwise a date is
+        /// taken out of the text, and then the names of the known people: "Yurii playing guitar 2009" is Yurii, "playing guitar", 2009.
+        /// A text in double quotes is a description, as it is.
         /// </summary>
-        /// <param name="tuning">How much the search lets through; null is the default (see <see cref="SearchTuning"/>).</param>
-        public SearchResult Search(ModelHub models, string text, SearchTuning? tuning = null)
+        private SearchPlan? Plan(string text)
         {
             text = text.Trim();
             if (text.Length == 0)
+                return null;
+
+            if (People.TryFindName(text, out var name))
+                return new SearchPlan([name], string.Empty, null);
+
+            var query = DateQuery.Parse(text);
+            if (query.Words.Length == 0)
+                return query.Dates is null ? null : new SearchPlan([], string.Empty, query.Dates);
+
+            List<string> names = [];
+            var words = DateQuery.IsQuoted(text) ? query.Words : People.TakeNames(query.Words, names);
+            return new SearchPlan(names, words, query.Dates);
+        }
+
+        /// <summary>
+        /// The name of a person finds the photos of that person; anything else is described in words. A name with words ("Yurii playing guitar")
+        /// finds the photos of that person that fit the words, with several names ("Mom and Dad on the beach") the photos that have all of them.
+        /// A date in the text ("beach September 2009", "Mom 2005", "September 1") limits the search to the photos taken then; a date alone
+        /// lists them, oldest first. A text in double quotes is only a description.
+        /// </summary>
+        /// <param name="tuning">How much the search lets through; null is the default (see <see cref="SearchTuning"/>).</param>
+        public SearchResult Search(ModelHub models, string text, SearchTuning? tuning = null) =>
+            Search(words => models.TextEncoder(ClipModel).Encode(words), text, tuning);
+
+        /// <param name="encode">Makes the vector of a description with the folder's model (a test gives its own); asked only if the text has a description.</param>
+        internal SearchResult Search(Func<string, float[]> encode, string text, SearchTuning? tuning = null)
+        {
+            if (Plan(text) is not { } plan)
                 return Empty(string.Empty);
 
             tuning ??= SearchTuning.Default;
-
-            // A name wins over everything, also one that reads like a date or a month
-            if (People.TryFindName(text, out var name))
-                return SearchPerson(name, tuning);
-
-            var query = DateQuery.Parse(text);
-            if (query.Dates is not { } dates)
-                return SearchText(models, text, dates: null, tuning);
-
-            if (query.Words.Length == 0)
-                return SearchDates(dates);
-            if (People.TryFindName(query.Words, out name))
-                return SearchFaces(Describe(name, dates), People.ExamplesOf(name), tuning, dates);
-            return SearchText(models, query.Words, dates, tuning);
+            return plan switch
+            {
+                { Names.Count: 0, Words.Length: 0 } => SearchDates(plan.Dates!),
+                { Names.Count: 0 } => SearchText(encode, plan.Words, plan.Dates, tuning),
+                { Names.Count: 1, Words.Length: 0 } => SearchFaces(Describe(plan.Names[0], plan.Dates), People.ExamplesOf(plan.Names[0]), tuning, plan.Dates),
+                _ => SearchPeople(encode, plan, tuning),
+            };
         }
 
         /// <summary>Whether answering a text needs the text model: a name, or nothing but a date, does not.</summary>
-        public bool NeedsTextModel(string text)
-        {
-            text = text.Trim();
-            if (text.Length == 0 || People.TryFindName(text, out _))
-                return false;
-
-            var words = DateQuery.Parse(text).Words;
-            return words.Length > 0 && !People.TryFindName(words, out _);
-        }
+        public bool NeedsTextModel(string text) => Plan(text) is { Words.Length: > 0 };
 
         public SearchResult SearchText(ModelHub models, string text, SearchTuning? tuning = null) =>
-            SearchText(models, text, dates: null, tuning ?? SearchTuning.Default);
+            SearchText(words => models.TextEncoder(ClipModel).Encode(words), text, dates: null, tuning ?? SearchTuning.Default);
 
-        private SearchResult SearchText(ModelHub models, string text, DateFilter? dates, SearchTuning tuning)
+        private SearchResult SearchText(Func<string, float[]> encode, string text, DateFilter? dates, SearchTuning tuning)
         {
             var model = ClipModel; // the vector of the words and the vectors of the photos must be of the same model
-            return RankText(Describe($"\"{text}\"", dates), models.TextEncoder(model).Encode(text), dates, tuning, model);
+            return RankText(Describe($"\"{text}\"", dates), encode(text), dates, tuning, model);
         }
 
         /// <summary>The photos whose picture fits the vector of a text, see <see cref="SearchTuning.TextCutoff"/> for how many.</summary>
         /// <param name="model">The model that made the vector of the text; null is the folder's.</param>
-        internal SearchResult RankText(string description, float[] query, DateFilter? dates, SearchTuning tuning, ClipModelInfo? model = null)
+        /// <param name="only">Limits the search to the photos it says yes to (the photos of a person); null searches them all.</param>
+        internal SearchResult RankText(string description, float[] query, DateFilter? dates, SearchTuning tuning, ClipModelInfo? model = null,
+            Func<IndexedPhoto, bool>? only = null)
         {
             model ??= ClipModel;
             var indexed = WithVectorOf(model);
-            var photos = OnePerPhoto(indexed.Where(p => dates is null || dates.Matches(p.Date.Taken)), model);
+            var photos = OnePerPhoto(indexed.Where(p => (dates is null || dates.Matches(p.Date.Taken)) && (only is null || only(p))), model);
 
-            var otherModel = Index.PhotoCount - indexed.Count;
+            var otherModel = only is null
+                ? Index.PhotoCount - indexed.Count
+                : Index.Snapshot().Count(p => p.HasVector && !p.Clips.ContainsKey(model.Id) && only(p));
             var scored = photos.Select(p => (Photo: p, Score: model.TextScore(VectorMath.Dot(query, p.VectorOf(model.Id)!)))).OrderByDescending(s => s.Score).ToList();
             if (scored.Count == 0)
                 return new SearchResult(description, [], indexed.Count, Dates: dates, OtherModelPhotos: otherModel);
@@ -248,6 +268,68 @@ namespace PhotoLiker.Search
 
             hits = [.. hits.OrderByDescending(h => h.Score)];
             return new SearchResult(description, hits, photos.Length, Dates: dates);
+        }
+
+        /// <summary>
+        /// The photos of several people at once, or of a person that fit some words ("Yurii playing guitar"): the photos where every person has
+        /// a face of their own, and then, with words, the best fitting of those the way a text search ranks (so the cutoffs are the same and the
+        /// closest photos are shown when none fits well); without words the best faces first. Who is in a photo comes from the faces, which
+        /// do not depend on the model; the words are matched by the folder's model, so they only see the photos that have its vector.
+        /// </summary>
+        private SearchResult SearchPeople(Func<string, float[]> encode, SearchPlan plan, SearchTuning tuning)
+        {
+            var examples = plan.Names.Select(People.ExamplesOf).ToList();
+            var who = string.Join(" and ", plan.Names);
+
+            if (plan.Words.Length > 0)
+            {
+                var model = ClipModel;
+                return RankText(Describe($"{who}, \"{plan.Words}\"", plan.Dates), encode(plan.Words), plan.Dates, tuning, model,
+                    only: photo => Together(photo, examples, tuning.MinFaceScore) is not null);
+            }
+
+            var photos = Index.Snapshot();
+            var hits = new List<SearchHit>();
+            foreach (var photo in OnePerPhoto(photos.Where(p => plan.Dates is null || plan.Dates.Matches(p.Date.Taken)), ClipModel))
+            {
+                if (Together(photo, examples, tuning.MinFaceScore) is { } score)
+                    hits.Add(ToHit(photo, score));
+            }
+            return new SearchResult(Describe(who, plan.Dates), [.. hits.OrderByDescending(h => h.Score)], photos.Length, Dates: plan.Dates);
+        }
+
+        /// <summary>
+        /// How well a photo shows all of these people: every person needs a face of their own that is close enough to one of their faces
+        /// (the faces are shared out so that the sum is the best), and the score is the mean of those closenesses; null if somebody is missing.
+        /// </summary>
+        private static float? Together(IndexedPhoto photo, IReadOnlyList<IReadOnlyList<float[]>> people, float minScore)
+        {
+            var faces = photo.Faces;
+            if (faces.Count < people.Count)
+                return null;
+
+            // How close each face is to each person (a crowd of more than 64 faces is only looked at as far as that)
+            var closeness = people
+                .Select(examples => faces.Take(64).Select(face => examples.Select(e => VectorMath.Dot(e, face.Embedding)).DefaultIfEmpty(0f).Max()).ToArray())
+                .ToArray();
+            return Share(closeness, person: 0, taken: 0UL, minScore) / people.Count;
+        }
+
+        // The best sum of closenesses when persons from `person` on pick faces not in `taken` (a bit for each), none lower than minScore
+        private static float? Share(float[][] closeness, int person, ulong taken, float minScore)
+        {
+            if (person == closeness.Length)
+                return 0f;
+
+            float? best = null;
+            for (var face = 0; face < closeness[person].Length; face++)
+            {
+                if ((taken & (1UL << face)) != 0 || closeness[person][face] < minScore)
+                    continue;
+                if (Share(closeness, person + 1, taken | (1UL << face), minScore) is { } rest)
+                    best = Math.Max(best ?? float.MinValue, closeness[person][face] + rest);
+            }
+            return best;
         }
 
         /// <summary>
