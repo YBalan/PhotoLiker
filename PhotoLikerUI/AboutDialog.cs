@@ -15,6 +15,7 @@ namespace PhotoLikerUI
         private readonly Button _install;
         private readonly Button _releasePage;
         private readonly Label _status;
+        private readonly ProgressBar _progress;
         private ReleaseInfo? _release;
 
         /// <summary>The setup of a new version that was downloaded and is to be run, with the program closed (the window does it once the box has closed).</summary>
@@ -96,11 +97,14 @@ namespace PhotoLikerUI
                 Margin = new Padding(3, 6, 3, 0)
             };
 
+            // Only while the setup is downloaded
+            _progress = new ProgressBar { Style = ProgressBarStyle.Continuous, Size = new Size(shortcuts.Width, 14), Margin = new Padding(3, 4, 3, 0), Visible = false };
+
             var buttons = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 12, 0, 0) };
             buttons.Controls.AddRange([english, ukrainian, ok]);
 
             var layout = new TableLayoutPanel { AutoSize = true, ColumnCount = 1, Padding = new Padding(12), Dock = DockStyle.Fill };
-            layout.Controls.AddRange([heading, version, shortcutsHeading, shortcuts, updateButtons, _status, buttons]);
+            layout.Controls.AddRange([heading, version, shortcutsHeading, shortcuts, updateButtons, _status, _progress, buttons]);
             Controls.Add(layout);
 
             AcceptButton = ok;
@@ -144,7 +148,10 @@ namespace PhotoLikerUI
             }
         }
 
-        /// <summary>Says what the latest release means for this copy, and offers the setup if this copy can be updated by it.</summary>
+        /// <summary>
+        /// Says what the latest release means for this copy, and offers its setup (any copy can have it: one that the setup put here is replaced by it,
+        /// any other, a zip or a build from the source, gets an installed copy next to it, which InstallAsync says before it does it).
+        /// </summary>
         private void ShowLatest(ReleaseInfo? latest)
         {
             if (latest is null)
@@ -157,28 +164,25 @@ namespace PhotoLikerUI
             var number = latest.Version.ToString(3);
             var installed = UpdateLauncher.InstalledVersion;
 
-            if (installed is null)
-            {
-                _status.Text = string.Format(AboutStrings.UpdateDevelopmentFormat, number);
-                _releasePage.Visible = true;
-            }
-            else if (!UpdateChecker.IsNewer(latest.Version, installed))
+            if (installed is not null && !UpdateChecker.IsNewer(latest.Version, installed))
             {
                 _status.Text = string.Format(AboutStrings.UpdateUpToDateFormat, installed.ToString(3));
+                return;
             }
-            else
-            {
-                var canInstall = UpdateLauncher.InstalledBySetup && latest.InstallerUrl is not null;
-                _status.Text = string.Format(
-                    canInstall ? AboutStrings.UpdateAvailableFormat : latest.InstallerUrl is null ? AboutStrings.UpdateNoSetupFormat : AboutStrings.UpdateNotInstalledFormat,
-                    number, installed.ToString(3));
-                _install.Text = string.Format(AboutStrings.UpdateInstallButtonFormat, number);
-                _install.Visible = canInstall;
-                _releasePage.Visible = true;
-            }
+
+            // A build that is no release (installed is null) has no number to compare: it is told what the latest is, and may install it
+            _status.Text = installed is null
+                ? string.Format(AboutStrings.UpdateDevelopmentFormat, number)
+                : string.Format(latest.InstallerUrl is null ? AboutStrings.UpdateNoSetupFormat : AboutStrings.UpdateAvailableFormat, number, installed.ToString(3));
+            _install.Text = string.Format(AboutStrings.UpdateInstallButtonFormat, number);
+            _install.Visible = latest.InstallerUrl is not null;
+            _releasePage.Visible = true;
         }
 
-        /// <summary>Downloads the setup of the release found and closes the box; the window then closes and runs it (<see cref="SetupToRun"/>).</summary>
+        /// <summary>
+        /// Downloads the setup of the release found, with a progress bar, and closes the box; the window then closes, runs the setup silently and the
+        /// program starts again (<see cref="SetupToRun"/>). A copy that the setup did not put here is asked first: the new version becomes a second copy.
+        /// </summary>
         private async Task InstallAsync()
         {
             if (_release is not { InstallerUrl: not null } release)
@@ -186,12 +190,17 @@ namespace PhotoLikerUI
 
             var number = release.Version.ToString(3);
             var total = (double)release.InstallerBytes / BytesInMegabyte;
-            if (!UpdateLauncher.Confirm(this, string.Format(AboutStrings.UpdateConfirmFormat, number, total)))
+            if (!UpdateLauncher.InstalledBySetup && !UpdateLauncher.Confirm(this, string.Format(AboutStrings.UpdateConfirmCopyFormat, number, total)))
                 return;
 
             _check.Enabled = _install.Enabled = false;
+            _progress.Value = 0;
+            _progress.Visible = true;
             var progress = new Progress<(long Done, long Total)>(step =>
-                _status.Text = string.Format(AboutStrings.UpdateDownloadingFormat, number, (double)step.Done / BytesInMegabyte, (double)step.Total / BytesInMegabyte));
+            {
+                _status.Text = string.Format(AboutStrings.UpdateDownloadingFormat, number, (double)step.Done / BytesInMegabyte, (double)step.Total / BytesInMegabyte);
+                _progress.Value = step.Total > 0 ? (int)Math.Min(100, 100 * step.Done / step.Total) : 0;
+            });
             _status.Text = string.Format(AboutStrings.UpdateDownloadingFormat, number, 0.0, total);
 
             try
@@ -210,7 +219,10 @@ namespace PhotoLikerUI
             finally
             {
                 if (!IsDisposed)
+                {
+                    _progress.Visible = false;
                     _check.Enabled = _install.Enabled = true;
+                }
             }
         }
 

@@ -21,8 +21,8 @@ namespace PhotoLikerUI
         public static Version? InstalledVersion { get; set; } = AppVersionInfo.ReleaseVersion;
 
         /// <summary>
-        /// Whether the setup put this copy here: it leaves unins000.exe beside the program. Only such a copy can be replaced by a new setup;
-        /// one that came from the zip is replaced by hand, and a setup run over it would put a second copy elsewhere.
+        /// Whether the setup put this copy here: it leaves unins000.exe beside the program. Only such a copy is replaced by a new setup; for any
+        /// other (the zip, a build from the source) the setup puts a second copy elsewhere, so the About box asks before it does that.
         /// </summary>
         public static bool InstalledBySetup { get; set; } = File.Exists(Path.Combine(AppContext.BaseDirectory, "unins000.exe"));
 

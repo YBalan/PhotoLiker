@@ -17,6 +17,9 @@ namespace PhotoLikerUI
             _setupAfterClose = setup;
             Close();
             _setupAfterClose = null; // already used if the window closed; dropped if it did not
+
+            if (!IsDisposed) // it did not close: the download is there, but nothing was installed, which the person has to hear
+                MessageBox.Show(this, AboutStrings.UpdateNotClosed, MainFormStrings.AboutTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>Called by <c>OnFormClosed</c> when everything is saved, as the last thing the window does.</summary>

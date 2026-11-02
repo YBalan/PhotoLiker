@@ -92,14 +92,18 @@ Open the [About box](#about-box) (the question mark of the toolbar, or <kbd>F1</
 GitHub for the latest release of the project, and says if it is newer than the version you have. Only that button asks: nothing is checked
 in the background, nothing runs at startup.
 
-- If there is a newer version, **Install x.y.z** asks first, then downloads its setup, checks it against the size and the SHA-256
-  that GitHub gives for the file (a download that does not match is thrown away), closes PhotoLiker (after it saved what it keeps), runs the
-  setup silently over the installed copy and starts PhotoLiker again. Your settings, likes and search indexes stay: they are in
+- If there is a newer version, **Install x.y.z and restart** does all of it from the box, with no further question: it downloads the
+  setup (a progress bar and the megabytes so far), checks it against the size and the SHA-256 that GitHub gives for the file (a download that
+  does not match is thrown away), closes PhotoLiker (after it saved what it keeps), runs the setup silently over the installed copy (nothing to
+  click: only the setup's small progress window shows) and starts PhotoLiker again. Your settings, likes and search indexes stay: they are in
   `%LocalAppData%\PhotoLiker` and in your photo folders, which the setup does not touch.
 - **Release page** opens the page of that release (what changed, the files).
-- A copy that was not put there by the setup (unpacked from the zip, or run from source) is not replaced by a setup, which would leave a
-  second copy: the box says so and sends you to the release page.
-- If an index is being built, closing for the update asks the same question as closing the window does; answer No and nothing is installed.
+- A copy that the setup did not put there (unpacked from the zip, or a build run from the source) cannot be replaced by a setup: the setup
+  installs PhotoLiker for your user as a second copy, and starts that one. So this is the one case in which **Install** asks first, and says so;
+  this copy stays where it is, and shares its settings, likes and indexes with the installed one. A build from the source, which has no version number
+  to compare, is offered the latest release the same way.
+- If an index is being built, closing for the update asks the same question as closing the window does; answer No and nothing is installed (the
+  box says so; press Install again to retry).
 
 ## Photo search
 
@@ -904,8 +908,10 @@ What the [update button](#updating) of the About box relies on:
 - The latest release is the newest one that is neither a draft nor a pre-release (what the API's `releases/latest` returns), so a pre-release
   does not reach anyone through the button. GitHub allows 60 anonymous requests an hour from one address, plenty for a button that is pressed by hand.
 - The setup is started as `PhotoLiker-Setup-x.exe /SILENT /SP- /NORESTARTAPPLICATIONS /Relaunch=1` (`UpdateLauncher.SetupArguments`); `/Relaunch=1` is read by
-  `installer\PhotoLiker.iss`, which starts the program again at the end of a silent setup. A copy has to have `unins000.exe` beside it (the setup
-  puts it there) to be offered the setup.
+  `installer\PhotoLiker.iss`, which starts the program again at the end of a silent setup. A copy that has `unins000.exe` beside it (the setup
+  puts it there) is replaced without a question; any other copy is asked first (see [Updating](#updating)). The window is closed by the program itself before
+  the setup starts, so the setup does not have to close it (if it still finds it running, Windows' Restart Manager closes it, which the tests of the
+  setup showed to work).
 - The logic is `UpdateChecker` in Core (tested in `UpdateCheckerTests`, with a stand-in for GitHub); the button, the question and the download are
   in `AboutDialog`, and the smoke tour presses them with a stand-in for GitHub (below).
 
@@ -969,7 +975,7 @@ toolbar button, makes a video in the real Generate Video dialog with a cover (a 
 and photographs the dialog empty, filled in and done, then opens the About box and checks that it lists the keys and that both pages of the
 [user manual](#user-manual) are beside the program, and that <kbd>F1</kbd> opens the box and <kbd>F2</kbd> / <kbd>F3</kbd> hand the Ukrainian / English page
 to the browser (the tour takes that call instead, so no browser is launched). It ends with the [update button](#updating) of the About box, pressed
-for real with a stand-in for GitHub (nothing goes to the network): the same version, an error, a newer version (photographed), a copy that is not installed,
+for real with a stand-in for GitHub (nothing goes to the network): the same version, an error, a newer version (photographed), a copy that is not installed (asked first, answered No), a release without a setup file,
 a build that is no release, Install answered No and then Yes (the setup is downloaded and checked, the window closes and hands the setup to the tour
 instead of running it). Its pictures are `12-generate-video-button` to `16-about` and `27-about-update` of `docs\images`:
 

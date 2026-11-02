@@ -572,9 +572,11 @@ You do not need the box for that: <kbd>F3</kbd> opens the English manual and <kb
 </figure>
 
 <p><strong>Check for updates</strong> asks GitHub whether there is a newer version of PhotoLiker than yours. It asks only when you press it: nothing is checked in the
-background. If there is a newer version, <strong>Install</strong> asks you first, then downloads the setup, checks it, closes PhotoLiker, runs the setup over the installed
-copy and starts PhotoLiker again. Your settings, likes and search indexes are kept. <strong>Release page</strong> opens the page of that version, where it says what changed.
-A copy that was unpacked from the zip, or run from the source, is not replaced this way: the box then sends you to the release page.</p>
+background. If there is a newer version, <strong>Install and restart</strong> does the rest from the box: it downloads the setup (with a progress bar), checks it, closes PhotoLiker,
+runs the setup silently over the installed copy (only its small progress window shows) and starts PhotoLiker again. Your settings, likes and search indexes are kept.
+<strong>Release page</strong> opens the page of that version, where it says what changed.
+A copy that was unpacked from the zip, or run from the source, cannot be replaced by the setup: it installs PhotoLiker for you as a second copy and starts that one, so this is the one
+case where <strong>Install</strong> asks first. The copy you ran it from stays where it is.</p>
 
 <figure>
   <img src="images/27-about-update.png" alt="The About box after Check for updates found a newer version" width="650" height="566">

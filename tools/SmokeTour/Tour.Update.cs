@@ -29,25 +29,30 @@ internal sealed partial class Tour
         var opened = new List<string>();
         var questions = new List<string>();
         var answer = false;
-        var stage = "release"; // what the stand-in says: "release", "same", "down"
+        var stage = "release"; // what the stand-in says: "release", "same", "down", "nosetup"
+        ProgressBar? bar = null;
+        var barShownWhileDownloading = false;
 
         var requests = new List<string>();
         var handler = new StandInGitHub(request =>
         {
             requests.Add(request.RequestUri!.ToString());
             if (request.RequestUri.Host == "github.com")
+            {
+                barShownWhileDownloading = bar?.Visible == true; // the box shows the progress bar before it asks for the file
                 return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(setupBytes) };
+            }
 
             var version = stage == "same" ? "2.1.0" : "2.2.0";
+            var assets = stage == "nosetup" ? "" : $$"""
+                { "name": "PhotoLiker-Setup-{{version}}.exe", "size": {{setupBytes.Length}}, "digest": "sha256:{{sha}}",
+                  "browser_download_url": "{{FakeRepository}}/download/v{{version}}/PhotoLiker-Setup-{{version}}.exe" }
+                """;
             return stage == "down"
                 ? new HttpResponseMessage(HttpStatusCode.InternalServerError)
                 : new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = new StringContent($$"""
-                        { "tag_name": "v{{version}}", "assets": [ {
-                          "name": "PhotoLiker-Setup-{{version}}.exe", "size": {{setupBytes.Length}}, "digest": "sha256:{{sha}}",
-                          "browser_download_url": "{{FakeRepository}}/download/v{{version}}/PhotoLiker-Setup-{{version}}.exe" } ] }
-                        """, Encoding.UTF8, "application/json")
+                    Content = new StringContent($$"""{ "tag_name": "v{{version}}", "assets": [ {{assets}} ] }""", Encoding.UTF8, "application/json")
                 };
         });
 
@@ -69,8 +74,9 @@ internal sealed partial class Tour
         var install = Field<Button>(dialog, "_install");
         var releasePage = Field<Button>(dialog, "_releasePage");
         var status = Field<Label>(dialog, "_status");
+        bar = Field<ProgressBar>(dialog, "_progress");
 
-        checks.That(check.Visible && check.Enabled && !install.Visible && !releasePage.Visible && status.Text.Length == 0,
+        checks.That(check.Visible && check.Enabled && !install.Visible && !releasePage.Visible && !bar.Visible && status.Text.Length == 0,
             "at first there is the button and nothing else, and GitHub has not been asked");
         checks.That(requests.Count == 0, "nothing was asked of GitHub just by opening the box");
 
@@ -91,35 +97,42 @@ internal sealed partial class Tour
         stage = "release";
         check.PerformClick();
         checks.That(await Until(() => status.Text.Contains("Version 2.2.0 is available (you have 2.1.0)")), $"a newer version is announced ('{status.Text}')");
-        checks.That(install.Visible && install.Text == "Install 2.2.0" && releasePage.Visible, $"with the buttons '{install.Text}' and '{releasePage.Text}'");
+        checks.That(install.Visible && install.Text == "Install 2.2.0 and restart" && releasePage.Visible, $"with the buttons '{install.Text}' and '{releasePage.Text}'");
         await DialogShot(dialog, "27-about-update");
 
         releasePage.PerformClick();
         checks.That(opened.SequenceEqual([FakeRepository + "/tag/v2.2.0"]), $"the release page opens the page of the tag ({string.Join(", ", opened)})");
 
-        // 4. a newer version, this copy is a zip or a build from source
+        // 4. a newer version, this copy is a zip or a build from source: it can install too, after a question that says what will happen
         Set("InstalledBySetup", false);
         check.PerformClick();
-        checks.That(await Until(() => status.Text.Contains("not put here by the setup")), $"a copy that is not installed is sent to the release page ('{status.Text}')");
-        checks.That(!install.Visible && releasePage.Visible, "no Install button for it");
+        checks.That(await Until(() => status.Text.Contains("Version 2.2.0 is available (you have 2.1.0)")), $"a copy that is not installed is told the same ('{status.Text}')");
+        checks.That(install.Visible && releasePage.Visible, "and is offered the setup as well");
+        var downloadsBefore = requests.Count(url => url.Contains("/download/"));
+        install.PerformClick();
+        await Settle(300);
+        checks.That(questions.Count == 1 && questions[0].Contains("not put here by the setup") && questions[0].Contains("2.2.0"), "but it is asked first, and told it gets a second copy");
+        checks.That(requests.Count(url => url.Contains("/download/")) == downloadsBefore && !Directory.Exists(downloadFolder) && !bar.Visible, "and answering No downloads nothing");
+        checks.That(OpenDialog(AboutDialogType) is not null && install.Visible, "and the box stays as it was");
         Set("InstalledBySetup", true);
 
         // 5. a build that is no release
         Set("InstalledVersion", null);
         check.PerformClick();
         checks.That(await Until(() => status.Text.Contains("development build")), $"a build from source says what it is ('{status.Text}')");
-        checks.That(!install.Visible && releasePage.Visible, "and is not offered a setup");
+        checks.That(install.Visible && releasePage.Visible, "and may install the latest release");
         Set("InstalledVersion", new Version(2, 1, 0));
 
-        // 6. install: No to the question first, then Yes
+        // 6. a release that has no setup file
+        stage = "nosetup";
+        check.PerformClick();
+        checks.That(await Until(() => status.Text.Contains("has no setup file")), $"a release without a setup says so ('{status.Text}')");
+        checks.That(!install.Visible && releasePage.Visible, "and only offers its page");
+        stage = "release";
+
+        // 7. a copy that the setup put here: no question at all, a progress bar, then the window closes and starts the setup
         check.PerformClick();
         checks.That(await Until(() => install.Visible), "the newer version is found again");
-        var downloadsBefore = requests.Count(url => url.Contains("/download/"));
-        install.PerformClick();
-        await Settle(300);
-        checks.That(questions.Count == 1 && questions[0].Contains("2.2.0") && questions[0].Contains("closes"), "Install asks first, and says that the program closes");
-        checks.That(requests.Count(url => url.Contains("/download/")) == downloadsBefore && !Directory.Exists(downloadFolder), "and answering No downloads nothing");
-        checks.That(OpenDialog(AboutDialogType) is not null && install.Visible, "and the box stays as it was");
 
         var ran = false;
         var answeredAt = DateTime.UtcNow;
@@ -129,7 +142,9 @@ internal sealed partial class Tour
             // code does not run any more, the window it runs in is gone)
             ran = true;
             var file = new FileInfo(path);
-            checks.That(file.Exists && file.Length == setupBytes.Length && File.ReadAllBytes(path).SequenceEqual(setupBytes), "Yes: the setup was downloaded, whole, to " + path);
+            checks.That(questions.Count == 1, "Install asked nothing this time (the one question was the other copy's)");
+            checks.That(barShownWhileDownloading, "a progress bar was on while the setup came down");
+            checks.That(file.Exists && file.Length == setupBytes.Length && File.ReadAllBytes(path).SequenceEqual(setupBytes), "the setup was downloaded, whole, to " + path);
             checks.That(Path.GetFileName(path) == "PhotoLiker-Setup-2.2.0.exe" && Path.GetDirectoryName(path) == downloadFolder, "under the name GitHub gave it");
             checks.That(!Directory.EnumerateFiles(downloadFolder, "*.part").Any(), "nothing half-downloaded is left");
             checks.That(File.GetLastWriteTimeUtc(Path.Combine(AppPaths.DataFolder, "global-config.json")) >= answeredAt, "the window had saved its settings (as it closed) before the setup was started");
@@ -139,10 +154,8 @@ internal sealed partial class Tour
             return null;
         }));
 
-        answer = true;
         install.PerformClick();
         checks.That(await Until(() => ran, 20000), "the box closed, then the window, which started the setup");
-        checks.That(questions.Count == 2, "after a second question");
     }
 
     private sealed class StandInGitHub(Func<HttpRequestMessage, HttpResponseMessage> answer) : HttpMessageHandler

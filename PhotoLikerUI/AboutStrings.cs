@@ -24,10 +24,10 @@ namespace PhotoLikerUI
         public static string UpdateUpToDateFormat => T();
         public static string UpdateAvailableFormat => T();
         public static string UpdateDevelopmentFormat => T();
-        public static string UpdateNotInstalledFormat => T();
         public static string UpdateNoSetupFormat => T();
         public static string UpdateCheckFailedFormat => T();
-        public static string UpdateConfirmFormat => T();
+        public static string UpdateConfirmCopyFormat => T();
+        public static string UpdateNotClosed => T();
         public static string UpdateDownloadingFormat => T();
         public static string UpdateDownloadFailedFormat => T();
         public static string UpdateStartFailedFormat => T();
