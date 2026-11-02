@@ -28,9 +28,9 @@ namespace PhotoLiker.Search
             return (month, Day, single) switch
             {
                 (not null, not null, { } year) => $"{month} {Day}, {year}",
-                (not null, not null, null) => $"{month} {Day} (any year)",
+                (not null, not null, null) => $"{month} {Day} ({SearchLibStrings.AnyYear})",
                 (not null, null, { } year) => $"{month} {year}",
-                (not null, null, null) => $"{month} (any year)",
+                (not null, null, null) => $"{month} ({SearchLibStrings.AnyYear})",
                 (null, _, { } year) => year.ToString(CultureInfo.InvariantCulture),
                 _ => string.Empty,
             };

@@ -11,7 +11,7 @@ namespace PhotoLiker.Core
                 seconds = 0;
 
             if (seconds < 10)
-                return string.Create(CultureInfo.InvariantCulture, $"{seconds:0.0} s");
+                return string.Format(CultureInfo.InvariantCulture, CoreStrings.DurationSecondsFormat, seconds);
 
             var total = (long)Math.Round(seconds);
             var hours = total / 3600;

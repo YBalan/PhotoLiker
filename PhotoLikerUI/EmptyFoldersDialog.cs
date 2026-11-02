@@ -357,7 +357,7 @@ namespace PhotoLikerUI
         {
             var parts = new List<string>(folder.Junk);
             if (folder.Subfolders > 0)
-                parts.Add(string.Format(EmptyFoldersStrings.ContainsSubfoldersFormat, EmptyFoldersStrings.Count(folder.Subfolders, EmptyFoldersStrings.EmptyFolderOne, EmptyFoldersStrings.EmptyFolderMany)));
+                parts.Add(string.Format(EmptyFoldersStrings.ContainsSubfoldersFormat, Plural.Count(folder.Subfolders, EmptyFoldersStrings.EmptyFolder)));
             return parts.Count == 0 ? EmptyFoldersStrings.ContainsEmpty : string.Join(EmptyFoldersStrings.ContainsSeparator, parts);
         }
 
@@ -459,10 +459,10 @@ namespace PhotoLikerUI
             _summary.Text = total == 0
                 ? (_phase == Phase.Looking ? string.Empty : EmptyFoldersStrings.FoundNone)
                 : string.Format(
-                    EmptyFoldersStrings.FoundFormat, EmptyFoldersStrings.Count(total, EmptyFoldersStrings.EmptyFolderOne, EmptyFoldersStrings.EmptyFolderMany),
-                    junk > 0 ? string.Format(EmptyFoldersStrings.FoundJunkPart, EmptyFoldersStrings.Count(junk, EmptyFoldersStrings.ThumbnailFileOne, EmptyFoldersStrings.ThumbnailFileMany)) : string.Empty);
+                    EmptyFoldersStrings.FoundFormat, Plural.Count(total, EmptyFoldersStrings.EmptyFolder),
+                    junk > 0 ? string.Format(EmptyFoldersStrings.FoundJunkPart, Plural.Count(junk, EmptyFoldersStrings.ThumbnailFile)) : string.Empty);
             _remove.Text = ticked > 0
-                ? string.Format(EmptyFoldersStrings.RemoveButtonFormat, EmptyFoldersStrings.Count(ticked, EmptyFoldersStrings.FolderOne, EmptyFoldersStrings.FolderMany))
+                ? string.Format(EmptyFoldersStrings.RemoveButtonFormat, Plural.Count(ticked, EmptyFoldersStrings.Folder))
                 : EmptyFoldersStrings.RemoveButtonNothing;
             _remove.Enabled = _phase == Phase.Ready && ticked > 0;
             _checkAll.Enabled = _uncheckAll.Enabled = _phase == Phase.Ready && total > 0;
@@ -476,10 +476,10 @@ namespace PhotoLikerUI
             _summary.Text = total == 0
                 ? (_phase == Phase.Looking ? string.Empty : EmptyFoldersStrings.PhotosFoundNone + (_index is null ? EmptyFoldersStrings.PhotosNoIndexNote : string.Empty))
                 : string.Format(
-                    EmptyFoldersStrings.PhotosFoundFormat, EmptyFoldersStrings.Count(total, EmptyFoldersStrings.PhotoOne, EmptyFoldersStrings.PhotoMany),
+                    EmptyFoldersStrings.PhotosFoundFormat, Plural.Count(total, EmptyFoldersStrings.Photo),
                     _canMovePhotos ? string.Empty : EmptyFoldersStrings.PhotosIndexingNote);
             _remove.Text = ticked > 0
-                ? string.Format(EmptyFoldersStrings.MovePhotosButtonFormat, EmptyFoldersStrings.Count(ticked, EmptyFoldersStrings.PhotoOne, EmptyFoldersStrings.PhotoMany))
+                ? string.Format(EmptyFoldersStrings.MovePhotosButtonFormat, Plural.Count(ticked, EmptyFoldersStrings.Photo))
                 : EmptyFoldersStrings.MovePhotosNothing;
             _remove.Enabled = _phase == Phase.Ready && ticked > 0 && _canMovePhotos;
             _checkAll.Enabled = _uncheckAll.Enabled = _phase == Phase.Ready && total > 0;
@@ -587,11 +587,11 @@ namespace PhotoLikerUI
             }
 
             var failures = result.Failures.Count > 0
-                ? string.Format(EmptyFoldersStrings.FailedPart, EmptyFoldersStrings.Count(result.Failures.Count, EmptyFoldersStrings.PhotoOne, EmptyFoldersStrings.PhotoMany))
+                ? string.Format(EmptyFoldersStrings.FailedPart, Plural.Count(result.Failures.Count, EmptyFoldersStrings.Photo))
                 : string.Empty;
             _status.Text = string.Format(
                 result.Cancelled ? EmptyFoldersStrings.MovedPhotosStoppedFormat : EmptyFoldersStrings.MovedPhotosFormat,
-                EmptyFoldersStrings.Count(result.Moved.Count, EmptyFoldersStrings.PhotoOne, EmptyFoldersStrings.PhotoMany), failures) + indexNote;
+                Plural.Count(result.Moved.Count, EmptyFoldersStrings.Photo), failures) + indexNote;
         }
 
         // ── removing ───────────────────────────────────────────────────────
@@ -674,11 +674,11 @@ namespace PhotoLikerUI
             }
 
             var failures = result.Failures.Count > 0
-                ? string.Format(EmptyFoldersStrings.FailedPart, EmptyFoldersStrings.Count(result.Failures.Count, EmptyFoldersStrings.FolderOne, EmptyFoldersStrings.FolderMany))
+                ? string.Format(EmptyFoldersStrings.FailedPart, Plural.Count(result.Failures.Count, EmptyFoldersStrings.Folder))
                 : string.Empty;
             _status.Text = string.Format(result.Cancelled ? EmptyFoldersStrings.RemovedStoppedFormat : EmptyFoldersStrings.RemovedFormat, 
-                EmptyFoldersStrings.Count(result.Removed.Count, EmptyFoldersStrings.FolderOne, EmptyFoldersStrings.FolderMany),
-                EmptyFoldersStrings.Count(result.JunkFiles, EmptyFoldersStrings.ThumbnailFileOne, EmptyFoldersStrings.ThumbnailFileMany), failures);
+                Plural.Count(result.Removed.Count, EmptyFoldersStrings.Folder),
+                Plural.Count(result.JunkFiles, EmptyFoldersStrings.ThumbnailFile), failures);
         }
 
         private void StopWorking()

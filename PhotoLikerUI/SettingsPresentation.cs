@@ -20,14 +20,15 @@ namespace PhotoLikerUI
 
         private static readonly Dictionary<string, Attribute[]> Attributes = new()
         {
-            [nameof(Settings.CurrentFolder)]  = [Category(CurrentFileCategory), ReadOnly, Describe(SettingsStrings.CurrentFolder)],
-            [nameof(Settings.LikedFolder)]    = [Category(SettingsCategory), Editor<FolderPickerEditor>(), Describe(SettingsStrings.LikedFolder)],
-            [nameof(Settings.GoThroughSubFolders)] = [Category(SettingsCategory), Describe(SettingsStrings.GoThroughSubFolders)],
+            [nameof(Settings.CurrentFolder)]  = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.CurrentFolder)],
+            [nameof(Settings.LikedFolder)]    = [Category(SettingsCategory), Editor<FolderPickerEditor>(), Describe(() => SettingsStrings.LikedFolder)],
+            [nameof(Settings.GoThroughSubFolders)] = [Category(SettingsCategory), Describe(() => SettingsStrings.GoThroughSubFolders)],
             [nameof(Settings.GoThroughSubFoldersAlternateSpelling)] = [Hidden],
-            [nameof(Settings.Extensions)]     = [Category(SettingsCategory), new TypeConverterAttribute(typeof(PhotoExtsConverter)), Describe(SettingsStrings.Extensions)],
-            [nameof(Settings.SortOrder)]      = [Category(SettingsCategory), Describe(SettingsStrings.SortOrder)],
-            [nameof(Settings.CacheSize)]      =[Category(SettingsCategory), Describe(SettingsStrings.CacheSize)],
-            [nameof(Settings.ThumbnailSize)]  = [Category(SettingsCategory), Describe(SettingsStrings.ThumbnailSize)],
+            [nameof(Settings.Extensions)]     = [Category(SettingsCategory), new TypeConverterAttribute(typeof(PhotoExtsConverter)), Describe(() => SettingsStrings.Extensions)],
+            [nameof(Settings.SortOrder)]      = [Category(SettingsCategory), Describe(() => SettingsStrings.SortOrder)],
+            [nameof(Settings.CacheSize)]      =[Category(SettingsCategory), Describe(() => SettingsStrings.CacheSize)],
+            [nameof(Settings.ThumbnailSize)]  = [Category(SettingsCategory), Describe(() => SettingsStrings.ThumbnailSize)],
+            [nameof(Settings.Language)]       = [Category(SettingsCategory), new TypeConverterAttribute(typeof(LanguageConverter)), Describe(() => SettingsStrings.LanguageDescription)],
             [nameof(Settings.IsDarkTheme)]    = [Category(SettingsCategory), Hidden],
             [nameof(Settings.SearchPrecision)] = [Category(SettingsCategory), Hidden], // the slider of the search strip
             [nameof(Settings.SearchModel)]    = [Category(SettingsCategory), Hidden], // the combo box at the right end of the search strip
@@ -40,18 +41,24 @@ namespace PhotoLikerUI
             [nameof(Settings.WindowState)]    = [Category(WindowCategory), Hidden],
 
             [nameof(Settings.Files)]          = [Category(InfoCategory), Hidden],
-            [nameof(Settings.TotalFiles)]     = [Category(InfoCategory), Describe(SettingsStrings.TotalFiles)],
-            [nameof(Settings.CurrentIndex)]   = [Category(InfoCategory), Describe(SettingsStrings.CurrentIndex)], // editable: typing a number jumps to that photo
+            [nameof(Settings.TotalFiles)]     = [Category(InfoCategory), Describe(() => SettingsStrings.TotalFiles)],
+            [nameof(Settings.CurrentIndex)]   = [Category(InfoCategory), Describe(() => SettingsStrings.CurrentIndex)], // editable: typing a number jumps to that photo
 
-            [nameof(Settings.CurrentFileName)] = [Category(CurrentFileCategory), ReadOnly, Describe(SettingsStrings.CurrentFileName)],
-            [nameof(Settings.CurrentFilePath)] = [Category(CurrentFileCategory), ReadOnly, Describe(SettingsStrings.CurrentFilePath)],
-            [nameof(Settings.LikedFile)]       = [Category(CurrentFileCategory), ReadOnly, Describe(SettingsStrings.LikedFile)],
-            [nameof(Settings.SavedInFolders)]  = [Category(CurrentFileCategory), ReadOnly, new TypeConverterAttribute(typeof(StringListConverter)), Describe(SettingsStrings.SavedInFolders)],
+            [nameof(Settings.CurrentFileName)] = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.CurrentFileName)],
+            [nameof(Settings.CurrentFilePath)] = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.CurrentFilePath)],
+            [nameof(Settings.LikedFile)]       = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.LikedFile)],
+            [nameof(Settings.SavedInFolders)]  = [Category(CurrentFileCategory), ReadOnly, new TypeConverterAttribute(typeof(StringListConverter)), Describe(() => SettingsStrings.SavedInFolders)],
         };
 
         private static Attribute Category(string name) => new CategoryAttribute(name);
 
-        private static Attribute Describe(string text) => new DescriptionAttribute(text);
+        // The help text is asked for when a row is selected, not when the table is made, so it follows the language that is on then
+        private static Attribute Describe(Func<string> text) => new LocalizedDescription(text);
+
+        private sealed class LocalizedDescription(Func<string> text) : DescriptionAttribute
+        {
+            public override string Description => text();
+        }
 
         private static Attribute Editor<T>() where T : System.Drawing.Design.UITypeEditor =>
             new EditorAttribute(typeof(T), typeof(System.Drawing.Design.UITypeEditor));

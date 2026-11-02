@@ -9,11 +9,10 @@ namespace PhotoLikerUI
     /// </summary>
     internal static class ShellOpen
     {
-        public const string OpenErrorFormat = "Could not open '{0}': {1}";
-        public const string OpenMenu = "Open";
-        public const string ShowMenu = "Show in File Explorer";
+        public static string OpenMenu => DialogStrings.OpenMenu;
+        public static string ShowMenu => DialogStrings.ShowMenu;
 
-        private const string NotThere = "it is not there any more";
+        private static string NotThere => DialogStrings.NotThere;
 
         /// <summary>Opens the photo in the viewer Windows has for it.</summary>
         public static string? Photo(string path) => Document(path);
@@ -37,7 +36,7 @@ namespace PhotoLikerUI
 
         /// <summary>The words for a status line, from the result of one of the calls above; empty if it worked.</summary>
         public static string Report(string path, string? error) =>
-            error is null ? string.Empty : string.Format(OpenErrorFormat, Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar)), error);
+            error is null ? string.Empty : string.Format(DialogStrings.OpenErrorFormat, Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar)), error);
 
         private static string? Start(ProcessStartInfo info)
         {

@@ -46,7 +46,7 @@ namespace PhotoLikerUI
             }
             else if (dialog.Removed > 0)
             {
-                SetStatus(string.Format(EmptyFoldersStrings.StatusDone, EmptyFoldersStrings.Count(dialog.Removed, EmptyFoldersStrings.EmptyFolderOne, EmptyFoldersStrings.EmptyFolderMany)));
+                SetStatus(string.Format(EmptyFoldersStrings.StatusDone, Plural.Count(dialog.Removed, EmptyFoldersStrings.EmptyFolder)));
             }
         }
     }

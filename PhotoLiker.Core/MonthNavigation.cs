@@ -14,7 +14,7 @@ namespace PhotoLiker.Core
 
         /// <summary>"September 2009", or "no date" for photos without one.</summary>
         public static string Describe(int? month) =>
-            month is { } m ? new DateTime(m / 100, m % 100, 1).ToString("MMMM yyyy", CultureInfo.InvariantCulture) : "no date";
+            month is { } m ? new DateTime(m / 100, m % 100, 1).ToString("MMMM yyyy", Loc.Language.Culture) : CoreStrings.NoDate;
 
         /// <summary>
         /// The index of the first photo of the next (<paramref name="forward"/>) or the previous run of the same month, counted

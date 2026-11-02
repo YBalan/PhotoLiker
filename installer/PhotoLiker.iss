@@ -1,4 +1,4 @@
-; Inno Setup script for Photo Liker (WinForms app, PhotoLikerUI).
+﻿; Inno Setup script for Photo Liker (WinForms app, PhotoLikerUI).
 ; Built by installer\build-installer.ps1, which passes /DAppVersion, /DSourceDir and /DOutputDir.
 
 #ifndef AppVersion
@@ -33,6 +33,16 @@ OutputBaseFilename=PhotoLiker-Setup-{#AppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+
+; The setup is in English or Ukrainian (it offers both when it starts). The program itself starts in English and has its own Language setting
+; (the Language row of the settings grid), whatever language the setup was in.
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
+
+[CustomMessages]
+english.RuntimeMissing={#AppName} needs the .NET 10 Desktop Runtime, which was not found on this computer.%n%nOpen the download page and exit setup? Choose No to install anyway.
+ukrainian.RuntimeMissing={#AppName} потребує .NET 10 Desktop Runtime, якого не знайдено на цьому комп’ютері.%n%nВідкрити сторінку завантаження і вийти з установника? Виберіть «Ні», щоб усе одно встановити.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -98,8 +108,7 @@ begin
   Result := True;
   if not IsDesktopRuntimeInstalled then
     if SuppressibleMsgBox(
-         '{#AppName} needs the .NET 10 Desktop Runtime, which was not found on this computer.' + #13#10 + #13#10 +
-         'Open the download page and exit setup? Choose No to install anyway.',
+         ExpandConstant('{cm:RuntimeMissing}'),
          mbConfirmation, MB_YESNO, IDNO) = IDYES then
     begin
       ShellExec('open', 'https://dotnet.microsoft.com/download/dotnet/10.0', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);

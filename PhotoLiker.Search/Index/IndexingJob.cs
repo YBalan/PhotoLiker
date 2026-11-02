@@ -601,8 +601,8 @@ namespace PhotoLiker.Search
 
                 _since.Restart();
                 var message = value.Total > 0
-                    ? $"Downloading {value.Name}: {value.Done >> 20} of {value.Total >> 20} MB"
-                    : $"Downloading {value.Name}: {value.Done >> 20} MB";
+                    ? string.Format(SearchLibStrings.DownloadingFormat, value.Name, value.Done >> 20, value.Total >> 20)
+                    : string.Format(SearchLibStrings.DownloadingNoTotalFormat, value.Name, value.Done >> 20);
                 progress.Report(new IndexProgress(IndexPhase.DownloadingModels, message, (int)(value.Done >> 20), (int)(value.Total >> 20), 0, 0, 0, null));
             }
         }

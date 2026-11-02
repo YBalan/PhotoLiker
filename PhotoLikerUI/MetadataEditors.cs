@@ -36,7 +36,7 @@ namespace PhotoLikerUI
         {
             using var form = new Form
             {
-                Text          = context?.PropertyDescriptor?.DisplayName ?? "Value",
+                Text          = context?.PropertyDescriptor?.DisplayName ?? DialogStrings.ValueFallback,
                 Size          = new Size(700, 450),
                 MinimumSize   = new Size(400, 250),
                 StartPosition = FormStartPosition.CenterParent,
@@ -56,7 +56,7 @@ namespace PhotoLikerUI
 
             var btnCopy = new Button
             {
-                Text   = "Copy All",
+                Text   = DialogStrings.CopyAll,
                 Dock   = DockStyle.Bottom,
                 Height = 30,
             };

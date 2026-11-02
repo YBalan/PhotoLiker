@@ -10,6 +10,12 @@
     <PackageReference Include="MetadataExtractor" Version="2.8.1" />
   </ItemGroup>
 
+  <!-- The texts of the program in English, built in: the program has words with no language file at all, and every other language
+       (languages\photo-liker-<code>.txt, copied beside the program by PhotoLikerUI) is measured against it. See AppLanguage. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\languages\photo-liker-en.txt" LogicalName="photo-liker-en.txt" />
+  </ItemGroup>
+
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>PhotoLiker.Tests</_Parameter1>

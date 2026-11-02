@@ -31,6 +31,17 @@ namespace PhotoLikerUI
             statusStrip1.ShowItemToolTips = true; // a status bar shows none by default
         }
 
+        /// <summary>Writes the texts of the two buttons again in the language that is on.</summary>
+        private void ApplyRotateLanguage()
+        {
+            _rotateBackButton.AccessibleName = MainFormStrings.RotateBackButtonText;
+            _rotateBackButton.Text = MainFormStrings.RotateBackButtonKeys;
+            _rotateBackButton.ToolTipText = MainFormStrings.RotateBackButtonTooltip;
+            _rotateButton.AccessibleName = MainFormStrings.RotateButtonText;
+            _rotateButton.Text = MainFormStrings.RotateButtonKeys;
+            _rotateButton.ToolTipText = MainFormStrings.RotateButtonTooltip;
+        }
+
         private ToolStripButton NewRotateButton(string name, string accessibleName, string keys, string tooltip, Image image, int quarterTurns)
         {
             var button = new ToolStripButton(keys)

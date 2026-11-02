@@ -14,7 +14,7 @@ namespace SmokeTour;
 internal sealed partial class Tour(DrivenForm form, string folder, string? screenshotFolder, Checks checks)
 {
     private const int SidePanelWidth = 430;      // wider than the default so the setting names are readable
-    private const int SettingsGridHeight = 450;   // tall enough for all thirteen rows
+    private const int SettingsGridHeight = 475;   // tall enough for all fourteen rows
 
     private readonly string _likedFolder = Path.Combine(folder, "Liked");
 
@@ -195,7 +195,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
 
         var rows = form.VisibleSettingsRows().ToList();
         string[] expected = ["TotalFiles", "CurrentIndex", "CurrentFolder", "CurrentFilePath", "CurrentFileName", "LikedFile", "SavedInFolders",
-            "LikedFolder", "GoThroughSubFolders", "Extensions", "SortOrder", "CacheSize", "ThumbnailSize"];
+            "LikedFolder", "GoThroughSubFolders", "Extensions", "SortOrder", "CacheSize", "ThumbnailSize", "Language"];
         checks.That(expected.All(rows.Contains), "all settings are listed");
         checks.That(!rows.Contains("WindowLeft") && !rows.Contains("IsDarkTheme") && !rows.Contains("Files"), "window state, theme and file list stay hidden");
 

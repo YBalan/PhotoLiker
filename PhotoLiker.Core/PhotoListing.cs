@@ -120,12 +120,12 @@ namespace PhotoLiker.Core
 
             var root = new DirectoryInfo(key.Root);
             if (!root.Exists)
-                throw new DirectoryNotFoundException($"Could not find a part of the path '{key.Root}'.");
+                throw new DirectoryNotFoundException(string.Format(CoreStrings.FolderNotFoundFormat, key.Root));
 
             var excluded = PhotoScanner.ExcludedFolders(key.Folder, key.ExcludedFolder);
             var listed = ListMany(key, excluded, [(string.Empty, root.LastWriteTimeUtc.Ticks)], isKnown: _ => false, cancellationToken);
             if (listed[string.Empty] is null)
-                throw new IOException($"The folder '{key.Root}' could not be read.");
+                throw new IOException(string.Format(CoreStrings.FolderUnreadableFormat, key.Root));
 
             var folders = new Dictionary<string, ListedFolder>(StringComparer.OrdinalIgnoreCase);
             foreach (var (relative, folder) in listed)

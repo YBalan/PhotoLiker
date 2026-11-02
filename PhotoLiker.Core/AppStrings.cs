@@ -1,22 +1,25 @@
+using System.Runtime.CompilerServices;
 namespace PhotoLiker.Core
 {
     public static class AppStrings
     {
+        private static string T([CallerMemberName] string key = "") => Loc.Get(nameof(AppStrings), key);
+
         public const string SettingsFileName             = "photo-liker-config.json";
         public const string DefaultLikedFolderName       = "Liked";
         public const string DeletedFolderName            = "Deleted";
-        public const string StatusFolderLoaded           = "Loaded {0} photos from '{1}'";
-        public const string StatusFolderLoadError        = "Error loading folder: {0}";
-        public const string StatusNoPhotosFound          = "No photos found.";
-        public const string StatusImageLoadError         = "Error loading image: {0}";
-        public const string StatusFileCopied             = "'{0}' copied to liked folder.";
-        public const string StatusFileRemoved            = "Removed '{0}' from liked folder.";
-        public const string StatusLikeError              = "Error liking photo: {0}";
-        public const string StatusUnlikeError            = "Error unliking photo: {0}";
+        public static string StatusFolderLoaded => T();
+        public static string StatusFolderLoadError => T();
+        public static string StatusNoPhotosFound => T();
+        public static string StatusImageLoadError => T();
+        public static string StatusFileCopied => T();
+        public static string StatusFileRemoved => T();
+        public static string StatusLikeError => T();
+        public static string StatusUnlikeError => T();
         public const string TitleFormat                  = "PhotoLiker — {0}";
         public const string LikedCheckmark               = "✓";
-        public const string GpsMapLinkLabel              = "📍 Maps";
-        public const string FolderBrowserSelectPhotos    = "Select a folder containing photos";
-        public const string FolderBrowserSelectLiked     = "Select a folder to save liked photos";
+        public static string GpsMapLinkLabel => T();
+        public static string FolderBrowserSelectPhotos => T();
+        public static string FolderBrowserSelectLiked => T();
     }
 }

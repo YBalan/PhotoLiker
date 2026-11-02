@@ -161,7 +161,7 @@ namespace PhotoLiker.Core
                 if (entry is FileInfo file && IsJunk(file.Name))
                     junk.Add(file.FullName);
                 else
-                    throw new IOException(entry is DirectoryInfo ? $"It still holds the folder '{entry.Name}'." : $"It holds '{entry.Name}'.");
+                    throw new IOException(string.Format(entry is DirectoryInfo ? CoreStrings.FolderHoldsFolderFormat : CoreStrings.FolderHoldsFileFormat, entry.Name));
             }
 
             foreach (var file in junk)

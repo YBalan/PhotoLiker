@@ -151,7 +151,7 @@ namespace PhotoLiker.Core
                 stream.Position = patch.At;
                 stream.ReadExactly(current);
                 if (!current.AsSpan().SequenceEqual(patch.Expected))
-                    throw new IOException("The photo was changed by another program meanwhile.");
+                    throw new IOException(CoreStrings.ChangedMeanwhile);
             }
 
             foreach (var patch in patches)
@@ -169,7 +169,7 @@ namespace PhotoLiker.Core
             var original = FileReading.ReadAllBytesShared(path);
             var again = Plan(new MemoryStream(original, writable: false), change);
             if (again.Splice is not { } splice || splice.At != expected.At || splice.RemoveLength != expected.RemoveLength)
-                throw new IOException("The photo was changed by another program meanwhile.");
+                throw new IOException(CoreStrings.ChangedMeanwhile);
 
             var temp = path + ".saving";
             try
@@ -307,7 +307,7 @@ namespace PhotoLiker.Core
             }
 
             if (grown.Count + 2 > MaxSegmentLength)
-                throw new InvalidDataException("The Exif block of this photo has no room for the new values.");
+                throw new InvalidDataException(CoreStrings.ExifNoRoom);
 
             var segment = new byte[4 + grown.Count];
             segment[0] = 0xFF;
@@ -346,7 +346,7 @@ namespace PhotoLiker.Core
             if (write.Short is not null)
             {
                 if (type != ShortType || count != 1)
-                    throw new InvalidDataException("The orientation is not stored as one number.");
+                    throw new InvalidDataException(CoreStrings.OrientationNotNumber);
                 return entry.At + 8;
             }
 
@@ -460,7 +460,7 @@ namespace PhotoLiker.Core
             return (int)at;
         }
 
-        private static InvalidDataException Damaged() => new("The Exif block is damaged.");
+        private static InvalidDataException Damaged() => new(CoreStrings.ExifDamaged);
 
         // ── finding things in the file ─────────────────────────────────────
 
@@ -477,7 +477,7 @@ namespace PhotoLiker.Core
             Span<byte> head = stackalloc byte[4];
             stream.Position = 0;
             if (stream.Read(head[..2]) != 2 || head[0] != 0xFF || head[1] != 0xD8)
-                throw new InvalidDataException("This is not a JPEG.");
+                throw new InvalidDataException(CoreStrings.NotJpeg);
 
             long insertAt = 2;
             for (var first = true; ; first = false)
@@ -486,7 +486,7 @@ namespace PhotoLiker.Core
                 if (stream.Read(head) < 4)
                     break; // the file ends: no Exif came before
                 if (head[0] != 0xFF)
-                    throw new InvalidDataException("The JPEG is damaged.");
+                    throw new InvalidDataException(CoreStrings.JpegDamaged);
 
                 var marker = head[1];
                 if (marker == 0xFF)
@@ -504,7 +504,7 @@ namespace PhotoLiker.Core
 
                 var length = head[2] << 8 | head[3];
                 if (length < 2)
-                    throw new InvalidDataException("The JPEG is damaged.");
+                    throw new InvalidDataException(CoreStrings.JpegDamaged);
 
                 if (marker == 0xE0 && first)
                     insertAt = markerAt + 2 + length; // JFIF has to stay the first block
@@ -525,7 +525,7 @@ namespace PhotoLiker.Core
         private static Layout LocateInExif(byte[] payload, long segmentAt)
         {
             if (payload.Length < Tiff + 8)
-                throw new InvalidDataException("The Exif block is too short.");
+                throw new InvalidDataException(CoreStrings.ExifTooShort);
 
             try
             {
@@ -533,15 +533,15 @@ namespace PhotoLiker.Core
                 {
                     ((byte)'M', (byte)'M') => true,
                     ((byte)'I', (byte)'I') => false,
-                    _ => throw new InvalidDataException("The Exif block has an unknown byte order."),
+                    _ => throw new InvalidDataException(CoreStrings.ExifByteOrder),
                 };
                 if (ReadU16(payload.AsSpan(Tiff + 2), big) != 42)
-                    throw new InvalidDataException("The Exif block is not a TIFF block.");
+                    throw new InvalidDataException(CoreStrings.ExifNotTiff);
 
                 var ifd0 = Tiff + (int)ReadU32(payload.AsSpan(Tiff + 4), big);
                 var count = ReadU16(payload.AsSpan(ifd0), big);
                 if (count > MaxEntries || ifd0 + 2 + count * EntrySize > payload.Length)
-                    throw new InvalidDataException("The Exif block is damaged.");
+                    throw new InvalidDataException(CoreStrings.ExifDamaged);
 
                 for (var i = 0; i < count; i++)
                 {
@@ -550,7 +550,7 @@ namespace PhotoLiker.Core
                         continue;
 
                     if (ReadU16(payload.AsSpan(entry + 2), big) != ShortType || ReadU32(payload.AsSpan(entry + 4), big) != 1)
-                        throw new InvalidDataException("The orientation is not stored as one number.");
+                        throw new InvalidDataException(CoreStrings.OrientationNotNumber);
 
                     return new Layout(ReadU16(payload.AsSpan(entry + 8), big), big, segmentAt, payload, segmentAt + 4 + payload.Length);
                 }
@@ -559,7 +559,7 @@ namespace PhotoLiker.Core
             }
             catch (ArgumentOutOfRangeException)
             {
-                throw new InvalidDataException("The Exif block is damaged.");
+                throw new InvalidDataException(CoreStrings.ExifDamaged);
             }
         }
 

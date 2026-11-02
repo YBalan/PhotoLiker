@@ -92,8 +92,8 @@ namespace PhotoLikerUI
             bool dark,
             Func<VideoGenerationOptions, VideoSequence, Action<string>, Action<int>, Task> generateVideoAsync)
         {
-            var current = new Source("Current", null, defaultOutputFolder, "No photos loaded") { Photos = [.. currentPhotos] };
-            var liked = new Source("Liked", likedFolder, likedFolder, EmptyFolderText);
+            var current = new Source(VideoStrings.SourceCurrent, null, defaultOutputFolder, VideoStrings.NoPhotosLoaded) { Photos = [.. currentPhotos] };
+            var liked = new Source(VideoStrings.SourceLiked, likedFolder, likedFolder, VideoStrings.EmptyFolder);
             _automaticOutputFolder = liked.OutputFolder;
             _likedFolder = likedFolder;
             _extensions = extensions;
@@ -105,7 +105,8 @@ namespace PhotoLikerUI
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            ClientSize = new Size(DialogWidth, 600); // the height is set to what the rows need, below
+            MeasureColumns();
+            ClientSize = new Size(_dialogWidth, 600); // the height is set to what the rows need, below
 
             var layout = new TableLayoutPanel
             {
@@ -114,9 +115,9 @@ namespace PhotoLikerUI
                 ColumnCount = 3,
                 RowCount = 18
             };
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, _labelColumnWidth));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, ButtonColumnWidth));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, _buttonColumnWidth));
             for (var row = 0; row < 16; row++)
                 layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -135,11 +136,11 @@ namespace PhotoLikerUI
             _sortOrderCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _sortOrderCombo.Width = 220;
             Choice<PhotoSortOrder>[] sortOrders = [
-                new(PhotoSortOrder.OldestFirst, "Oldest first"),
-                new(PhotoSortOrder.NewestFirst, "Newest first"),
-                new(PhotoSortOrder.ByName, "By name"),
-                new(PhotoSortOrder.Random, "Random"),
-                new(PhotoSortOrder.None, "As listed (no sorting)")
+                new(PhotoSortOrder.OldestFirst, VideoStrings.SortOldestFirst),
+                new(PhotoSortOrder.NewestFirst, VideoStrings.SortNewestFirst),
+                new(PhotoSortOrder.ByName, VideoStrings.SortByName),
+                new(PhotoSortOrder.Random, VideoStrings.SortRandom),
+                new(PhotoSortOrder.None, VideoStrings.SortNone)
             ];
             _sortOrderCombo.Items.AddRange(sortOrders);
             _sortOrderCombo.SelectedIndex = Math.Max(0, Array.FindIndex(sortOrders, c => c.Value == defaultSortOrder));
@@ -150,11 +151,11 @@ namespace PhotoLikerUI
             _outputFileNameTextBox.Dock = DockStyle.Fill; // it spans the two columns, as wide as the folder box and its button together
 
             _audioTextBox.Dock = DockStyle.Fill;
-            var audioBrowseButton = new Button { Text = "Browse...", Dock = DockStyle.Fill };
+            var audioBrowseButton = new Button { Text = VideoStrings.Browse, Dock = DockStyle.Fill };
             audioBrowseButton.Click += (_, _) => BrowseAudio();
-            _audioPlayButton.Text = "Play audio";
-            _audioStopButton.Text = "Stop";
-            _audioClearButton.Text = "Clear";
+            _audioPlayButton.Text = VideoStrings.PlayAudio;
+            _audioStopButton.Text = VideoStrings.Stop;
+            _audioClearButton.Text = VideoStrings.Clear;
             _audioStatusLabel.AutoSize = true;
             _audioStatusLabel.Margin = new Padding(8, 6, 0, 0);
             _audioLengthLabel.AutoSize = true;
@@ -167,14 +168,14 @@ namespace PhotoLikerUI
             _videoLengthLabel.Text = "\n ";
 
             var toolTip = new ToolTip();
-            toolTip.SetToolTip(_audioTextBox, AudioHint);
-            toolTip.SetToolTip(audioBrowseButton, AudioHint);
+            toolTip.SetToolTip(_audioTextBox, VideoStrings.AudioHint);
+            toolTip.SetToolTip(audioBrowseButton, VideoStrings.AudioHint);
 
             _coverTextBox.Dock = DockStyle.Fill;
-            var coverBrowseButton = new Button { Text = "Browse...", Dock = DockStyle.Fill };
+            var coverBrowseButton = new Button { Text = VideoStrings.Browse, Dock = DockStyle.Fill };
             coverBrowseButton.Click += (_, _) => BrowseCover();
-            toolTip.SetToolTip(_coverTextBox, CoverHint);
-            toolTip.SetToolTip(coverBrowseButton, CoverHint);
+            toolTip.SetToolTip(_coverTextBox, VideoStrings.CoverHint);
+            toolTip.SetToolTip(coverBrowseButton, VideoStrings.CoverHint);
 
             _coverSecondsNumeric.DecimalPlaces = 2;
             _coverSecondsNumeric.Increment = 0.5M;
@@ -182,7 +183,7 @@ namespace PhotoLikerUI
             _coverSecondsNumeric.Maximum = 60M;
             _coverSecondsNumeric.Value = 3.00M;
             _coverSecondsNumeric.Width = 70;
-            _coverClearButton.Text = "Clear";
+            _coverClearButton.Text = VideoStrings.Clear;
 
             _coverPreviewBox.Size = CoverPreviewSize;
             _coverPreviewBox.SizeMode = PictureBoxSizeMode.Zoom;
@@ -215,25 +216,25 @@ namespace PhotoLikerUI
             _frameTimeEndNumeric.Value = 0.50M;
             _frameTimeEndNumeric.Width = 70;
 
-            _randomFrameTimesCheckBox.Text = "Use random";
+            _randomFrameTimesCheckBox.Text = VideoStrings.UseRandom;
             _randomFrameTimesCheckBox.AutoSize = true;
             _randomFrameTimesCheckBox.Margin = new Padding(16, 4, 0, 0);
-            toolTip.SetToolTip(_randomFrameTimesCheckBox, RandomFrameTimesHint);
+            toolTip.SetToolTip(_randomFrameTimesCheckBox, VideoStrings.RandomFrameTimesHint);
 
             // The photos play once, or over and over until the audio ends; the audio plays over and over until the photos end, or once
             _playModeCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _playModeCombo.Width = 90;
-            Choice<bool>[] playModes = [new(false, "Once"), new(true, "Repeat")];
+            Choice<bool>[] playModes = [new(false, VideoStrings.Once), new(true, VideoStrings.Repeat)];
             _playModeCombo.Items.AddRange(playModes);
             _playModeCombo.SelectedIndex = 0;
-            toolTip.SetToolTip(_playModeCombo, PlayModeHint);
+            toolTip.SetToolTip(_playModeCombo, VideoStrings.PlayModeHint);
 
             _audioPlayModeCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _audioPlayModeCombo.Width = 90;
-            Choice<bool>[] audioPlayModes = [new(true, "Repeat"), new(false, "Once")];
+            Choice<bool>[] audioPlayModes = [new(true, VideoStrings.Repeat), new(false, VideoStrings.Once)];
             _audioPlayModeCombo.Items.AddRange(audioPlayModes);
             _audioPlayModeCombo.SelectedIndex = 0;
-            toolTip.SetToolTip(_audioPlayModeCombo, AudioPlayModeHint);
+            toolTip.SetToolTip(_audioPlayModeCombo, VideoStrings.AudioPlayModeHint);
 
             _codecCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _codecCombo.Items.AddRange(["libx264", "libx265"]);
@@ -243,29 +244,29 @@ namespace PhotoLikerUI
             _crfNumeric.Maximum = 51;
             _crfNumeric.Value = 23;
 
-            var browseButton = new Button { Text = "Browse...", Dock = DockStyle.Fill };
+            var browseButton = new Button { Text = VideoStrings.Browse, Dock = DockStyle.Fill };
             browseButton.Click += (_, _) => BrowseOutputFolder();
 
-            layout.Controls.Add(new Label { Text = "Photos from:", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 0);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelPhotosFrom, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 0);
             var sourcePanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
             sourcePanel.Controls.Add(_sourceCombo);
             sourcePanel.Controls.Add(_countLabel);
             layout.Controls.Add(sourcePanel, 1, 0);
             layout.SetColumnSpan(sourcePanel, 2);
 
-            layout.Controls.Add(new Label { Text = "Sort order:", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 1);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelSortOrder, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 1);
             layout.Controls.Add(_sortOrderCombo, 1, 1);
             layout.SetColumnSpan(_sortOrderCombo, 2);
 
-            layout.Controls.Add(new Label { Text = "Output folder:", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 2);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelOutputFolder, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 2);
             layout.Controls.Add(_outputFolderTextBox, 1, 2);
             layout.Controls.Add(browseButton, 2, 2);
 
-            layout.Controls.Add(new Label { Text = "Output file name:", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 3);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelOutputFileName, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 3);
             layout.Controls.Add(_outputFileNameTextBox, 1, 3);
             layout.SetColumnSpan(_outputFileNameTextBox, 2);
 
-            layout.Controls.Add(new Label { Text = "Audio (optional):", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 4);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelAudio, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 4);
             layout.Controls.Add(_audioTextBox, 1, 4);
             layout.Controls.Add(audioBrowseButton, 2, 4);
 
@@ -278,13 +279,13 @@ namespace PhotoLikerUI
             layout.Controls.Add(audioPanel, 1, 5);
             layout.SetColumnSpan(audioPanel, 2);
 
-            layout.Controls.Add(new Label { Text = "Cover (optional):", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 6);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelCover, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 6);
             layout.Controls.Add(_coverTextBox, 1, 6);
             layout.Controls.Add(coverBrowseButton, 2, 6);
 
             // The picture on the left; on its right how long it is shown, and the button to take it away
             var coverTimePanel = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 3, 0, 3) };
-            coverTimePanel.Controls.Add(new Label { Text = "Shown for (sec):", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+            coverTimePanel.Controls.Add(new Label { Text = VideoStrings.LabelShownFor, AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
             coverTimePanel.Controls.Add(_coverSecondsNumeric);
             var coverSidePanel = new FlowLayoutPanel
             {
@@ -302,7 +303,7 @@ namespace PhotoLikerUI
             layout.Controls.Add(coverPanel, 1, 7);
             layout.SetColumnSpan(coverPanel, 2);
 
-            layout.Controls.Add(new Label { Text = "Resolution:", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 8);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelResolution, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 8);
             var resolutionPanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
             resolutionPanel.Controls.Add(_widthNumeric);
             resolutionPanel.Controls.Add(new Label { Text = "x", AutoSize = true, Margin = new Padding(8, 6, 8, 0) });
@@ -310,45 +311,45 @@ namespace PhotoLikerUI
             layout.Controls.Add(resolutionPanel, 1, 8);
 
             // Not AutoSize: that only ever grows, and the first layout pass of the table measures it in a narrow cell (a button 96 px tall)
-            _firstImageButton.Text = "Use first image";
+            _firstImageButton.Text = VideoStrings.UseFirstImage;
             _firstImageButton.Dock = DockStyle.Fill;
             _firstImageButton.Click += (_, _) => ApplyFirstImageResolution();
             layout.Controls.Add(_firstImageButton, 2, 8);
 
-            layout.Controls.Add(new Label { Text = "Frame time range (sec):", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 9);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelFrameTimeRange, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 9);
             var frameRangePanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
-            frameRangePanel.Controls.Add(new Label { Text = "Start", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+            frameRangePanel.Controls.Add(new Label { Text = VideoStrings.LabelStart, AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
             frameRangePanel.Controls.Add(_frameTimeStartNumeric);
-            frameRangePanel.Controls.Add(new Label { Text = "End", AutoSize = true, Margin = new Padding(12, 6, 6, 0) });
+            frameRangePanel.Controls.Add(new Label { Text = VideoStrings.LabelEnd, AutoSize = true, Margin = new Padding(12, 6, 6, 0) });
             frameRangePanel.Controls.Add(_frameTimeEndNumeric);
             frameRangePanel.Controls.Add(_randomFrameTimesCheckBox);
             layout.Controls.Add(frameRangePanel, 1, 9);
             layout.SetColumnSpan(frameRangePanel, 2);
 
-            layout.Controls.Add(new Label { Text = "Repeat or once:", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 10);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelRepeatOrOnce, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 10);
             var playPanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
-            playPanel.Controls.Add(new Label { Text = "Photos", AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
+            playPanel.Controls.Add(new Label { Text = VideoStrings.LabelPhotos, AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
             playPanel.Controls.Add(_playModeCombo);
-            playPanel.Controls.Add(new Label { Text = "Audio", AutoSize = true, Margin = new Padding(16, 6, 6, 0) });
+            playPanel.Controls.Add(new Label { Text = VideoStrings.LabelAudioShort, AutoSize = true, Margin = new Padding(16, 6, 6, 0) });
             playPanel.Controls.Add(_audioPlayModeCombo);
             layout.Controls.Add(playPanel, 1, 10);
             layout.SetColumnSpan(playPanel, 2);
 
-            layout.Controls.Add(new Label { Text = "Video length:", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 11);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelVideoLength, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 11);
             layout.Controls.Add(_videoLengthLabel, 1, 11);
             layout.SetColumnSpan(_videoLengthLabel, 2);
 
-            layout.Controls.Add(new Label { Text = "Video codec:", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 12);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelCodec, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 12);
             layout.Controls.Add(_codecCombo, 1, 12);
             layout.SetColumnSpan(_codecCombo, 2);
 
-            layout.Controls.Add(new Label { Text = "Quality (CRF):", AutoSize = true, Anchor = AnchorStyles.Left }, 0, 13);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelQuality, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 13);
             layout.Controls.Add(_crfNumeric, 1, 13);
             layout.SetColumnSpan(_crfNumeric, 2);
 
             var hintLabel = new Label
             {
-                Text = "Lower CRF = better quality and larger file size.",
+                Text = VideoStrings.QualityHint,
                 AutoSize = true,
                 ForeColor = SystemColors.GrayText,
                 Margin = new Padding(0, 8, 0, 0)
@@ -382,19 +383,19 @@ namespace PhotoLikerUI
                 Margin = new Padding(0, 8, 0, 0)
             };
 
-            _generateButton.Text = "Generate";
+            _generateButton.Text = VideoStrings.GenerateButton;
             _generateButton.AutoSize = true;
             _generateButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             _generateButton.Click += async (_, _) => await GenerateAsync();
 
-            _runButton.Text = "Play";
+            _runButton.Text = VideoStrings.PlayButton;
             _runButton.AutoSize = true;
             _runButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             _runButton.Enabled = false;
             _runButton.Visible = false;
             _runButton.Click += (_, _) => RunGeneratedVideo();
 
-            _cancelButton.Text = "Cancel";
+            _cancelButton.Text = VideoStrings.CancelButton;
             _cancelButton.AutoSize = true;
             _cancelButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             _cancelButton.DialogResult = DialogResult.Cancel;
@@ -411,8 +412,8 @@ namespace PhotoLikerUI
             CancelButton = _cancelButton;
 
             // As tall as the rows need (the log and the progress bar are not there until generating, which makes room for them)
-            _collapsedHeight = layout.GetPreferredSize(new Size(DialogWidth, 0)).Height;
-            ClientSize = new Size(DialogWidth, _collapsedHeight);
+            _collapsedHeight = layout.GetPreferredSize(new Size(_dialogWidth, 0)).Height;
+            ClientSize = new Size(_dialogWidth, _collapsedHeight);
 
             _inputControls.AddRange([
                 _sourceCombo,
@@ -524,7 +525,7 @@ namespace PhotoLikerUI
 
             if (source.Photos is null)
             {
-                _countLabel.Text = "Counting...";
+                _countLabel.Text = VideoStrings.Counting;
                 UpdateAvailability();
                 UpdateVideoLength();
 
@@ -536,7 +537,7 @@ namespace PhotoLikerUI
                 {
                     if (!IsDisposed && generation == _sourceGeneration)
                     {
-                        _countLabel.Text = $"Cannot list the photos: {ex.Message}";
+                        _countLabel.Text = string.Format(VideoStrings.CannotListFormat, ex.Message);
                         UpdateVideoLength();
                     }
                     return;
@@ -573,7 +574,7 @@ namespace PhotoLikerUI
             if (IsDisposed)
                 return;
 
-            var sources = groups.Select(group => new Source(Path.GetFileName(group.Path), group.Path, group.Path, EmptyFolderText)).ToList();
+            var sources = groups.Select(group => new Source(Path.GetFileName(group.Path), group.Path, group.Path, VideoStrings.EmptyFolder)).ToList();
             foreach (var source in sources)
                 _sourceCombo.Items.Add(source);
 
@@ -682,12 +683,12 @@ namespace PhotoLikerUI
             try
             {
                 // Which photos are still there is found out here and not when the dialog opens, which would keep it from opening on a slow disk
-                AppendOutput($"Checking {Plural.Count(photos.Count, "photo", "photos")}...");
+                AppendOutput(string.Format(VideoStrings.LogCheckingFormat, Plural.Count(photos.Count, VideoStrings.Photo)));
                 var (files, missing) = await Task.Run(() => FindFiles(photos, sortOrder));
                 if (missing > 0)
-                    AppendOutput($"{Plural.Count(missing, "photo is", "photos are")} not there any more and left out.");
+                    AppendOutput(string.Format(VideoStrings.LogMissingFormat, Plural.Count(missing, VideoStrings.MissingPhoto)));
                 if (files.Count == 0)
-                    throw new FileNotFoundException("None of the photos is there any more.");
+                    throw new FileNotFoundException(VideoStrings.NoneThere);
 
                 // The cover is the first picture of the video, whatever the order of the photos. A photo that is the cover as well is
                 // taken out of the photos, or it would be seen twice.
@@ -696,22 +697,22 @@ namespace PhotoLikerUI
                 {
                     var same = files.RemoveAll(file => IsSameFile(file, cover));
                     if (same > 0)
-                        AppendOutput("The cover is one of the photos as well: it is shown first only.");
-                    AppendOutput($"Cover: {cover} (shown for {options.CoverSeconds:0.##} sec)");
+                        AppendOutput(VideoStrings.LogCoverIsPhoto);
+                    AppendOutput(string.Format(VideoStrings.LogCoverFormat, cover, options.CoverSeconds));
                 }
 
                 // ffmpeg is told not to turn the photos by their EXIF orientation (it gets it wrong for the photos next to a turned one),
                 // so the ones that have to be turned are copied upright first, as the app shows them (the cover goes with them, first)
-                AppendOutput("Looking for photos that have to be turned upright (EXIF orientation)...");
+                AppendOutput(VideoStrings.LogLookingUpright);
                 IReadOnlyList<string> toTurn = cover is null ? files : [cover, .. files];
                 using var upright = await UprightPhotos.CreateAsync(toTurn, options.WidthPixels, options.HeightPixels, SetProgress);
                 AppendOutput(upright.Turned > 0
-                    ? $"{Plural.Count(upright.Turned, "photo", "photos")} turned upright."
-                    : "No photo has to be turned.");
+                    ? string.Format(VideoStrings.LogTurnedFormat, Plural.Count(upright.Turned, VideoStrings.Photo))
+                    : VideoStrings.LogNoneTurned);
                 if (upright.Converted > 0)
-                    AppendOutput($"{Plural.Count(upright.Converted, "picture", "pictures")} saved as JPEG: they are not all of one kind (JPEG, PNG...), which ffmpeg cannot join.");
+                    AppendOutput(string.Format(VideoStrings.LogConvertedFormat, Plural.Count(upright.Converted, VideoStrings.Picture)));
                 if (upright.Failed > 0)
-                    AppendOutput($"{Plural.Count(upright.Failed, "picture", "pictures")} could not be turned or saved as JPEG and come out as stored.");
+                    AppendOutput(string.Format(VideoStrings.LogFailedFormat, Plural.Count(upright.Failed, VideoStrings.Picture)));
                 SetProgress(0);
 
                 // The times: the random ones are the ones drawn for the length that is shown, so the video is as long as it says
@@ -719,7 +720,7 @@ namespace PhotoLikerUI
                 var repeat = options.RepeatToAudio && options.AudioPath is not null;
                 var audioSeconds = repeat ? await KnownAudioSecondsAsync(options.AudioPath!) : null;
                 if (repeat && audioSeconds is null)
-                    AppendOutput("The length of the audio is not known, so the photos play once.");
+                    AppendOutput(VideoStrings.LogAudioUnknown);
 
                 var uprightPhotos = cover is null ? upright.Files : [.. upright.Files.Skip(1)];
                 var sequence = VideoGenerationService.BuildSequence(
@@ -735,9 +736,8 @@ namespace PhotoLikerUI
 
                 if (samples is not null)
                 {
-                    AppendOutput(
-                        $"Random time for each photo, {Math.Min(options.StartFrameTimeSeconds, options.EndFrameTimeSeconds):0.##} to " +
-                        $"{Math.Max(options.StartFrameTimeSeconds, options.EndFrameTimeSeconds):0.##} sec.");
+                    AppendOutput(string.Format(VideoStrings.LogRandomTimesFormat,
+                        Math.Min(options.StartFrameTimeSeconds, options.EndFrameTimeSeconds), Math.Max(options.StartFrameTimeSeconds, options.EndFrameTimeSeconds)));
                 }
 
                 if (options.AudioPath is not null)
@@ -745,24 +745,24 @@ namespace PhotoLikerUI
                     AppendOutput(sequence.Audio switch
                     {
                         AudioPlayback.OnceEndsVideo =>
-                            $"Audio: {options.AudioPath} (played once; the photos play {PassesText(sequence, options, samples, uprightPhotos.Count)} times, until it ends)",
+                            string.Format(VideoStrings.LogAudioOnceEndsFormat, options.AudioPath, PassesText(sequence, options, samples, uprightPhotos.Count)),
                         AudioPlayback.OnceThenSilence =>
-                            $"Audio: {options.AudioPath} (played once: silence after it if it is shorter than the video, cut where the video ends)",
+                            string.Format(VideoStrings.LogAudioOnceSilenceFormat, options.AudioPath),
                         _ =>
-                            $"Audio: {options.AudioPath} (played over and over if it is shorter than the video, cut where the video ends)",
+                            string.Format(VideoStrings.LogAudioRepeatFormat, options.AudioPath),
                     });
                 }
 
-                AppendOutput($"The video will be about {DurationText.Format(sequence.ExpectedSeconds)} long.");
-                AppendOutput($"Starting ffmpeg: {options.OutputPath}");
+                AppendOutput(string.Format(VideoStrings.LogExpectedFormat, DurationText.Format(sequence.ExpectedSeconds)));
+                AppendOutput(string.Format(VideoStrings.LogStartingFormat, options.OutputPath));
                 await _generateVideoAsync(options, sequence, AppendOutput, SetProgress);
 
                 if (!File.Exists(options.OutputPath))
-                    throw new FileNotFoundException($"Generated file not found: {options.OutputPath}", options.OutputPath);
+                    throw new FileNotFoundException(string.Format(VideoStrings.GeneratedNotFoundFormat, options.OutputPath), options.OutputPath);
 
                 GeneratedOutputPath = options.OutputPath;
                 SetProgress(100);
-                AppendOutput($"Video generation completed: {options.OutputPath}");
+                AppendOutput(string.Format(VideoStrings.LogCompletedFormat, options.OutputPath));
                 _runButton.Visible = true;
                 _runButton.Enabled = true;
                 SetBusyState(false);
@@ -922,15 +922,12 @@ namespace PhotoLikerUI
                 _outputFolderTextBox.Text = dialog.SelectedPath;
         }
 
-        private const string AudioHint =
-            "The sound of the video. Played over and over if it is shorter than the video, and cut where the video ends. Anything ffmpeg can read: mp3, m4a, wav, flac, ogg...";
-
         private void BrowseAudio()
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "Choose the audio of the video",
-                Filter = "Audio files|*.mp3;*.m4a;*.aac;*.wav;*.flac;*.ogg;*.opus;*.wma|All files|*.*",
+                Title = VideoStrings.ChooseAudioTitle,
+                Filter = $"{VideoStrings.FilterAudio}|*.mp3;*.m4a;*.aac;*.wav;*.flac;*.ogg;*.opus;*.wma|{VideoStrings.FilterAll}|*.*",
             };
 
             var current = _audioTextBox.Text.Trim();
@@ -969,8 +966,8 @@ namespace PhotoLikerUI
             _audioClearButton.Enabled = !_isGenerating && hasAudio;
             _audioStatusLabel.Text = state switch
             {
-                AudioPreviewState.Preparing => "Preparing...",
-                AudioPreviewState.Playing => "Playing...",
+                AudioPreviewState.Preparing => VideoStrings.AudioPreparing,
+                AudioPreviewState.Playing => VideoStrings.AudioPlaying,
                 _ => string.Empty,
             };
         }
@@ -990,7 +987,7 @@ namespace PhotoLikerUI
 
             _audioLength = null;
             _readingAudioLength = path is not null;
-            _audioLengthLabel.Text = path is null ? string.Empty : "Length: ...";
+            _audioLengthLabel.Text = path is null ? string.Empty : VideoStrings.LengthReading;
             UpdatePlayModeCombo();
             UpdateVideoLength();
             if (path is null)
@@ -1003,12 +1000,12 @@ namespace PhotoLikerUI
             {
                 if (!await Task.Run(() => File.Exists(path), cancellation.Token))
                 {
-                    text = "File not found";
+                    text = VideoStrings.FileNotFound;
                 }
                 else
                 {
                     length = await AudioDecoder.ReadDurationAsync(path, cancellation.Token);
-                    text = length is { } read ? $"Length: {DurationText.Format(read.TotalSeconds)}" : "Length: unknown";
+                    text = length is { } read ? string.Format(VideoStrings.LengthFormat, DurationText.Format(read.TotalSeconds)) : VideoStrings.LengthUnknown;
                 }
             }
             catch (OperationCanceledException)
@@ -1018,7 +1015,7 @@ namespace PhotoLikerUI
             catch (Exception)
             {
                 // ffmpeg is not there, say: the video cannot be made either, and says so when it is tried
-                text = "Length: unknown";
+                text = VideoStrings.LengthUnknown;
             }
 
             // Closed, or another file asked for, while this one was read
@@ -1045,7 +1042,7 @@ namespace PhotoLikerUI
             string text;
             if (SelectedSource.Photos is not { } photos)
             {
-                text = SelectedSource.Failed ? "-" : "Counting the photos...";
+                text = SelectedSource.Failed ? "-" : VideoStrings.CountingPhotos;
             }
             else
             {
@@ -1066,7 +1063,7 @@ namespace PhotoLikerUI
                     var repeat = RepeatPhotosSelected;
 
                     var length = VideoGenerationService.EstimateLength(photoCount, start, end, samples, coverSeconds, repeat, _audioLength?.TotalSeconds);
-                    text = $"About {DurationText.Format(length)}";
+                    text = string.Format(VideoStrings.AboutLengthFormat, DurationText.Format(length));
                     line = AudioLine(photoCount, start, end, samples, coverSeconds, repeat);
                 }
             }
@@ -1078,25 +1075,25 @@ namespace PhotoLikerUI
         private string AudioLine(int photoCount, double start, double end, double[]? samples, double? coverSeconds, bool repeat)
         {
             if (AudioPath is null)
-                return repeat ? "Repeat needs an audio file: the photos play once." : " ";
+                return repeat ? VideoStrings.RepeatNeedsAudio : " ";
 
             if (_audioLength is not { } audio)
             {
                 // Still being read, or not to be told
-                return repeat && !_readingAudioLength ? "The length of the audio is not known: the photos play once." : " ";
+                return repeat && !_readingAudioLength ? VideoStrings.AudioLengthUnknown : " ";
             }
 
             var photoPass = VideoGenerationService.PhotoSeconds(photoCount, start, end, samples);
             var cover = coverSeconds ?? 0;
             var once = cover + photoPass;
             if (repeat && photoPass > 0 && audio.TotalSeconds > once)
-                return $"The photos play {TimesText((audio.TotalSeconds - cover) / photoPass)} times, until the audio ends.";
+                return string.Format(VideoStrings.PhotosPlayTimesFormat, TimesText((audio.TotalSeconds - cover) / photoPass));
 
             return VideoGenerationService.FitOfAudio(once, audio.TotalSeconds) switch
             {
-                AudioFit.Cut => "The audio is cut where the video ends.",
-                AudioFit.Repeated => RepeatAudioSelected ? "The audio is played over and over." : "The audio is played once, then the video is silent.",
-                _ => "The audio is about as long as the video.",
+                AudioFit.Cut => VideoStrings.AudioCut,
+                AudioFit.Repeated => RepeatAudioSelected ? VideoStrings.AudioRepeated : VideoStrings.AudioOnceThenSilent,
+                _ => VideoStrings.AudioAbout,
             };
         }
 
@@ -1167,10 +1164,36 @@ namespace PhotoLikerUI
             _audioPlayModeCombo.Enabled = enabled;
         }
 
-        private const int DialogWidth = 534;
+        // The width of the dialog and of its label and button columns with the texts of English: wider where the texts of the language need it
+        private const int BaseDialogWidth = 534;
+        private const int BaseLabelColumnWidth = 130;
+        private const int BaseButtonColumnWidth = 104;
+        private const int LabelColumnPadding = 6;  // the label margins
+        private const int ButtonColumnPadding = 20; // the margins and the border of a button
 
-        /// <summary>Wide enough for "Use first image".</summary>
-        private const int ButtonColumnWidth = 104;
+        private int _dialogWidth = BaseDialogWidth;
+        private int _labelColumnWidth = BaseLabelColumnWidth;
+        private int _buttonColumnWidth = BaseButtonColumnWidth;
+
+        /// <summary>
+        /// The column of the labels is wide enough for the longest label, and the one of the "Use first image" button for its text. The columns
+        /// between them keep their width, so the dialog grows by what these two do.
+        /// </summary>
+        private void MeasureColumns()
+        {
+            int Wide(string text) => TextRenderer.MeasureText(text, Font).Width;
+
+            string[] labels =
+            [
+                VideoStrings.LabelPhotosFrom, VideoStrings.LabelSortOrder, VideoStrings.LabelOutputFolder, VideoStrings.LabelOutputFileName,
+                VideoStrings.LabelAudio, VideoStrings.LabelCover, VideoStrings.LabelResolution, VideoStrings.LabelFrameTimeRange,
+                VideoStrings.LabelRepeatOrOnce, VideoStrings.LabelVideoLength, VideoStrings.LabelCodec, VideoStrings.LabelQuality,
+                VideoStrings.LengthReading, VideoStrings.LengthUnknown, VideoStrings.FileNotFound,
+            ];
+            _labelColumnWidth = Math.Max(BaseLabelColumnWidth, labels.Max(Wide) + LabelColumnPadding);
+            _buttonColumnWidth = Math.Max(BaseButtonColumnWidth, Wide(VideoStrings.UseFirstImage) + ButtonColumnPadding);
+            _dialogWidth = BaseDialogWidth + (_labelColumnWidth - BaseLabelColumnWidth) + (_buttonColumnWidth - BaseButtonColumnWidth);
+        }
 
         /// <summary>The height that makes room for the log and the progress bar, on top of the one of the rows.</summary>
         private const int LogHeight = 150;
@@ -1179,25 +1202,13 @@ namespace PhotoLikerUI
 
         private static readonly Size CoverPreviewSize = new(160, 90);
 
-        private const string RandomFrameTimesHint =
-            "Each photo is shown for a time of its own, picked at random between Start and End (whichever is the smaller), instead of going from Start to End in steps. The cover keeps its own time. The times are drawn when you tick this and when you pick another folder, and the video length shown is the length of the video.";
-
-        private const string PlayModeHint =
-            "Photos. Once: they play once. Repeat: when the audio is longer than they are, they play over and over until it ends (instead of the audio being cut).";
-
-        private const string AudioPlayModeHint =
-            "Audio. Repeat: when it is shorter than the video, it is played over and over until the video ends. Once: it is played once, and the rest of the video is silent. A longer audio is cut where the video ends (unless the photos are set to repeat).";
-
-        private const string CoverHint =
-            "A picture that opens the video, before the photos, whatever their sort order. It is shown for the time set here, and not as part of the frame time range.";
-
         private void BrowseCover()
         {
             var extensions = _extensions.Select(extension => extension.StartsWith('.') ? "*" + extension : "*." + extension).ToList();
             using var dialog = new OpenFileDialog
             {
-                Title = "Choose the cover image of the video",
-                Filter = (extensions.Count > 0 ? $"Pictures|{string.Join(';', extensions)}|" : string.Empty) + "All files|*.*",
+                Title = VideoStrings.ChooseCoverTitle,
+                Filter = (extensions.Count > 0 ? $"{VideoStrings.FilterPictures}|{string.Join(';', extensions)}|" : string.Empty) + $"{VideoStrings.FilterAll}|*.*",
             };
 
             var current = CoverPath;
@@ -1245,7 +1256,7 @@ namespace PhotoLikerUI
                 }
 
                 SetCoverPreview(preview);
-                _coverInfoLabel.Text = $"{fullSize.Width} x {fullSize.Height} px";
+                _coverInfoLabel.Text = string.Format(VideoStrings.CoverSizeFormat, fullSize.Width, fullSize.Height);
             }
             catch (Exception ex)
             {
@@ -1253,8 +1264,8 @@ namespace PhotoLikerUI
                 if (!IsDisposed && generation == _coverGeneration)
                 {
                     _coverInfoLabel.Text = ex is FileNotFoundException or DirectoryNotFoundException
-                        ? "This file is not there."
-                        : "No preview for this file.";
+                        ? VideoStrings.CoverNotThere
+                        : VideoStrings.CoverNoPreview;
                 }
             }
         }
@@ -1283,7 +1294,7 @@ namespace PhotoLikerUI
             if (_coverPreviewBox.Image is not null)
                 return;
 
-            TextRenderer.DrawText(e.Graphics, "No cover image", Font, _coverPreviewBox.ClientRectangle, SystemColors.GrayText,
+            TextRenderer.DrawText(e.Graphics, VideoStrings.NoCoverImage, Font, _coverPreviewBox.ClientRectangle, SystemColors.GrayText,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
         }
 
@@ -1292,7 +1303,7 @@ namespace PhotoLikerUI
             var firstImagePath = GetFirstImagePath();
             if (string.IsNullOrWhiteSpace(firstImagePath) || !File.Exists(firstImagePath))
             {
-                MessageBox.Show(this, "No source image is available.", MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, VideoStrings.NoSourceImage, MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -1317,7 +1328,7 @@ namespace PhotoLikerUI
         {
             if (string.IsNullOrWhiteSpace(GeneratedOutputPath) || !File.Exists(GeneratedOutputPath))
             {
-                MessageBox.Show(this, "Generated video file is not available.", MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, VideoStrings.GeneratedNotAvailable, MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 _runButton.Enabled = false;
                 return;
             }
@@ -1327,8 +1338,6 @@ namespace PhotoLikerUI
                 UseShellExecute = true
             });
         }
-
-        private const string EmptyFolderText = "No photos in this folder";
 
         /// <summary>
         /// Where the photos of the video come from: the loaded ones (no folder), or the copies in a folder. Shown in the combo as its
@@ -1368,31 +1377,31 @@ namespace PhotoLikerUI
         {
             if (string.IsNullOrWhiteSpace(_outputFolderTextBox.Text))
             {
-                MessageBox.Show(this, "Please select an output folder.", MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, VideoStrings.SelectOutputFolder, MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
             if (string.IsNullOrWhiteSpace(_outputFileNameTextBox.Text))
             {
-                MessageBox.Show(this, "Please enter an output file name.", MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, VideoStrings.EnterFileName, MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
             if (_outputFileNameTextBox.Text.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             {
-                MessageBox.Show(this, "Output file name contains invalid characters.", MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, VideoStrings.InvalidFileName, MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
             if (!string.IsNullOrWhiteSpace(_audioTextBox.Text) && !File.Exists(_audioTextBox.Text.Trim()))
             {
-                MessageBox.Show(this, "The audio file is not there.", MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, VideoStrings.AudioNotThere, MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
             if (CoverPath is { } cover && !File.Exists(cover))
             {
-                MessageBox.Show(this, "The cover image is not there.", MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, VideoStrings.CoverFileNotThere, MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 

@@ -36,6 +36,8 @@
             InitializeEmptyFolders();
             InitializeDuplicates();
             InitializeRotate();
+            InitializeLanguage();
+            ApplyControlTexts(); // the designer writes English into the buttons it makes
             Text = WithDebugPrefix(Text);
 
             // Set application icon programmatically

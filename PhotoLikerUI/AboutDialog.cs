@@ -6,7 +6,7 @@ namespace PhotoLikerUI
     /// </summary>
     internal sealed class AboutDialog : Form
     {
-        private const int KeyColumnWidth = 20; // characters; the longest input ("Alt+1-9, Alt+A-Z") plus two spaces
+        private const int KeyColumnGap = 2; // spaces after the longest input
 
         public AboutDialog(bool dark)
         {
@@ -38,7 +38,9 @@ namespace PhotoLikerUI
             };
             var shortcutsHeading = new Label { Text = AboutStrings.ShortcutsHeading, Font = sectionFont, AutoSize = true };
 
-            var lines = AboutStrings.Shortcuts.Select(shortcut => shortcut.Input.PadRight(KeyColumnWidth) + shortcut.Action).ToArray();
+            var shortcutList = AboutStrings.Shortcuts;
+            var keyColumnWidth = shortcutList.Max(shortcut => shortcut.Input.Length) + KeyColumnGap;
+            var lines = shortcutList.Select(shortcut => shortcut.Input.PadRight(keyColumnWidth) + shortcut.Action).ToArray();
             var shortcuts = new TextBox
             {
                 Multiline = true,

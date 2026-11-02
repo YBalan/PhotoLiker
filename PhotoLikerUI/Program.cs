@@ -16,6 +16,7 @@ namespace PhotoLikerUI
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
+            MainForm.SetLanguage(AppLanguage.Find(GlobalConfig.Load().Language)); // before the first text is looked up
             SettingsPresentation.Register();
 
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
@@ -42,7 +43,7 @@ namespace PhotoLikerUI
             try
             {
                 MessageBox.Show(
-                    $"{exception.Message}{Environment.NewLine}{Environment.NewLine}Details were saved to:{Environment.NewLine}{CrashLog.FilePath}",
+                    string.Format(DialogStrings.CrashDetailsFormat, exception.Message, CrashLog.FilePath),
                     "PhotoLiker",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);

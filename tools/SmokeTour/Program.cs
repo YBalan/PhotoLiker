@@ -13,6 +13,8 @@ namespace SmokeTour;
 ///   --keep                 leave the demo folder behind
 ///   --only-dialogs         instead of the tour: like four photos, make a video in the Generate Video dialog and open the About box
 ///                          (the pictures of the user manual and of docs/how-to-generate-video.md, in a minute or so)
+///   --only-language        instead of the tour: change the Language row of the settings to Ukrainian and back, open the dialogs in
+///                          Ukrainian and check their texts
 ///
 /// The window takes the screen for about a minute (it is photographed as it is on screen, and one step clicks and types
 /// for real): leave the mouse and the keyboard alone.
@@ -25,6 +27,7 @@ internal static class Program
         var screenshots = ValueOf(args, "--screenshots");
         var keep = args.Contains("--keep");
         var onlyDialogs = args.Contains("--only-dialogs");
+        var onlyLanguage = args.Contains("--only-language");
         var demoFolder = Path.GetFullPath(ValueOf(args, "--demo-folder") ?? DefaultDemoFolder());
 
         // Keep the real %LocalAppData%\PhotoLiker (last folder, crash log) out of this. Has to happen before anything reads AppPaths.
@@ -62,7 +65,7 @@ internal static class Program
         {
             try
             {
-                await (onlyDialogs ? tour.RunDialogs() : tour.Run());
+                await (onlyDialogs ? tour.RunDialogs() : onlyLanguage ? tour.RunLanguage() : tour.Run());
             }
             catch (Exception ex)
             {
@@ -76,7 +79,7 @@ internal static class Program
 
         Application.Run(form);
 
-        if (!onlyDialogs)
+        if (!onlyDialogs && !onlyLanguage)
         {
             try
             {

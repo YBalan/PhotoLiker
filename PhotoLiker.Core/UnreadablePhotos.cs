@@ -14,7 +14,7 @@ namespace PhotoLiker.Core
     /// </summary>
     public static class UnreadablePhotos
     {
-        public const string EmptyFileReason = "The file is empty (0 bytes).";
+        public static string EmptyFileReason => CoreStrings.EmptyFileReason;
 
         /// <summary>A stop comes between two photos.</summary>
         /// <param name="progress">The number of photos handled so far.</param>
@@ -35,7 +35,7 @@ namespace PhotoLiker.Core
                 try
                 {
                     if (!File.Exists(path))
-                        throw new FileNotFoundException("It is not there any more.");
+                        throw new FileNotFoundException(CoreStrings.NotThereAnyMore);
 
                     DeletedPhotos.Move(root, path, DeletedPhotos.UnreadableFolderName);
                     moved.Add(path);

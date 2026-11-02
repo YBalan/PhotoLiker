@@ -118,9 +118,9 @@ namespace PhotoLiker.Core
         private static void Check(string keeper, long keeperLength, string copy, long copyLength)
         {
             if (!File.Exists(keeper) || new FileInfo(keeper).Length != keeperLength)
-                throw new IOException("The photo that stays is gone or has changed.");
+                throw new IOException(CoreStrings.KeeperChanged);
             if (!File.Exists(copy) || new FileInfo(copy).Length != copyLength)
-                throw new IOException("The copy is gone or has changed.");
+                throw new IOException(CoreStrings.CopyChanged);
         }
 
         /// <summary>
@@ -135,7 +135,7 @@ namespace PhotoLiker.Core
             {
                 using var reader = File.ReadLines(logFile).GetEnumerator();
                 if (!reader.MoveNext() || JsonSerializer.Deserialize<LogHeader>(reader.Current) is not { Kind: LogKind })
-                    throw new InvalidDataException("This is not a PhotoLiker log of moved duplicates.");
+                    throw new InvalidDataException(CoreStrings.NotDuplicateLog);
 
                 while (reader.MoveNext())
                 {
@@ -145,7 +145,7 @@ namespace PhotoLiker.Core
             }
             catch (JsonException ex)
             {
-                throw new InvalidDataException("This is not a PhotoLiker log of moved duplicates.", ex);
+                throw new InvalidDataException(CoreStrings.NotDuplicateLog, ex);
             }
 
             var restored = new List<DuplicateMove>();
