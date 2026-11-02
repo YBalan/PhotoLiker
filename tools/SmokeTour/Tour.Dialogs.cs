@@ -41,6 +41,7 @@ internal sealed partial class Tour
 
         await GenerateVideoDialog(liked);
         await AboutBox();
+        await AboutUpdate(); // the last one: it ends with the window closing
     }
 
     // ── Generate Video ──────────────────────────────────────────────────────────────────────────
@@ -116,8 +117,8 @@ internal sealed partial class Tour
         var text = AllControls(dialog).OfType<TextBox>().Single().Text;
         checks.That(new[] { "Right / Left", "Space", "Delete", "1-9, A-Z", "Alt+1-9", "F5", "Ctrl+C" }.All(text.Contains), "it lists the keys");
 
-        var buttons = AllControls(dialog).OfType<Button>().Select(b => b.Text).ToList();
-        checks.That(buttons.Count == 3 && buttons[0].Contains("English") && buttons[1].Contains("українською") && buttons[2] == "OK", $"and has the buttons {string.Join(" | ", buttons)}");
+        var buttons = AllControls(dialog).OfType<Button>().Where(b => b.Visible).Select(b => b.Text).ToList();
+        checks.That(buttons.Count == 4 && buttons[0] == "Check for updates" && buttons[1].Contains("English") && buttons[2].Contains("українською") && buttons[3] == "OK", $"and has the buttons {string.Join(" | ", buttons)}");
 
         // The pages are copied beside the program by the project (and by the installer, which packs the same folder)
         checks.That(UserManual.Find(AppContext.BaseDirectory, UserManual.English) is not null, "the English manual is beside the program");

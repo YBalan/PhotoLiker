@@ -99,8 +99,9 @@ internal sealed partial class Tour
 
         var text = AllControls(dialog).OfType<TextBox>().Single().Text;
         checks.That(dialog.Text == "Про PhotoLiker" && text.Contains("Пробіл") && text.Contains("Вподобати фото"), "the About box lists the keys in Ukrainian");
-        var buttons = AllControls(dialog).OfType<Button>().Select(b => b.Text).ToList();
-        checks.That(buttons.Count == 3 && buttons[0] == "User manual (English)" && buttons[1] == "Посібник користувача (українською)", $"and keeps the two manual buttons each in its own language ({string.Join(" | ", buttons)})");
+        var buttons = AllControls(dialog).OfType<Button>().Where(b => b.Visible).Select(b => b.Text).ToList();
+        checks.That(buttons.Count == 4 && buttons[0] == "Перевірити оновлення" && buttons[1] == "User manual (English)" && buttons[2] == "Посібник користувача (українською)",
+            $"and keeps the two manual buttons each in its own language, with the update button in Ukrainian ({string.Join(" | ", buttons)})");
         await DialogShot(dialog, "25-uk-about");
         dialog.Close();
         checks.That(await Until(() => OpenDialog("AboutDialog") is null), "it closes");

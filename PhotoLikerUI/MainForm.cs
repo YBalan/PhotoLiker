@@ -218,6 +218,7 @@
             _globalConfig.LastFolder = _currentConfig.CurrentFolder;
             _globalConfig.Save();
             base.OnFormClosed(e);
+            RunSetupAfterClose(); // after everything is saved: the setup of a new version replaces the files of this one
         }
 
         private void ThemeToggleToolStripButton_Click(object? sender, EventArgs e)
@@ -707,6 +708,9 @@
         {
             using var dialog = new AboutDialog(_currentConfig.IsDarkTheme);
             dialog.ShowDialog(this);
+
+            if (dialog.SetupToRun is { } setup)
+                CloseAndRunSetup(setup);
         }
 
         private void UpdateGpsLink(MetadataWrapper metadata)

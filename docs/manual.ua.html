@@ -334,6 +334,7 @@ PhotoLiker запускається англійською, доки ви цьо
     <tr><td>Find duplicates</td><td>Знайти дублікати</td></tr>
     <tr><td>Register Context Menu / Unregister Context Menu</td><td>Додати в контекстне меню / Прибрати з контекстного меню</td></tr>
     <tr><td>Help</td><td>Довідка</td></tr>
+    <tr><td>Check for updates / Install x.y.z / Release page</td><td>Перевірити оновлення / Встановити x.y.z / Сторінка випуску</td></tr>
     <tr><td>Index photos / Update index / Stop indexing</td><td>Індексувати фото / Оновити індекс / Зупинити індексацію</td></tr>
     <tr><td>Search / More like this / Close results / Faces</td><td>Шукати / Схожі на це / Закрити результати / Обличчя</td></tr>
     <tr><td>Wide … Precise</td><td>Широко … Точно</td></tr>
@@ -560,8 +561,18 @@ PhotoLiker (немає його папки <code>ffmpeg</code>) або дода�
 Для цього вікно не обов’язкове: у головному вікні <kbd>F3</kbd> відкриває англійський посібник, а <kbd>F2</kbd> — український.</p>
 
 <figure>
-  <img src="images/16-about.png" alt="Вікно About із клавішами та кнопками посібника" width="608" height="472">
+  <img src="images/16-about.png" alt="Вікно About із клавішами та кнопками посібника" width="650" height="566">
   <figcaption>Вікно About.</figcaption>
+</figure>
+
+<p>Кнопка <strong>Check for updates</strong> питає GitHub, чи є новіша версія PhotoLiker, ніж ваша. Вона питає лише тоді, коли ви її натиснете: у фоновому режимі
+нічого не перевіряється. Якщо новіша версія є, <strong>Install</strong> спершу запитає вас, потім завантажить установник, перевірить його, закриє PhotoLiker, запустить
+установник поверх встановленої копії і знову запустить PhotoLiker. Ваші налаштування, вподобання та індекси пошуку залишаються. <strong>Release page</strong> відкриває
+сторінку цієї версії, де сказано, що змінилося. Копію, яку розпакували з zip або запустили з коду, так не замінюють: вікно натомість відправляє вас на сторінку випуску.</p>
+
+<figure>
+  <img src="images/27-about-update.png" alt="Вікно About після того, як Check for updates знайшла новішу версію" width="650" height="566">
+  <figcaption>Знайдено новішу версію.</figcaption>
 </figure>
 
 <footer>

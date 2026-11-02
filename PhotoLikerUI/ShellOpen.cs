@@ -21,6 +21,16 @@ namespace PhotoLikerUI
         public static string? Document(string path) =>
             File.Exists(path) ? Start(new ProcessStartInfo(path) { UseShellExecute = true }) : NotThere;
 
+        /// <summary>Opens a web page in the default browser. Only https addresses are handed to Windows.</summary>
+        public static string? Url(string url) =>
+            Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
+                ? Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true })
+                : NotThere;
+
+        /// <summary>Starts a program (the setup of a new version) with its arguments; it is not waited for.</summary>
+        public static string? Run(string program, string arguments) =>
+            File.Exists(program) ? Start(new ProcessStartInfo(program, arguments) { UseShellExecute = true }) : NotThere;
+
         /// <summary>Opens the folder in File Explorer.</summary>
         public static string? Folder(string folder) =>
             Directory.Exists(folder) ? Start(new ProcessStartInfo(folder) { UseShellExecute = true }) : NotThere;

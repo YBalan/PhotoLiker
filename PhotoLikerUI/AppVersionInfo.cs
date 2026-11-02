@@ -15,5 +15,15 @@ namespace PhotoLikerUI
         public static DateTime BuildDate { get; } = new DateTime(2000, 1, 1)
             .AddDays(Version.Build)
             .AddSeconds(Version.Revision * 2);
+
+        /// <summary>
+        /// The release this build is: the release workflow stamps the build with the version of its tag (<c>-p:Version=2.1.0</c>), which ends up in
+        /// the informational version. Null for any other build (the project's default is 0.0.0), which is not a release.
+        /// </summary>
+        public static Version? ReleaseVersion { get; } = UpdateChecker.ReleaseVersionOf(
+            Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion);
+
+        /// <summary>What the About box calls the version: the release (2.1.0) or, for a build that is no release, the assembly version.</summary>
+        public static string DisplayVersion { get; } = ReleaseVersion?.ToString(3) ?? Version.ToString();
     }
 }

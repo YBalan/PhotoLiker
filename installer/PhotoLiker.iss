@@ -56,6 +56,9 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopico
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; "Check for updates" in the About box runs the new setup like this:  PhotoLiker-Setup-x.exe /SILENT /Relaunch=1  (see UpdateLauncher.SetupArguments).
+; A silent setup does not offer to start the program, so this entry starts it again, since the program closed itself to be replaced.
+Filename: "{app}\{#AppExe}"; Flags: nowait; Check: RelaunchRequested
 
 ; The app registers its own "Open in Photo Liker" folder context menu (ContextMenuRegistry); remove it on uninstall.
 ; Settings and likes in %LocalAppData%\PhotoLiker are user data and are left alone.
@@ -99,6 +102,11 @@ begin
     finally
       FindClose(FindRec);
     end;
+end;
+
+function RelaunchRequested: Boolean;
+begin
+  Result := ExpandConstant('{param:Relaunch|0}') = '1';
 end;
 
 function InitializeSetup: Boolean;
