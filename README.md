@@ -804,7 +804,7 @@ every step:
   **SortOrder** lists the same photos oldest first, newest first or as the disk gives them, keeping the shown photo;
 - <kbd>Delete</kbd> moves the photo (keeping its subfolder) to `Deleted`, shows the next one, and the folder is not listed
   again, also with the subfolders on; with the list emptied nothing is shown and the keys do nothing;
-- **Rotate**, the two buttons in the right corner of the status bar (counterclockwise first) and <kbd>Ctrl</kbd>+<kbd>+</kbd> /
+- **Rotate**, the two buttons in the right corner of the status bar (counterclockwise first, each showing its key, with a tooltip) and <kbd>Ctrl</kbd>+<kbd>+</kbd> /
   <kbd>Ctrl</kbd>+<kbd>-</kbd> (also with <kbd>Shift</kbd>, and the numpad keys), turn a photo that has an orientation by two bytes,
   four clicks give the file back byte for byte, the dates of the file become the date taken (and its Liked copy is renamed to the new
   id and still found); a JPEG without any EXIF gets the flag and the date of its file written into it as its Date Taken, and its

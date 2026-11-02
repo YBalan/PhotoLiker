@@ -65,10 +65,12 @@ namespace PhotoLikerUI
         public const string StatusCopyError              = "Error copying photo: {0}";
 
         // Rotate (turns the photo a quarter clockwise or counterclockwise and saves it in its own file)
-        public const string RotateButtonText             = "Rotate";
-        public const string RotateButtonTooltip          = "Rotate the photo a quarter clockwise (Ctrl +) and save it in its file. A JPEG is turned by its orientation flag: the picture is not written again, so nothing is lost however often you turn it. Its date taken (EXIF) and the dates of its file become one: the date taken it has, else the date of its file, which is then written into the photo as its date taken.";
+        public const string RotateButtonText             = "Rotate";       // the name screen readers get; the button itself shows the keys
+        public const string RotateButtonKeys             = "Ctrl +";
+        public const string RotateButtonTooltip          = "Rotate the photo a quarter clockwise (Ctrl +) and save it in its file.\nA JPEG is turned by its orientation flag: the picture is not written again,\nso nothing is lost however often you turn it.\nIts date taken (EXIF) and the dates of its file become one: the date taken it has,\nelse the date of its file, which is then written into the photo as its date taken.";
         public const string RotateBackButtonText         = "Rotate back";
-        public const string RotateBackButtonTooltip      = "Rotate the photo a quarter counterclockwise (Ctrl -) and save it in its file, the same way as the clockwise button.";
+        public const string RotateBackButtonKeys         = "Ctrl -";
+        public const string RotateBackButtonTooltip      = "Rotate the photo a quarter counterclockwise (Ctrl -) and save it in its file,\nthe same way as the clockwise button.";
         public const string StatusRotateNoPhoto          = "No photo to rotate.";
         public const string StatusRotateOnlyJpeg         = "'{0}' is not a JPEG. Only JPEG photos can be rotated.";
         public const string StatusRotating               = "Rotating '{0}'...";
