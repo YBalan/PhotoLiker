@@ -73,7 +73,8 @@ internal static class Program
             }
             finally
             {
-                form.Close();
+                if (!form.IsDisposed) // installing an update from the About box has closed it already
+                    form.Close();
             }
         };
 

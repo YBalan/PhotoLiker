@@ -11,6 +11,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 ## Contents
 
 - [Install](#install)
+  - [Updating](#updating)
 - [Photo search](#photo-search)
 - [Happy path walkthrough](#happy-path-walkthrough)
   - [Keyboard and mouse](#keyboard-and-mouse)
@@ -35,6 +36,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [User manual](#user-manual)
 - [Project layout](#project-layout)
 - [Development](#development)
+  - [Releasing](#releasing)
   - [Smoke tour](#smoke-tour)
 - [License](#license)
 
@@ -61,12 +63,17 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 
 PhotoLiker needs Windows 10/11 (x64) and the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
 
-- **Installer**: build it with `installer\build-installer.ps1` (see [Development](#development)), or take `PhotoLiker-Setup` from
-  the artifacts of a GitHub Actions run (see below). It installs per user, needs no administrator rights and checks for the runtime.
-- **Zip**: `PhotoLikerUI.zip`, also an artifact of the GitHub Actions run.
-- **GitHub Actions artifacts**: every push and pull request to `master` builds both `PhotoLikerUI` (the zip) and `PhotoLiker-Setup`
-  (the installer). To get them for another branch, open *Actions > Build and Package PhotoLikerUI > Run workflow* and pick the
-  branch. The artifacts are on the page of the run.
+- **Installer** (the way to go): take `PhotoLiker-Setup-<version>.exe` from the
+  [latest release](https://github.com/YBalan/PhotoLiker/releases/latest). It installs per user, needs no administrator rights and
+  checks for the runtime. Once it is installed, the program [updates itself](#updating) from the same page when you ask it to.
+- **Zip**: `PhotoLiker-<version>-win-x64.zip` of the same release: unpack it anywhere and run `PhotoLikerUI.exe`.
+- **Windows SmartScreen**: the program is not code-signed (yet), so the first time you run the setup Windows may say *Windows
+  protected your PC*. Choose *More info*, then *Run anyway*.
+- **A build of a branch**: every push and pull request to `master` builds both `PhotoLikerUI` (the zip) and `PhotoLiker-Setup`
+  (the installer) as artifacts of a GitHub Actions run. To get them for another branch, open *Actions > Build and Package
+  PhotoLikerUI > Run workflow* and pick the branch. The artifacts are on the page of the run (and expire). Or build the installer
+  yourself with `installer\build-installer.ps1` (see [Development](#development)). These builds are not releases: they know no
+  version number, and the update button does not offer them a setup.
 - **From source**: `dotnet run --project PhotoLikerUI -c Release -- "C:\Photos\Holiday"`. The folder argument is optional;
   without it the last folder you used is opened.
 
@@ -74,6 +81,25 @@ The **Register Context Menu** button of the toolbar adds *Open in Photo Liker* t
 user only, no administrator rights). The same button removes it again.
 
 The installer and the zip also carry the [user manual](#user-manual), in English and Ukrainian: it opens from the **About** box.
+
+`ffmpeg.exe` (Generate Video) is not part of PhotoLiker: it is GPL v3 software by the [FFmpeg](https://ffmpeg.org/) project (the
+[gyan.dev](https://www.gyan.dev/ffmpeg/builds/) build), run as a separate program. Its licence and the place to get its source are in
+`ffmpeg\COPYING.GPLv3.txt` and `ffmpeg\FFMPEG-NOTICE.txt` beside the program, in the installer and in the zip.
+
+### Updating
+
+Open the [About box](#about-box) (the question mark of the toolbar, or <kbd>F1</kbd>) and press **Check for updates**. PhotoLiker asks
+GitHub for the latest release of the project, and says if it is newer than the version you have. Only that button asks: nothing is checked
+in the background, nothing runs at startup.
+
+- If there is a newer version, **Install x.y.z** asks first, then downloads its setup, checks it against the size and the SHA-256
+  that GitHub gives for the file (a download that does not match is thrown away), closes PhotoLiker (after it saved what it keeps), runs the
+  setup silently over the installed copy and starts PhotoLiker again. Your settings, likes and search indexes stay: they are in
+  `%LocalAppData%\PhotoLiker` and in your photo folders, which the setup does not touch.
+- **Release page** opens the page of that release (what changed, the files).
+- A copy that was not put there by the setup (unpacked from the zip, or run from source) is not replaced by a setup, which would leave a
+  second copy: the box says so and sends you to the release page.
+- If an index is being built, closing for the update asks the same question as closing the window does; answer No and nothing is installed.
 
 ## Photo search
 
@@ -326,13 +352,19 @@ How the photos are prepared:
 
 ### About box
 
-The **Help** button (the question mark, last on the toolbar) or <kbd>F1</kbd> opens the About box: the version and build date, the list of
+The **Help** button (the question mark, last on the toolbar) or <kbd>F1</kbd> opens the About box: the version (the release, like `2.1.0`; a
+build that is no release shows its assembly version) and build date, the list of
 keys and mouse moves of the window (the table under [Keyboard and mouse](#keyboard-and-mouse), without the explanations; keep the two
-in step: the list is `AboutStrings.Shortcuts`), and two buttons, **User manual (English)** and **Посібник користувача (українською)**, that open the
+in step: the list is `AboutStrings.Shortcuts`), the **Check for updates** button (see [Updating](#updating)), and two buttons,
+**User manual (English)** and **Посібник користувача (українською)**, that open the
 [user manual](#user-manual) in the browser. The box follows the dark theme of the window. If the page is not beside the program (a build
 that did not copy it) a message says where it should be.
 
 ![The About box](docs/images/16-about.png)
+
+When a newer version is found the box says so and offers it (a stand-in for GitHub made this picture, see the [smoke tour](#smoke-tour)):
+
+![The About box after Check for updates found a newer version](docs/images/27-about-update.png)
 
 ## Settings
 
@@ -819,6 +851,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script (setup in English or Ukrainian) and `build-installer.ps1`. |
+| `.github` | `workflows\build.yml` (builds every push and pull request to `master`, as artifacts) and `workflows\release.yml` (makes a GitHub release from a tag, see [Releasing](#releasing)), with `release-intro.md`, the text that opens the notes of a release. |
 | `languages` | The language files of the program, `photo-liker-en.txt` (the English texts, built into Core) and `photo-liker-ua.txt`; the build copies them to `Languages\` beside the app. See [Language](#language). |
 | `docs` | Screenshots, the [user manual](#user-manual) pages, [a how-to for Generate Video](docs/how-to-generate-video.md) and a small sample folder of photos. |
 
@@ -834,7 +867,39 @@ installer\build-installer.ps1                           # publish and pack the i
 ```
 
 The installer is written to `publish\installer\PhotoLiker-Setup-<version>.exe`. Inno Setup is available with
-`winget install JRSoftware.InnoSetup`.
+`winget install JRSoftware.InnoSetup`. `installer\build-installer.ps1 -Version 2.1.0` names the installer after that version and stamps it on
+the program too, as a release does (see below).
+
+### Releasing
+
+A release is made by pushing a tag of the form `v<major>.<minor>.<patch>` (from the commit that is to be released, normally on `master`):
+
+```powershell
+git tag v2.1.0
+git push origin v2.1.0
+```
+
+`.github\workflows\release.yml` then runs the tests of both test projects, builds the installer with `build-installer.ps1 -Version 2.1.0`,
+zips the same published folder and creates the GitHub release **Photo Liker 2.1.0** with `PhotoLiker-Setup-2.1.0.exe` and
+`PhotoLiker-2.1.0-win-x64.zip`. Its notes are `.github\release-intro.md` (how to install and update, the SmartScreen warning, the ffmpeg
+licence) followed by GitHub's own list of what changed since the previous release. The workflow fails, and publishes nothing, if a test fails or
+the tag is not of that form. A release that turns out wrong is deleted on GitHub (*Releases > the release > Delete*, and delete the tag with
+`git push --delete origin v2.1.0`) and made again with a new tag; a version number is not used twice.
+
+What the [update button](#updating) of the About box relies on:
+
+- The version of the tag is put on the program (`-p:Version=2.1.0`, which the project turns into the informational version): that is how the
+  running program knows which release it is (`AppVersionInfo.ReleaseVersion`). Without the property the version is `0.0.0-dev`, a build that is
+  no release (a plain `dotnet build`, the artifacts of `build.yml`), which is shown as such and is never offered a setup.
+- The release has a file named `PhotoLiker-Setup-*.exe` (`UpdateChecker.InstallerPrefix`) among its files; GitHub's SHA-256 of it is checked
+  after the download. Only a setup at `github.com/YBalan/PhotoLiker/releases/download/` is accepted.
+- The latest release is the newest one that is neither a draft nor a pre-release (what the API's `releases/latest` returns), so a pre-release
+  does not reach anyone through the button. GitHub allows 60 anonymous requests an hour from one address, plenty for a button that is pressed by hand.
+- The setup is started as `PhotoLiker-Setup-x.exe /SILENT /SP- /NORESTARTAPPLICATIONS /Relaunch=1` (`UpdateLauncher.SetupArguments`); `/Relaunch=1` is read by
+  `installer\PhotoLiker.iss`, which starts the program again at the end of a silent setup. A copy has to have `unins000.exe` beside it (the setup
+  puts it there) to be offered the setup.
+- The logic is `UpdateChecker` in Core (tested in `UpdateCheckerTests`, with a stand-in for GitHub); the button, the question and the download are
+  in `AboutDialog`, and the smoke tour presses them with a stand-in for GitHub (below).
 
 ### Smoke tour
 
@@ -895,7 +960,10 @@ dotnet run -c Release --project tools\SmokeTour -- --screenshots docs\images # a
 toolbar button, makes a video in the real Generate Video dialog with a cover (a title card it draws) and a song (a tone that ffmpeg makes)
 and photographs the dialog empty, filled in and done, then opens the About box and checks that it lists the keys and that both pages of the
 [user manual](#user-manual) are beside the program, and that <kbd>F1</kbd> opens the box and <kbd>F2</kbd> / <kbd>F3</kbd> hand the Ukrainian / English page
-to the browser (the tour takes that call instead, so no browser is launched). Its pictures are `12-generate-video-button` to `16-about` of `docs\images`:
+to the browser (the tour takes that call instead, so no browser is launched). It ends with the [update button](#updating) of the About box, pressed
+for real with a stand-in for GitHub (nothing goes to the network): the same version, an error, a newer version (photographed), a copy that is not installed,
+a build that is no release, Install answered No and then Yes (the setup is downloaded and checked, the window closes and hands the setup to the tour
+instead of running it). Its pictures are `12-generate-video-button` to `16-about` and `27-about-update` of `docs\images`:
 
 ```powershell
 dotnet run -c Release --project tools\SmokeTour -- --only-dialogs --screenshots docs\images
@@ -915,4 +983,6 @@ settings and last folder are not touched.
 
 ## License
 
-MIT, see [LICENSE.txt](LICENSE.txt).
+MIT, see [LICENSE.txt](LICENSE.txt). The program also ships with `ffmpeg.exe`, which is GPL v3 and not covered by it: see [Install](#install).
+The models that are downloaded on first use have their own licences (see [Photo search](#photo-search)); those of InsightFace are for
+non-commercial use only.

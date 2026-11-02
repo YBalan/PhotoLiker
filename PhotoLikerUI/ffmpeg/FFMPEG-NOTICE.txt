@@ -1,0 +1,21 @@
+ffmpeg.exe in this folder
+=========================
+
+PhotoLiker's "Generate Video" uses ffmpeg.exe. It is a separate program, started by PhotoLiker when a video is made; PhotoLiker does not
+contain or link to its code. PhotoLiker itself is under the MIT licence (LICENSE.txt, beside PhotoLikerUI.exe); ffmpeg.exe is not.
+
+What it is
+    FFmpeg 7.1.1, the "essentials" build for Windows by gyan.dev: https://www.gyan.dev/ffmpeg/builds/
+    (run  ffmpeg.exe -version  to see how it was built and which libraries are inside)
+
+Licence
+    GNU General Public License, version 3 or later. The build is made with --enable-gpl --enable-version3 and has GPL libraries inside
+    (libx264, libx265 and others). The text of the licence is in COPYING.GPLv3.txt beside this file.
+
+Source code
+    FFmpeg 7.1.1:   https://ffmpeg.org/releases/ffmpeg-7.1.1.tar.xz
+                    https://github.com/FFmpeg/FFmpeg/tree/n7.1.1
+    The libraries built into it, and the way this build is made:  https://www.gyan.dev/ffmpeg/builds/
+    FFmpeg's own page about its licence:  https://ffmpeg.org/legal.html
+
+To use another ffmpeg, replace this file, or delete it: PhotoLiker then uses the ffmpeg.exe that is found on PATH.

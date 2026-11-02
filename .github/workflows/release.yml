@@ -1,0 +1,85 @@
+name: Release
+
+# Publishes a release on GitHub: push a tag  vMAJOR.MINOR.PATCH  (git tag v2.1.0 && git push origin v2.1.0).
+# The release gets the installer (PhotoLiker-Setup-<version>.exe, what the "Check for updates" button of the About box downloads) and the zip.
+# The version of the tag is stamped on the program, which is how the program knows which release it is.
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write # creates the release and attaches the files
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Version of the tag
+        id: version
+        shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ($env:TAG -notmatch '^v(\d+\.\d+\.\d+)$') {
+            throw "The tag '$env:TAG' is not a release tag. Use v<major>.<minor>.<patch>, for example v2.1.0."
+          }
+          "version=$($Matches[1])" >> $env:GITHUB_OUTPUT
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # A release is not made from code whose tests fail
+      - name: Test the Core library
+        run: dotnet test PhotoLiker.Tests/PhotoLiker.Tests.csproj --configuration Release
+
+      - name: Test the search library
+        run: dotnet test PhotoLiker.Search.Tests/PhotoLiker.Search.Tests.csproj --configuration Release
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if ((Get-Command ISCC.exe -ErrorAction SilentlyContinue) -or (Test-Path $iscc)) {
+            Write-Host 'Inno Setup is already on this runner.'
+          } else {
+            choco install innosetup --no-progress -y
+            if ($LASTEXITCODE -ne 0) { throw "Installing Inno Setup failed with exit code $LASTEXITCODE" }
+          }
+
+      # Publishes the app (framework-dependent, win-x64, stamped with the version) into publish\PhotoLikerUI and packs it
+      - name: Build installer
+        shell: pwsh
+        run: ./installer/build-installer.ps1 -Version '${{ steps.version.outputs.version }}'
+
+      - name: Zip
+        shell: pwsh
+        run: |
+          Get-ChildItem publish/PhotoLikerUI -Recurse -Filter *.pdb | Remove-Item # the installer leaves them out as well
+          Compress-Archive -Path publish/PhotoLikerUI/* -DestinationPath "publish/PhotoLiker-${{ steps.version.outputs.version }}-win-x64.zip"
+
+      - name: Create the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $intro = (Get-Content .github/release-intro.md -Raw).Replace('{version}', $env:VERSION)
+          Set-Content -Path release-intro.md -Value $intro -Encoding utf8
+
+          # The intro goes first, GitHub's list of what changed (the merged pull requests and commits since the last release) after it
+          gh release create $env:TAG `
+            "publish/installer/PhotoLiker-Setup-$env:VERSION.exe" `
+            "publish/PhotoLiker-$env:VERSION-win-x64.zip" `
+            --title "Photo Liker $env:VERSION" `
+            --notes-file release-intro.md `
+            --generate-notes `
+            --verify-tag
+          if ($LASTEXITCODE -ne 0) { throw "gh release create failed with exit code $LASTEXITCODE" }

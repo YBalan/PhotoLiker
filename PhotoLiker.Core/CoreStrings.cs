@@ -40,5 +40,8 @@ namespace PhotoLiker.Core
         public static string TooManyRepeatsFormat => T();
         public static string AudioUnreadable => T();
         public static string DurationSecondsFormat => T();
+        public static string UpdateAnswerUnreadable => T();
+        public static string UpdateTagUnreadableFormat => T();
+        public static string UpdateDownloadDamaged => T();
     }
 }

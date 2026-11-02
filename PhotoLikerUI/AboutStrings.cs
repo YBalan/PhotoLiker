@@ -16,6 +16,22 @@ namespace PhotoLikerUI
 
         public static string ManualNotFoundFormat => T();
 
+        public static string UpdateCheckButton => T();
+        public static string UpdateInstallButtonFormat => T();
+        public static string UpdateReleasePageButton => T();
+        public static string UpdateChecking => T();
+        public static string UpdateNoRelease => T();
+        public static string UpdateUpToDateFormat => T();
+        public static string UpdateAvailableFormat => T();
+        public static string UpdateDevelopmentFormat => T();
+        public static string UpdateNotInstalledFormat => T();
+        public static string UpdateNoSetupFormat => T();
+        public static string UpdateCheckFailedFormat => T();
+        public static string UpdateConfirmFormat => T();
+        public static string UpdateDownloadingFormat => T();
+        public static string UpdateDownloadFailedFormat => T();
+        public static string UpdateStartFailedFormat => T();
+
         /// <summary>The keys and mouse moves of the main window, with what they do. Keep it in step with "Keyboard and mouse" in the README.</summary>
         public static (string Input, string Action)[] Shortcuts =>
             [.. ShortcutIds.Select(id => (T($"Shortcut{id}Input"), T($"Shortcut{id}Action")))];

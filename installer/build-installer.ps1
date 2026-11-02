@@ -8,7 +8,9 @@ The app is published framework-dependent (like the CI build), so the installer s
 .NET 10 Desktop Runtime instead of bundling it. Requires Inno Setup 6 (winget install JRSoftware.InnoSetup).
 
 .PARAMETER Version
-Version stamped on the installer. Defaults to the assembly version of the freshly published build.
+Version stamped on the installer, e.g. 2.1.0 (the release workflow passes the one of the tag). It is also stamped on the program, which is how
+the program knows which release it is (the "Check for updates" button of the About box compares it with the latest release on GitHub).
+Defaults to the assembly version of the freshly published build, and then the program is stamped as 0.0.0-dev, a build that is no release.
 
 .PARAMETER IsccPath
 Path to ISCC.exe when Inno Setup is not on PATH or in its default install folders.
@@ -49,7 +51,9 @@ if (-not $iscc -or -not (Test-Path $iscc)) {
 if (Test-Path $stageDir) { Remove-Item $stageDir -Recurse -Force }
 
 Write-Host "Publishing PhotoLikerUI to $stageDir"
-dotnet publish $project -c Release -r win-x64 --self-contained false -o $stageDir
+$publishArgs = @($project, '-c', 'Release', '-r', 'win-x64', '--self-contained', 'false', '-o', $stageDir)
+if ($Version) { $publishArgs += "-p:Version=$Version" }
+dotnet publish @publishArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
 
 if (-not $Version) {

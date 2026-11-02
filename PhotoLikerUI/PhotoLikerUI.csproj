@@ -22,6 +22,11 @@
     <AssemblyVersion>2.0.*</AssemblyVersion>
     <FileVersion>2.0.0.0</FileVersion>
     <Deterministic>false</Deterministic>
+
+    <!-- The release workflow (.github\workflows\release.yml) and installer\build-installer.ps1 -Version pass the version of the tag
+         (-p:Version=2.1.0); it ends up in the informational version, which is how the program knows which release it is (AppVersionInfo, the
+         "Check for updates" button of the About box). Any other build is 0.0.0-dev and is no release. -->
+    <Version Condition="'$(Version)' == ''">0.0.0-dev</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -51,10 +56,18 @@
     </Content>
   </ItemGroup>
 
+  <!-- ffmpeg.exe is GPL v3 software (the gyan.dev build): its licence and where to get its source go with it, into ffmpeg\ beside the program,
+       and into the zip and the installer, which pack the published folder. The MIT licence of the program itself goes beside PhotoLikerUI.exe. -->
   <ItemGroup>
     <None Update="ffmpeg\ffmpeg.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="ffmpeg\FFMPEG-NOTICE.txt;ffmpeg\COPYING.GPLv3.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Content Include="..\LICENSE.txt" Link="LICENSE.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
