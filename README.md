@@ -850,7 +850,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
-| `installer` | Inno Setup script (setup in English or Ukrainian) and `build-installer.ps1`. |
+| `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |
 | `.github` | `workflows\build.yml` (builds every push and pull request to `master`, as artifacts) and `workflows\release.yml` (makes a GitHub release from a tag, see [Releasing](#releasing)), with `release-intro.md`, the text that opens the notes of a release. |
 | `languages` | The language files of the program, `photo-liker-en.txt` (the English texts, built into Core) and `photo-liker-ua.txt`; the build copies them to `Languages\` beside the app. See [Language](#language). |
 | `docs` | Screenshots, the [user manual](#user-manual) pages, [a how-to for Generate Video](docs/how-to-generate-video.md) and a small sample folder of photos. |
@@ -872,12 +872,20 @@ the program too, as a release does (see below).
 
 ### Releasing
 
-A release is made by pushing a tag of the form `v<major>.<minor>.<patch>` (from the commit that is to be released, normally on `master`):
+A release is made by pushing a tag of the form `v<major>.<minor>.<patch>` on the commit that is to be released (normally on `master`, pushed to
+GitHub first). Pushing the tag is the only manual step; `release.yml` starts by itself when GitHub receives it, and nothing else starts it (a push to a
+branch does not). The task does the tagging with its checks:
 
 ```powershell
-git tag v2.1.0
-git push origin v2.1.0
+installer\publish-release.ps1 -Version 2.1.0 -DryRun   # every check, nothing tagged or pushed
+installer\publish-release.ps1 -Version 2.1.0 -Watch    # tag v2.1.0, push it, follow the workflow run (needs gh)
 ```
+
+In VS Code: *Terminal > Run Task > **publish-release-check** / **publish-release***, which ask for the version. The script refuses when the version
+is not `major.minor.patch` or not newer than the existing `v*` tags, when something is uncommitted, when the commit is not on GitHub yet or has
+no `release.yml`, or when the tag exists (here or on GitHub). It shows the commit, asks you to type the version again (and asks once more if the
+branch is not `master`), and removes the local tag again if the push fails. `-Yes` skips the questions. By hand it is
+`git tag -a v2.1.0 -m "Photo Liker 2.1.0"` and `git push origin v2.1.0`.
 
 `.github\workflows\release.yml` then runs the tests of both test projects, builds the installer with `build-installer.ps1 -Version 2.1.0`,
 zips the same published folder and creates the GitHub release **Photo Liker 2.1.0** with `PhotoLiker-Setup-2.1.0.exe` and
