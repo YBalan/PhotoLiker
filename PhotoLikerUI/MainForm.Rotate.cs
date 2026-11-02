@@ -3,7 +3,7 @@ using PhotoLiker.Search;
 namespace PhotoLikerUI
 {
     /// <summary>
-    /// The two Rotate buttons at the right end of the status bar, and Ctrl + / Ctrl -: turn the photo that is shown a quarter clockwise
+    /// The two Rotate buttons at the right end of the status bar, and Ctrl+'+' / Ctrl+'-': turn the photo that is shown a quarter clockwise
     /// or counterclockwise and save that in its file. A JPEG is turned by its EXIF orientation (see <see cref="JpegOrientation"/>), so
     /// nothing is decoded or written again.
     /// </summary>
@@ -56,7 +56,7 @@ namespace PhotoLikerUI
             return button;
         }
 
-        /// <summary>Ctrl + (also Ctrl and the plus of the numpad) turns clockwise, Ctrl - counterclockwise; Shift, which some keyboards need for the plus, is allowed.</summary>
+        /// <summary>Ctrl+'+' (also Ctrl and the plus of the numpad) turns clockwise, Ctrl+'-' counterclockwise; Shift, which some keyboards need for the plus, is allowed.</summary>
         private static bool TryGetRotateKey(Keys keyData, out int quarterTurns)
         {
             quarterTurns = 0;

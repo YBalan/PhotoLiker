@@ -1208,7 +1208,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         var strip = form.Find<StatusStrip>("statusStrip1");
         checks.That(button.Image is not null && button.Enabled && button.ToolTipText!.Contains("clockwise"), "the status bar has a Rotate button with an icon and a tooltip");
         checks.That(backButton.Image is not null && backButton.Enabled && backButton.ToolTipText!.Contains("counterclockwise"), "and a button for the other way, with an icon and a tooltip");
-        checks.That(button.Text == "Ctrl +" && backButton.Text == "Ctrl -" && button.DisplayStyle == ToolStripItemDisplayStyle.ImageAndText && backButton.DisplayStyle == ToolStripItemDisplayStyle.ImageAndText,
+        checks.That(button.Text == "Ctrl+'+'" && backButton.Text == "Ctrl+'-'" && button.DisplayStyle == ToolStripItemDisplayStyle.ImageAndText && backButton.DisplayStyle == ToolStripItemDisplayStyle.ImageAndText,
             $"each button shows its key next to its icon ('{backButton.Text}' and '{button.Text}')");
         checks.That(strip.ShowItemToolTips, "and the status bar shows the tooltips of its items (it does not by default)");
         var items = strip.Items.Cast<ToolStripItem>().ToList();
