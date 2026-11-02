@@ -47,6 +47,37 @@
       "problemMatcher": "$msCompile"
     },
     {
+      "label": "publish-release-check",
+      "detail": "Dry run: every check of a release, nothing tagged or pushed",
+      "command": "pwsh",
+      "type": "process",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/installer/publish-release.ps1",
+        "-Version",
+        "${input:releaseVersion}",
+        "-DryRun"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "publish-release",
+      "detail": "Tag the current commit v<version> and push the tag: GitHub Actions (release.yml) builds and publishes the release",
+      "command": "pwsh",
+      "type": "process",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/installer/publish-release.ps1",
+        "-Version",
+        "${input:releaseVersion}",
+        "-Watch"
+      ],
+      "presentation": { "reveal": "always", "focus": true, "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
       "label": "test",
       "command": "dotnet",
       "type": "process",
@@ -56,6 +87,13 @@
       ],
       "problemMatcher": "$msCompile",
       "group": { "kind": "test", "isDefault": true }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "releaseVersion",
+      "type": "promptString",
+      "description": "Version to release: major.minor.patch, e.g. 2.1.0 (it becomes the tag v<version>)"
     }
   ]
 }
