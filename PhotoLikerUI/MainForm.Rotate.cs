@@ -18,23 +18,37 @@ namespace PhotoLikerUI
         private void InitializeRotate()
         {
             _rotateBackButton = NewRotateButton(
-                "rotateCounterClockwiseToolStripButton", MainFormStrings.RotateBackButtonText, MainFormStrings.RotateBackButtonTooltip,
+                "rotateCounterClockwiseToolStripButton", MainFormStrings.RotateBackButtonText, MainFormStrings.RotateBackButtonKeys, MainFormStrings.RotateBackButtonTooltip,
                 AppIcons.RotateCounterClockwise(), CounterClockwise);
             _rotateButton = NewRotateButton(
-                "rotateToolStripButton", MainFormStrings.RotateButtonText, MainFormStrings.RotateButtonTooltip,
+                "rotateToolStripButton", MainFormStrings.RotateButtonText, MainFormStrings.RotateButtonKeys, MainFormStrings.RotateButtonTooltip,
                 AppIcons.RotateClockwise(), Clockwise);
 
             // Behind the label that takes the space between, so they sit in the right corner: counterclockwise first, clockwise last
             statusStrip1.Items.Add(_rotateBackButton);
             statusStrip1.Items.Add(_rotateButton);
+
+            statusStrip1.ShowItemToolTips = true; // a status bar shows none by default
         }
 
-        private ToolStripButton NewRotateButton(string name, string text, string tooltip, Image image, int quarterTurns)
+        /// <summary>Writes the texts of the two buttons again in the language that is on.</summary>
+        private void ApplyRotateLanguage()
         {
-            var button = new ToolStripButton(text)
+            _rotateBackButton.AccessibleName = MainFormStrings.RotateBackButtonText;
+            _rotateBackButton.Text = MainFormStrings.RotateBackButtonKeys;
+            _rotateBackButton.ToolTipText = MainFormStrings.RotateBackButtonTooltip;
+            _rotateButton.AccessibleName = MainFormStrings.RotateButtonText;
+            _rotateButton.Text = MainFormStrings.RotateButtonKeys;
+            _rotateButton.ToolTipText = MainFormStrings.RotateButtonTooltip;
+        }
+
+        private ToolStripButton NewRotateButton(string name, string accessibleName, string keys, string tooltip, Image image, int quarterTurns)
+        {
+            var button = new ToolStripButton(keys)
             {
                 Name = name,
-                DisplayStyle = ToolStripItemDisplayStyle.Image, // the text is still the accessible name
+                AccessibleName = accessibleName, // the text is the short key
+                DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
                 Image = image,
                 ToolTipText = tooltip,
             };

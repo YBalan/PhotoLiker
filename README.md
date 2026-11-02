@@ -30,6 +30,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Removing empty folders](#removing-empty-folders)
 - [Finding duplicates](#finding-duplicates)
 - [Dark and light theme](#dark-and-light-theme)
+- [Language](#language)
 - [Settings file](#settings-file)
 - [User manual](#user-manual)
 - [Project layout](#project-layout)
@@ -348,6 +349,7 @@ the top whenever another photo is shown:
 | **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, `Random` in a random order, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
 | **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
 | **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
+| **Language** | The language of the program, `English` or `Українська`. It changes at once and is kept for all folders. See [Language](#language). |
 
 The rows of **Current File** and **TotalFiles** are read-only. **CurrentIndex** is the number of the shown photo, counted
 from 0: type another number into it to jump to that photo (a number outside the list goes to the nearest end).
@@ -701,6 +703,53 @@ The theme button of the toolbar switches between the two. The choice is stored i
 
 ![The light theme](docs/images/11-light-theme.png)
 
+## Language
+
+The program speaks **English** (built in, and the default) or any language that has a **language file**. The **Language** row of the settings grid
+lists them; the change is made at once, without a restart: the toolbar and its tips, the search strip (including the lines of the model box), the
+status line, every dialog (Generate Video, Align dates, Remove empty folders, Find duplicates, the confirmations and messages), the About box and the
+help texts of the two grids are written again in the new language, and the dialogs that open later use it too. The choice goes to `global-config.json`
+in `%LocalAppData%\PhotoLiker`, not to the settings file of a folder, so it is the same for every folder and does not travel with a folder that is
+shared between computers.
+
+**The files.** A language is a plain text file named `photo-liker-<code>.txt` (UTF-8): `photo-liker-ua.txt` is Ukrainian, `photo-liker-en.txt` English
+(`ua` is the code of the file, not of the culture). The program looks for them in the folder `Languages` next to the program (the build, the zip and
+the installer put `photo-liker-en.txt` and `photo-liker-ua.txt` there) and in `%LocalAppData%\PhotoLiker\Languages`, where a file wins over the one beside
+the program and survives a new version being installed. Every file found is a choice in the Language row, named as the file's own `Name` line says;
+with no file at all there is English only. The list is read again each time it is opened, so a file you just added is in it; to see an edit of a file
+that is in use, pick another language and then this one again.
+
+**The format.** One text per line, `Name = text`; empty lines and lines that begin with `#` are ignored. The name is the class that offers the text and
+its member (`SearchStrings.IndexButton`) and is not to be changed; the text is what you translate. In a text, `\n` is a new line, `\t` a tab, `\\` a
+backslash and `\s` a space (the spaces at the very start and end of a text are cut off, so write `\s` where one is meant there); any other backslash stays
+(`Deleted\Duplicated`). `{0}`, `{1}` ... are filled in by the program: keep them (their order is yours). A text of the form `photo|photos` holds the forms
+of a noun for a number; Ukrainian has three (`фото|фото|фото`: 1, 2-4, 5+). The first lines, without a dot in their name, describe the language:
+
+```
+Name = Українська        how the language is named in the list
+Culture = uk-UA          the .NET culture: month names, and the language of what .NET itself says
+Plural = east-slavic     one-other (1 | the rest: English, German ...) or east-slavic (1, 21 | 2-4, 22-24 | the rest: Ukrainian, Russian ...)
+```
+
+**A new language.** Copy `photo-liker-en.txt` to `photo-liker-<code>.txt` (in `%LocalAppData%\PhotoLiker\Languages`, or in the folder `languages` of the
+repository, from where the build copies it), change the three lines above and translate the texts. A text that is left out, or that has other `{0}` than
+English, is shown in English, and when the language is picked the status line says how many of those there are and names the first, so a language can be
+translated in steps. `Plural = ...` has two rules for now (`PluralRule` in Core); another is a few lines in `Plural.Index`.
+
+What is **not** translated, on purpose: the names of the rows of the two grids (`LikedFolder`, `Date Taken (Original)`, the categories), the names of the
+folders (`Liked`, `Deleted`, `1 - Group`) and of the settings file, and the words of a search (descriptions and month names are English; see
+[Photo search](#photo-search)). Windows' own dialogs (the folder picker, the file dialogs, the buttons of a message box) follow the language of
+Windows. Dates and numbers follow the regional settings of Windows, not this setting, except for the month names of <kbd>PageDown</kbd> / <kbd>PageUp</kbd>.
+The setup program is in English or Ukrainian too (it offers both when it starts); the program itself starts in English whatever language the setup used.
+
+**For developers.** The English texts are `languages\photo-liker-en.txt`, built into `PhotoLiker.Core` (so there is a word for everything with no file),
+and every other language is measured against it. A text is offered by a class of one of the three assemblies (`AboutStrings`, `SearchStrings`, `VideoStrings`,
+`CoreStrings` ...) as one line, `public static string IndexButton => T();`, and the code uses it as it always did; a text whose name ends in `Format` is a format
+string. A new text is one such line and one line in `photo-liker-en.txt` (and in the other files, or it is shown in English). `Loc` holds the language that is
+on (`Loc.Language`, `Loc.Changed`; a test puts one on for itself with `Loc.Use`), `AppLanguage` finds and reads the files, `MainForm.ApplyLanguage` writes the
+texts of the window again. The tests (`LanguageFilesOfTheRepositoryTests`) check that every file of `languages` has exactly the texts English has, with the same
+placeholders and the right number of forms of each noun, and that the code asks for no text that is missing and no text goes unasked.
+
 ## Settings file
 
 Each photo folder keeps its settings in `photo-liker-config.json` inside the folder, so every folder remembers its own
@@ -735,7 +784,7 @@ as `OldestFirst` and does not spoil the rest of the file. `SearchPrecision` (the
 settings of the [photo search](#photo-search).
 
 Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that
-was opened), `people.json` (the people named in all folders, see above) and `crash.log` (the stack trace of an unexpected
+was opened, and the [language](#language)), `people.json` (the people named in all folders, see above) and `crash.log` (the stack trace of an unexpected
 error). Set the environment variable `PHOTOLIKER_DATA_DIR` to keep them somewhere else; the tests do that, so running them
 leaves your own files alone.
 
@@ -755,7 +804,8 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
   Ukrainian language (`ua` is the country), so that browsers and screen readers know the language.
 - **Keeping it up to date.** The manual is not generated: when a feature changes, change this README, the pages (both languages) and, for the
   keys, `AboutStrings.Shortcuts`. A new screenshot goes to `docs/images` (the file name decides where the pages show it).
-- **Another language.** Copy `manual.en.html` to `manual.<code>.html`, translate it, add a button to the About box and `UserManual`.
+- **Another language.** Copy `manual.en.html` to `manual.<code>.html`, translate it, add a button to the About box and `UserManual`. The
+  manuals name the buttons as they are in English; the Ukrainian one has a table of the Ukrainian names (see [Language](#language)).
 
 ## Project layout
 
@@ -765,10 +815,11 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown, the ffmpeg video service. Shared by all front ends. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
-| `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app). |
+| `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
-| `installer` | Inno Setup script and `build-installer.ps1`. |
+| `installer` | Inno Setup script (setup in English or Ukrainian) and `build-installer.ps1`. |
+| `languages` | The language files of the program, `photo-liker-en.txt` (the English texts, built into Core) and `photo-liker-ua.txt`; the build copies them to `Languages\` beside the app. See [Language](#language). |
 | `docs` | Screenshots, the [user manual](#user-manual) pages, [a how-to for Generate Video](docs/how-to-generate-video.md) and a small sample folder of photos. |
 
 ## Development
@@ -804,7 +855,7 @@ every step:
   **SortOrder** lists the same photos oldest first, newest first or as the disk gives them, keeping the shown photo;
 - <kbd>Delete</kbd> moves the photo (keeping its subfolder) to `Deleted`, shows the next one, and the folder is not listed
   again, also with the subfolders on; with the list emptied nothing is shown and the keys do nothing;
-- **Rotate**, the two buttons in the right corner of the status bar (counterclockwise first) and <kbd>Ctrl</kbd>+<kbd>+</kbd> /
+- **Rotate**, the two buttons in the right corner of the status bar (counterclockwise first, each showing its key, with a tooltip) and <kbd>Ctrl</kbd>+<kbd>+</kbd> /
   <kbd>Ctrl</kbd>+<kbd>-</kbd> (also with <kbd>Shift</kbd>, and the numpad keys), turn a photo that has an orientation by two bytes,
   four clicks give the file back byte for byte, the dates of the file become the date taken (and its Liked copy is renamed to the new
   id and still found); a JPEG without any EXIF gets the flag and the date of its file written into it as its Date Taken, and its
@@ -849,6 +900,13 @@ to the browser (the tour takes that call instead, so no browser is launched). It
 ```powershell
 dotnet run -c Release --project tools\SmokeTour -- --only-dialogs --screenshots docs\images
 ```
+
+`--only-language` is a third, short one: it changes the **Language** row of the settings grid to Ukrainian, checks that the buttons of the toolbar and
+the search strip, the status bar, the help of the grid and the lines of the model box are Ukrainian at once and that the language went to
+`global-config.json` and not to the settings file of the folder, opens the About box and the Align dates, Remove empty folders, Find duplicates and
+Generate Video dialogs to check that their texts are Ukrainian (and no label is cut off), photographs them, puts a German language file in the folder
+of the user's files to see that it joins the list, and changes the row back. Pass
+`--screenshots <folder>` to keep the pictures (`20-language-english` ... `26-uk-generate-video`, not part of `docs\images`).
 
 The exit code is 0 when every check passed. The window is photographed as it is on screen, and the last step clicks and
 presses keys for real, so leave the mouse and the keyboard alone for the minute it takes. The demo photos go to `PhotoLikerDemo\Holiday` on the drive of the repository (change it with

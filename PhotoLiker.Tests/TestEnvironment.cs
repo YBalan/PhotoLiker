@@ -15,6 +15,27 @@ internal static class TestEnvironment
         Environment.SetEnvironmentVariable(
             AppPaths.DataFolderVariable,
             Path.Combine(Path.GetTempPath(), "PhotoLikerTests_AppData"));
+
+    /// <summary>
+    /// The language files of the program are beside the app, which the tests are not: look in the repository, where they are kept
+    /// (<see cref="AppLanguage.FolderVariable"/>). The path is also what <see cref="Languages"/> hands out.
+    /// </summary>
+    [ModuleInitializer]
+    internal static void FindTheLanguageFiles() =>
+        Environment.SetEnvironmentVariable(AppLanguage.FolderVariable, Languages);
+
+    internal static string RepositoryRoot { get; } = FindRoot();
+
+    internal static string Languages => Path.Combine(RepositoryRoot, "languages");
+
+    private static string FindRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "PhotoLiker.sln")))
+            directory = directory.Parent;
+
+        return directory?.FullName ?? throw new InvalidOperationException("The source tree (PhotoLiker.sln) was not found above the tests.");
+    }
 }
 
 public class AppPathsTests

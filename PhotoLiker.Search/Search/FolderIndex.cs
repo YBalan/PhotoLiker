@@ -248,7 +248,7 @@ namespace PhotoLiker.Search
 
         /// <summary>The photos with a face that looks like this one.</summary>
         public SearchResult SearchPerson(IndexedFace face, string? name, SearchTuning? tuning = null) =>
-            SearchFaces(name ?? "this person", [face.Embedding], tuning ?? SearchTuning.Default);
+            SearchFaces(name ?? SearchLibStrings.ThisPerson, [face.Embedding], tuning ?? SearchTuning.Default);
 
         private SearchResult SearchFaces(string description, IReadOnlyList<float[]> examples, SearchTuning tuning, DateFilter? dates = null)
         {
@@ -408,7 +408,7 @@ namespace PhotoLiker.Search
         public IndexedFace MarkFace(ModelHub models, string fullPath, float x, float y, float width, float height)
         {
             var photo = Index.FindFullPath(fullPath)
-                ?? throw new InvalidOperationException("This photo is not in the index yet, index the folder first.");
+                ?? throw new InvalidOperationException(SearchLibStrings.PhotoNotIndexed);
 
             var decoded = WicPhotoDecoder.Decode(FileReading.ReadAllBytesShared(fullPath));
             float boxX = x * decoded.Width, boxY = y * decoded.Height, boxWidth = width * decoded.Width, boxHeight = height * decoded.Height;

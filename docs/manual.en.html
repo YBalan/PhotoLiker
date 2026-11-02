@@ -267,7 +267,7 @@ of the photo in the Liked and group folders stay where they are.</p>
 <h2 id="rotate">9. Rotating photos</h2>
 
 <p>The two <strong>Rotate</strong> buttons in the right corner of the status bar turn the shown photo a quarter counterclockwise (the first)
-or clockwise (the last) and save that in its file; <kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd> do the same. Press again for the next quarter. It works on JPEG files (<code>.jpg</code>, <code>.jpeg</code>); for another kind of
+or clockwise (the last) and save that in its file; <kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd> do the same (each button shows its key, and a tooltip when you point at it). Press again for the next quarter. It works on JPEG files (<code>.jpg</code>, <code>.jpeg</code>); for another kind of
 file the status bar says so and nothing is written.</p>
 
 <ul>
@@ -301,6 +301,7 @@ description: select it and the pane under the table says what it is for.</p>
     <tr><td><strong>SortOrder</strong></td><td>The order of the photos, see <a href="#order">Order of the photos</a>.</td></tr>
     <tr><td><strong>CacheSize</strong></td><td>How many photos on each side of the shown one are kept ready in memory, so that the arrow keys feel instant.</td></tr>
     <tr><td><strong>ThumbnailSize</strong></td><td>Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the thumbnails changes it.</td></tr>
+    <tr><td><strong>Language</strong></td><td>The language of the program, <strong>English</strong> or <strong>Українська</strong>. See <a href="#language">Language</a>.</td></tr>
   </tbody>
 </table>
 </div>
@@ -308,6 +309,21 @@ description: select it and the pane under the table says what it is for.</p>
 <p><strong>CurrentIndex</strong> is the number of the shown photo, counted from 0: type another number into it to jump to that
 photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong> and the other rows
 that show information cannot be changed.</p>
+
+<h3 id="language">Language</h3>
+<p>The <strong>Language</strong> row of the settings table chooses the language of the program: pick <strong>English</strong> or <strong>Українська</strong> (Ukrainian) in the list. The
+change is made at once, with nothing to restart: the buttons and their tips, the search strip, the messages, the dialogs, the About box and the help texts of the tables are
+written again in the new language. The choice is remembered for the next start and is the same for all folders (it is not in the settings file of a folder, so a folder you share
+with another computer does not carry your language). PhotoLiker starts in English until you change it.</p>
+
+<p><strong>The languages are plain text files.</strong> English is built into the program. Every other language is a file named <code>photo-liker-&lt;code&gt;.txt</code> in the
+<code>Languages</code> folder next to the program (<code>photo-liker-ua.txt</code> is Ukrainian) or in <code>%LocalAppData%\PhotoLiker\Languages</code>; each file found is in the list of the
+<strong>Language</strong> row, and with no file there is English only. To add a language, copy <code>photo-liker-en.txt</code> to a new name in the second folder, translate the part
+after each <code>=</code> with any text editor, and pick it in the list. A text you leave out is shown in English. The first lines of the file explain the rest.</p>
+
+<p>What stays as it is: the <strong>names of the rows</strong> of the two tables (<code>LikedFolder</code>, <code>Date Taken (Original)</code> ...), the names of the folders
+<code>Liked</code>, <code>Deleted</code> and the group folders, and the words of a search: describe the photos in English (the model <strong>XLM-R</strong> also
+understands Ukrainian and many other languages), and month names are English. The dialogs of Windows itself, such as the folder picker and the file dialogs, speak the language of Windows.</p>
 
 <h3>Picking a folder</h3>
 <p>The <strong>…</strong> button of <strong>LikedFolder</strong> opens the Windows folder dialog. Cancelling keeps the old value.</p>
@@ -521,7 +537,8 @@ PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe<
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="theme">16. Dark and light theme</h2>
 
-<p>The theme button of the toolbar switches between the two. The choice is remembered for each folder.</p>
+<p>The theme button of the toolbar switches between the two. The choice is remembered for each folder. (The language of the program is chosen in the settings table,
+see <a href="#language">Language</a>.)</p>
 
 <figure>
   <img src="images/11-light-theme.png" alt="The light theme" width="1486" height="893">
@@ -539,7 +556,7 @@ PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe<
   <li><strong>The Liked folder</strong> (by default inside the photo folder) and its group folders: your copies.</li>
   <li><strong>The <code>Deleted</code> folder</strong> inside the photo folder: the photos you removed, and the duplicates and unreadable photos that were moved.</li>
   <li><strong>On this computer</strong>, in <code>%LocalAppData%\PhotoLiker</code>: the saved lists of folders, the search index, the AI models, the people of all
-  your folders and the last folder you opened. All of it except the models can be rebuilt, so deleting it only costs the time to make it again.</li>
+  your folders, the last folder you opened and the language of the program. All of it except the models can be rebuilt, so deleting it only costs the time to make it again.</li>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->

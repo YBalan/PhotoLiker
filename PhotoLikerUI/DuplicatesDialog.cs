@@ -291,15 +291,15 @@ namespace PhotoLikerUI
                 var text = _groups.Length == 0
                     ? DuplicatesStrings.NoDuplicates
                     : string.Format(DuplicatesStrings.ScanDoneFormat,
-                        Plural.Count(files.Count, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany), MainForm.FormatDuration(clock.Elapsed),
-                        Plural.Count(result.Candidates, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany),
-                        Plural.Count(_groups.Length, DuplicatesStrings.GroupOne, DuplicatesStrings.GroupMany));
+                        Plural.Count(files.Count, DuplicatesStrings.Photo), MainForm.FormatDuration(clock.Elapsed),
+                        Plural.Count(result.Candidates, DuplicatesStrings.Photo),
+                        Plural.Count(_groups.Length, DuplicatesStrings.Group));
                 if (listed.Count > files.Count)
-                    text += string.Format(DuplicatesStrings.ScanLeftOutPart, Plural.Count(listed.Count - files.Count, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany));
+                    text += string.Format(DuplicatesStrings.ScanLeftOutPart, Plural.Count(listed.Count - files.Count, DuplicatesStrings.Photo));
                 if (_groups.Count(g => g.MetadataDiffers) is > 0 and var differing)
-                    text += string.Format(DuplicatesStrings.ScanMetadataPart, Plural.Count(differing, DuplicatesStrings.GroupOne, DuplicatesStrings.GroupMany));
+                    text += string.Format(DuplicatesStrings.ScanMetadataPart, Plural.Count(differing, DuplicatesStrings.Group));
                 if (result.Unreadable > 0)
-                    text += string.Format(DuplicatesStrings.ScanUnreadablePart, Plural.Count(result.Unreadable, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany));
+                    text += string.Format(DuplicatesStrings.ScanUnreadablePart, Plural.Count(result.Unreadable, DuplicatesStrings.Photo));
                 _status.Text = _note + text;
                 _note = string.Empty;
 
@@ -432,14 +432,14 @@ namespace PhotoLikerUI
             _summary.Text = _plans.Length == 0
                 ? string.Empty
                 : string.Format(DuplicatesStrings.SummaryFormat,
-                    Plural.Count(_plans.Length, DuplicatesStrings.GroupOne, DuplicatesStrings.GroupMany),
-                    Plural.Count(files, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany),
+                    Plural.Count(_plans.Length, DuplicatesStrings.Group),
+                    Plural.Count(files, DuplicatesStrings.Photo),
                     bytes / 1073741824.0,
-                    _counts[NeedsChoice] > 0 ? string.Format(DuplicatesStrings.SummaryChoosePart, Plural.Count(_counts[NeedsChoice], DuplicatesStrings.GroupOne, DuplicatesStrings.GroupMany)) : string.Empty,
-                    _counts[LeftAlone] > 0 ? string.Format(DuplicatesStrings.SummaryLeftPart, Plural.Count(_counts[LeftAlone], DuplicatesStrings.GroupOne, DuplicatesStrings.GroupMany)) : string.Empty);
+                    _counts[NeedsChoice] > 0 ? string.Format(DuplicatesStrings.SummaryChoosePart, Plural.Count(_counts[NeedsChoice], DuplicatesStrings.Group)) : string.Empty,
+                    _counts[LeftAlone] > 0 ? string.Format(DuplicatesStrings.SummaryLeftPart, Plural.Count(_counts[LeftAlone], DuplicatesStrings.Group)) : string.Empty);
 
             _move.Text = files > 0
-                ? string.Format(DuplicatesStrings.MoveButtonFormat, Plural.Count(files, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany))
+                ? string.Format(DuplicatesStrings.MoveButtonFormat, Plural.Count(files, DuplicatesStrings.Photo))
                 : DuplicatesStrings.MoveButtonNothing;
             _move.Enabled = _phase == Phase.Ready && files > 0;
         }
@@ -604,10 +604,10 @@ namespace PhotoLikerUI
                     _failed[failure.Path] = failure.Message;
 
                 Changed |= report.Moved.Count > 0;
-                var failures = report.Failures.Count > 0 ? string.Format(DuplicatesStrings.FailedPart, Plural.Count(report.Failures.Count, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany)) : string.Empty;
+                var failures = report.Failures.Count > 0 ? string.Format(DuplicatesStrings.FailedPart, Plural.Count(report.Failures.Count, DuplicatesStrings.Photo)) : string.Empty;
                 _status.Text = string.Format(
                     report.Cancelled ? DuplicatesStrings.MovedStoppedFormat : DuplicatesStrings.MovedFormat,
-                    Plural.Count(report.Moved.Count, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany), report.Bytes / 1073741824.0, failures, Path.GetFileName(report.LogFile)) + indexNote;
+                    Plural.Count(report.Moved.Count, DuplicatesStrings.Photo), report.Bytes / 1073741824.0, failures, Path.GetFileName(report.LogFile)) + indexNote;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -693,10 +693,10 @@ namespace PhotoLikerUI
                     return;
 
                 Changed |= report.Moved.Count > 0;
-                var skipped = report.Skipped > 0 ? string.Format(DuplicatesStrings.UndoSkippedPart, Plural.Count(report.Skipped, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany)) : string.Empty;
+                var skipped = report.Skipped > 0 ? string.Format(DuplicatesStrings.UndoSkippedPart, Plural.Count(report.Skipped, DuplicatesStrings.Photo)) : string.Empty;
                 if (report.Failures.Count > 0)
-                    skipped += string.Format(DuplicatesStrings.FailedPart, Plural.Count(report.Failures.Count, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany));
-                _note = string.Format(DuplicatesStrings.UndoDoneFormat, Plural.Count(report.Moved.Count, DuplicatesStrings.PhotoOne, DuplicatesStrings.PhotoMany), skipped)
+                    skipped += string.Format(DuplicatesStrings.FailedPart, Plural.Count(report.Failures.Count, DuplicatesStrings.Photo));
+                _note = string.Format(DuplicatesStrings.UndoDoneFormat, Plural.Count(report.Moved.Count, DuplicatesStrings.Photo), skipped)
                     + (_index is not null && report.Moved.Count > 0 ? DuplicatesStrings.UndoReindexPart : string.Empty) + " ";
                 look = true; // they are duplicates again: look again
             }

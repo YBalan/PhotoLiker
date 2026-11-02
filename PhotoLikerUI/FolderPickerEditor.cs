@@ -31,7 +31,7 @@ namespace PhotoLikerUI
             {
                 nameof(Settings.LikedFolder) => AppStrings.FolderBrowserSelectLiked,
                 { } name => name,
-                null => "Folder",
+                null => DialogStrings.FolderFallback,
             };
     }
 }

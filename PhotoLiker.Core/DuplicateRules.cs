@@ -100,7 +100,7 @@ namespace PhotoLiker.Core
                 {
                     var (rank, name, reason) = ranks[Path.GetDirectoryName(p) ?? string.Empty];
                     var clean = !IsCopyName(Path.GetFileNameWithoutExtension(p));
-                    return new DuplicateCopy(p, rank, clean ? reason : reason + "; named like a copy", name, group.Lengths[index], clean);
+                    return new DuplicateCopy(p, rank, clean ? reason : reason + CoreStrings.ReasonNamedLikeCopy, name, group.Lengths[index], clean);
                 }).ToList();
                 var best = copies.Max(c => (c.Rank, c.Name, c.Clean));
                 var winners = copies.Where(c => (c.Rank, c.Name, c.Clean) == best).ToList();
@@ -125,11 +125,11 @@ namespace PhotoLiker.Core
             var (name, nameReason) = NameRank(segments);
 
             if (keepPatterns.Any(p => p.IsMatch(relativeFolder)))
-                return (FolderRank.Keep, name, "the folder is one to keep copies in");
+                return (FolderRank.Keep, name, CoreStrings.ReasonKeepFolder);
             if (movePatterns.Any(p => p.IsMatch(relativeFolder)))
-                return (FolderRank.Avoid, name, "the folder is one to move copies out of");
+                return (FolderRank.Avoid, name, CoreStrings.ReasonMoveFolder);
             if (segments.FirstOrDefault(s => DiscardNames.Contains(s, StringComparer.OrdinalIgnoreCase)) is { } discard)
-                return (FolderRank.Avoid, name, $"inside the folder '{discard}' ({nameReason})");
+                return (FolderRank.Avoid, name, string.Format(CoreStrings.ReasonInsideFormat, discard, nameReason));
 
             return (name, name, nameReason);
         }
@@ -140,13 +140,13 @@ namespace PhotoLiker.Core
             var segments = allSegments.Where(s => !DiscardNames.Contains(s, StringComparer.OrdinalIgnoreCase)).ToList();
 
             if (segments.FirstOrDefault(IsDateName) is { } dated)
-                return (FolderRank.Named, $"folder named for a date: '{dated}'");
+                return (FolderRank.Named, string.Format(CoreStrings.ReasonDatedFormat, dated));
             if (segments.FirstOrDefault(IsMeaningful) is { } named)
-                return (FolderRank.Named, $"folder with a name of its own: '{named}'");
+                return (FolderRank.Named, string.Format(CoreStrings.ReasonNamedFormat, named));
             if (segments.FirstOrDefault(IsCounterName) is { } counter)
-                return (FolderRank.Counter, $"only a camera's folder name: '{counter}'");
+                return (FolderRank.Counter, string.Format(CoreStrings.ReasonCounterFormat, counter));
 
-            return (FolderRank.Counter, "no folder of its own");
+            return (FolderRank.Counter, CoreStrings.ReasonNoFolder);
         }
 
         // What Windows and other programs add to the name of a file that was copied into the folder it is in

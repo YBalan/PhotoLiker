@@ -46,10 +46,19 @@ namespace PhotoLikerUI
         {
             var text = value as string;
             var start = DateText.TryParseTyped(text, out var typed) || DateText.TryFindDisplayed(text, out typed) ? typed : DateTime.Now;
-            var dark = Application.OpenForms.OfType<MainForm>().FirstOrDefault()?.IsDarkTheme ?? false;
+            var main = Application.OpenForms.OfType<MainForm>().FirstOrDefault();
 
-            using var dialog = new DateEditDialog(context?.PropertyDescriptor?.DisplayName ?? MainFormStrings.DateEditTitle, start, dark);
-            return dialog.ShowDialog() == DialogResult.OK ? DateText.Display(dialog.Picked) : value;
+            using var dialog = new DateEditDialog(context?.PropertyDescriptor?.DisplayName ?? MainFormStrings.DateEditTitle, start, main?.IsDarkTheme ?? false);
+            return Show(dialog, provider, main) == DialogResult.OK ? DateText.Display(dialog.Picked) : value;
         }
+
+        /// <summary>
+        /// Through the grid's editor service, so the dialog is owned by the grid's form and the grid knows a modal editor is open (it
+        /// then keeps its focus and z-order straight). Without the service (the grid always offers it) the main window owns the dialog.
+        /// </summary>
+        private static DialogResult Show(Form dialog, IServiceProvider? provider, Form? owner) =>
+            provider?.GetService(typeof(System.Windows.Forms.Design.IWindowsFormsEditorService)) is System.Windows.Forms.Design.IWindowsFormsEditorService editorService
+                ? editorService.ShowDialog(dialog)
+                : dialog.ShowDialog(owner);
     }
 }

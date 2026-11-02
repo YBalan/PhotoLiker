@@ -14,7 +14,7 @@ namespace SmokeTour;
 internal sealed partial class Tour(DrivenForm form, string folder, string? screenshotFolder, Checks checks)
 {
     private const int SidePanelWidth = 430;      // wider than the default so the setting names are readable
-    private const int SettingsGridHeight = 450;   // tall enough for all thirteen rows
+    private const int SettingsGridHeight = 475;   // tall enough for all fourteen rows
 
     private readonly string _likedFolder = Path.Combine(folder, "Liked");
 
@@ -195,7 +195,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
 
         var rows = form.VisibleSettingsRows().ToList();
         string[] expected = ["TotalFiles", "CurrentIndex", "CurrentFolder", "CurrentFilePath", "CurrentFileName", "LikedFile", "SavedInFolders",
-            "LikedFolder", "GoThroughSubFolders", "Extensions", "SortOrder", "CacheSize", "ThumbnailSize"];
+            "LikedFolder", "GoThroughSubFolders", "Extensions", "SortOrder", "CacheSize", "ThumbnailSize", "Language"];
         checks.That(expected.All(rows.Contains), "all settings are listed");
         checks.That(!rows.Contains("WindowLeft") && !rows.Contains("IsDarkTheme") && !rows.Contains("Files"), "window state, theme and file list stay hidden");
 
@@ -1208,6 +1208,9 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         var strip = form.Find<StatusStrip>("statusStrip1");
         checks.That(button.Image is not null && button.Enabled && button.ToolTipText!.Contains("clockwise"), "the status bar has a Rotate button with an icon and a tooltip");
         checks.That(backButton.Image is not null && backButton.Enabled && backButton.ToolTipText!.Contains("counterclockwise"), "and a button for the other way, with an icon and a tooltip");
+        checks.That(button.Text == "Ctrl +" && backButton.Text == "Ctrl -" && button.DisplayStyle == ToolStripItemDisplayStyle.ImageAndText && backButton.DisplayStyle == ToolStripItemDisplayStyle.ImageAndText,
+            $"each button shows its key next to its icon ('{backButton.Text}' and '{button.Text}')");
+        checks.That(strip.ShowItemToolTips, "and the status bar shows the tooltips of its items (it does not by default)");
         var items = strip.Items.Cast<ToolStripItem>().ToList();
         checks.That(items.Last() == button && items[^2] == backButton && button.Bounds.Right > strip.ClientSize.Width - 30,
             $"the counterclockwise button comes before the clockwise one, which is the last item, in the right corner (its right edge is at {button.Bounds.Right} of {strip.ClientSize.Width})");

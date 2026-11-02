@@ -1,122 +1,127 @@
+using System.Runtime.CompilerServices;
 namespace PhotoLikerUI
 {
     internal static class MainFormStrings
     {
+        private static string T([CallerMemberName] string key = "") => Loc.Get(nameof(MainFormStrings), key);
+
         // Settings persistence
-        public const string SettingsLoaded               = "Settings loaded from {0}";
-        public const string SettingsLoadError            = "Error loading settings: {0}";
-        public const string SettingsSaved                = "Settings saved to {0}";
-        public const string SettingsSaveError            = "Error saving settings: {0}";
-        public const string SettingsFolderLoaded         = "Settings loaded from folder '{0}'.";
+        public static string SettingsLoaded => T();
+        public static string SettingsLoadError => T();
+        public static string SettingsSaved => T();
+        public static string SettingsSaveError => T();
+        public static string SettingsFolderLoaded => T();
 
         // Folder / file selection dialogs
-        public const string FolderBrowserSelectVideoOutput = "Select a folder to save generated video";
+        public static string FolderBrowserSelectVideoOutput => T();
 
         // Video generation
-        public const string VideoDialogTitle             = "Generate Video";
-        public const string GenerateVideoButtonText      = "Generate Video";
-        public const string GenerateVideoTooltip         = "Generate video from loaded photos using ffmpeg";
-        public const string StatusVideoGenerating        = "Generating video with ffmpeg...";
-        public const string StatusVideoGenerated         = "Video generated: {0}";
-        public const string StatusVideoGenerationError   = "Video generation failed: {0}";
+        public static string VideoDialogTitle => T();
+        public static string GenerateVideoButtonText => T();
+        public static string GenerateVideoTooltip => T();
+        public static string StatusVideoGenerating => T();
+        public static string StatusVideoGenerated => T();
+        public static string StatusVideoGenerationError => T();
 
         // Folder loading
-        public const string StatusFolderLoading          = "Scanning '{0}'...";
-        public const string StatusNoPhotosFound          = "No photos found in the selected folder.";
-        public const string StatusFolderFromSavedList    = "Loaded {0:N0} photos from the list saved for '{1}'. Checking the folder for changes...";
-        public const string StatusFolderChecked          = "Loaded {0:N0} photos from '{1}'. Checked for changes in {2:0.0} s: {3}.";
-        public const string StatusFolderNotReachable     = "'{0}' cannot be reached. The list saved at the last visit is shown.";
-        public const string StatusFolderCheckError       = "Could not check the folder for changes: {0}";
-        public const string CheckNothingChanged          = "nothing changed";
-        public const string CheckAdded                   = "{0:N0} added";
-        public const string CheckRemoved                 = "{0:N0} removed";
-        public const string CheckChanged                 = "{0:N0} changed";
-        public const string CheckIncompleteNote          = " {0:N0} folders could not be read and are looked at again next time.";
+        public static string StatusFolderLoading => T();
+        public static string StatusNoPhotosFound => T();
+        public static string StatusFolderFromSavedList => T();
+        public static string StatusFolderChecked => T();
+        public static string StatusFolderNotReachable => T();
+        public static string StatusFolderCheckError => T();
+        public static string CheckNothingChanged => T();
+        public static string CheckAdded => T();
+        public static string CheckRemoved => T();
+        public static string CheckChanged => T();
+        public static string CheckIncompleteNote => T();
         public const string DebugTitlePrefix             = "[DEBUG] ";
 
         // About (Help button)
-        public const string AboutTitle                   = "About PhotoLiker";
+        public static string AboutTitle => T();
 
         // Image loading / cache
-        public const string ImageLoading                 = "Loading...";
-        public const string StatusCacheLoadError         = "Error loading image {0}: {1}";
+        public static string ImageLoading => T();
+        public static string StatusCacheLoadError => T();
 
         // Like / unlike
-        public const string StatusFileCopied             = "File '{0}' copied to liked folder.";
-        public const string StatusFileSaved              = "File '{0}' saved to '{1}'.";
-        public const string StatusFileRemovedFromGroup   = "Removed '{0}' from '{1}'.";
-        public const string StatusGroupError             = "Error saving photo to group: {0}";
-        public const string StatusLikeCancelled          = "Like cancelled.";
-        public const string StatusCreateLikedFolderError = "Error creating liked folder: {0}";
-        public const string StatusNoFolderSelected       = "No folder selected for liked photos.";
+        public static string StatusFileCopied => T();
+        public static string StatusFileSaved => T();
+        public static string StatusFileRemovedFromGroup => T();
+        public static string StatusGroupError => T();
+        public static string StatusLikeCancelled => T();
+        public static string StatusCreateLikedFolderError => T();
+        public static string StatusNoFolderSelected => T();
 
         // Delete (moves the photo to the Deleted folder)
-        public const string StatusPhotoDeleted           = "'{0}' moved to the Deleted folder. In the list now: {1:N0}.";
-        public const string StatusDeleteError            = "Could not move the photo to the Deleted folder: {0}";
+        public static string StatusPhotoDeleted => T();
+        public static string StatusDeleteError => T();
 
         // Duplicate file dialog
-        public const string DuplicateDialogText          = "File '{0}' already exists in the liked folder. Choose another location?";
-        public const string DuplicateDialogTitle         = "File Exists";
-        public const string SaveLikedPhotoDialogTitle    = "Save Liked Photo";
+        public static string DuplicateDialogText => T();
+        public static string DuplicateDialogTitle => T();
+        public static string SaveLikedPhotoDialogTitle => T();
 
         // Copy to the clipboard
-        public const string StatusPhotoCopied            = "Photo '{0}' copied to the clipboard.";
-        public const string StatusCopyNoPhoto            = "No photo to copy.";
-        public const string StatusCopyError              = "Error copying photo: {0}";
+        public static string StatusPhotoCopied => T();
+        public static string StatusCopyNoPhoto => T();
+        public static string StatusCopyError => T();
 
         // Rotate (turns the photo a quarter clockwise or counterclockwise and saves it in its own file)
-        public const string RotateButtonText             = "Rotate";
-        public const string RotateButtonTooltip          = "Rotate the photo a quarter clockwise (Ctrl +) and save it in its file. A JPEG is turned by its orientation flag: the picture is not written again, so nothing is lost however often you turn it. Its date taken (EXIF) and the dates of its file become one: the date taken it has, else the date of its file, which is then written into the photo as its date taken.";
-        public const string RotateBackButtonText         = "Rotate back";
-        public const string RotateBackButtonTooltip      = "Rotate the photo a quarter counterclockwise (Ctrl -) and save it in its file, the same way as the clockwise button.";
-        public const string StatusRotateNoPhoto          = "No photo to rotate.";
-        public const string StatusRotateOnlyJpeg         = "'{0}' is not a JPEG. Only JPEG photos can be rotated.";
-        public const string StatusRotating               = "Rotating '{0}'...";
-        public const string StatusPhotoRotated           = "'{0}' rotated clockwise and saved.";
-        public const string StatusPhotoRotatedBack       = "'{0}' rotated counterclockwise and saved.";
-        public const string StatusRotateAdded            = " It had no orientation flag yet, so one was added to the file, which is a little larger now.";
-        public const string StatusRotateDatesTaken       = " Its date taken and the dates of the file are {0:g}.";
-        public const string StatusRotateTakenFromFile    = " It had no date taken, so the date of its file, {0:g}, was written into it as its date taken.";
-        public const string StatusRotateDateNotKept      = " The drive did not keep the date of the file.";
-        public const string StatusRotateCopiesNotRenamed = " {0} copy(ies) in the liked folders could not be renamed and are not shown as copies of it any more.";
-        public const string StatusRotateError            = "Could not rotate '{0}': {1}";
+        public static string RotateButtonText => T();       // the name screen readers get; the button itself shows the keys
+        public static string RotateButtonKeys => T();
+        public static string RotateButtonTooltip => T();
+        public static string RotateBackButtonText => T();
+        public static string RotateBackButtonKeys => T();
+        public static string RotateBackButtonTooltip => T();
+        public static string StatusRotateNoPhoto => T();
+        public static string StatusRotateOnlyJpeg => T();
+        public static string StatusRotating => T();
+        public static string StatusPhotoRotated => T();
+        public static string StatusPhotoRotatedBack => T();
+        public static string StatusRotateAdded => T();
+        public static string StatusRotateDatesTaken => T();
+        public static string StatusRotateTakenFromFile => T();
+        public static string StatusRotateDateNotKept => T();
+        public static string StatusRotateCopiesNotRenamed => T();
+        public static string StatusRotateError => T();
 
         // Editing a date row of the metadata grid
-        public const string DateEditTitle                = "Date";
-        public const string DateEditOk                   = "OK";
-        public const string DateEditCancel               = "Cancel";
-        public const string StatusDateBusy               = "Another change to a photo is still running; try again in a moment.";
-        public const string StatusDateSetFormat          = "'{0}': {1} is {2:g} now{3}.";
-        public const string StatusDateAndFileSet         = " and so are the dates of the file";
-        public const string StatusDateError              = "Could not change the date of '{0}': {1}";
+        public static string DateEditTitle => T();
+        public static string DateEditOk => T();
+        public static string DateEditCancel => T();
+        public static string StatusDateBusy => T();
+        public static string StatusDateSetFormat => T();
+        public static string StatusDateAndFileSet => T();
+        public static string StatusDateError => T();
 
         // Zoom / fit
-        public const string StatusImageFitted            = "Image fitted to screen.";
+        public static string StatusImageFitted => T();
 
         // Keyboard
-        public const string StatusKeyPressed             = "Key pressed: {0}";
-        public const string StatusMonthShown             = "{0}: photo {1:N0} of {2:N0}.";
-        public const string StatusNoNextMonth            = "This is the last month of the list.";
-        public const string StatusNoPreviousMonth        = "This is the first month of the list.";
+        public static string StatusKeyPressed => T();
+        public static string StatusMonthShown => T();
+        public static string StatusNoNextMonth => T();
+        public static string StatusNoPreviousMonth => T();
 
         // Theme toggle button labels
-        public const string ThemeDarkLabel               = "\U0001f319 Dark";
-        public const string ThemeLightLabel              = "\u2600\ufe0f Light";
+        public static string ThemeDarkLabel => T();
+        public static string ThemeLightLabel => T();
 
         // Context menu registration
-        public const string ContextMenuRegister          = "Register Context Menu";
-        public const string ContextMenuUnregister        = "Unregister Context Menu";
-        public const string ContextMenuRegisterTooltip   = "Add 'Open in Photo Liker' to folder right-click menu";
-        public const string ContextMenuUnregisterTooltip = "Remove 'Open in Photo Liker' from folder right-click menu";
-        public const string StatusContextMenuRegistered  = "Context menu entry registered. Right-click any folder to use 'Open in Photo Liker'.";
-        public const string StatusContextMenuRemoved     = "Context menu entry removed.";
-        public const string StatusContextMenuError       = "Error updating context menu registration: {0}";
+        public static string ContextMenuRegister => T();
+        public static string ContextMenuUnregister => T();
+        public static string ContextMenuRegisterTooltip => T();
+        public static string ContextMenuUnregisterTooltip => T();
+        public static string StatusContextMenuRegistered => T();
+        public static string StatusContextMenuRemoved => T();
+        public static string StatusContextMenuError => T();
 
         // Folder explorer buttons
-        public const string StatusOpenSourceFolder       = "Opened source folder in File Explorer.";
-        public const string StatusOpenLikedFolder        = "Opened liked folder in File Explorer.";
-        public const string StatusLikedFolderNotSet      = "Liked folder is not set.";
-        public const string StatusSourceFolderNotSet     = "Source folder is not set.";
+        public static string StatusOpenSourceFolder => T();
+        public static string StatusOpenLikedFolder => T();
+        public static string StatusLikedFolderNotSet => T();
+        public static string StatusSourceFolderNotSet => T();
 
         // Exception messages
         public const string ExCurrentFileNullOrEmpty     = "Current file cannot be null or empty.";

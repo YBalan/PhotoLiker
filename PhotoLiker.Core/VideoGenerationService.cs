@@ -103,10 +103,10 @@ namespace PhotoLiker.Core
                 await Task.WhenAll(stdOutTask, stdErrTask, process.WaitForExitAsync());
 
                 if (process.ExitCode != 0)
-                    throw new InvalidOperationException($"ffmpeg failed with exit code {process.ExitCode}.");
+                    throw new InvalidOperationException(string.Format(CoreStrings.FfmpegFailedFormat, process.ExitCode));
 
                 if (!File.Exists(outputPath))
-                    throw new FileNotFoundException($"ffmpeg completed but output file was not created: {outputPath}", outputPath);
+                    throw new FileNotFoundException(string.Format(CoreStrings.FfmpegNoOutputFormat, outputPath), outputPath);
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
@@ -163,8 +163,7 @@ namespace PhotoLiker.Core
             return $"-y -f concat -safe 0 -noautorotate -i \"{listFilePath}\"{audioInput} -vf \"{scaleFilter}\"{audioOutput} -c:v {codec} -crf {crf} -pix_fmt yuv420p -progress pipe:1 -nostats \"{outputPath}\"";
         }
 
-        internal const string FfmpegNotFoundMessage =
-            "ffmpeg executable not found. Place ffmpeg.exe in the 'ffmpeg' subfolder next to the app, or ensure ffmpeg is available in PATH.";
+        internal static string FfmpegNotFoundMessage => CoreStrings.FfmpegNotFound;
 
         internal static string ResolveFfmpegExecutablePath()
         {
@@ -403,7 +402,7 @@ namespace PhotoLiker.Core
             var audio = audioSeconds!.Value;
             var morePasses = Math.Ceiling((audio + RepeatMarginSeconds - once) / photoPass);
             if ((morePasses * photoFiles.Count) + files.Count > MaxListedFiles)
-                throw new InvalidOperationException($"The photos would have to be repeated {morePasses:N0} times to last as long as the audio: too many. Let them play once.");
+                throw new InvalidOperationException(string.Format(CoreStrings.TooManyRepeatsFormat, morePasses));
 
             for (var pass = 0; pass < morePasses; pass++)
             {

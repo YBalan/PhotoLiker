@@ -177,7 +177,7 @@ namespace PhotoLiker.Search
         {
             var info = new FileInfo(entry.Path);
             if (!info.Exists)
-                throw new FileNotFoundException("The photo is gone.");
+                throw new FileNotFoundException(SearchLibStrings.PhotoGone);
 
             var taken = entry.Facts.Taken!.Value;
             var takenUtc = DateAlignment.ToUtc(taken);
@@ -194,7 +194,7 @@ namespace PhotoLiker.Search
                     // The photo has no place for its date taken: the Exif block is made larger, with the date taken in it (and whatever else was asked for).
                     // What the photo says must still be what it said when it was looked at; if it is another one by now, nothing is written into it
                     if (ExifReader.Locate(stream) != entry.Facts.Exif)
-                        throw new InvalidDataException("The photo changed after it was looked at; look again.");
+                        throw new InvalidDataException(SearchLibStrings.PhotoChangedLookAgain);
                     var plan = JpegExif.Plan(stream, ChangeOf(entry.SetExif, taken));
                     if (plan.Splice is { } sp)
                     {
@@ -219,7 +219,7 @@ namespace PhotoLiker.Search
                         var current = ReadText(stream, at);
                         // The place was found when the photo was looked at; if the photo is another one by now, nothing is written into it
                         if (ExifReader.ParseDate(current) != expected)
-                            throw new InvalidDataException("The photo changed after it was looked at; look again.");
+                            throw new InvalidDataException(SearchLibStrings.PhotoChangedLookAgain);
                         if (!current.AsSpan().SequenceEqual(text))
                             edits.Add(new ExifEdit(at, current, text));
                     }
@@ -347,7 +347,7 @@ namespace PhotoLiker.Search
             var at = checked((int)work.Splice.At);
             if (original.Length != work.Expected || at + work.Splice.RemoveLength > original.Length ||
                 !original.AsSpan(at, work.Splice.RemoveLength).SequenceEqual(work.OldBytes))
-                throw new InvalidDataException("The photo changed after it was looked at; look again.");
+                throw new InvalidDataException(SearchLibStrings.PhotoChangedLookAgain);
 
             ReplaceFile(path, work.Splice.Apply(original), created, written);
         }
@@ -405,7 +405,7 @@ namespace PhotoLiker.Search
             {
                 using var lines = File.ReadLines(logFile).GetEnumerator();
                 if (!lines.MoveNext() || JsonSerializer.Deserialize<LogHeader>(lines.Current) is not { Kind: LogKind })
-                    throw new InvalidDataException("This is not a PhotoLiker date log.");
+                    throw new InvalidDataException(SearchLibStrings.NotDateLog);
 
                 while (lines.MoveNext())
                 {
@@ -415,7 +415,7 @@ namespace PhotoLiker.Search
             }
             catch (JsonException ex)
             {
-                throw new InvalidDataException("This is not a PhotoLiker date log.", ex);
+                throw new InvalidDataException(SearchLibStrings.NotDateLog, ex);
             }
 
             var photos = new ConcurrentBag<AlignedFile>();

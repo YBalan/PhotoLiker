@@ -113,7 +113,7 @@ namespace PhotoLiker.Core
             if (process.ExitCode != 0)
             {
                 var lastLine = (await error).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault();
-                throw new InvalidOperationException($"ffmpeg cannot read this file as audio{(lastLine is null ? "." : ": " + lastLine)}");
+                throw new InvalidOperationException(CoreStrings.AudioUnreadable + (lastLine is null ? "." : ": " + lastLine));
             }
         }
     }

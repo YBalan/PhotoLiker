@@ -408,7 +408,7 @@ namespace PhotoLiker.Search
             catch (Exception ex) when (ex is JsonException or FormatException)
             {
                 File.Move(_sharedFile!, _sharedFile + ".bad", overwrite: true);
-                SharedError = $"The shared people file was damaged ({ex.Message}). It was set aside as {Path.GetFileName(_sharedFile)}.bad and started again.";
+                SharedError = string.Format(SearchLibStrings.SharedPeopleDamagedFormat, ex.Message, Path.GetFileName(_sharedFile));
             }
             return new SharedFileModel();
         }

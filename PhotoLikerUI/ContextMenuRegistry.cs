@@ -4,7 +4,6 @@ namespace PhotoLikerUI
 {
     internal static class ContextMenuRegistry
     {
-        private const string MenuLabel = "Open in Photo Liker";
         private const string KeyName = "OpenInPhotoLiker";
 
         // HKCU paths — no admin rights required
@@ -25,7 +24,7 @@ namespace PhotoLikerUI
             foreach (var shellPath in ShellKeyPaths)
             {
                 using var key = Registry.CurrentUser.CreateSubKey(shellPath);
-                key.SetValue(null, MenuLabel);
+                key.SetValue(null, DialogStrings.ContextMenuEntry); // in the language that is on when it is registered
                 key.SetValue("Icon", $"\"{exePath}\"");
 
                 // Directory\shell uses %1, Background\shell uses %V

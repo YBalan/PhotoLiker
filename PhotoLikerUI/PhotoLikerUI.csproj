@@ -19,8 +19,8 @@
 
     <!-- The compiler fills in the * on every build (days since 2000-01-01 and seconds since midnight / 2), so the
          version grows with each build. AppVersionInfo reads the build date back from it. -->
-    <AssemblyVersion>1.0.*</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>2.0.*</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
     <Deterministic>false</Deterministic>
   </PropertyGroup>
 
@@ -38,6 +38,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\docs\images\*.png" Link="Manual\images\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- The language files (languages\photo-liker-en.txt, photo-liker-ua.txt ...) go into Languages\ next to the program, where the Language row of
+       the settings looks for them (and in %LocalAppData%\PhotoLiker\Languages). Publishing copies them as well, so the zip and the installer have them.
+       Any file photo-liker-<code>.txt added to the folder languages\ is a language of the program. -->
+  <ItemGroup>
+    <Content Include="..\languages\photo-liker-*.txt" Link="Languages\%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

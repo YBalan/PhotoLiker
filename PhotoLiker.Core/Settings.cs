@@ -27,6 +27,17 @@ namespace PhotoLiker.Core
         public int    ThumbnailSize  { get; set; } = 110;
         public bool   IsDarkTheme    { get; set; } = false;
 
+        /// <summary>
+        /// The language of the program ("en", "ua"), for the settings grid. It is the language that is on (<see cref="Loc.Language"/>) and is
+        /// kept in the global config, not in the settings file of the folder: the same for every folder.
+        /// </summary>
+        [JsonIgnore]
+        public string Language
+        {
+            get => Loc.Language.Code;
+            set => Loc.Language = AppLanguage.Find(value);
+        }
+
         /// <summary>How strict the photo search is, 0 (wide: more photos, looser matches) to <see cref="MaxSearchPrecision"/> (precise: fewer, closer matches).</summary>
         public int    SearchPrecision { get; set; } = DefaultSearchPrecision;
         public const int MaxSearchPrecision = 100;

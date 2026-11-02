@@ -556,7 +556,7 @@ namespace PhotoLikerUI
                 }
             }
 
-            _status.Text = string.Format(DateAlignmentStrings.StatusGiven, Plural.Count(given, "photo", "photos"), none > 0 ? string.Format(DateAlignmentStrings.StatusGivenNonePart, Plural.Count(none, "photo", "photos")) : string.Empty);
+            _status.Text = string.Format(DateAlignmentStrings.StatusGiven, Plural.Count(given, DateAlignmentStrings.Photo), none > 0 ? string.Format(DateAlignmentStrings.StatusGivenNonePart, Plural.Count(none, DateAlignmentStrings.Photo)) : string.Empty);
             Replan();
         }
 
@@ -570,7 +570,7 @@ namespace PhotoLikerUI
             if (forgotten == 0)
                 return;
 
-            _status.Text = string.Format(DateAlignmentStrings.StatusForgot, Plural.Count(forgotten, "photo", "photos"));
+            _status.Text = string.Format(DateAlignmentStrings.StatusForgot, Plural.Count(forgotten, DateAlignmentStrings.Photo));
             Replan();
         }
 

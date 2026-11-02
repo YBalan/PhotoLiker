@@ -39,7 +39,7 @@ namespace PhotoLikerUI
                 var groupName = Path.GetFileName(plan.Folder);
                 if (plan.ToCopy.Count == 0)
                 {
-                    MessageBox.Show(this, string.Format(GroupCopyStrings.NothingToCopyFormat, Plural.Count(photos.Count, GroupCopyStrings.One, GroupCopyStrings.Many), groupName),
+                    MessageBox.Show(this, string.Format(GroupCopyStrings.NothingToCopyFormat, Plural.Count(photos.Count, GroupCopyStrings.Photo), groupName),
                         GroupCopyStrings.ConfirmTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
@@ -47,7 +47,7 @@ namespace PhotoLikerUI
                 var already = plan.AlreadyThere > 0 ? string.Format(GroupCopyStrings.AlreadyThereFormat, plan.AlreadyThere, photos.Count) : string.Empty;
                 var question = string.Format(
                     GroupCopyStrings.ConfirmFormat,
-                    Plural.Count(plan.ToCopy.Count, GroupCopyStrings.One, GroupCopyStrings.Many), groupName, GroupCopyStrings.FormatSize(plan.Bytes), already,
+                    Plural.Count(plan.ToCopy.Count, GroupCopyStrings.Photo), groupName, GroupCopyStrings.FormatSize(plan.Bytes), already,
                     plan.FolderIsNew ? GroupCopyStrings.NewFolderNote : string.Empty);
                 if (MessageBox.Show(this, question, GroupCopyStrings.ConfirmTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
                     return;
@@ -89,7 +89,7 @@ namespace PhotoLikerUI
 
             return result.Copied == 0
                 ? string.Format(GroupCopyStrings.StatusDoneNothing, groupName, notes)
-                : string.Format(GroupCopyStrings.StatusDoneFormat, Plural.Count(result.Copied, GroupCopyStrings.One, GroupCopyStrings.Many), GroupCopyStrings.FormatSize(result.Bytes), groupName, notes);
+                : string.Format(GroupCopyStrings.StatusDoneFormat, Plural.Count(result.Copied, GroupCopyStrings.Photo), GroupCopyStrings.FormatSize(result.Bytes), groupName, notes);
         }
 
         /// <summary>The photos that could not be copied are listed (the first few), also when the run gave up because they kept failing.</summary>

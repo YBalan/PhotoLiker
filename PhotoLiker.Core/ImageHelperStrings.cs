@@ -1,7 +1,10 @@
+using System.Runtime.CompilerServices;
 namespace PhotoLiker.Core
 {
     public static class ImageHelperStrings
     {
+        private static string T([CallerMemberName] string key = "") => Loc.Get(nameof(ImageHelperStrings), key);
+
         public const string UnknownTagFormat      = "Unknown (0x{0:X4})";
         public const string RationalFormat        = "{0}/{1} ({2:0.###})";
         public const string Infinity              = "∞";
@@ -16,20 +19,20 @@ namespace PhotoLiker.Core
         public const string CategoryUnknown       = "6. Unknown";
         public const string CategoryDebug         = "7. Debug";
         public const string UnknownPrefix         = "Unknown";
-        public const string NotADateFormat        = "'{0}' needs a date and a time, for example 2015-05-01 14:30:00 or 01.05.2015 14:30 (a day alone is taken at noon).";
-        public const string NoDateShown           = "(none)";
+        public static string NotADateFormat => T();
+        public static string NoDateShown => T();
 
         // GPS decoded format strings
         public const string GpsDecimalDegreesFormat = "{0:0.######}°";
         public const string GpsDmsFormat            = "{0}° {1}\' {2:\"0.##}\" {3}";
         public const string GpsCoordFormat          = "{0}, {1}";
         public const string GpsAltitudeFormat       = "{0:0.##} m {1}";
-        public const string GpsAltitudeAboveSea     = "above sea level";
-        public const string GpsAltitudeBelowSea     = "below sea level";
+        public static string GpsAltitudeAboveSea => T();
+        public static string GpsAltitudeBelowSea => T();
         public const string GpsSpeedFormat          = "{0:0.##} {1}";
-        public const string GpsSpeedKmh             = "km/h";
-        public const string GpsSpeedMph             = "mph";
-        public const string GpsSpeedKnots           = "knots";
+        public static string GpsSpeedKmh => T();
+        public static string GpsSpeedMph => T();
+        public static string GpsSpeedKnots => T();
         public const string GpsTimestampFormat      = "{0} {1}";
         public const string GpsMapLinkFormat        = "https://maps.google.com/maps?q={0},{1}";
         public const string GpsLatitude             = "Latitude (decimal)";

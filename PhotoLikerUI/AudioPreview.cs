@@ -115,7 +115,7 @@ namespace PhotoLikerUI
         {
             var info = new FileInfo(audioPath);
             if (!info.Exists)
-                throw new FileNotFoundException("The audio file is not there.", audioPath);
+                throw new FileNotFoundException(DialogStrings.AudioFileNotThere, audioPath);
 
             // A file that was changed since the last listen is not the one that was made a WAV of
             var identity = $"{info.FullName}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";

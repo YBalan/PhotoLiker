@@ -48,6 +48,9 @@ namespace PhotoLikerUI
         private ToolStripControlHost _precisionHost = null!;
         private ToolStripComboBox _modelBox = null!;
         private bool _syncingModel;
+        private ToolStripLabel _precisionWideLabel = null!;
+        private ToolStripLabel _precisionPreciseLabel = null!;
+        private ToolStripLabel _modelLabel = null!;
         private ToolStripDropDownButton _transferButton = null!;
         private ToolStripMenuItem _exportItem = null!;
         private ToolStripMenuItem _importItem = null!;
@@ -149,13 +152,7 @@ namespace PhotoLikerUI
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 AutoSize = false,
             };
-            foreach (var model in ClipModels.All)
-                _modelBox.Items.Add(new ModelChoice(model));
-            // As wide as the longest line (name, vendor, languages), so that the box shows the chosen line whole; the list opens as wide
-            _modelBox.Width = _modelBox.Items.Cast<object>().Max(item => TextRenderer.MeasureText(item.ToString(), _modelBox.Font).Width)
-                + MainFormConstants.ModelBoxPadding;
-            _modelBox.ComboBox.DropDownWidth = _modelBox.Width;
-            _modelBox.SelectedIndex = 0;
+            FillModelBox();
             _modelBox.SelectedIndexChanged += ModelBox_SelectedIndexChanged;
             _modelBox.DropDownClosed += (_, _) => FocusViewer(); // the arrow keys are the viewer's, not the combo box's
 
@@ -172,6 +169,10 @@ namespace PhotoLikerUI
             _transferButton.DropDownItems.AddRange([_exportItem, _importItem]);
             _transferButton.DropDownOpening += (_, _) => ApplyMenuTheme(_transferButton.DropDown);
 
+            _precisionWideLabel = new ToolStripLabel(SearchStrings.PrecisionWide) { Name = "precisionWideToolStripLabel" };
+            _precisionPreciseLabel = new ToolStripLabel(SearchStrings.PrecisionPrecise) { Name = "precisionPreciseToolStripLabel" };
+            _modelLabel = new ToolStripLabel(SearchStrings.ModelLabel) { Name = "searchModelToolStripLabel" };
+
             var strip = new ToolStrip { Name = "searchToolStrip", GripStyle = ToolStripGripStyle.Hidden, Dock = DockStyle.Top };
             strip.Items.AddRange([
                 _transferButton,
@@ -180,11 +181,11 @@ namespace PhotoLikerUI
                 new ToolStripSeparator(),
                 _searchBox, _searchButton, _closeResultsButton, _similarButton, _facesButton,
                 new ToolStripSeparator(),
-                new ToolStripLabel(SearchStrings.PrecisionWide) { Name = "precisionWideToolStripLabel" },
+                _precisionWideLabel,
                 _precisionHost,
-                new ToolStripLabel(SearchStrings.PrecisionPrecise) { Name = "precisionPreciseToolStripLabel" },
+                _precisionPreciseLabel,
                 new ToolStripSeparator(),
-                new ToolStripLabel(SearchStrings.ModelLabel) { Name = "searchModelToolStripLabel" },
+                _modelLabel,
                 _modelBox,
             ]);
             splitContainer3.Panel1.Controls.Add(strip);
@@ -200,6 +201,53 @@ namespace PhotoLikerUI
             };
 
             UpdateSearchControls();
+        }
+
+        /// <summary>The model lines of the combo box, as wide as the longest (name, vendor, languages), so that the box shows the chosen line whole; the list opens as wide.</summary>
+        private void FillModelBox()
+        {
+            var selected = Math.Max(0, _modelBox.SelectedIndex);
+            _syncingModel = true;
+            try
+            {
+                _modelBox.Items.Clear();
+                foreach (var model in ClipModels.All)
+                    _modelBox.Items.Add(new ModelChoice(model));
+
+                _modelBox.Width = _modelBox.Items.Cast<object>().Max(item => TextRenderer.MeasureText(item.ToString(), _modelBox.Font).Width)
+                    + MainFormConstants.ModelBoxPadding;
+                _modelBox.ComboBox.DropDownWidth = _modelBox.Width;
+                _modelBox.SelectedIndex = selected;
+            }
+            finally
+            {
+                _syncingModel = false;
+            }
+        }
+
+        /// <summary>Writes the texts of the strip again in the language that is on (labels, tooltips, the lines of the model box).</summary>
+        private void ApplySearchLanguage()
+        {
+            _searchBox.ToolTipText = SearchStrings.SearchTooltip;
+            _searchBox.TextBox.PlaceholderText = SearchStrings.SearchPlaceholder;
+            _searchButton.Text = SearchStrings.SearchButton;
+            _searchButton.ToolTipText = SearchStrings.SearchTooltip;
+            _closeResultsButton.Text = SearchStrings.CloseResultsButton;
+            _closeResultsButton.ToolTipText = SearchStrings.CloseResultsTooltip;
+            _similarButton.Text = SearchStrings.SimilarButton;
+            _similarButton.ToolTipText = SearchStrings.SimilarTooltip;
+            _facesButton.Text = SearchStrings.FacesButton;
+            _facesButton.ToolTipText = SearchStrings.FacesTooltip;
+            _exportItem.Text = SearchStrings.ExportIndexMenu;
+            _importItem.Text = SearchStrings.ImportIndexMenu;
+            _transferButton.Text = SearchStrings.IndexFileButton;
+            _transferButton.ToolTipText = SearchStrings.IndexFileTooltip;
+            _precisionWideLabel.Text = SearchStrings.PrecisionWide;
+            _precisionPreciseLabel.Text = SearchStrings.PrecisionPrecise;
+            _modelLabel.Text = SearchStrings.ModelLabel;
+            UpdatePrecisionTooltip();
+            FillModelBox();
+            UpdateSearchControls(); // the index button, the label of the index, the tooltip of the model
         }
 
         /// <summary>Enables and labels the controls for what is possible right now.</summary>
@@ -475,9 +523,9 @@ namespace PhotoLikerUI
         }
 
         internal static string FormatDuration(TimeSpan time) =>
-            time.TotalHours >= 1 ? $"{(int)time.TotalHours} h {time.Minutes} min"
-            : time.TotalMinutes >= 1 ? $"{(int)Math.Ceiling(time.TotalMinutes)} min"
-            : $"{(int)time.TotalSeconds} s";
+            time.TotalHours >= 1 ? string.Format(SearchStrings.DurationHoursFormat, (int)time.TotalHours, time.Minutes)
+            : time.TotalMinutes >= 1 ? string.Format(SearchStrings.DurationMinutesFormat, (int)Math.Ceiling(time.TotalMinutes))
+            : string.Format(SearchStrings.DurationSecondsFormat, (int)time.TotalSeconds);
 
         // ── searching ──────────────────────────────────────────────────────
 
