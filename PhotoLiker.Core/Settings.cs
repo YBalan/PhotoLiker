@@ -55,6 +55,10 @@ namespace PhotoLiker.Core
         [JsonConverter(typeof(SlideshowModeConverter))]
         public SlideshowMode SlideshowMode { get; set; } = SlideshowMode.Random;
 
+        /// <summary>Which screens the slideshow covers: the one PhotoLiker is on, or all of them, each with a photo of its own.</summary>
+        [JsonConverter(typeof(SlideshowMonitorsConverter))]
+        public SlideshowMonitors SlideshowMonitors { get; set; } = SlideshowMonitors.Current;
+
         /// <summary>How many seconds the slideshow keeps a photo on the screen, see <see cref="Slideshow.TimeoutOf"/>.</summary>
         public double SlideshowTimeout { get; set; } = Slideshow.DefaultTimeoutSeconds;
 

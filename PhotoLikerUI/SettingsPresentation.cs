@@ -36,6 +36,7 @@ namespace PhotoLikerUI
 
             // The rows say what they are for under the heading of their category: Mode, Timeout, Watermark
             [nameof(Settings.SlideshowMode)]  = [Category(SlideshowCategory), new DisplayNameAttribute("Mode"), Describe(() => SettingsStrings.SlideshowMode)],
+            [nameof(Settings.SlideshowMonitors)] = [Category(SlideshowCategory), new DisplayNameAttribute("Monitors"), Describe(() => SettingsStrings.SlideshowMonitors)],
             [nameof(Settings.SlideshowTimeout)] = [Category(SlideshowCategory), new DisplayNameAttribute("Timeout"), Describe(() => SettingsStrings.SlideshowTimeout)],
             [nameof(Settings.SlideshowWatermark)] = [Category(SlideshowCategory), new DisplayNameAttribute("Watermark"), Describe(() => SettingsStrings.SlideshowWatermark)],
 

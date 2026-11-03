@@ -42,10 +42,16 @@ namespace PhotoLiker.Core
         /// The next place. Not <paramref name="avoid"/> (the photo on the screen now, which a key may have moved to a place that was planned),
         /// unless it is the only photo there is.
         /// </summary>
-        public int Take(int avoid)
+        public int Take(int avoid) => Take(place => place == avoid);
+
+        /// <summary>
+        /// The next place that <paramref name="reject"/> does not turn down (the photos on the screens, for slideshows of several screens), unless every place is turned down:
+        /// then the last one tried. Those turned down are not given later in this round.
+        /// </summary>
+        public int Take(Func<int, bool> reject)
         {
             var place = TakePlanned();
-            if (place == avoid && Count > 1)
+            for (var tried = 1; tried < Count && reject(place); tried++)
                 place = TakePlanned();
             return place;
         }

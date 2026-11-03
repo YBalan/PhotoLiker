@@ -55,8 +55,8 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
   folder out.
 - **Rotate** turns the shown photo a quarter clockwise (or counterclockwise, with the button before it; <kbd>Ctrl</kbd>+<kbd>+</kbd> and <kbd>Ctrl</kbd>+<kbd>-</kbd>) from the buttons in the right corner of the status bar and saves
   it in its file, without losing anything (see [Rotating photos](#rotating-photos)).
-- **Slideshow** on the whole screen (<kbd>Alt</kbd>+<kbd>Enter</kbd>): random or one by one, with a time for each photo and the year or the
-  date and time the photo was taken in the bottom right corner. <kbd>Right</kbd> / <kbd>Left</kbd> go to the photos next to the shown one, also in
+- **Slideshow** on the whole screen, or on every monitor with a different photo on each (<kbd>Alt</kbd>+<kbd>Enter</kbd>): random or one by one,
+  with a time for each photo and the year or the date and time the photo was taken in the bottom right corner. <kbd>Right</kbd> / <kbd>Left</kbd> go to the photos next to the shown one, also in
   the random mode, and holding a key scrolls at the speed of the key repeat (see [Slideshow](#slideshow)).
 - **Settings grid** next to the photo, with a folder picker for the liked folder. Changing which photos are listed,
   or in what order, reloads the folder at once.
@@ -563,19 +563,20 @@ bytes instead of a new file.
 
 ## Slideshow
 
-<kbd>Alt</kbd>+<kbd>Enter</kbd> shows the photos of the list as a slideshow on the whole screen the window is on, beginning with the photo that is
-shown (while search results are shown, the results). Each photo is as large as the screen lets it be, with black around it, and the mouse
-pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back, and the window shows the photo the slideshow ended on.
+<kbd>Alt</kbd>+<kbd>Enter</kbd> shows the photos of the list as a slideshow on the whole screen the window is on (or on every monitor, see **Monitors**
+below), beginning with the photo that is shown (while search results are shown, the results). Each photo is as large as the screen lets it be, with
+black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back, and the window shows the photo the slideshow ended on.
 
 - <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one **in the list, also in the random mode** (where only the timer picks
   at random), and give that photo its full time again. After the last photo comes the first, and before the first the last. A key that is held
   down keeps scrolling.
-- The settings are the three rows of the **4. Slideshow** category of the settings grid. They are kept in the settings file of the folder, so a
+- The settings are the four rows of the **4. Slideshow** category of the settings grid. They are kept in the settings file of the folder, so a
   folder can have its own.
 
 | Setting | Meaning |
 |---|---|
 | **Mode** | `Random` (the default): after the time of a photo, another one of the list, every photo once before any comes a second time and never the same one twice in a row (the photo the slideshow began with counts as shown). `OneByOne`: the next photo of the list. |
+| **Monitors** | `Current` (the default): the screen PhotoLiker is on. `All`: every connected monitor, each with a photo of its own: **never the same photo on two monitors**, and all of them change together (a new set is shown once the photos of all are ready). In `Random` every monitor takes the next photo of the random order. In `OneByOne` the monitors, from left to right as Windows places them, show photos that follow each other (the shown photo stays on the monitor the window is on, the one before it is on the monitor to its left) and the next set begins where this one ends. <kbd>Right</kbd> / <kbd>Left</kbd> move every monitor to its neighbouring photo, so the row of photos moves a place. With more monitors than photos the ones farthest from the window are left out. |
 | **Timeout** | How many seconds a photo stays on the screen: 2 by default, not less than 0.2. The time counts from the moment the photo is on the screen, so a photo that is slow to come (a network share) is not shortened. |
 | **Watermark** | What is written in the bottom right corner, white on a dark band: `DateTime` (the default), the day and the time the photo was taken (`14 Aug 2025 09:12:07`, as everywhere in the program), `Year`, or `None`. The date is the one the search and <kbd>PageUp</kbd> / <kbd>PageDown</kbd> use: the date the camera wrote into the photo if it can be believed, else the date of the file (see [Aligning file dates](#aligning-file-dates)). A photo with no date at all gets no text. |
 
@@ -586,7 +587,9 @@ also cannot make several at once), so a frame is drawn as it is. A full HD frame
 many can be kept ready: the frames of the 6 photos ahead (the way you last went with <kbd>Right</kbd> / <kbd>Left</kbd>), the 2 behind, and, in the
 random mode, the next 3 photos of the random order, which is decided ahead for this purpose. They are made 4 at a time, the most likely first, and never more than
 about 512 MB are kept. So the timer and the keys show a photo from memory. In the random mode only the two photos next to the shown one are kept ready
-until a key is used, because every new photo has new neighbours; then the frames follow the way you go.
+until a key is used, because every new photo has new neighbours; then the frames follow the way you go. With **Monitors** `All` every monitor has frames
+of its own, made for its own size (monitors of different sizes are fine), the memory for frames (512 MB) and the photos made at a time are shared by the
+monitors, and in the random mode only the photo after each is kept ready until a key is used.
 
 A key that comes while its photo is still being made is not lost: up to three are kept and the photo is shown the moment it is there, the
 nearest that is ready first, so holding a key scrolls as fast as the photos can be made and never stands still. In a test on a local disk
@@ -870,6 +873,7 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
   "CacheSize": 20,
   "ThumbnailSize": 120,
   "SlideshowMode": "Random",
+  "SlideshowMonitors": "Current",
   "SlideshowTimeout": 2,
   "SlideshowWatermark": "DateTime",
   "IsDarkTheme": true,
@@ -884,8 +888,8 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
 shared between machines that may run different versions. The spelling `GoThroughSubFolders` (used by the MAUI app) is read
 as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized. `SortOrder` is written by name
 (`OldestFirst`, `NewestFirst`, `ByName`, `Random` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
-as `OldestFirst` and does not spoil the rest of the file. `SlideshowMode` (`Random`, `OneByOne`) and `SlideshowWatermark` (`None`, `Year`, `DateTime`) are
-written by name and read the same way (an unknown name gives `Random` / `DateTime`); `SlideshowTimeout` is in seconds. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
+as `OldestFirst` and does not spoil the rest of the file. `SlideshowMode` (`Random`, `OneByOne`), `SlideshowMonitors` (`Current`, `All`) and `SlideshowWatermark` (`None`, `Year`, `DateTime`) are
+written by name and read the same way (an unknown name gives `Random` / `Current` / `DateTime`); `SlideshowTimeout` is in seconds. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
 settings of the [photo search](#photo-search).
 
 Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that

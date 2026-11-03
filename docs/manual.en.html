@@ -288,8 +288,8 @@ file the status bar says so and nothing is written.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="slideshow">10. Slideshow</h2>
 
-<p>Press <kbd>Alt</kbd>+<kbd>Enter</kbd> and the photos of the list go by on the whole screen, beginning with the photo you are looking at
-(while search results are shown, the results are the list). Each photo is as large as the screen lets it be, with black around it.
+<p>Press <kbd>Alt</kbd>+<kbd>Enter</kbd> and the photos of the list go by on the whole screen, or on every monitor, each with a different photo (see
+<strong>Monitors</strong> below), beginning with the photo you are looking at (while search results are shown, the results are the list). Each photo is as large as the screen lets it be, with black around it.
 <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) takes you back to the window, to the photo the slideshow stopped at.</p>
 
 <ul>
@@ -300,13 +300,14 @@ file the status bar says so and nothing is written.</p>
   <li>A photo that cannot be read is passed over.</li>
 </ul>
 
-<p>The three settings are in the group <strong>4. Slideshow</strong> of the settings table, and are kept for the folder:</p>
+<p>The four settings are in the group <strong>4. Slideshow</strong> of the settings table, and are kept for the folder:</p>
 
 <div class="table-scroll">
 <table class="wide-first">
   <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
   <tbody>
     <tr><td><strong>Mode</strong></td><td><code>Random</code> (the default): after the time of a photo another one of the list, every photo once before any comes a second time. <code>OneByOne</code>: the next photo of the list.</td></tr>
+    <tr><td><strong>Monitors</strong></td><td><code>Current</code> (the default): the screen PhotoLiker is on. <code>All</code>: every connected monitor, each with a photo of its own, never the same photo on two monitors, and they all change together. With <code>Random</code> every monitor takes the next photo of the random order; with <code>OneByOne</code> the monitors, from left to right, show photos that follow each other (the photo you were looking at stays on the monitor of the window), and the next set begins where this one ends. <kbd>→</kbd> / <kbd>←</kbd> move every monitor to its neighbouring photo. With more monitors than photos the farthest from the window are left out.</td></tr>
     <tr><td><strong>Timeout</strong></td><td>How many seconds a photo stays: 2 by default, not less than 0.2. It counts from the moment the photo is on the screen.</td></tr>
     <tr><td><strong>Watermark</strong></td><td>What is written in the bottom right corner: <code>DateTime</code> (the default), the day and the time the photo was taken, <code>Year</code>, or <code>None</code>. It is the date the camera wrote in the photo, when that can be believed, else the date of the file. A photo with no date gets no text.</td></tr>
   </tbody>

@@ -14,6 +14,16 @@ namespace PhotoLiker.Core
         OneByOne,
     }
 
+    /// <summary>Which screens the slideshow covers.</summary>
+    public enum SlideshowMonitors
+    {
+        /// <summary>The screen PhotoLiker is on.</summary>
+        Current,
+
+        /// <summary>Every connected screen, each with a photo of its own (see <see cref="Slideshow.Strip"/> and <see cref="Slideshow.ChooseScreens"/>).</summary>
+        All,
+    }
+
     /// <summary>What the slideshow writes in the bottom right corner of the screen.</summary>
     public enum SlideshowWatermark
     {
@@ -78,6 +88,41 @@ namespace PhotoLiker.Core
 
         public static int Wrap(int index, int count) => (index % count + count) % count;
 
+        /// <summary>
+        /// The photos that <paramref name="screens"/> screens show side by side in the one-by-one mode: that many photos one after the other, left to right,
+        /// beginning with the first at or after <paramref name="head"/> that can be read. Photos that <paramref name="skip"/> names are passed over, so the
+        /// screens never show the same photo, and never leave a gap, because of one that can not be read.
+        /// </summary>
+        public static int[] Strip(int head, int screens, int count, Func<int, bool>? skip = null)
+        {
+            var strip = new int[screens];
+            var first = Wrap(head, count);
+            strip[0] = skip?.Invoke(first) == true ? Move(first, count, 1, skip) : first;
+            for (var i = 1; i < screens; i++)
+                strip[i] = Move(strip[i - 1], count, 1, skip);
+            return strip;
+        }
+
+        /// <summary>
+        /// Which of the screens (counted from 0, left to right) the slideshow uses when there are more of them than photos: no two screens could show different photos then.
+        /// The screen the window is on, <paramref name="primary"/>, is always one, and the others are the ones nearest to it. The result is in the order of the screens.
+        /// </summary>
+        public static int[] ChooseScreens(int screenCount, int primary, int photoCount)
+        {
+            var wanted = Math.Clamp(photoCount, 1, Math.Max(1, screenCount));
+            var chosen = new List<int> { Math.Clamp(primary, 0, screenCount - 1) };
+            for (var distance = 1; chosen.Count < wanted; distance++)
+            {
+                if (chosen[0] - distance >= 0)
+                    chosen.Add(chosen[0] - distance);
+                if (chosen.Count < wanted && chosen[0] + distance < screenCount)
+                    chosen.Add(chosen[0] + distance);
+            }
+
+            chosen.Sort();
+            return [.. chosen];
+        }
+
         /// <summary>The text for the corner of the screen; null when there is none to write (no watermark asked for, or the photo has no date).</summary>
         public static string? WatermarkText(SlideshowWatermark watermark, DateTime? taken) => watermark switch
         {
@@ -109,6 +154,8 @@ namespace PhotoLiker.Core
     }
 
     public sealed class SlideshowModeConverter() : TolerantEnumConverter<SlideshowMode>(SlideshowMode.Random);
+
+    public sealed class SlideshowMonitorsConverter() : TolerantEnumConverter<SlideshowMonitors>(SlideshowMonitors.Current);
 
     public sealed class SlideshowWatermarkConverter() : TolerantEnumConverter<SlideshowWatermark>(SlideshowWatermark.DateTime);
 }

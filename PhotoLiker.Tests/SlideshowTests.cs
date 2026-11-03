@@ -21,6 +21,7 @@ public class SlideshowTests : IDisposable
         var settings = new Settings();
 
         Assert.Equal(SlideshowMode.Random, settings.SlideshowMode);
+        Assert.Equal(SlideshowMonitors.Current, settings.SlideshowMonitors);
         Assert.Equal(2, settings.SlideshowTimeout);
         Assert.Equal(SlideshowWatermark.DateTime, settings.SlideshowWatermark);
     }
@@ -28,14 +29,16 @@ public class SlideshowTests : IDisposable
     [Fact]
     public void TheSettings_AreKeptInTheFileOfTheFolder_ByName()
     {
-        new Settings { CurrentFolder = _tempDir, SlideshowMode = SlideshowMode.OneByOne, SlideshowTimeout = 0.5, SlideshowWatermark = SlideshowWatermark.Year }.Save(_tempDir);
+        new Settings { CurrentFolder = _tempDir, SlideshowMode = SlideshowMode.OneByOne, SlideshowMonitors = SlideshowMonitors.All, SlideshowTimeout = 0.5, SlideshowWatermark = SlideshowWatermark.Year }.Save(_tempDir);
 
         var json = File.ReadAllText(Settings.GetFilePath(_tempDir));
         Assert.Contains("\"SlideshowMode\": \"OneByOne\"", json);
         Assert.Contains("\"SlideshowWatermark\": \"Year\"", json);
+        Assert.Contains("\"SlideshowMonitors\": \"All\"", json);
 
         var loaded = Settings.Load(_tempDir);
         Assert.Equal(SlideshowMode.OneByOne, loaded.SlideshowMode);
+        Assert.Equal(SlideshowMonitors.All, loaded.SlideshowMonitors);
         Assert.Equal(0.5, loaded.SlideshowTimeout);
         Assert.Equal(SlideshowWatermark.Year, loaded.SlideshowWatermark);
     }
@@ -56,13 +59,14 @@ public class SlideshowTests : IDisposable
     public void AName_ThisVersionDoesNotKnow_DoesNotSpoilTheRestOfTheFile()
     {
         File.WriteAllText(Settings.GetFilePath(_tempDir),
-            """{ "CacheSize": 7, "SlideshowMode": "Spiral", "SlideshowWatermark": 12, "SlideshowTimeout": 3 }""");
+            """{ "CacheSize": 7, "SlideshowMode": "Spiral", "SlideshowWatermark": 12, "SlideshowMonitors": "Both", "SlideshowTimeout": 3 }""");
 
         var loaded = Settings.Load(_tempDir);
 
         Assert.Equal(7, loaded.CacheSize);
         Assert.Equal(3, loaded.SlideshowTimeout);
         Assert.Equal(SlideshowMode.Random, loaded.SlideshowMode);
+        Assert.Equal(SlideshowMonitors.Current, loaded.SlideshowMonitors);
         Assert.Equal(SlideshowWatermark.DateTime, loaded.SlideshowWatermark);
     }
 
@@ -221,6 +225,81 @@ public class SlideshowTests : IDisposable
         Assert.True(orders > 1);
 
         static IEnumerable<int> DrawAll(SlideshowShuffle shuffle) => Enumerable.Range(0, 20).Select(_ => shuffle.Take(-1)).ToList();
+    }
+
+    // ── several screens ─────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(5, 3, 8, new[] { 5, 6, 7 })]
+    [InlineData(7, 3, 8, new[] { 7, 0, 1 })]   // round the end of the list
+    [InlineData(0, 1, 8, new[] { 0 })]
+    public void Strip_IsThePhotosOneAfterTheOther(int head, int screens, int count, int[] expected) =>
+        Assert.Equal(expected, Slideshow.Strip(head, screens, count));
+
+    [Fact]
+    public void Strip_PassesOverPhotosThatCanNotBeRead_WithoutGapsOrRepeats()
+    {
+        bool Broken(int i) => i is 6 or 7;
+
+        Assert.Equal([5, 8, 9], Slideshow.Strip(5, 3, 12, Broken));
+        Assert.Equal([8, 9, 10], Slideshow.Strip(6, 3, 12, Broken));    // the head itself can not be read: the next one that can
+        Assert.Equal([4, 5, 8], Slideshow.Strip(4, 3, 12, Broken));
+    }
+
+    [Theory]
+    [InlineData(3, 1, 100, new[] { 0, 1, 2 })]
+    [InlineData(1, 0, 100, new[] { 0 })]       // one screen, one photo each
+    [InlineData(3, 1, 2, new[] { 0, 1 })]      // two photos: two screens, the one the window is on and its neighbour
+    [InlineData(4, 3, 2, new[] { 2, 3 })]      // the window on the last of four screens: the one next to it
+    [InlineData(4, 1, 3, new[] { 0, 1, 2 })]
+    [InlineData(4, 0, 3, new[] { 0, 1, 2 })]
+    [InlineData(3, 1, 1, new[] { 1 })]         // one photo, one screen: the window's
+    public void ChooseScreens_KeepsTheWindowsScreenAndTheNearestOnes(int screens, int primary, int photos, int[] expected) =>
+        Assert.Equal(expected, Slideshow.ChooseScreens(screens, primary, photos));
+
+    [Fact]
+    public void Shuffle_Take_CanTurnDownPhotos_AndDoesNotGiveThemInTheSameRound()
+    {
+        var shuffle = new SlideshowShuffle(10, new Random(5));
+        var picks = new List<int>();
+        for (var i = 0; i < 4; i++)
+            picks.Add(shuffle.Take(place => picks.Contains(place) || place % 2 == 0));
+
+        Assert.All(picks, place => Assert.Equal(1, place % 2));
+        Assert.Equal(picks.Count, picks.Distinct().Count());
+    }
+
+    [Fact]
+    public void Shuffle_Take_GivesUpWhenEveryPhotoIsTurnedDown()
+    {
+        var shuffle = new SlideshowShuffle(3, new Random(1));
+
+        Assert.InRange(shuffle.Take(_ => true), 0, 2);
+    }
+
+    [Fact]
+    public void ScreensThatTakeInTurns_GetDifferentPhotos_EveryRound()
+    {
+        // 3 screens and 12 photos: every tick gives the screens 3 different photos, and each photo comes once in 4 ticks
+        for (var seed = 0; seed < 50; seed++)
+        {
+            var shuffle = new SlideshowShuffle(12, new Random(seed), shown: 4);
+            var shown = new[] { 4, -1, -1 };
+            var all = new List<int>();
+            for (var tick = 0; tick < 8; tick++)
+            {
+                var next = new int[3];
+                for (var screen = 0; screen < 3; screen++)
+                    next[screen] = shuffle.Take(place => place == shown[screen] || Array.IndexOf(next, place, 0, screen) >= 0);
+
+                Assert.Equal(3, next.Distinct().Count());
+                all.AddRange(next);
+                shown = next;
+            }
+
+            Assert.Equal(24, all.Count);
+            Assert.Equal(12, all.Distinct().Count());
+        }
     }
 
     // ── the watermark ───────────────────────────────────────────────────────

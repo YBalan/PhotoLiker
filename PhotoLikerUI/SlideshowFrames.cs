@@ -27,12 +27,10 @@ namespace PhotoLikerUI
     /// </summary>
     internal sealed class SlideshowFrames : IDisposable
     {
-        // The decoder keeps up when several photos are made at once (GDI+ does not), and over a network their reads overlap
-        private const int MaxParallelLoads = 4;
-
         private readonly Size _screen;
         private readonly long _maxBytes;
         private readonly int _minFrames; // always kept, whatever they weigh: the shown photo and the ones next to it
+        private readonly int _maxParallelLoads; // the decoder keeps up when several photos are made at once (GDI+ does not), and over a network their reads overlap
         private readonly Dictionary<string, SlideshowFrame> _frames = new(StringComparer.Ordinal);
         private readonly HashSet<string> _loading = new(StringComparer.Ordinal);
         private readonly HashSet<string> _failed = new(StringComparer.Ordinal);
@@ -44,11 +42,12 @@ namespace PhotoLikerUI
         private long _bytes;
         private int _activePumps;
 
-        public SlideshowFrames(Size screen, long maxBytes, int minFrames)
+        public SlideshowFrames(Size screen, long maxBytes, int minFrames, int maxParallelLoads)
         {
             _screen = screen;
             _maxBytes = maxBytes;
             _minFrames = minFrames;
+            _maxParallelLoads = maxParallelLoads;
         }
 
         /// <summary>A frame finished loading and is now here.</summary>
@@ -101,7 +100,7 @@ namespace PhotoLikerUI
 
         private void StartPumps()
         {
-            while (_activePumps < MaxParallelLoads && _queue.Count > 0 && !_cts.IsCancellationRequested)
+            while (_activePumps < _maxParallelLoads && _queue.Count > 0 && !_cts.IsCancellationRequested)
             {
                 _activePumps++;
                 _ = PumpAsync();
