@@ -138,6 +138,57 @@ public class WicPhotoDecoderTests
     {
         Assert.ThrowsAny<Exception>(() => WicPhotoDecoder.Decode([1, 2, 3, 4, 5]));
     }
+
+    // ── DecodeToFit (the slideshow) ─────────────────────────────────────────
+
+    [Theory]
+    [InlineData(4000, 3000, 1920, 1080, 1440, 1080)] // the height decides
+    [InlineData(3000, 4000, 1920, 1080, 810, 1080)]  // a portrait photo
+    [InlineData(4000, 2250, 1920, 1080, 1920, 1080)] // the same proportions as the screen
+    [InlineData(4000, 1000, 1920, 1080, 1920, 480)]  // a panorama: the width decides
+    public void DecodeToFit_FillsTheBox_KeepingTheProportions(int width, int height, int boxWidth, int boxHeight, int expectedWidth, int expectedHeight)
+    {
+        var photo = WicPhotoDecoder.DecodeToFit(Jpeg(width, height, 20, 40, 220), boxWidth, boxHeight);
+
+        Assert.Equal(expectedWidth, photo.Width);
+        Assert.Equal(expectedHeight, photo.Height);
+        Assert.Equal(expectedWidth * expectedHeight * 4, photo.Pbgra.Length);
+    }
+
+    [Fact]
+    public void DecodeToFit_GivesPremultipliedBgra_OfTheColoursOfThePhoto()
+    {
+        var photo = WicPhotoDecoder.DecodeToFit(Jpeg(400, 200, blue: 20, green: 40, red: 220), 100, 100);
+
+        Assert.InRange(photo.Pbgra[0], 5, 40);     // blue
+        Assert.InRange(photo.Pbgra[2], 205, 235);  // red
+        Assert.Equal(255, photo.Pbgra[3]);         // opaque
+    }
+
+    [Fact]
+    public void DecodeToFit_NeverEnlarges()
+    {
+        var photo = WicPhotoDecoder.DecodeToFit(Jpeg(64, 48, 0, 0, 0), 1920, 1080);
+
+        Assert.Equal(64, photo.Width);
+        Assert.Equal(48, photo.Height);
+    }
+
+    [Fact]
+    public void DecodeToFit_TurnsThePhotoUpright_AndFitsItAsItIsSeen()
+    {
+        // Stored 400 wide and 200 high, marked "rotate 90 degrees to view": upright it is 200 wide and 400 high, so a 100 x 100 box takes it at 50 x 100
+        var photo = WicPhotoDecoder.DecodeToFit(Jpeg(400, 200, 10, 10, 10, orientation: 6), 100, 100);
+
+        Assert.Equal(50, photo.Width);
+        Assert.Equal(100, photo.Height);
+    }
+
+    [Fact]
+    public void DecodeToFit_OfAFileThatIsNotAPhoto_Throws()
+    {
+        Assert.ThrowsAny<Exception>(() => WicPhotoDecoder.DecodeToFit([1, 2, 3, 4, 5], 100, 100));
+    }
 }
 
 public class ClipImageEncoderTests

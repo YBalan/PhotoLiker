@@ -51,6 +51,17 @@ namespace PhotoLiker.Core
         public string SearchModel { get; set; } = DefaultSearchModel;
         public const string DefaultSearchModel = "clip-vit-b32";
 
+        /// <summary>Which photo the slideshow (Alt+Enter) shows next: a random one, or the next of the list.</summary>
+        [JsonConverter(typeof(SlideshowModeConverter))]
+        public SlideshowMode SlideshowMode { get; set; } = SlideshowMode.Random;
+
+        /// <summary>How many seconds the slideshow keeps a photo on the screen, see <see cref="Slideshow.TimeoutOf"/>.</summary>
+        public double SlideshowTimeout { get; set; } = Slideshow.DefaultTimeoutSeconds;
+
+        /// <summary>What the slideshow writes in the bottom right corner of the screen: the year or the date and time the photo was taken, or nothing.</summary>
+        [JsonConverter(typeof(SlideshowWatermarkConverter))]
+        public SlideshowWatermark SlideshowWatermark { get; set; } = SlideshowWatermark.DateTime;
+
         // Main window of the WinForms app
         public int    WindowLeft     { get; set; } = 100;
         public int    WindowTop      { get; set; } = 100;

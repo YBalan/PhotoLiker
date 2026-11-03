@@ -25,5 +25,10 @@ namespace PhotoLikerUI
         public static string CacheSize => T();
         public static string ThumbnailSize => T();
         public static string LanguageDescription => T();
+
+        // 4. Slideshow
+        public static string SlideshowMode => T();
+        public static string SlideshowTimeout => T();
+        public static string SlideshowWatermark => T();
     }
 }

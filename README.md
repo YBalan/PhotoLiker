@@ -25,6 +25,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Groups](#groups)
 - [Deleting photos](#deleting-photos)
 - [Rotating photos](#rotating-photos)
+- [Slideshow](#slideshow)
 - [Big folders open at once](#big-folders-open-at-once)
 - [EXIF and GPS](#exif-and-gps)
 - [Aligning file dates](#aligning-file-dates)
@@ -53,6 +54,9 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
   folder out.
 - **Rotate** turns the shown photo a quarter clockwise (or counterclockwise, with the button before it; <kbd>Ctrl</kbd>+<kbd>+</kbd> and <kbd>Ctrl</kbd>+<kbd>-</kbd>) from the buttons in the right corner of the status bar and saves
   it in its file, without losing anything (see [Rotating photos](#rotating-photos)).
+- **Slideshow** on the whole screen (<kbd>Alt</kbd>+<kbd>Enter</kbd>): random or one by one, with a time for each photo and the year or the
+  date and time the photo was taken in the bottom right corner. <kbd>Right</kbd> / <kbd>Left</kbd> go to the photos next to the shown one, also in
+  the random mode, and holding a key scrolls at the speed of the key repeat (see [Slideshow](#slideshow)).
 - **Settings grid** next to the photo, with a folder picker for the liked folder. Changing which photos are listed,
   or in what order, reloads the folder at once.
 - **EXIF and GPS** of the shown photo, GPS decoded to coordinates and a link to the map.
@@ -264,6 +268,7 @@ What is kept where:
 | <kbd>1</kbd>-<kbd>9</kbd>, <kbd>A</kbd>-<kbd>Z</kbd> | Save the photo in a group, or take it out again (see [Groups](#groups)). |
 | <kbd>Alt</kbd>+<kbd>1</kbd>-<kbd>9</kbd> (also on the numpad), <kbd>Alt</kbd>+<kbd>A</kbd>-<kbd>Z</kbd> | While search results are shown: save *all* of them in the group, after telling how many photos and MB that is and asking. A group without a folder gets one named after the search (see [Groups](#groups)). |
 | <kbd>0</kbd> | Fit the image to the viewer (after zooming in). |
+| <kbd>Alt</kbd>+<kbd>Enter</kbd> | Show the photos of the list as a [slideshow](#slideshow) on the whole screen, beginning with the shown photo. In it <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one, and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back. Like F1-F3 it also works while you type into a text box. |
 | <kbd>F1</kbd> | Open the [About box](#about-box). |
 | <kbd>F2</kbd> / <kbd>F3</kbd> | Open the [user manual](#user-manual) in Ukrainian / in English, in the browser. F1-F3 also work while you type into a text box. |
 | <kbd>F5</kbd> | List the folder again from scratch instead of from the saved list (see [Big folders open at once](#big-folders-open-at-once)). |
@@ -399,6 +404,8 @@ the top whenever another photo is shown:
 | **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
 | **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
 | **Language** | The language of the program, `English` or `Українська`. It changes at once and is kept for all folders. See [Language](#language). |
+
+The category **Slideshow** has its own three rows, **Mode**, **Timeout** and **Watermark**; see [Slideshow](#slideshow).
 
 The rows of **Current File** and **TotalFiles** are read-only. **CurrentIndex** is the number of the shown photo, counted
 from 0: type another number into it to jump to that photo (a number outside the list goes to the nearest end).
@@ -552,6 +559,38 @@ bytes instead of a new file.
   copies. The saved list of the folder and the search index take over the new size and date, and the boxes of the faces in the
   index turn with the photo, so "Update index" does not analyze it again. The list is not sorted again until the folder is
   listed anew (<kbd>F5</kbd>).
+
+## Slideshow
+
+<kbd>Alt</kbd>+<kbd>Enter</kbd> shows the photos of the list as a slideshow on the whole screen the window is on, beginning with the photo that is
+shown (while search results are shown, the results). Each photo is as large as the screen lets it be, with black around it, and the mouse
+pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back, and the window shows the photo the slideshow ended on.
+
+- <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one **in the list, also in the random mode** (where only the timer picks
+  at random), and give that photo its full time again. After the last photo comes the first, and before the first the last. A key that is held
+  down keeps scrolling.
+- The settings are the three rows of the **4. Slideshow** category of the settings grid. They are kept in the settings file of the folder, so a
+  folder can have its own.
+
+| Setting | Meaning |
+|---|---|
+| **Mode** | `Random` (the default): after the time of a photo, another one of the list, every photo once before any comes a second time and never the same one twice in a row (the photo the slideshow began with counts as shown). `OneByOne`: the next photo of the list. |
+| **Timeout** | How many seconds a photo stays on the screen: 2 by default, not less than 0.2. The time counts from the moment the photo is on the screen, so a photo that is slow to come (a network share) is not shortened. |
+| **Watermark** | What is written in the bottom right corner, white on a dark band: `DateTime` (the default), the day and the time the photo was taken (`14 Aug 2025 09:12:07`, as everywhere in the program), `Year`, or `None`. The date is the one the search and <kbd>PageUp</kbd> / <kbd>PageDown</kbd> use: the date the camera wrote into the photo if it can be believed, else the date of the file (see [Aligning file dates](#aligning-file-dates)). A photo with no date at all gets no text. |
+
+**How it stays quick.** The slideshow does not show the decoded photos of the main window (a 24 MP photo is 96 MB, and every repaint
+would have to scale it to the screen). It makes **frames** of its own: each photo is decoded by the Windows imaging component straight at the
+size of the screen, turned upright (a JPEG is decoded at the reduced size from the start, several times quicker than with GDI+, which
+also cannot make several at once), so a frame is drawn as it is. A full HD frame is 8 MB however large the photo was, which is why
+many can be kept ready: the frames of the 6 photos ahead (the way you last went with <kbd>Right</kbd> / <kbd>Left</kbd>), the 2 behind, and, in the
+random mode, the next 3 photos of the random order, which is decided ahead for this purpose. They are made 4 at a time, the most likely first, and never more than
+about 512 MB are kept. So the timer and the keys show a photo from memory. In the random mode only the two photos next to the shown one are kept ready
+until a key is used, because every new photo has new neighbours; then the frames follow the way you go.
+
+A key that comes while its photo is still being made is not lost: up to three are kept and the photo is shown the moment it is there, the
+nearest that is ready first, so holding a key scrolls as fast as the photos can be made and never stands still. In a test on a local disk
+(12 MP test photos) a held key showed 59 of the 60 photos, at the 30 a second the keyboard repeats at; over a network share the reads set the pace.
+A photo that cannot be read is passed over (a list of only such photos says so on the black screen).
 
 ## Big folders open at once
 
@@ -817,6 +856,9 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
   "SortOrder": "OldestFirst",
   "CacheSize": 20,
   "ThumbnailSize": 120,
+  "SlideshowMode": "Random",
+  "SlideshowTimeout": 2,
+  "SlideshowWatermark": "DateTime",
   "IsDarkTheme": true,
   "WindowLeft": 30, "WindowTop": 20, "WindowWidth": 1500, "WindowHeight": 900,
   "ScreenIndex": 0,
@@ -829,7 +871,8 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
 shared between machines that may run different versions. The spelling `GoThroughSubFolders` (used by the MAUI app) is read
 as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized. `SortOrder` is written by name
 (`OldestFirst`, `NewestFirst`, `ByName`, `Random` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
-as `OldestFirst` and does not spoil the rest of the file. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
+as `OldestFirst` and does not spoil the rest of the file. `SlideshowMode` (`Random`, `OneByOne`) and `SlideshowWatermark` (`None`, `Year`, `DateTime`) are
+written by name and read the same way (an unknown name gives `Random` / `DateTime`); `SlideshowTimeout` is in seconds. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
 settings of the [photo search](#photo-search).
 
 Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that
