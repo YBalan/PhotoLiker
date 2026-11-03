@@ -50,7 +50,10 @@ namespace PhotoLikerUI
         private readonly Label _videoLengthLabel = new();
         private readonly AudioPreview _audioPreview = new();
         private readonly TextBox _coverTextBox = new();
-        private readonly NumericUpDown _coverSecondsNumeric = new();
+        private readonly NumericUpDown _coverStartSecondsNumeric = new();
+        private readonly CheckBox _coverAtStartCheckBox = new();
+        private readonly CheckBox _coverAtEndCheckBox = new();
+        private readonly NumericUpDown _coverEndSecondsNumeric = new();
         private readonly Button _coverClearButton = new();
         private readonly PictureBox _coverPreviewBox = new();
         private readonly Label _coverInfoLabel = new();
@@ -177,21 +180,45 @@ namespace PhotoLikerUI
             toolTip.SetToolTip(_coverTextBox, VideoStrings.CoverHint);
             toolTip.SetToolTip(coverBrowseButton, VideoStrings.CoverHint);
 
-            _coverSecondsNumeric.DecimalPlaces = 2;
-            _coverSecondsNumeric.Increment = 0.5M;
-            _coverSecondsNumeric.Minimum = 0.04M;
-            _coverSecondsNumeric.Maximum = 60M;
-            _coverSecondsNumeric.Value = 3.00M;
-            _coverSecondsNumeric.Width = 70;
+            // The cover is shown before the photos and/or after them, each for a time of its own; a tick and a time for each, one under the other
+            _coverAtStartCheckBox.Text = VideoStrings.ShowAtStart;
+            _coverAtStartCheckBox.Checked = true;
+            _coverAtEndCheckBox.Text = VideoStrings.ShowAtEnd;
+            foreach (var checkBox in new[] { _coverAtStartCheckBox, _coverAtEndCheckBox })
+            {
+                checkBox.AutoSize = true;
+                checkBox.Anchor = AnchorStyles.Left;
+                checkBox.Margin = new Padding(0, 0, CoverSideGap, 0);
+            }
+
+            foreach (var numeric in new[] { _coverStartSecondsNumeric, _coverEndSecondsNumeric })
+            {
+                numeric.DecimalPlaces = 2;
+                numeric.Increment = 0.5M;
+                numeric.Minimum = 0.04M;
+                numeric.Maximum = 60M;
+                numeric.Value = 3.00M;
+                numeric.Width = CoverTimeBoxWidth;
+                numeric.Anchor = AnchorStyles.Left;
+                numeric.Margin = new Padding(0, 0, CoverSideGap, 0);
+            }
+
+            toolTip.SetToolTip(_coverAtStartCheckBox, VideoStrings.CoverAtStartHint);
+            toolTip.SetToolTip(_coverStartSecondsNumeric, VideoStrings.CoverAtStartHint);
+            toolTip.SetToolTip(_coverAtEndCheckBox, VideoStrings.CoverAtEndHint);
+            toolTip.SetToolTip(_coverEndSecondsNumeric, VideoStrings.CoverAtEndHint);
             _coverClearButton.Text = VideoStrings.Clear;
+            _coverClearButton.Margin = new Padding(3, 1, 3, 1); // the rows beside the preview have to fit its height, or the dialog grows
 
             _coverPreviewBox.Size = CoverPreviewSize;
             _coverPreviewBox.SizeMode = PictureBoxSizeMode.Zoom;
             _coverPreviewBox.BorderStyle = BorderStyle.FixedSingle;
-            _coverPreviewBox.Margin = new Padding(0, 3, 12, 3);
+            _coverPreviewBox.Margin = new Padding(0, 3, CoverPreviewGap, 3);
             _coverPreviewBox.Paint += PaintCoverPlaceholder;
             _coverInfoLabel.AutoSize = true;
             _coverInfoLabel.MaximumSize = new Size(190, 0);
+            _coverInfoLabel.Margin = new Padding(3, 1, 3, 0);
+            _coverInfoLabel.Text = " "; // never empty: an empty label is shorter than one with text, and the cover row (which is as tall as the rows beside the preview) would move
 
             _widthNumeric.Minimum = 320;
             _widthNumeric.Maximum = 7680;
@@ -248,7 +275,8 @@ namespace PhotoLikerUI
             browseButton.Click += (_, _) => BrowseOutputFolder();
 
             layout.Controls.Add(new Label { Text = VideoStrings.LabelPhotosFrom, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 0);
-            var sourcePanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
+            // No margin of its own: the combo has its own, and a second one would put it 3 px right of the sort order combo below
+            var sourcePanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0) };
             sourcePanel.Controls.Add(_sourceCombo);
             sourcePanel.Controls.Add(_countLabel);
             layout.Controls.Add(sourcePanel, 1, 0);
@@ -283,10 +311,19 @@ namespace PhotoLikerUI
             layout.Controls.Add(_coverTextBox, 1, 6);
             layout.Controls.Add(coverBrowseButton, 2, 6);
 
-            // The picture on the left; on its right how long it is shown, and the button to take it away
-            var coverTimePanel = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 3, 0, 3) };
-            coverTimePanel.Controls.Add(new Label { Text = VideoStrings.LabelShownFor, AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
-            coverTimePanel.Controls.Add(_coverSecondsNumeric);
+            // The picture on the left; on its right when it is shown (at the start, at the end) and for how long, and the button to take it away.
+            // A table, so that the boxes and the "(sec)" of the two rows stand one under the other.
+            var coverTimesTable = new TableLayoutPanel { AutoSize = true, ColumnCount = 3, RowCount = 2, Margin = new Padding(0, 1, 0, 1) };
+            for (var column = 0; column < 3; column++)
+                coverTimesTable.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            coverTimesTable.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            coverTimesTable.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            coverTimesTable.Controls.Add(_coverAtStartCheckBox, 0, 0);
+            coverTimesTable.Controls.Add(_coverStartSecondsNumeric, 1, 0);
+            coverTimesTable.Controls.Add(new Label { Text = VideoStrings.LabelSec, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0) }, 2, 0);
+            coverTimesTable.Controls.Add(_coverAtEndCheckBox, 0, 1);
+            coverTimesTable.Controls.Add(_coverEndSecondsNumeric, 1, 1);
+            coverTimesTable.Controls.Add(new Label { Text = VideoStrings.LabelSec, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0) }, 2, 1);
             var coverSidePanel = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.TopDown,
@@ -294,7 +331,7 @@ namespace PhotoLikerUI
                 WrapContents = false,
                 Margin = new Padding(0, 0, 0, 0)
             };
-            coverSidePanel.Controls.Add(coverTimePanel);
+            coverSidePanel.Controls.Add(coverTimesTable);
             coverSidePanel.Controls.Add(_coverClearButton);
             coverSidePanel.Controls.Add(_coverInfoLabel);
             var coverPanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
@@ -469,7 +506,16 @@ namespace PhotoLikerUI
             _playModeCombo.SelectedIndexChanged += (_, _) => UpdateVideoLength();
             _audioPlayModeCombo.SelectedIndexChanged += (_, _) => UpdateVideoLength();
             UpdatePlayModeCombo();
-            _coverSecondsNumeric.ValueChanged += (_, _) => UpdateVideoLength();
+            _coverStartSecondsNumeric.ValueChanged += (_, _) => UpdateVideoLength();
+            _coverEndSecondsNumeric.ValueChanged += (_, _) => UpdateVideoLength();
+            foreach (var checkBox in new[] { _coverAtStartCheckBox, _coverAtEndCheckBox })
+            {
+                checkBox.CheckedChanged += (_, _) =>
+                {
+                    UpdateCoverControls();
+                    UpdateVideoLength();
+                };
+            }
 
             // The cover: a new file or a cleared box brings its preview up to date
             _coverTextBox.TextChanged += async (_, _) => await ShowCoverAsync();
@@ -690,15 +736,23 @@ namespace PhotoLikerUI
                 if (files.Count == 0)
                     throw new FileNotFoundException(VideoStrings.NoneThere);
 
-                // The cover is the first picture of the video, whatever the order of the photos. A photo that is the cover as well is
-                // taken out of the photos, or it would be seen twice.
+                // The cover is the first picture of the video (if it is shown at the start) and the last (if at the end), whatever the order
+                // of the photos. A photo that is the cover as well is taken out of the photos, or it would be seen twice.
                 var cover = options.CoverPath;
                 if (cover is not null)
                 {
                     var same = files.RemoveAll(file => IsSameFile(file, cover));
                     if (same > 0)
                         AppendOutput(VideoStrings.LogCoverIsPhoto);
-                    AppendOutput(string.Format(VideoStrings.LogCoverFormat, cover, options.CoverSeconds));
+                    AppendOutput(options.CoverSeconds is { } coverStartSeconds
+                        ? string.Format(VideoStrings.LogCoverFormat, cover, coverStartSeconds)
+                        : string.Format(VideoStrings.LogCoverNotAtStartFormat, cover));
+                    if (options.CoverEndSeconds is { } coverEndSeconds)
+                        AppendOutput(string.Format(VideoStrings.LogCoverEndFormat, coverEndSeconds));
+                }
+                else if (CoverPath is not null)
+                {
+                    AppendOutput(VideoStrings.LogCoverUnused);
                 }
 
                 // ffmpeg is told not to turn the photos by their EXIF orientation (it gets it wrong for the photos next to a turned one),
@@ -732,7 +786,8 @@ namespace PhotoLikerUI
                     samples,
                     repeat,
                     options.RepeatAudio,
-                    audioSeconds);
+                    audioSeconds,
+                    options.CoverEndSeconds);
 
                 if (samples is not null)
                 {
@@ -795,8 +850,9 @@ namespace PhotoLikerUI
                 _codecCombo.SelectedItem?.ToString() ?? "libx264",
                 (int)_crfNumeric.Value,
                 AudioPath,
-                CoverPath,
-                (double)_coverSecondsNumeric.Value,
+                UsedCoverPath,
+                CoverStartSeconds,
+                CoverEndSeconds,
                 RepeatPhotosSelected,
                 RepeatAudioSelected);
         }
@@ -823,7 +879,7 @@ namespace PhotoLikerUI
         private static string PassesText(VideoSequence sequence, VideoGenerationOptions options, double[]? samples, int photoCount)
         {
             var pass = VideoGenerationService.PhotoSeconds(photoCount, options.StartFrameTimeSeconds, options.EndFrameTimeSeconds, samples);
-            var cover = options.CoverPath is null ? 0 : options.CoverSeconds;
+            var cover = (options.CoverSeconds ?? 0) + (options.CoverEndSeconds ?? 0);
             return pass > 0 ? TimesText((sequence.ExpectedSeconds - cover) / pass) : "0";
         }
 
@@ -835,6 +891,15 @@ namespace PhotoLikerUI
 
         /// <summary>The cover picture, or null for none.</summary>
         private string? CoverPath => string.IsNullOrWhiteSpace(_coverTextBox.Text) ? null : _coverTextBox.Text.Trim();
+
+        /// <summary>How long the cover is shown before the photos; null when it is not (no cover, or "Show at the start" not ticked).</summary>
+        private double? CoverStartSeconds => CoverPath is not null && _coverAtStartCheckBox.Checked ? (double)_coverStartSecondsNumeric.Value : null;
+
+        /// <summary>How long the cover is shown after the photos; null when it is not (no cover, or "Show at the end" not ticked).</summary>
+        private double? CoverEndSeconds => CoverPath is not null && _coverAtEndCheckBox.Checked ? (double)_coverEndSecondsNumeric.Value : null;
+
+        /// <summary>The cover picture when it is in the video (shown at the start and/or at the end), otherwise null: with both ticks off it is not used.</summary>
+        private string? UsedCoverPath => CoverStartSeconds is null && CoverEndSeconds is null ? null : CoverPath;
 
         private static bool IsSameFile(string path, string other)
         {
@@ -1046,7 +1111,7 @@ namespace PhotoLikerUI
             }
             else
             {
-                var cover = CoverPath;
+                var cover = UsedCoverPath;
 
                 // A photo that is the cover as well is shown once, as the cover
                 var photoCount = photos.Count - (CoverIsOnePhoto(photos, cover) ? 1 : 0);
@@ -1058,13 +1123,14 @@ namespace PhotoLikerUI
                 {
                     var start = (double)_frameTimeStartNumeric.Value;
                     var end = (double)_frameTimeEndNumeric.Value;
-                    double? coverSeconds = cover is null ? null : (double)_coverSecondsNumeric.Value;
+                    var coverSeconds = CoverStartSeconds;
                     var samples = RandomSamples();
                     var repeat = RepeatPhotosSelected;
 
-                    var length = VideoGenerationService.EstimateLength(photoCount, start, end, samples, coverSeconds, repeat, _audioLength?.TotalSeconds);
+                    var coverEndSeconds = CoverEndSeconds;
+                    var length = VideoGenerationService.EstimateLength(photoCount, start, end, samples, coverSeconds, repeat, _audioLength?.TotalSeconds, coverEndSeconds);
                     text = string.Format(VideoStrings.AboutLengthFormat, DurationText.Format(length));
-                    line = AudioLine(photoCount, start, end, samples, coverSeconds, repeat);
+                    line = AudioLine(photoCount, start, end, samples, coverSeconds, repeat, coverEndSeconds);
                 }
             }
 
@@ -1072,7 +1138,7 @@ namespace PhotoLikerUI
         }
 
         /// <summary>The second line under the video length: what becomes of the audio (or why "Repeat" is not doing anything).</summary>
-        private string AudioLine(int photoCount, double start, double end, double[]? samples, double? coverSeconds, bool repeat)
+        private string AudioLine(int photoCount, double start, double end, double[]? samples, double? coverSeconds, bool repeat, double? coverEndSeconds)
         {
             if (AudioPath is null)
                 return repeat ? VideoStrings.RepeatNeedsAudio : " ";
@@ -1084,7 +1150,7 @@ namespace PhotoLikerUI
             }
 
             var photoPass = VideoGenerationService.PhotoSeconds(photoCount, start, end, samples);
-            var cover = coverSeconds ?? 0;
+            var cover = (coverSeconds ?? 0) + (coverEndSeconds ?? 0);
             var once = cover + photoPass;
             if (repeat && photoPass > 0 && audio.TotalSeconds > once)
                 return string.Format(VideoStrings.PhotosPlayTimesFormat, TimesText((audio.TotalSeconds - cover) / photoPass));
@@ -1171,13 +1237,21 @@ namespace PhotoLikerUI
         private const int LabelColumnPadding = 6;  // the label margins
         private const int ButtonColumnPadding = 20; // the margins and the border of a button
 
+        // The cover row: a tick (its box and its text), the time box and "(sec)" beside the preview
+        private const int CoverTimeBoxWidth = 60;
+        private const int CheckBoxExtraWidth = 22; // the box of a check box and the gap before its text
+        private const int CoverSideGap = 6;
+        private const int LayoutPadding = 12;      // each side of the table
+        private const int CoverPreviewGap = 12;    // between the preview and what is on its right
+
         private int _dialogWidth = BaseDialogWidth;
         private int _labelColumnWidth = BaseLabelColumnWidth;
         private int _buttonColumnWidth = BaseButtonColumnWidth;
 
         /// <summary>
         /// The column of the labels is wide enough for the longest label, and the one of the "Use first image" button for its text. The columns
-        /// between them keep their width, so the dialog grows by what these two do.
+        /// between them keep their width, so the dialog grows by what these two do. It also has to be wide enough for the cover row (the
+        /// preview, and the ticks with their times on its right), which the texts of some languages make wider than the base width.
         /// </summary>
         private void MeasureColumns()
         {
@@ -1193,6 +1267,11 @@ namespace PhotoLikerUI
             _labelColumnWidth = Math.Max(BaseLabelColumnWidth, labels.Max(Wide) + LabelColumnPadding);
             _buttonColumnWidth = Math.Max(BaseButtonColumnWidth, Wide(VideoStrings.UseFirstImage) + ButtonColumnPadding);
             _dialogWidth = BaseDialogWidth + (_labelColumnWidth - BaseLabelColumnWidth) + (_buttonColumnWidth - BaseButtonColumnWidth);
+
+            var coverSide = Math.Max(Wide(VideoStrings.ShowAtStart), Wide(VideoStrings.ShowAtEnd)) + CheckBoxExtraWidth
+                + CoverSideGap + CoverTimeBoxWidth + CoverSideGap + Wide(VideoStrings.LabelSec);
+            var coverRow = (2 * LayoutPadding) + _labelColumnWidth + CoverPreviewSize.Width + CoverPreviewGap + coverSide + CoverSideGap;
+            _dialogWidth = Math.Max(_dialogWidth, coverRow);
         }
 
         /// <summary>The height that makes room for the log and the progress bar, on top of the one of the rows.</summary>
@@ -1236,7 +1315,7 @@ namespace PhotoLikerUI
             var generation = ++_coverGeneration;
 
             SetCoverPreview(null);
-            _coverInfoLabel.Text = string.Empty;
+            _coverInfoLabel.Text = " ";
             UpdateCoverControls();
             UpdateVideoLength();
             if (path is null)
@@ -1277,14 +1356,20 @@ namespace PhotoLikerUI
             _coverBitmap = preview;
         }
 
-        /// <summary>The time and Clear need a cover, and nothing is touched while generating.</summary>
+        /// <summary>
+        /// The two ticks ("Show at the start", "Show at the end") and Clear need a cover, a time needs its tick as well, and nothing is
+        /// touched while generating. The ticks stay when the cover is cleared, to be there for the next one.
+        /// </summary>
         private void UpdateCoverControls()
         {
             if (IsDisposed || Disposing)
                 return;
 
             var hasCover = CoverPath is not null;
-            _coverSecondsNumeric.Enabled = !_isGenerating && hasCover;
+            _coverAtStartCheckBox.Enabled = !_isGenerating && hasCover;
+            _coverStartSecondsNumeric.Enabled = !_isGenerating && hasCover && _coverAtStartCheckBox.Checked;
+            _coverAtEndCheckBox.Enabled = !_isGenerating && hasCover;
+            _coverEndSecondsNumeric.Enabled = !_isGenerating && hasCover && _coverAtEndCheckBox.Checked;
             _coverClearButton.Enabled = !_isGenerating && hasCover;
         }
 
@@ -1399,7 +1484,7 @@ namespace PhotoLikerUI
                 return false;
             }
 
-            if (CoverPath is { } cover && !File.Exists(cover))
+            if (UsedCoverPath is { } cover && !File.Exists(cover))
             {
                 MessageBox.Show(this, VideoStrings.CoverFileNotThere, MainFormStrings.VideoDialogTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
@@ -1422,7 +1507,8 @@ namespace PhotoLikerUI
         int Crf,
         string? AudioPath,
         string? CoverPath,
-        double CoverSeconds,
+        double? CoverSeconds,
+        double? CoverEndSeconds,
         bool RepeatToAudio,
         bool RepeatAudio);
 }

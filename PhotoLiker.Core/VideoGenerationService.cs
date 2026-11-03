@@ -160,8 +160,23 @@ namespace PhotoLiker.Core
                 ? $" -map 0:v:0 -map 1:a:0{(audio == AudioPlayback.OnceThenSilence ? " -af apad" : string.Empty)} -c:a aac -b:a 192k -shortest{cutAt}"
                 : string.Empty;
 
-            return $"-y -f concat -safe 0 -noautorotate -i \"{listFilePath}\"{audioInput} -vf \"{scaleFilter}\"{audioOutput} -c:v {codec} -crf {crf} -pix_fmt yuv420p -progress pipe:1 -nostats \"{outputPath}\"";
+            return $"-y -f concat -safe 0 -noautorotate -i \"{listFilePath}\"{audioInput} -vf \"{scaleFilter}\"{audioOutput} -c:v {codec} -crf {crf}{NoBFrames(codec)} -pix_fmt yuv420p -progress pipe:1 -nostats \"{outputPath}\"";
         }
+
+        /// <summary>
+        /// The encoder is told not to use B-frames. With them the encoder reorders pictures, and the file has to delay the decode time of
+        /// the first ones by that reordering: a stretch of the first three pictures, which for a video that opens with a cover of 3 s is
+        /// 3.32 s. ffmpeg writes that as an edit list (the video starts 3.32 s into its own timeline) and composition offsets, and a player
+        /// that does not honour the edit list shows the first picture late, the cover for twice its time and the video 3.3 s too long (the
+        /// container itself says the right length). Without B-frames the decode time is the picture's time: no offsets, no edit list. For a
+        /// slideshow of stills the files come out of the same size.
+        /// </summary>
+        private static string NoBFrames(string codec) => codec.Trim().ToLowerInvariant() switch
+        {
+            "libx264" => " -bf 0",
+            "libx265" => " -x265-params bframes=0",
+            _ => string.Empty,
+        };
 
         internal static string FfmpegNotFoundMessage => CoreStrings.FfmpegNotFound;
 
@@ -322,9 +337,10 @@ namespace PhotoLiker.Core
         /// it. Not exact where the photos are not the ones counted: files that have gone from the disk by the time it is made.
         /// </summary>
         /// <param name="photoCount">The photos (not counting the cover).</param>
-        /// <param name="coverSeconds">Null for no cover.</param>
+        /// <param name="coverSeconds">How long the cover is shown before the photos; null for not at all.</param>
         /// <param name="repeatToAudio">The photos play over and over until the audio ends (when it is longer than they are).</param>
         /// <param name="audioSeconds">The length of the audio, if there is one and it is known.</param>
+        /// <param name="coverEndSeconds">How long the cover is shown after the photos; null for not at all.</param>
         public static double EstimateLength(
             int photoCount,
             double startFrameTimeSeconds,
@@ -332,14 +348,15 @@ namespace PhotoLiker.Core
             IReadOnlyList<double>? randomSamples,
             double? coverSeconds,
             bool repeatToAudio,
-            double? audioSeconds)
+            double? audioSeconds,
+            double? coverEndSeconds = null)
         {
             var photoPass = PhotoSeconds(photoCount, startFrameTimeSeconds, endFrameTimeSeconds, randomSamples);
-            var once = (coverSeconds ?? 0) + photoPass;
+            var once = (coverSeconds ?? 0) + photoPass + (coverEndSeconds ?? 0);
             if (RepeatsForAudio(repeatToAudio, audioSeconds, once, photoPass))
                 return audioSeconds!.Value;
 
-            return photoCount <= 0 && coverSeconds is null ? 0 : once + LastFrameSeconds;
+            return photoCount <= 0 && coverSeconds is null && coverEndSeconds is null ? 0 : once + LastFrameSeconds;
         }
 
         /// <summary>
@@ -355,51 +372,100 @@ namespace PhotoLiker.Core
         }
 
         /// <summary>
-        /// Puts the pictures of a video in order with the time of each: the cover first (when there is one), then the photos, in the
-        /// order given. With <paramref name="repeatToAudio"/> and an audio that is longer than all of that, the photos (not the cover)
-        /// are listed again and again, with the same times, until they are longer than the audio, which is played once and ends the video.
-        /// Otherwise the pictures are listed once and end the video, and the audio, if any, is played over and over to fill it
-        /// (<paramref name="repeatAudio"/>), or once, with silence after it if it is shorter.
+        /// Puts the pictures of a video in order with the time of each: the cover first (when it is asked for at the start), then the
+        /// photos, in the order given, then the cover again (when it is asked for at the end). With <paramref name="repeatToAudio"/> and
+        /// an audio that is longer than all of that, the photos (not the cover) are listed again and again, with the same times, until
+        /// they are longer than the audio, which is played once and ends the video. Otherwise the pictures are listed once and end the
+        /// video, and the audio, if any, is played over and over to fill it (<paramref name="repeatAudio"/>), or once, with silence
+        /// after it if it is shorter.
         /// </summary>
         /// <param name="photoFiles">The photos, in the order they are shown, upright and of one kind (see <see cref="BuildFfmpegArguments"/>).</param>
-        /// <param name="coverFile">The cover picture, or null for none.</param>
+        /// <param name="coverFile">The cover picture, or null for none (the times of the cover are then of no matter).</param>
+        /// <param name="coverSeconds">How long the cover is shown before the photos; null for not at the start.</param>
         /// <param name="randomSamples">Null: the photos go from the start to the end time in steps. Otherwise see <see cref="BuildFrameDurations"/>.</param>
         /// <param name="repeatToAudio">An audio that is longer than the pictures once through is not cut: the photos play over and over until it ends.</param>
         /// <param name="repeatAudio">An audio that is shorter than the pictures is played over and over to fill them (otherwise once, and then silence).</param>
         /// <param name="audioSeconds">The length of the audio; null when there is none or it is not known (then no photo is repeated for it).</param>
+        /// <param name="coverEndSeconds">
+        /// The cover is shown after the last photo, for this long; null for not at all. When the photos repeat for the audio, the cover
+        /// takes the last seconds of it, and the photo that is playing then is cut short.
+        /// </param>
         /// <exception cref="InvalidOperationException">The photos would have to be listed more than <see cref="MaxListedFiles"/> times in all.</exception>
         public static VideoSequence BuildSequence(
             IReadOnlyList<string> photoFiles,
             string? coverFile,
-            double coverSeconds,
+            double? coverSeconds,
             double startFrameTimeSeconds,
             double endFrameTimeSeconds,
             IReadOnlyList<double>? randomSamples,
             bool repeatToAudio,
             bool repeatAudio,
-            double? audioSeconds)
+            double? audioSeconds,
+            double? coverEndSeconds = null)
         {
             var photoDurations = BuildFrameDurations(photoFiles.Count, startFrameTimeSeconds, endFrameTimeSeconds, randomSamples);
-            var files = new List<string>(photoFiles.Count + 1);
-            var durations = new List<double>(photoFiles.Count + 1);
-            if (coverFile is not null)
+            var files = new List<string>(photoFiles.Count + 2);
+            var durations = new List<double>(photoFiles.Count + 2);
+            if (coverFile is not null && coverSeconds is { } startCover)
             {
                 files.Add(coverFile);
-                durations.Add(coverSeconds);
+                durations.Add(startCover);
             }
 
             files.AddRange(photoFiles);
             durations.AddRange(photoDurations);
 
-            var once = durations.Sum();
+            var endCover = coverFile is null ? null : coverEndSeconds;
+            var shownOnce = durations.Sum();
+            var once = shownOnce + (endCover ?? 0);
             var photoPass = photoDurations.Sum();
             if (!RepeatsForAudio(repeatToAudio, audioSeconds, once, photoPass))
             {
+                if (endCover is { } endSeconds)
+                {
+                    files.Add(coverFile!);
+                    durations.Add(endSeconds);
+                }
+
                 return new VideoSequence(
                     files, durations, once + LastFrameSeconds, repeatAudio ? AudioPlayback.Loop : AudioPlayback.OnceThenSilence);
             }
 
             var audio = audioSeconds!.Value;
+            if (endCover is { } coverEnd)
+            {
+                // The cover takes the last seconds of the audio, so the photos are listed up to there, the last one cut short. Past the end
+                // of the audio ffmpeg drops the pictures, and the last one it keeps is shown for one frame only (the cover would be
+                // cut to 0.04 s, and the audio with it), so the list ends exactly with the audio: the cover is listed for the time
+                // that is left less the one frame that is added after the last file, which brings the video to the end of the audio
+                var photosUntil = audio - coverEnd;
+                var passesToAdd = Math.Ceiling((photosUntil - shownOnce) / photoPass);
+                if ((passesToAdd * photoFiles.Count) + files.Count + 1 > MaxListedFiles)
+                    throw new InvalidOperationException(string.Format(CoreStrings.TooManyRepeatsFormat, passesToAdd));
+
+                var elapsed = shownOnce;
+                for (var pass = 0; pass < passesToAdd && elapsed < photosUntil; pass++)
+                {
+                    for (var i = 0; i < photoFiles.Count && elapsed < photosUntil; i++)
+                    {
+                        var shown = Math.Min(photoDurations[i], photosUntil - elapsed);
+                        if (shown < LastFrameSeconds / 2)
+                        {
+                            elapsed = photosUntil; // less than half a frame is left: the cover starts that much early
+                            break;
+                        }
+
+                        files.Add(photoFiles[i]);
+                        durations.Add(shown);
+                        elapsed += shown;
+                    }
+                }
+
+                files.Add(coverFile!);
+                durations.Add(Math.Max(audio - LastFrameSeconds - durations.Sum(), LastFrameSeconds));
+                return new VideoSequence(files, durations, audio, AudioPlayback.OnceEndsVideo);
+            }
+
             var morePasses = Math.Ceiling((audio + RepeatMarginSeconds - once) / photoPass);
             if ((morePasses * photoFiles.Count) + files.Count > MaxListedFiles)
                 throw new InvalidOperationException(string.Format(CoreStrings.TooManyRepeatsFormat, morePasses));

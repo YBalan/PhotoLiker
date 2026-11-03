@@ -99,6 +99,20 @@ public class VideoGenerationServiceTests
         Assert.True(option < arguments.IndexOf(" -i ", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("libx264", " -crf 23 -bf 0 -pix_fmt")]
+    [InlineData("libx265", " -crf 23 -x265-params bframes=0 -pix_fmt")]
+    [InlineData("LIBX265", " -crf 23 -x265-params bframes=0 -pix_fmt")]
+    [InlineData("libvpx", " -crf 23 -pix_fmt")]
+    public void BuildFfmpegArguments_KeepsTheEncoderFromReorderingPictures_SoThatNoPlayerShowsTheCoverLate(string codec, string expected)
+    {
+        // B-frames delay the decode time of the first pictures by the time of the first three (3.32 s behind a cover of 3 s), written as an
+        // edit list that a player may skip: the video then starts late, shows the cover twice as long and ends late
+        var arguments = VideoGenerationService.BuildFfmpegArguments(@"C:\t\list.txt", @"C:\v\out.mp4", 1920, 1080, codec, 23);
+
+        Assert.Contains($"-c:v {codec}{expected}", arguments);
+    }
+
     [Fact]
     public void BuildFfmpegArguments_FitsEveryPhotoIntoTheFrame()
     {

@@ -30,7 +30,9 @@ namespace PhotoLikerUI
         public static string LabelOutputFileName => T();
         public static string LabelAudio => T();
         public static string LabelCover => T();
-        public static string LabelShownFor => T();
+        public static string ShowAtStart => T();
+        public static string ShowAtEnd => T();
+        public static string LabelSec => T();
         public static string LabelResolution => T();
         public static string LabelFrameTimeRange => T();
         public static string LabelStart => T();
@@ -55,6 +57,9 @@ namespace PhotoLikerUI
         public static string NoneThere => T();
         public static string LogCoverIsPhoto => T();
         public static string LogCoverFormat => T();
+        public static string LogCoverNotAtStartFormat => T();
+        public static string LogCoverEndFormat => T();
+        public static string LogCoverUnused => T();
         public static string LogLookingUpright => T();
         public static string LogTurnedFormat => T();
         public static string LogNoneTurned => T();
@@ -93,6 +98,8 @@ namespace PhotoLikerUI
         public static string PlayModeHint => T();
         public static string AudioPlayModeHint => T();
         public static string CoverHint => T();
+        public static string CoverAtStartHint => T();
+        public static string CoverAtEndHint => T();
         public static string ChooseCoverTitle => T();
         public static string CoverSizeFormat => T();
         public static string CoverNotThere => T();

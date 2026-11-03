@@ -158,12 +158,14 @@ public class VideoSequenceTests
     {
         var samples = random ? VideoGenerationService.DrawRandomSamples(photos, new Random(photos + 1)) : null;
 
-        foreach (double? cover in new double?[] { null, 3.0 })
+        // (the cover file, its time at the start, its time at the end): no cover; at the start; at both; only at the end
+        (string? File, double? AtStart, double? AtEnd)[] covers = [(null, null, null), ("cover.jpg", 3.0, null), ("cover.jpg", 3.0, 2.5), ("cover.jpg", null, 2.5)];
+        foreach (var (file, atStart, atEnd) in covers)
         {
-            var sequence = VideoGenerationService.BuildSequence(Photos(photos), cover is null ? null : "cover.jpg", cover ?? 0, start, end, samples, false, true, null);
-            var estimate = VideoGenerationService.EstimateLength(photos, start, end, samples, cover, false, null);
+            var sequence = VideoGenerationService.BuildSequence(Photos(photos), file, atStart, start, end, samples, false, true, null, atEnd);
+            var estimate = VideoGenerationService.EstimateLength(photos, start, end, samples, atStart, false, null, atEnd);
 
-            if (photos == 0 && cover is null)
+            if (photos == 0 && file is null)
                 Assert.Equal(0, estimate);
             else
                 Assert.Equal(sequence.ExpectedSeconds, estimate, precision: 6);
@@ -197,6 +199,34 @@ public class VideoSequenceTests
     {
         Assert.Equal(0, VideoGenerationService.EstimateLength(0, 1, 3, null, null, false, null));
         Assert.Equal(4 + VideoGenerationService.LastFrameSeconds, VideoGenerationService.EstimateLength(0, 1, 3, null, 4, false, null), precision: 9);
+    }
+
+    [Fact]
+    public void EstimateLength_WithTheCoverAtTheEnd_AddsItsSecondTime()
+    {
+        Assert.Equal(6 + 3 + 4 + VideoGenerationService.LastFrameSeconds, VideoGenerationService.EstimateLength(3, 2, 2, null, 3, false, null, 4), precision: 9);
+    }
+
+    [Fact]
+    public void EstimateLength_ACoverOnlyAtTheEnd_AddsItsTimeOnce()
+    {
+        // No cover at the start (null), 4 s at the end
+        Assert.Equal(6 + 4 + VideoGenerationService.LastFrameSeconds, VideoGenerationService.EstimateLength(3, 2, 2, null, null, false, null, 4), precision: 9);
+        Assert.Equal(4 + VideoGenerationService.LastFrameSeconds, VideoGenerationService.EstimateLength(0, 2, 2, null, null, false, null, 4), precision: 9);
+    }
+
+    [Fact]
+    public void EstimateLength_NoPhotosAndNoCoverAnywhere_IsNothing()
+    {
+        Assert.Equal(0, VideoGenerationService.EstimateLength(0, 2, 2, null, null, false, null, null));
+    }
+
+    [Fact]
+    public void EstimateLength_Repeat_TheCoverAtTheEndCountsTowardsWhatTheAudioHasToBeLongerThan()
+    {
+        // Cover 2 + photos 6 + cover 2 = 10 s once through: an audio of 9 s is shorter (the video is 10.04 s), one of 12 s is the video's length
+        Assert.Equal(10 + VideoGenerationService.LastFrameSeconds, VideoGenerationService.EstimateLength(3, 2, 2, null, 2, true, 9, 2), precision: 9);
+        Assert.Equal(12, VideoGenerationService.EstimateLength(3, 2, 2, null, 2, true, 12, 2));
     }
 
     // ── what becomes of the audio when the photos play once ─────────────────
@@ -352,6 +382,150 @@ public class VideoSequenceTests
 
         Assert.False(sequence.AudioEndsVideo);
         Assert.Equal(["cover"], sequence.Files);
+    }
+
+    // ── the cover at the end ────────────────────────────────────────────────
+
+    [Fact]
+    public void BuildSequence_CoverAtTheEnd_ListsTheCoverAgainLast_WithItsOwnTime()
+    {
+        var sequence = VideoGenerationService.BuildSequence(["a", "b", "c"], "cover", 5, 1, 3, null, false, true, null, 4);
+
+        Assert.Equal(["cover", "a", "b", "c", "cover"], sequence.Files);
+        Assert.Equal([5.0, 1.0, 2.0, 3.0, 4.0], sequence.Durations);
+        Assert.Equal(15 + VideoGenerationService.LastFrameSeconds, sequence.ExpectedSeconds, precision: 9);
+        Assert.Equal(AudioPlayback.Loop, sequence.Audio);
+    }
+
+    [Fact]
+    public void BuildSequence_CoverOnlyAtTheEnd_LeavesTheStartAlone()
+    {
+        var sequence = VideoGenerationService.BuildSequence(["a", "b"], "cover", null, 1, 1, null, false, true, null, 4);
+
+        Assert.Equal(["a", "b", "cover"], sequence.Files);
+        Assert.Equal([1.0, 1.0, 4.0], sequence.Durations);
+        Assert.Equal(6 + VideoGenerationService.LastFrameSeconds, sequence.ExpectedSeconds, precision: 9);
+    }
+
+    [Fact]
+    public void BuildSequence_CoverAskedForNowhere_IsNotListed()
+    {
+        var sequence = VideoGenerationService.BuildSequence(["a", "b"], "cover", null, 1, 1, null, false, true, null, null);
+
+        Assert.Equal(["a", "b"], sequence.Files);
+    }
+
+    [Fact]
+    public void BuildSequence_Repeat_CoverOnlyAtTheEnd_TheStartIsPhotos()
+    {
+        // 3 photos of 1 s, cover 4 s at the end, the audio 20 s: the photos run to 16 s, so the first file is a photo
+        var sequence = VideoGenerationService.BuildSequence(Photos(3), "cover", null, 1, 1, null, true, true, 20, 4);
+
+        Assert.True(sequence.AudioEndsVideo);
+        Assert.Equal("p1.jpg", sequence.Files[0]);
+        Assert.Equal("cover", sequence.Files[^1]);
+        Assert.Equal(1, sequence.Files.Count(f => f == "cover"));
+        Assert.Equal(16, sequence.Durations.Take(sequence.Durations.Count - 1).Sum(), precision: 9);
+        Assert.Equal(20 - VideoGenerationService.LastFrameSeconds, sequence.Durations.Sum(), precision: 9);
+    }
+
+    [Fact]
+    public void BuildSequence_NoCoverAtTheEnd_ListsTheCoverOnce()
+    {
+        var sequence = VideoGenerationService.BuildSequence(["a", "b"], "cover", 5, 1, 1, null, false, true, null, null);
+
+        Assert.Equal(["cover", "a", "b"], sequence.Files);
+    }
+
+    [Fact]
+    public void BuildSequence_ATimeForTheEndWithoutACover_IsIgnored()
+    {
+        var sequence = VideoGenerationService.BuildSequence(["a", "b"], null, 0, 1, 1, null, false, true, null, 4);
+
+        Assert.Equal(["a", "b"], sequence.Files);
+        Assert.Equal([1.0, 1.0], sequence.Durations);
+    }
+
+    [Fact]
+    public void BuildSequence_OnlyACover_WithTheCoverAtTheEnd_IsShownAtBothEnds()
+    {
+        var sequence = VideoGenerationService.BuildSequence([], "cover", 3, 1, 1, null, true, true, 100, 2);
+
+        Assert.Equal(["cover", "cover"], sequence.Files);
+        Assert.Equal([3.0, 2.0], sequence.Durations);
+        Assert.False(sequence.AudioEndsVideo);
+    }
+
+    [Fact]
+    public void BuildSequence_Repeat_TheCoverTakesTheLastSecondsOfTheAudio_AndTheListEndsWithTheAudio()
+    {
+        // Cover 2 s, 3 photos of 1 s, cover 4 s at the end, the audio 20 s: the photos run up to 16 s, whole passes and a bit of a pass.
+        // The cover is listed one frame short of that, because the concat list adds a frame after its last file; past the audio ffmpeg
+        // drops pictures, and the last one it keeps would be cut to one frame (taking the audio with it)
+        var sequence = VideoGenerationService.BuildSequence(Photos(3), "cover", 2, 1, 1, null, repeatToAudio: true, repeatAudio: true, audioSeconds: 20, coverEndSeconds: 4);
+
+        Assert.True(sequence.AudioEndsVideo);
+        Assert.Equal(20, sequence.ExpectedSeconds);
+        Assert.Equal(20, sequence.AudioEndSeconds);
+        Assert.Equal(sequence.Files.Count, sequence.Durations.Count);
+        Assert.Equal("cover", sequence.Files[0]);
+        Assert.Equal("cover", sequence.Files[^1]);
+        Assert.Equal(2, sequence.Files.Count(f => f == "cover"));
+        Assert.Equal(2, sequence.Durations[0]);
+        Assert.Equal(4 - VideoGenerationService.LastFrameSeconds, sequence.Durations[^1], precision: 9);
+        Assert.Equal(16, sequence.Durations.Take(sequence.Durations.Count - 1).Sum(), precision: 9);
+        Assert.Equal(20 - VideoGenerationService.LastFrameSeconds, sequence.Durations.Sum(), precision: 9);
+    }
+
+    [Fact]
+    public void BuildSequence_Repeat_TheLastPhotoBeforeTheCoverIsCutShort()
+    {
+        // Cover 1 s + 2 photos of 2 s + cover 1 s = 6 s; the audio is 10.5 s, so the photos run to 9.5 s: a pass (4 s) and half of the first photo
+        var sequence = VideoGenerationService.BuildSequence(Photos(2), "cover", 1, 2, 2, null, true, true, 10.5, 1);
+
+        Assert.Equal(["cover", "p1.jpg", "p2.jpg", "p1.jpg", "p2.jpg", "p1.jpg", "cover"], sequence.Files);
+        Assert.Equal([1.0, 2.0, 2.0, 2.0, 2.0, 0.5], sequence.Durations.Take(6));
+        Assert.Equal(1.0 - VideoGenerationService.LastFrameSeconds, sequence.Durations[^1], precision: 9);
+    }
+
+    [Fact]
+    public void BuildSequence_Repeat_AWhollyNeededPhotoIsNotCut()
+    {
+        // The photos run to 9 s: the first pass ends at 5 s (cover 1 + 4), and one more pass of 4 s ends exactly there
+        var sequence = VideoGenerationService.BuildSequence(Photos(2), "cover", 1, 2, 2, null, true, true, 10, 1);
+
+        Assert.Equal(["cover", "p1.jpg", "p2.jpg", "p1.jpg", "p2.jpg", "cover"], sequence.Files);
+        Assert.Equal([1.0, 2.0, 2.0, 2.0, 2.0], sequence.Durations.Take(5));
+        Assert.Equal(1.0 - VideoGenerationService.LastFrameSeconds, sequence.Durations[^1], precision: 9);
+    }
+
+    [Fact]
+    public void BuildSequence_Repeat_LessThanHalfAFrameOfAPhotoIsLeftOut_AndTheCoverTakesIt()
+    {
+        // Cover 1 s, a photo of 2 s, cover 1 s: the photos run to 5.01 s, which leaves 0.01 s of a second pass: not a frame
+        var sequence = VideoGenerationService.BuildSequence(["a"], "cover", 1, 2, 2, null, true, true, 6.01, 1);
+
+        Assert.Equal(["cover", "a", "a", "cover"], sequence.Files);
+        Assert.Equal(1.01 - VideoGenerationService.LastFrameSeconds, sequence.Durations[^1], precision: 9);
+        Assert.Equal(5, sequence.Durations.Take(3).Sum(), precision: 9); // the cover starts at 5 s, not at 5.01 s
+    }
+
+    [Fact]
+    public void BuildSequence_Repeat_ACoverAtTheEndMakesTheVideoLongerThanTheAudio_NoRepeat()
+    {
+        // Cover 2 + photos 6 + cover 2 = 10 s; the audio is 9 s
+        var sequence = VideoGenerationService.BuildSequence(Photos(3), "cover", 2, 2, 2, null, true, true, 9, 2);
+
+        Assert.False(sequence.AudioEndsVideo);
+        Assert.Equal(["cover", "p1.jpg", "p2.jpg", "p3.jpg", "cover"], sequence.Files);
+    }
+
+    [Fact]
+    public void BuildSequence_Repeat_ListingTooManyFilesWithTheCoverAtTheEnd_IsRefused()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => VideoGenerationService.BuildSequence(["a"], "cover", 0.04, 0.04, 0.04, null, true, true, 20 * 3600, 0.04));
+
+        Assert.Contains("too many", ex.Message);
     }
 
     [Fact]
