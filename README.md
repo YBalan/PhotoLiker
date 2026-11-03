@@ -31,6 +31,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Aligning file dates](#aligning-file-dates)
 - [Removing empty folders](#removing-empty-folders)
 - [Finding duplicates](#finding-duplicates)
+- [Progress on the taskbar](#progress-on-the-taskbar)
 - [Dark and light theme](#dark-and-light-theme)
 - [Language](#language)
 - [Settings file](#settings-file)
@@ -784,6 +785,18 @@ The search index forgets the moved copies at once (after an undo, *Update index*
 Which folder you open matters for one thing: the `Deleted` folder directly inside the opened folder is the app's own and is not
 scanned; a `Deleted` folder deeper down is a folder like any other, and its copies are found and are the first to go.
 Afterwards **Remove empty folders** clears the card folders that are left with nothing in them.
+
+## Progress on the taskbar
+
+Whatever takes a while also shows its progress on the taskbar button of PhotoLiker, as a green bar that fills up under the icon, the way a browser
+shows a download, so it can be followed with the window minimized or behind another one. A bar that runs to and fro means that
+something is going on but its end is not known yet (listing the photos, loading the models).
+
+It follows the progress bars the program already shows: the indexing of the photos (the strip above the photo), and the dialogs **Align dates**,
+**Find duplicates**, **Remove empty folders** and **Generate Video**, saving all search results in a group, and the download of a new version in
+the About box. When two run at once the one in front is shown: a dialog opened over the window wins over the indexing behind it, and the indexing
+is back on the button when the dialog is closed. With nothing running the button shows nothing. (The code is in `TaskbarProgress`: each
+progress bar registers itself with one line, and the main window asks them a few times a second.)
 
 ## Dark and light theme
 

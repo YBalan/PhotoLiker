@@ -36,6 +36,7 @@
             InitializeEmptyFolders();
             InitializeDuplicates();
             InitializeRotate();
+            InitializeTaskbarProgress();
             InitializeLanguage();
             ApplyControlTexts(); // the designer writes English into the buttons it makes
             Text = WithDebugPrefix(Text);
@@ -212,6 +213,7 @@
             StopListingCheck();
             SaveListingOnClose();
             _photoCache.Dispose();
+            DisposeTaskbarProgress();
             ShutDownSearch();
             SaveWindowPosition();
             SaveSettingsToJson();
