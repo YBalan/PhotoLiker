@@ -1,5 +1,11 @@
 namespace PhotoLiker.Search
 {
+    /// <summary>
+    /// A photo decoded to pixels for showing on a screen, upright: interleaved B, G, R, A bytes with the colours multiplied by the alpha (the format
+    /// a screen draws fastest), no padding.
+    /// </summary>
+    public sealed record DecodedPixels(int Width, int Height, byte[] Pbgra);
+
     /// <summary>A photo decoded to pixels, upright and at most a limited size: interleaved B, G, R bytes, no padding.</summary>
     public sealed record DecodedPhoto(int Width, int Height, byte[] Bgr)
     {

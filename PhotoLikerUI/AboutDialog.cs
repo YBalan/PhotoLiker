@@ -99,6 +99,7 @@ namespace PhotoLikerUI
 
             // Only while the setup is downloaded
             _progress = new ProgressBar { Style = ProgressBarStyle.Continuous, Size = new Size(shortcuts.Width, 14), Margin = new Padding(3, 4, 3, 0), Visible = false };
+            TaskbarProgress.Watch(_progress);
 
             var buttons = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 12, 0, 0) };
             buttons.Controls.AddRange([english, ukrainian, ok]);

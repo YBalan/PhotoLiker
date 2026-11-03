@@ -137,6 +137,7 @@ namespace PhotoLikerUI
             var bottom = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 1, Margin = new Padding(0) };
             bottom.Controls.Add(_summary, 0, 0);
             bottom.Controls.Add(_progress, 0, 1);
+            TaskbarProgress.Watch(_progress); // shown while it works
             bottom.Controls.Add(_status, 0, 2);
             bottom.Controls.Add(buttons, 0, 3);
             _summary.Margin = new Padding(0, 6, 0, 4);

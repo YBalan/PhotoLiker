@@ -1,7 +1,10 @@
+using PhotoLiker.Search;
+
 namespace PhotoLikerUI
 {
     using System.Drawing.Drawing2D;
     using System.Drawing.Imaging;
+    using System.Runtime.InteropServices;
 
     public static class ImageHelper
     {
@@ -110,6 +113,132 @@ namespace PhotoLikerUI
                 preview.Dispose();
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Reads a photo for the slideshow: decoded, turned upright and scaled to fill as much of a screen of <paramref name="screen"/> pixels as it
+        /// can with its proportions (a small photo is enlarged), so that showing it is only a copy of its pixels. The date it was taken is read as well,
+        /// for the watermark. Safe to call from any thread.
+        /// </summary>
+        internal static SlideshowFrame LoadSlide(PhotoFile photo, Size screen)
+        {
+            var bytes = FileReading.ReadAllBytesShared(photo.OriginalFilePath);
+            var taken = TakenOf(photo, bytes);
+
+            Bitmap frame;
+            try
+            {
+                frame = SlideWithWic(bytes, screen);
+            }
+            catch
+            {
+                // A file the Windows imaging component will not take, which GDI+ (what the window reads with) may
+                frame = SlideWithGdi(bytes, screen);
+            }
+            return new SlideshowFrame(frame, taken);
+        }
+
+        /// <summary>
+        /// The quick way: the decoder makes the photo of the size of the screen itself (a JPEG is decoded at that size straight away, about 40 ms
+        /// for 12 MP where GDI+ needs 170 ms to decode and scale it, and it keeps up when several are made at once, which GDI+ does not).
+        /// </summary>
+        private static Bitmap SlideWithWic(byte[] bytes, Size screen)
+        {
+            var decoded = WicPhotoDecoder.DecodeToFit(bytes, screen.Width, screen.Height);
+
+            var bitmap = new Bitmap(decoded.Width, decoded.Height, PixelFormat.Format32bppPArgb); // the format the screen draws fastest
+            try
+            {
+                var data = bitmap.LockBits(new Rectangle(0, 0, decoded.Width, decoded.Height), ImageLockMode.WriteOnly, PixelFormat.Format32bppPArgb);
+                try
+                {
+                    var rowBytes = decoded.Width * 4;
+                    for (var y = 0; y < decoded.Height; y++)
+                        Marshal.Copy(decoded.Pbgra, y * rowBytes, data.Scan0 + y * data.Stride, rowBytes);
+                }
+                finally
+                {
+                    bitmap.UnlockBits(data);
+                }
+
+                return EnlargedToFit(bitmap, screen);
+            }
+            catch
+            {
+                bitmap.Dispose();
+                throw;
+            }
+        }
+
+        /// <summary>The decoder never enlarges: a photo smaller than the screen is blown up here, from its few pixels, which is cheap.</summary>
+        private static Bitmap EnlargedToFit(Bitmap photo, Size screen)
+        {
+            var scale = Math.Min((double)screen.Width / photo.Width, (double)screen.Height / photo.Height);
+            if (scale <= 1)
+                return photo;
+
+            var width = Math.Max(1, (int)Math.Round(photo.Width * scale));
+            var height = Math.Max(1, (int)Math.Round(photo.Height * scale));
+            var enlarged = new Bitmap(width, height, PixelFormat.Format32bppPArgb);
+            try
+            {
+                using (var g = Graphics.FromImage(enlarged))
+                {
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    g.DrawImage(photo, 0, 0, width, height);
+                }
+                photo.Dispose();
+                return enlarged;
+            }
+            catch
+            {
+                enlarged.Dispose();
+                throw;
+            }
+        }
+
+        private static Bitmap SlideWithGdi(byte[] bytes, Size screen)
+        {
+            // GDI+ reads the stream again while it draws, so nobody else may use this one
+            using var stream = new MemoryStream(bytes, writable: false);
+            using var source = Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: true);
+
+            var rotateFlip = GetRotateFlip(source);
+            if (rotateFlip != RotateFlipType.RotateNoneFlipNone)
+                source.RotateFlip(rotateFlip);
+
+            var scale = Math.Min((double)screen.Width / source.Width, (double)screen.Height / source.Height);
+            var width = Math.Max(1, (int)Math.Round(source.Width * scale));
+            var height = Math.Max(1, (int)Math.Round(source.Height * scale));
+
+            var frame = new Bitmap(width, height, PixelFormat.Format32bppPArgb);
+            try
+            {
+                using var g = Graphics.FromImage(frame);
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.DrawImage(source, 0, 0, width, height);
+                return frame;
+            }
+            catch
+            {
+                frame.Dispose();
+                throw;
+            }
+        }
+
+        /// <summary>When the photo was taken by the rule the program uses everywhere (see <see cref="PhotoDates"/>): the camera's date if it is believable, else the date of the file.</summary>
+        private static DateTime? TakenOf(PhotoFile photo, byte[] bytes)
+        {
+            var exif = ExifDates.None;
+            if (JpegOrientation.IsJpeg(photo.OriginalFilePath))
+            {
+                using var stream = new MemoryStream(bytes, writable: false);
+                exif = ExifReader.Read(stream);
+            }
+
+            return PhotoDates.Resolve(exif, PhotoDates.FileTime(photo.CreationTimeUtc), PhotoDates.FileTime(photo.LastWriteTimeUtc), DateTime.Now).Taken;
         }
 
         internal static Bitmap CreateThumbnail(Image source, int size)

@@ -36,6 +36,7 @@
             InitializeEmptyFolders();
             InitializeDuplicates();
             InitializeRotate();
+            InitializeTaskbarProgress();
             InitializeLanguage();
             ApplyControlTexts(); // the designer writes English into the buttons it makes
             Text = WithDebugPrefix(Text);
@@ -212,6 +213,7 @@
             StopListingCheck();
             SaveListingOnClose();
             _photoCache.Dispose();
+            DisposeTaskbarProgress();
             ShutDownSearch();
             SaveWindowPosition();
             SaveSettingsToJson();
@@ -743,7 +745,7 @@
                 return true;
             }
 
-            // The help keys do not type anything, so they work in a text box as well
+            // The help keys and the slideshow do not type anything, so they work in a text box as well
             switch (keyData)
             {
                 case Keys.F1:
@@ -754,6 +756,9 @@
                     return true;
                 case Keys.F3:
                     UserManualLauncher.Open(this, UserManual.English);
+                    return true;
+                case Keys.Alt | Keys.Enter:
+                    StartSlideshow();
                     return true;
             }
 

@@ -12,6 +12,7 @@ namespace PhotoLikerUI
         private const string InfoCategory = "1. Progress";
         private const string CurrentFileCategory = "2. Current File";
         private const string SettingsCategory = "3. Settings";
+        private const string SlideshowCategory = "4. Slideshow";
         private const string WindowCategory = "10. Window";
 
         // Declared before the table that uses them: static fields are initialized in the order they are written
@@ -32,6 +33,12 @@ namespace PhotoLikerUI
             [nameof(Settings.IsDarkTheme)]    = [Category(SettingsCategory), Hidden],
             [nameof(Settings.SearchPrecision)] = [Category(SettingsCategory), Hidden], // the slider of the search strip
             [nameof(Settings.SearchModel)]    = [Category(SettingsCategory), Hidden], // the combo box at the right end of the search strip
+
+            // The rows say what they are for under the heading of their category: Mode, Timeout, Watermark
+            [nameof(Settings.SlideshowMode)]  = [Category(SlideshowCategory), new DisplayNameAttribute("Mode"), Describe(() => SettingsStrings.SlideshowMode)],
+            [nameof(Settings.SlideshowMonitors)] = [Category(SlideshowCategory), new DisplayNameAttribute("Monitors"), Describe(() => SettingsStrings.SlideshowMonitors)],
+            [nameof(Settings.SlideshowTimeout)] = [Category(SlideshowCategory), new DisplayNameAttribute("Timeout"), Describe(() => SettingsStrings.SlideshowTimeout)],
+            [nameof(Settings.SlideshowWatermark)] = [Category(SlideshowCategory), new DisplayNameAttribute("Watermark"), Describe(() => SettingsStrings.SlideshowWatermark)],
 
             [nameof(Settings.WindowLeft)]     = [Category(WindowCategory), Hidden],
             [nameof(Settings.WindowTop)]      = [Category(WindowCategory), Hidden],

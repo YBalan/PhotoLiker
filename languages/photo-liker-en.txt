@@ -252,6 +252,8 @@ AboutStrings.ShortcutRotateInput = Ctrl+ / Ctrl-
 AboutStrings.ShortcutRotateAction = Rotate the photo a quarter clockwise / counterclockwise and save it
 AboutStrings.ShortcutZoomInput = Ctrl+mouse wheel
 AboutStrings.ShortcutZoomAction = Zoom the photo (drag to pan); over the strip: thumbnail size
+AboutStrings.ShortcutSlideshowInput = Alt+Enter
+AboutStrings.ShortcutSlideshowAction = Slideshow on the whole screen (Right / Left: the photo next to the shown one, Esc: back)
 AboutStrings.ShortcutCloseInput = Esc
 AboutStrings.ShortcutCloseAction = Close the search results
 AboutStrings.ShortcutSearchInput = Enter
@@ -729,6 +731,16 @@ SettingsStrings.SortOrder = The order of the photos: OldestFirst or NewestFirst 
 SettingsStrings.CacheSize = How many photos on each side of the shown one are kept decoded in memory, so that the arrow keys show them at once. A larger number browses faster over a slow network but uses more memory.
 SettingsStrings.ThumbnailSize = The size of the thumbnails in the strip at the right, in pixels. Ctrl + mouse wheel over the strip changes it.
 SettingsStrings.LanguageDescription = The language of the program. Each file photo-liker-<code>.txt in the Languages folder next to the program (or in %LocalAppData%\\PhotoLiker\\Languages) is a language; English is built in, so without files it is the only one. It changes at once and is kept for all folders, not in the settings file of a folder.
+SettingsStrings.SlideshowMode = Which photo the slideshow (Alt+Enter) shows after the one on the screen. Random: any photo of the list, each one once before any comes again. OneByOne: the next photo of the list, and after the last one the first. In both modes Left and Right go to the photo next to the shown one in the list.
+SettingsStrings.SlideshowMonitors = Which screens the slideshow covers. Current: the screen PhotoLiker is on. All: every connected screen, each with a photo of its own and never the same photo on two screens; they change together. In the Random mode every screen takes the next photo of the random order; in OneByOne the screens, from left to right, show photos that follow each other (the photo that was shown stays on the screen the window is on) and the next set begins where this one ends. Left and Right move every screen to its neighbouring photo. With more screens than photos the farthest from the window are left out.
+SettingsStrings.SlideshowTimeout = How many seconds the slideshow keeps a photo on the screen; 2 by default, not less than 0.2. The time counts from the moment the photo appears, and Left or Right start it again.
+SettingsStrings.SlideshowWatermark = What the slideshow writes in the bottom right corner of the screen: Year or DateTime (the day and the time) the photo was taken, or None. The date is the one the search and PageUp / PageDown use: the date the camera wrote into the photo, else the date of the file; a photo without a date gets no text.
+
+# ──────────── SlideshowStrings ────────────
+SlideshowStrings.Loading = Loading...
+SlideshowStrings.NothingToShow = None of the photos can be shown.
+SlideshowStrings.StatusNoPhotos = There are no photos to show in a slideshow.
+SlideshowStrings.StatusEndedFormat = Slideshow ended at '{0}' ({1} of {2}).
 
 # ──────────── VideoStrings ────────────
 VideoStrings.SourceCurrent = Current

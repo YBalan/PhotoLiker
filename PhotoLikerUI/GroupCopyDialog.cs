@@ -40,6 +40,7 @@ namespace PhotoLikerUI
 
             Controls.AddRange([_counts, _bar, _file, _cancel]);
             CancelButton = _cancel;
+            TaskbarProgress.Watch(_bar, () => _running); // the bar is there before and after the copying
         }
 
         /// <summary>What was done; null if the work failed altogether (see <see cref="Error"/>).</summary>

@@ -398,6 +398,7 @@ namespace PhotoLikerUI
             _progressBar.Minimum = 0;
             _progressBar.Maximum = 100;
             _progressBar.Visible = false;
+            TaskbarProgress.Watch(_progressBar, () => _isGenerating); // the bar stays on the dialog after the video is made
             layout.Controls.Add(_progressBar, 0, 15);
             layout.SetColumnSpan(_progressBar, 3);
 

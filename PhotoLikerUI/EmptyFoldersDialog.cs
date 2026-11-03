@@ -143,6 +143,7 @@ namespace PhotoLikerUI
             bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             bottom.Controls.Add(_summary, 0, 0);
             bottom.Controls.Add(_progress, 0, 1);
+            TaskbarProgress.Watch(_progress); // shown while it works
             bottom.Controls.Add(_status, 0, 2);
             bottom.Controls.Add(buttons, 0, 3);
 

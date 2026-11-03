@@ -29,6 +29,7 @@
     <li><a href="#groups">Likes and groups</a></li>
     <li><a href="#delete">Deleting photos</a></li>
     <li><a href="#rotate">Rotating photos</a></li>
+    <li><a href="#slideshow">Slideshow</a></li>
     <li><a href="#settings">Settings</a></li>
     <li><a href="#order">Order of the photos</a></li>
     <li><a href="#big-folders">Big folders</a></li>
@@ -176,6 +177,9 @@ photo again.</p></div>
   <li><strong>Thumbnails</strong> (right). Click one to jump to that photo.</li>
   <li><strong>Status bar</strong> (bottom): what the program just did. At the right it has the <strong>Maps</strong> link, when the
   photo has a position, and the <strong>Rotate</strong> button.</li>
+  <li><strong>Taskbar button</strong>: while something takes a while (indexing the photos, and the dialogs for dates, duplicates, empty folders and
+  video, saving search results in a group, or downloading a new version) a green bar fills up under the PhotoLiker icon, as when a browser downloads
+  a file, so you can follow it with the window minimized. A bar that runs to and fro means the end is not known yet.</li>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
@@ -193,13 +197,14 @@ photo again.</p></div>
     <tr><td><kbd>1</kbd>–<kbd>9</kbd>, <kbd>A</kbd>–<kbd>Z</kbd></td><td>Save the photo in a group, or take it out again (see <a href="#groups">Likes and groups</a>).</td></tr>
     <tr><td><kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>9</kbd>, <kbd>Alt</kbd>+<kbd>A</kbd>–<kbd>Z</kbd></td><td>While search results are shown: save <em>all</em> of them in the group, after telling you how many photos that is and asking.</td></tr>
     <tr><td><kbd>0</kbd></td><td>Fit the photo to the viewer (after zooming in).</td></tr>
+    <tr><td><kbd>Alt</kbd>+<kbd>Enter</kbd></td><td>Show the photos of the list as a <a href="#slideshow">slideshow</a> on the whole screen, beginning with the shown photo. In it <kbd>→</kbd> / <kbd>←</kbd> show the photo next to the shown one, and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back.</td></tr>
     <tr><td><kbd>F1</kbd></td><td>Open the About box (see <a href="#about">About box and this manual</a>).</td></tr>
     <tr><td><kbd>F2</kbd> / <kbd>F3</kbd></td><td>Open this manual in Ukrainian / in English.</td></tr>
     <tr><td><kbd>F5</kbd></td><td>List the folder again from scratch (see <a href="#big-folders">Big folders</a>).</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger.</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd></td><td>Rotate the photo a quarter clockwise / counterclockwise and save it (see <a href="#rotate">Rotating photos</a>).</td></tr>
     <tr><td><kbd>Ctrl</kbd>+mouse wheel</td><td>Over the photo: zoom, then drag to move the picture. Over the thumbnails: change their size.</td></tr>
-    <tr><td><kbd>Esc</kbd></td><td>Close the search results.</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Close the search results; in the slideshow, go back.</td></tr>
     <tr><td><kbd>Enter</kbd> in the search box</td><td>Search.</td></tr>
     <tr><td><kbd>Shift</kbd>+drag over the photo</td><td>Mark a face the program missed (with the face icon switched on).</td></tr>
   </tbody>
@@ -281,7 +286,36 @@ file the status bar says so and nothing is written.</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="settings">10. Settings</h2>
+<h2 id="slideshow">10. Slideshow</h2>
+
+<p>Press <kbd>Alt</kbd>+<kbd>Enter</kbd> and the photos of the list go by on the whole screen, or on every monitor, each with a different photo (see
+<strong>Monitors</strong> below), beginning with the photo you are looking at (while search results are shown, the results are the list). Each photo is as large as the screen lets it be, with black around it.
+<kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) takes you back to the window, to the photo the slideshow stopped at.</p>
+
+<ul>
+  <li><kbd>→</kbd> / <kbd>←</kbd> show the photo next to the one on the screen, <strong>also in the random mode</strong> (there only the timer
+  picks at random), and that photo gets its full time again. After the last photo comes the first, and before the first the last.</li>
+  <li><strong>Hold a key to scroll quickly.</strong> The photos around the one on the screen are made ready in advance, at the size of
+  your screen, and in the random mode so are the next ones the timer will pick, so the slideshow keeps up with the keyboard.</li>
+  <li>A photo that cannot be read is passed over.</li>
+</ul>
+
+<p>The four settings are in the group <strong>4. Slideshow</strong> of the settings table, and are kept for the folder:</p>
+
+<div class="table-scroll">
+<table class="wide-first">
+  <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Mode</strong></td><td><code>Random</code> (the default): after the time of a photo another one of the list, every photo once before any comes a second time. <code>OneByOne</code>: the next photo of the list.</td></tr>
+    <tr><td><strong>Monitors</strong></td><td><code>Current</code> (the default): the screen PhotoLiker is on. <code>All</code>: every connected monitor, each with a photo of its own, never the same photo on two monitors, and they all change together. With <code>Random</code> every monitor takes the next photo of the random order; with <code>OneByOne</code> the monitors, from left to right, show photos that follow each other (the photo you were looking at stays on the monitor of the window), and the next set begins where this one ends. <kbd>→</kbd> / <kbd>←</kbd> move every monitor to its neighbouring photo. With more monitors than photos the farthest from the window are left out.</td></tr>
+    <tr><td><strong>Timeout</strong></td><td>How many seconds a photo stays: 2 by default, not less than 0.2. It counts from the moment the photo is on the screen.</td></tr>
+    <tr><td><strong>Watermark</strong></td><td>What is written in the bottom right corner: <code>DateTime</code> (the default), the day and the time the photo was taken, <code>Year</code>, or <code>None</code>. It is the date the camera wrote in the photo, when that can be believed, else the date of the file. A photo with no date gets no text.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="settings">11. Settings</h2>
 
 <p>The settings table at the top left shows the progress, the current file and the settings of the folder. Every row has a
 description: select it and the pane under the table says what it is for.</p>
@@ -308,7 +342,7 @@ description: select it and the pane under the table says what it is for.</p>
 
 <p><strong>CurrentIndex</strong> is the number of the shown photo, counted from 0: type another number into it to jump to that
 photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong> and the other rows
-that show information cannot be changed.</p>
+that show information cannot be changed. The group <strong>4. Slideshow</strong> has three rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
 
 <h3 id="language">Language</h3>
 <p>The <strong>Language</strong> row of the settings table chooses the language of the program: pick <strong>English</strong> or <strong>Українська</strong> (Ukrainian) in the list. The
@@ -350,7 +384,7 @@ used from the next like.</p>
 </div>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="order">11. Order of the photos</h2>
+<h2 id="order">12. Order of the photos</h2>
 
 <p><strong>SortOrder</strong> decides the order of the list, and so where the arrow keys, <kbd>Home</kbd>, <kbd>End</kbd> and
 <kbd>PageDown</kbd> / <kbd>PageUp</kbd> take you:</p>
@@ -373,7 +407,7 @@ the dates of the files to the dates the photos were taken.</p></div>
 for every photo.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="big-folders">12. Big folders</h2>
+<h2 id="big-folders">13. Big folders</h2>
 
 <p>Listing a folder on a network drive is slow: the more subfolders, the longer it takes (6.6 seconds for 16,000 photos in 985 folders
 on a home router; minutes for a big archive). So PhotoLiker keeps the list.</p>
@@ -388,7 +422,7 @@ on a home router; minutes for a big archive). So PhotoLiker keeps the list.</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="exif">13. EXIF and GPS</h2>
+<h2 id="exif">14. EXIF and GPS</h2>
 
 <p>The grid below the settings shows what the camera wrote into the shown photo (EXIF): make and model, exposure, flash, the date the
 photo was taken, and more, in groups. Select a row and the pane under the grid explains it in plain words. The <strong>All Metadata</strong>
@@ -416,7 +450,7 @@ row under <em>Debug</em> holds everything as text.</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="tools">14. Tidying up: dates, empty folders, duplicates</h2>
+<h2 id="tools">15. Tidying up: dates, empty folders, duplicates</h2>
 
 <p>Three buttons of the toolbar tidy a photo folder. They all work the same way: they <strong>look first and show you what they would do</strong>,
 nothing is changed until you press the button that does it, and what they move is moved, not erased.</p>
@@ -475,7 +509,7 @@ photos that show <em>exactly the same picture</em> in different folders, keeps o
 <div class="note"><p>Do not tidy a folder while it is being indexed for search: stop the indexing first.</p></div>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="video">15. Making a video</h2>
+<h2 id="video">16. Making a video</h2>
 
 <p>The <strong>Generate Video</strong> button turns photos into a video: each photo is shown for a moment, one after the other, optionally behind
 a title picture and with a song under it. Nothing else has to be installed.</p>
@@ -536,7 +570,7 @@ when it is what you want.</p></div>
 PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe</code> on your <code>PATH</code>.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="theme">16. Dark and light theme</h2>
+<h2 id="theme">17. Dark and light theme</h2>
 
 <p>The theme button of the toolbar switches between the two. The choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
@@ -547,7 +581,7 @@ see <a href="#language">Language</a>.)</p>
 </figure>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="files">17. What PhotoLiker keeps, and where</h2>
+<h2 id="files">18. What PhotoLiker keeps, and where</h2>
 
 <ul>
   <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
@@ -561,7 +595,7 @@ see <a href="#language">Language</a>.)</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="about">18. About box and this manual</h2>
+<h2 id="about">19. About box and this manual</h2>
 
 <p>The <strong>Help</strong> button (the question mark) at the end of the toolbar, or the <kbd>F1</kbd> key, opens the About box: the version and build date of the program, the
 keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and two buttons that open this manual, in English or in Ukrainian.
