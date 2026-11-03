@@ -43,9 +43,10 @@ The dialog opens at once, even on a folder with tens of thousands of photos.
 
 ## 4. Add a title picture (optional)
 
-Under **Cover (optional)** click **Browse...** and pick a picture. A preview shows how it will look. The cover is the **first**
-picture of the video, whatever the sort order is, and **Shown for (sec)** says how long it stays on screen (3 seconds to
-begin with). **Clear** takes it away again.
+Under **Cover (optional)** click **Browse...** and pick a picture. A preview shows how it will look. **Show at the start**
+(ticked to begin with) makes it the **first** picture of the video, whatever the sort order is, for the seconds in the box beside
+it (3 seconds to begin with). **Show at the end** (not ticked to begin with) shows it again after the last photo, for the seconds
+in the box beside that one. Untick the start to show the cover only at the end. **Clear** takes it away again.
 
 ## 5. Add a song (optional)
 

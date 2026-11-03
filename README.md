@@ -318,11 +318,18 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   The times are drawn in the dialog, when you tick the box and whenever you pick another folder in *Photos from* (tick it off and on to
   draw again), so that *Video length* is the sum of the times that were drawn and the video gets exactly those times. Changing *Start* or *End*
   moves the same draw along, and making another video from the same dialog gives the same times.
-- **Cover (optional)** opens the video with a picture of your choice.
+- **Cover (optional)** is a picture of your choice for the start and/or the end of the video.
   - **Browse...** picks it, and a preview shows it (small, and upright, as it will look).
-  - *Shown for (sec)* is how long it stays on screen. The *Frame time range* is spread over the photos only, the cover is not part of it.
-  - **Clear** takes it away again.
-  - The cover is the first picture of the video whatever the sort order is, and a photo that is the cover as well is shown once, as the cover.
+  - **Show at the start** (ticked to begin with) shows it before the photos, for the number of seconds in the box beside it (3 to begin with).
+    The *Frame time range* is spread over the photos only, the cover is not part of it.
+  - **Show at the end** (not ticked to begin with) shows it after the last photo, for the seconds in the box beside it (3 to begin with).
+    With the photos set to **Repeat** and a longer audio, the cover takes the last seconds of the audio (the photo that is showing then is cut
+    short), so the video still ends together with the audio.
+  - The two ticks and their times are on only when there is a cover, a time only while its tick is on. With both ticks off the cover is left out
+    (the log says so).
+  - **Clear** takes it away again (the ticks stay for the next cover).
+  - The cover is the first picture of the video whatever the sort order is, and the last one if it is shown at the end. A photo that is the
+    cover as well is shown once, as the cover.
 - **Audio (optional)** puts a sound under the video.
   - **Browse...** picks the file (mp3, m4a, wav, flac, ogg... anything ffmpeg can read). Only the sound of the file is used, not the cover
     picture of a music file.
@@ -334,12 +341,13 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
 - **Repeat or once** has a box for the photos and one for the audio (both are off without an audio file). Each one matters when the other is the longer.
   - **Photos: Once** plays the photos once, so that a longer audio is cut.
   - **Photos: Repeat** plays them over and over, in the same order and with the same times, until the audio ends, when the audio is longer than
-    the cover and the photos once through. The audio is then played once and ends the video, and the cover is shown only at the start.
+    the cover and the photos once through. The audio is then played once and ends the video, and the cover is shown only at the start and/or at
+    the end, once (it is not repeated with the photos).
   - **Audio: Repeat** (the default) plays an audio that is shorter than the photos over and over until they end.
   - **Audio: Once** plays it once and the rest of the video is silent (the video is as long as the photos either way).
   - An audio whose length is not known (`Length: unknown`) is not repeated for.
 - **Video length** is how long the video will be with the settings as they are: the photos of the picked folder with the time of each, plus the
-  cover (with the photos set to **Repeat** and a longer audio: the length of the audio). It follows every change at once, and, when an audio is
+  cover (and its time at the end, if ticked; with the photos set to **Repeat** and a longer audio: the length of the audio). It follows every change at once, and, when an audio is
   chosen, says what becomes of it (cut, played over and over, played once and then silence, about as long as the video, or how many times the
   photos play). It is exact for the photos it counts: photos that have gone from the disk since they were listed are not taken off, and the video
   is a few hundredths of a second longer than the times add up to.
@@ -353,6 +361,11 @@ How the photos are prepared:
   how many. Photos that GDI+ cannot read are left as they are.
 - ffmpeg also cannot join pictures of different kinds (a PNG followed by JPEG files gives a video of one frame, without an error), so when the
   pictures are not all of one kind, say PNG photos among JPEG ones or a PNG cover, those that are not JPEG are copied as JPEG the same way.
+- The video is encoded without B-frames (`-bf 0` for libx264, `bframes=0` for libx265). With them the encoder reorders pictures and the file
+  has to delay the decode time of the first ones by a stretch of the first three pictures (3.32 s behind a cover of 3 s); ffmpeg writes that as
+  an edit list, and a player that does not honour it shows the video that much late: the cover for twice its time and the end 3 s too late,
+  although the file itself says the right length. Without B-frames there is nothing to delay. For a slideshow of stills the size is the same.
+  Videos made before this still have the delay.
 
 ### About box
 
