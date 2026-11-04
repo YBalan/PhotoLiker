@@ -154,6 +154,31 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
    `"Yurii playing guitar"` does not look for Yurii. A dashed yellow box with a name and a question
    mark is a guess ("looks like Mom"); click it to confirm. A face the program missed (small, turned away, dark): hold
    <kbd>Shift</kbd> and drag a box around it.
+
+   **Groups of people.** With many people named, sort them into groups (Family, Friends, Work...). The **People** button (two heads,
+   next to the faces icon) opens **People and groups**: the people you named, with the number of faces named and the groups each
+   one is in. Select one person or many (<kbd>Ctrl</kbd>+<kbd>A</kbd> selects everybody, Shift + click or Ctrl + click picks several) and tick the
+   groups they belong to on the right: a box that is only half filled means some of the selected people are in that group, and a
+   click puts all of them in. A person can be in several groups. **New group...** makes a group and puts the people who are selected
+   into it, **Show** limits the list to one group or to the people who are in none, **Rename group...** and **Delete group** work on the group that
+   is shown (deleting a group does not delete its people), and a click on a column title sorts the list (by **Faces**, the names with
+   the fewest named faces come first). Every change is saved at once.
+
+   **Rename person...** (also <kbd>F2</kbd> in the list, and **Rename ...** in the menu of a face) gives the selected person another name
+   everywhere: the faces named so in this folder, the same person in the other folders (each folder follows when you open it,
+   see below), and the groups the person is in. A name that another person has already makes the two **one person** (you are asked
+   first): all their faces are the faces of the one who was there, with that spelling, and in the groups they are there once. That is
+   also how to fix a name that was typed two ways. A name that differs only in case is another spelling of the same name.
+
+   ![People and groups: two people selected, one group ticked, one half filled](docs/images/28-people-groups.png)
+
+   Groups are used in three places. The menu of a face shows each group by name with its people in a sub-menu, then the people who
+   are in no group, and the person the face looks like at the top. **New person...** asks for a group too (it starts with the one
+   you used last; a name that is new makes a new group). And the name of a group typed into the search box finds the photos of
+   anybody in it: `Family`, `Family on the beach 2009`, `Family and Yurii` (Yurii together with somebody of the family). A group
+   can not have the name of a person. The groups are the same in every folder, and a folder that has people named in it keeps a copy of them next to the photos.
+
+   ![The menu of a face: the likely person on top, the groups with their people in sub-menus, then a person who is in no group](docs/images/29-face-menu-groups.png)
 5. **Precision**: the slider at the right end of the strip (**Wide** to **Precise**) sets how strict the searches are. To the
    left they let more photos through (looser matches), to the right fewer (closer matches); the middle is the standard. It moves
    the cutoffs of all the searches together: how well a photo must fit the words and how far below the best one it may be,
@@ -228,7 +253,8 @@ What is kept where:
   **Update index** then brings it up to date: photos whose size and date are the same are not analyzed again. The models
   are downloaded there on first use, or copy the `models` folder (below) along.
 - **The names you give** are kept in `photo-liker-people.json` in the photo folder, next to the photos: the face examples of each
-  person. It is the only new file in your folder, it is plain JSON, and a rebuilt index finds the same people again.
+  person. It is plain JSON, and a rebuilt index finds the same people again. (The only other file PhotoLiker adds to a folder is the
+  copy of the groups, `photo-liker-groups.json`, see below.)
   The people of all your folders are also collected in `%LocalAppData%\PhotoLiker\people.json`, so a folder you open and index
   for the first time already knows the people you named in the others: their names are in the list of the face menu and
   the search box, typing one finds the photos of that person in this folder, and a face that looks like one of them is
@@ -236,7 +262,19 @@ What is kept where:
   A face named in another folder is only an example here, it is not marked as named: the faces you confirm in this folder
   go into this folder's file. The file of a folder stays the truth about that folder (delete it and the folder's people are
   gone from the shared file the next time the folder is opened), the shared one is a copy that can be deleted any time.
+  It also remembers the last 100 renames of people (**Rename person...**): a folder you open later that still has a person under the
+  old name gets the new one in its own file, unless the person was named in it after the folder last agreed with the shared file
+  (a new person who has the old name is somebody else and is left alone).
   Folders you named people in before this existed join it when you open them once (no indexing needed).
+  The **groups** of people are one set for all folders, kept in `%LocalAppData%\PhotoLiker\people-groups.json` and also in
+  `photo-liker-groups.json` in every photo folder that has people named in it, so that the groups travel with the photos (to
+  another computer, into a backup) the way the names do. Both are plain JSON and say when they were saved, and the one saved
+  later is the set: when you open a folder whose copy is newer than the groups on this computer (a new computer, or a change made on another
+  one) the copy replaces them, and an older or missing copy is written again. A change is written to both at once, so a group you
+  deleted stays deleted in every folder you open afterwards. Two computers that both changed the groups since they last met are
+  not merged: the later change wins as a whole. A folder that can not be written (read-only, a drive that is off) only misses its
+  copy, the status bar says so and the groups on this computer are saved all the same. Delete a copy and it is written again
+  the next time the folder is opened.
 - **The models** are in `%LocalAppData%\PhotoLiker\models`, a folder for each, downloaded when they are first needed: to match
   words with photos CLIP ViT-B/32 (OpenAI, MIT licence, the standard), SigLIP 2 Base/16 (Google, Apache 2.0) and XLM-RoBERTa with ViT-B/32 (LAION,
   MIT licence) (see **Model** above; the last two are ONNX exports of the Immich project, fixed to one revision), and
@@ -893,7 +931,7 @@ written by name and read the same way (an unknown name gives `Random` / `Current
 settings of the [photo search](#photo-search).
 
 Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that
-was opened, and the [language](#language)), `people.json` (the people named in all folders, see above) and `crash.log` (the stack trace of an unexpected
+was opened, and the [language](#language)), `people.json` (the people named in all folders, see above), `people-groups.json` (the groups of people) and `crash.log` (the stack trace of an unexpected
 error). Set the environment variable `PHOTOLIKER_DATA_DIR` to keep them somewhere else; the tests do that, so running them
 leaves your own files alone.
 

@@ -101,6 +101,21 @@ them. Nothing is uploaded: the analysis runs on this computer, and your photos a
   Who is in a photo comes from the faces, so it works with every model; the words are matched by the chosen model. A text in double quotes is only words. A dashed
   yellow box with a name and a question mark is a guess (<q>looks like Mom</q>): click it to confirm. For a face the program missed, hold <kbd>Shift</kbd> and drag a box around it.
   Names you give in one folder are known in the others, too.</li>
+  <li><strong>People and groups.</strong> When many people are named, sort them into groups (Family, Friends, Work…) so that they are easy to find. The <strong>People</strong> button (two heads, next to the faces icon)
+  opens <strong>People and groups</strong>: the people you named, with the number of faces named and the groups each one is in. Select one person or several (<kbd>Ctrl</kbd>+<kbd>A</kbd> selects everybody;
+  <kbd>Shift</kbd>+click or <kbd>Ctrl</kbd>+click picks several) and tick the groups they belong to on the right: a box that is only half filled means that some of the selected people are in the group, and a click puts
+  all of them in. A person can be in several groups. <strong>New group…</strong> makes a group and puts the people who are selected into it; <strong>Show</strong> limits the list to one group, or to the people who are in none;
+  <strong>Rename group…</strong> and <strong>Delete group</strong> work on the group that is shown (deleting a group does not delete its people). A click on a column title sorts the list: by <strong>Faces</strong>, the names with the
+  fewest named faces come first. Every change is saved at once.
+  <strong>Rename person…</strong> (also <kbd>F2</kbd> in the list, and <strong>Rename …</strong> in the menu of a face) gives the selected person another name everywhere: in this folder, in the other folders
+  (each one follows when you open it) and in the groups. A name that another person has already makes the two <strong>one person</strong>: you are asked first, all their faces then belong to the one who was there,
+  with that spelling, and in the groups they are there once. That is also how to fix a name that was typed two ways.
+    <figure><img src="images/28-people-groups.png" alt="People and groups: two people selected, one group ticked, one half filled" width="902" height="612"><figcaption>Two people are selected: <strong>Friends</strong> has both, <strong>Family</strong> only one of them (half filled).</figcaption></figure>
+  Groups help in three places. The menu of a face shows each group by name with its people in a sub-menu, then the people who are in no group, and the person the face looks like at the top.
+  <strong>New person…</strong> asks for a group too: it starts with the one you used last, and a name that is new makes a new group. And the name of a group typed into the search box finds the photos of anybody in it:
+  <code>Family</code>, <code>Family on the beach 2009</code>, <code>Family and Yurii</code> (Yurii together with somebody of the family). A group can not have the name of a person. The groups are the same in all folders, and a folder that has people named in it keeps a copy of them next to the photos.
+    <figure><img src="images/29-face-menu-groups.png" alt="The menu of a face with groups" width="243" height="132"><figcaption>The menu of a face: the likely person on top, the groups with their people in sub-menus, then a person who is in no group.</figcaption></figure>
+  </li>
   <li><strong>Precision.</strong> The slider at the right end of the strip (<strong>Wide</strong> to <strong>Precise</strong>) sets how strict the searches are: to the left they let more photos through
   (looser matches), to the right fewer (closer matches), the middle is the standard. It applies to a description, to <strong>More like this</strong> and to the photos of a person. Moving it repeats the
   last search at once, so you can widen a search that found too little or narrow one that found too much. Hold the mouse over it to see the numbers. Each folder keeps its own position
@@ -586,12 +601,13 @@ see <a href="#language">Language</a>.)</p>
 <ul>
   <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
   photo you stopped at), so every folder opens the way you left it, on any computer. The paths in it are relative, so the folder can be moved or shared.
-  <code>photo-liker-people.json</code> holds the names you gave to faces. These are the only files PhotoLiker adds to your folder, besides the logs of Align
+  <code>photo-liker-people.json</code> holds the names you gave to faces, and <code>photo-liker-groups.json</code> the groups you sorted the people into (a copy of the groups of this computer,
+  so that they travel with the photos; the one that was saved later is the one that counts when you open the folder). These are the only files PhotoLiker adds to your folder, besides the logs of Align
   dates and Find duplicates.</li>
   <li><strong>The Liked folder</strong> (by default inside the photo folder) and its group folders: your copies.</li>
   <li><strong>The <code>Deleted</code> folder</strong> inside the photo folder: the photos you removed, and the duplicates and unreadable photos that were moved.</li>
   <li><strong>On this computer</strong>, in <code>%LocalAppData%\PhotoLiker</code>: the saved lists of folders, the search index, the AI models, the people of all
-  your folders, the last folder you opened and the language of the program. All of it except the models can be rebuilt, so deleting it only costs the time to make it again.</li>
+  your folders and the groups you sorted them into, the last folder you opened and the language of the program. All of it except the models can be rebuilt, so deleting it only costs the time to make it again.</li>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->

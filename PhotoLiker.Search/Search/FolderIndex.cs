@@ -104,11 +104,12 @@ namespace PhotoLiker.Search
         /// </summary>
         public ClipModelInfo ClipModel { get; set; } = ClipModels.Default;
 
-        public static FolderIndex Open(string folder) => Open(folder, SearchPaths.SharedPeopleFile);
+        public static FolderIndex Open(string folder) => Open(folder, SearchPaths.SharedPeopleFile, SearchPaths.PeopleGroupsFile);
 
         /// <param name="sharedPeopleFile">Where the people of all folders are collected; null keeps the people of this folder to itself.</param>
-        public static FolderIndex Open(string folder, string? sharedPeopleFile) =>
-            new(PhotoIndex.Open(folder), PeopleLibrary.Load(folder, sharedPeopleFile));
+        /// <param name="groupsFile">Where the groups of people are kept; null keeps them in memory only.</param>
+        public static FolderIndex Open(string folder, string? sharedPeopleFile, string? groupsFile = null) =>
+            new(PhotoIndex.Open(folder), PeopleLibrary.Load(folder, sharedPeopleFile, groupsFile));
 
         public Task<IndexSummary> IndexAsync(
             ModelHub models, string? excludedFolder, IReadOnlyCollection<string> extensions,
@@ -146,6 +147,7 @@ namespace PhotoLiker.Search
         /// <summary>
         /// The name of a person finds the photos of that person; anything else is described in words. A name with words ("Yurii playing guitar")
         /// finds the photos of that person that fit the words, with several names ("Mom and Dad on the beach") the photos that have all of them.
+        /// The name of a group ("Family") stands for any one of its people: the photos of anybody in it; "Family and Yurii" is Yurii with somebody of the family.
         /// A date in the text ("beach September 2009", "Mom 2005", "September 1") limits the search to the photos taken then; a date alone
         /// lists them, oldest first. A text in double quotes is only a description.
         /// </summary>
@@ -253,17 +255,27 @@ namespace PhotoLiker.Search
         private SearchResult SearchFaces(string description, IReadOnlyList<float[]> examples, SearchTuning tuning, DateFilter? dates = null)
         {
             var photos = Index.Snapshot();
-            var hits = new List<SearchHit>();
-            foreach (var photo in OnePerPhoto(photos.Where(p => dates is null || dates.Matches(p.Date.Taken)), ClipModel))
+            var candidates = OnePerPhoto(photos.Where(p => dates is null || dates.Matches(p.Date.Taken)), ClipModel);
+
+            // Every face against every example: a group has the examples of all its people, so this is the one place the cost grows with them.
+            // The photos are scored on all cores, and the hits are put together in the order of the photos, so the result is always the same.
+            var best = new float[candidates.Count];
+            Parallel.For(0, candidates.Count, i =>
             {
-                var best = 0f;
-                foreach (var face in photo.Faces)
+                var closest = 0f;
+                foreach (var face in candidates[i].Faces)
                 {
                     foreach (var example in examples)
-                        best = Math.Max(best, VectorMath.Dot(example, face.Embedding));
+                        closest = Math.Max(closest, VectorMath.Dot(example, face.Embedding));
                 }
-                if (best >= tuning.MinFaceScore)
-                    hits.Add(ToHit(photo, best));
+                best[i] = closest;
+            });
+
+            var hits = new List<SearchHit>();
+            for (var i = 0; i < candidates.Count; i++)
+            {
+                if (best[i] >= tuning.MinFaceScore)
+                    hits.Add(ToHit(candidates[i], best[i]));
             }
 
             hits = [.. hits.OrderByDescending(h => h.Score)];
@@ -289,11 +301,15 @@ namespace PhotoLiker.Search
             }
 
             var photos = Index.Snapshot();
+            var candidates = OnePerPhoto(photos.Where(p => plan.Dates is null || plan.Dates.Matches(p.Date.Taken)), ClipModel);
+            var scores = new float?[candidates.Count];
+            Parallel.For(0, candidates.Count, i => scores[i] = Together(candidates[i], examples, tuning.MinFaceScore)); // on all cores, like SearchFaces
+
             var hits = new List<SearchHit>();
-            foreach (var photo in OnePerPhoto(photos.Where(p => plan.Dates is null || plan.Dates.Matches(p.Date.Taken)), ClipModel))
+            for (var i = 0; i < candidates.Count; i++)
             {
-                if (Together(photo, examples, tuning.MinFaceScore) is { } score)
-                    hits.Add(ToHit(photo, score));
+                if (scores[i] is { } score)
+                    hits.Add(ToHit(candidates[i], score));
             }
             return new SearchResult(Describe(who, plan.Dates), [.. hits.OrderByDescending(h => h.Score)], photos.Length, Dates: plan.Dates);
         }
