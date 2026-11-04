@@ -125,6 +125,8 @@ namespace PhotoLikerUI
         public static string CloseResultsTooltip => T();
         public static string FacesButton => T();
         public static string FacesTooltip => T();
+        public static string PeopleButton => T();
+        public static string PeopleTooltip => T();
         public static string PrecisionWide => T();
         public static string PrecisionPrecise => T();
         public static string PrecisionTooltipFormat => T();
@@ -145,6 +147,8 @@ namespace PhotoLikerUI
         public static string FaceNewPerson => T();
         public static string FaceFindPhotos => T();
         public static string FaceFindPhotosOfFormat => T();
+        public static string FaceRenameFormat => T();
+        public static string StatusPersonRenamedFormat => T();
         public static string FaceRemoveName => T();
         public static string FaceDelete => T();
         public static string StatusFaceNamed => T();
@@ -156,10 +160,15 @@ namespace PhotoLikerUI
         public static string StatusFaceMarkError => T();
         public static string StatusPeopleFileError => T();
         public static string StatusSharedPeopleError => T();
+        public static string StatusGroupsFileError => T();
+        public static string StatusGroupsFolderCopyError => T();
+        public static string StatusFaceNamedInGroupFormat => T();
+        public static string StatusGroupNotSavedFormat => T();
         public static string StatusFaceNamedNotShared => T();
 
         public static string NamePersonTitle => T();
         public static string NamePersonPrompt => T();
+        public static string NamePersonGroupPrompt => T();
         public static string Ok => T();
         public static string Cancel => T();
     }

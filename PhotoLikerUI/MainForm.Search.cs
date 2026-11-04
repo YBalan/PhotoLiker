@@ -44,6 +44,7 @@ namespace PhotoLikerUI
         private ToolStripButton _closeResultsButton = null!;
         private ToolStripButton _similarButton = null!;
         private ToolStripButton _facesButton = null!;
+        private ToolStripButton _peopleButton = null!;
         private TrackBar _precisionBar = null!;
         private ToolStripControlHost _precisionHost = null!;
         private ToolStripComboBox _modelBox = null!;
@@ -121,6 +122,15 @@ namespace PhotoLikerUI
                 pictureBox1.Invalidate();
             };
 
+            _peopleButton = new ToolStripButton(SearchStrings.PeopleButton)
+            {
+                Name = "peopleToolStripButton",
+                DisplayStyle = ToolStripItemDisplayStyle.Image, // the text is still the accessible name
+                Image = AppIcons.People(),
+                ToolTipText = SearchStrings.PeopleTooltip,
+            };
+            _peopleButton.Click += (_, _) => OpenPeopleDialog();
+
             // Wide to precise: how much the searches let through (the cutoffs are in SearchTuning), kept in the folder's settings file
             _precisionBar = new TrackBar
             {
@@ -179,7 +189,7 @@ namespace PhotoLikerUI
                 new ToolStripSeparator(),
                 _indexButton, _indexProgress, _indexLabel,
                 new ToolStripSeparator(),
-                _searchBox, _searchButton, _closeResultsButton, _similarButton, _facesButton,
+                _searchBox, _searchButton, _closeResultsButton, _similarButton, _facesButton, _peopleButton,
                 new ToolStripSeparator(),
                 _precisionWideLabel,
                 _precisionHost,
@@ -238,6 +248,8 @@ namespace PhotoLikerUI
             _similarButton.ToolTipText = SearchStrings.SimilarTooltip;
             _facesButton.Text = SearchStrings.FacesButton;
             _facesButton.ToolTipText = SearchStrings.FacesTooltip;
+            _peopleButton.Text = SearchStrings.PeopleButton;
+            _peopleButton.ToolTipText = SearchStrings.PeopleTooltip;
             _exportItem.Text = SearchStrings.ExportIndexMenu;
             _importItem.Text = SearchStrings.ImportIndexMenu;
             _transferButton.Text = SearchStrings.IndexFileButton;
@@ -283,6 +295,7 @@ namespace PhotoLikerUI
             _searchBox.Enabled = searchable;
             _searchButton.Enabled = searchable;
             _facesButton.Enabled = searchable;
+            _peopleButton.Enabled = _folderSearch is not null; // the people and their groups are there as soon as the folder has an index
             _precisionBar.Enabled = searchable;
             ShowSearchPrecision();
             ShowSearchModel();
@@ -301,7 +314,7 @@ namespace PhotoLikerUI
         {
             var names = new AutoCompleteStringCollection();
             if (_folderSearch is { } search)
-                names.AddRange([.. search.People.Names]);
+                names.AddRange([.. search.People.Names.Union(search.People.Groups.Names, StringComparer.OrdinalIgnoreCase)]); // a group is searched like a person
             _searchBox.TextBox.AutoCompleteCustomSource = names;
         }
 
@@ -366,6 +379,10 @@ namespace PhotoLikerUI
                 SetStatus(string.Format(SearchStrings.StatusPeopleFileError, error));
             else if (opened?.People.SharedError is { } sharedError)
                 SetStatus(string.Format(SearchStrings.StatusSharedPeopleError, sharedError));
+            else if (opened?.People.Groups.LoadError is { } groupsError)
+                SetStatus(string.Format(SearchStrings.StatusGroupsFileError, groupsError));
+            else if (opened?.People.Groups.FolderCopyError is { } copyError)
+                SetStatus(string.Format(SearchStrings.StatusGroupsFolderCopyError, copyError));
         }
 
         /// <summary>Makes this the index of the shown folder.</summary>
@@ -999,12 +1016,7 @@ namespace PhotoLikerUI
             menu.Items.Add(new ToolStripLabel(heading) { Font = new Font(Font, FontStyle.Bold) });
             menu.Items.Add(new ToolStripSeparator());
 
-            foreach (var name in search.People.Names)
-            {
-                var item = new ToolStripMenuItem(name) { Checked = label.Confirmed && string.Equals(name, label.Name, StringComparison.CurrentCultureIgnoreCase) };
-                item.Click += (_, _) => NameFace(label.Face, name);
-                menu.Items.Add(item);
-            }
+            AddPeopleToFaceMenu(menu, label, search);
 
             var create = new ToolStripMenuItem(SearchStrings.FaceNewPerson);
             create.Click += (_, _) => NameFaceAsNewPerson(label.Face);
@@ -1014,6 +1026,13 @@ namespace PhotoLikerUI
             var find = new ToolStripMenuItem(label.Name is null ? SearchStrings.FaceFindPhotos : string.Format(SearchStrings.FaceFindPhotosOfFormat, label.Name));
             find.Click += (_, _) => FindPhotosOf(label);
             menu.Items.Add(find);
+
+            if (label.Name is { } person)
+            {
+                var rename = new ToolStripMenuItem(string.Format(SearchStrings.FaceRenameFormat, person));
+                rename.Click += (_, _) => RenamePersonFromMenu(person);
+                menu.Items.Add(rename);
+            }
 
             if (label.Confirmed)
             {
@@ -1031,14 +1050,17 @@ namespace PhotoLikerUI
             menu.Show(pictureBox1, at);
         }
 
-        private void NameFace(IndexedFace face, string name)
+        /// <summary>Gives the face the name. Returns false if it could not be named (the status says why).</summary>
+        private bool NameFace(IndexedFace face, string name)
         {
             if (_folderSearch is not { } search)
-                return;
+                return false;
 
+            var named = false;
             try
             {
                 search.NameFace(face, name);
+                named = true;
                 SetStatus(search.People.SharedError is { } notShared
                     ? string.Format(SearchStrings.StatusFaceNamedNotShared, name, notShared)
                     : string.Format(SearchStrings.StatusFaceNamed, name));
@@ -1047,9 +1069,14 @@ namespace PhotoLikerUI
             {
                 SetStatus(string.Format(SearchStrings.StatusFaceNameNotSaved, name, ex.Message));
             }
+            catch (ArgumentException ex)
+            {
+                SetStatus(ex.Message); // the name of a group, for one
+            }
 
             UpdateAutoComplete();
             UpdateFaces();
+            return named;
         }
 
         private void NameFaceAsNewPerson(IndexedFace face)
@@ -1057,10 +1084,14 @@ namespace PhotoLikerUI
             if (_folderSearch is not { } search)
                 return;
 
-            using var dialog = new NamePersonDialog(search.People.Names);
+            using var dialog = new NamePersonDialog(search.People.Names, search.People.Groups.Names, _lastGroup,
+                (name, group) => search.People.WhyNotAName(name) ?? search.People.WhyNotAGroupName(group, alsoTaken: name));
             ThemeManager.Apply(dialog, _currentConfig.IsDarkTheme);
             if (dialog.ShowDialog(this) == DialogResult.OK && dialog.PersonName.Length > 0)
-                NameFace(face, dialog.PersonName);
+            {
+                if (NameFace(face, dialog.PersonName))
+                    PutPersonInGroup(search, dialog.PersonName, dialog.GroupName);
+            }
         }
 
         private void RemoveFaceName(IndexedFace face)

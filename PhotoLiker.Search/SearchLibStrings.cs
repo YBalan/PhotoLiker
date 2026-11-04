@@ -15,6 +15,13 @@ namespace PhotoLiker.Search
         public static string PhotoChangedLookAgain => T();
         public static string NotDateLog => T();
         public static string SharedPeopleDamagedFormat => T();
+        public static string GroupsDamagedFormat => T();
+        public static string GroupNeedsName => T();
+        public static string GroupExistsFormat => T();
+        public static string GroupIsPersonFormat => T();
+        public static string PersonIsGroupFormat => T();
+        public static string PersonNeedsName => T();
+        public static string NoSuchPersonFormat => T();
         public static string DownloadingFormat => T();
         public static string DownloadingNoTotalFormat => T();
     }

@@ -119,6 +119,28 @@ namespace PhotoLikerUI
             g.DrawArc(smile, 5.8f, 6.2f, 4.4f, 4.2f, 25f, 130f);
         });
 
+        // ── People and groups ─────────────────────────────────────────────
+        // Two people side by side: a blue one behind, an amber one in front (the colours of the search and faces icons)
+        public static Bitmap People() => DrawOnBitmap(g =>
+        {
+            using var back = new SolidBrush(Color.FromArgb(95, 150, 235));
+            g.FillEllipse(back, 8.2f, 1.6f, 5f, 5f);
+            using var backBody = new GraphicsPath();
+            backBody.AddArc(6.6f, 7.4f, 8.4f, 8.4f, 180f, 180f);
+            backBody.CloseFigure();
+            g.FillPath(back, backBody);
+
+            using var front = new SolidBrush(Color.FromArgb(255, 190, 70));
+            using var edge = new Pen(Color.FromArgb(180, 110, 20), 0.8f);
+            g.FillEllipse(front, 2.4f, 3.6f, 5.6f, 5.6f);
+            g.DrawEllipse(edge, 2.4f, 3.6f, 5.6f, 5.6f);
+            using var frontBody = new GraphicsPath();
+            frontBody.AddArc(0.8f, 10f, 8.8f, 9f, 180f, 180f);
+            frontBody.CloseFigure();
+            g.FillPath(front, frontBody);
+            g.DrawPath(edge, frontBody);
+        });
+
         // ── Align dates ───────────────────────────────────────────────────
         // A calendar page with a red header and a green "equal" badge: the dates of the file made equal to the date taken
         public static Bitmap AlignDates() => DrawOnBitmap(g =>
