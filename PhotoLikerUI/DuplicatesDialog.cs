@@ -79,6 +79,7 @@ namespace PhotoLikerUI
 
             Text = DuplicatesStrings.Title;
             StartPosition = FormStartPosition.CenterParent;
+            Icon = DialogIcons.FindDuplicates;
             MinimizeBox = false;
             ShowInTaskbar = false;
             ClientSize = new Size(1100, 720);

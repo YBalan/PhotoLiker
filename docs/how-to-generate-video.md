@@ -69,6 +69,10 @@ Under **Audio (optional)** click **Browse...** and pick a file: mp3, m4a, wav, f
 - **Use random** gives each photo a time of its own, picked at random between Start and End.
 - **Video length** says how long the video will be with these settings, and what becomes of the song. It follows every
   change you make, so you can try the numbers before you start.
+- **Rhythm (experimental)**, **Cut photos on the beat** (needs a song): finds the beats of the song and changes the photo on a beat,
+  every photo for a whole number of beats, as near its time as that can be. Bars open at the bottom of the dialog: how hard the sound
+  hits (blue), the beats found (orange) and where the photos change (green). If the tempo was taken as half or double, **÷2** and
+  **×2** fix it. **Use random** and *Photos: Repeat* are off while it is ticked.
 
 ## 7. Resolution, codec and quality
 
@@ -86,6 +90,9 @@ what was done.
 
 When the log says *Video generation completed*, the video is in the output folder, and **Play** opens it in your player.
 **Cancel** closes the dialog (it is off while the video is being made).
+
+The settings of the dialog are kept in `photo-liker-video.json` in the folder of the photos (the log says where), and are put back the
+next time you open the dialog or pick that folder in **Photos from**.
 
 ## If something is not right
 

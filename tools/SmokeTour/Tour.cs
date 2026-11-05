@@ -1510,6 +1510,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
     /// <summary>Photographs the window; saves it as <paramref name="name"/> (or just the <paramref name="crop"/> of it).</summary>
     private async Task<Bitmap> Shot(string? name, Rectangle? crop = null)
     {
+        ScreenCapture.ParkMouse();
         await Settle(450);
         var picture = ScreenCapture.Capture(Window);
         if (name is not null)

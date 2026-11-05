@@ -12,6 +12,11 @@ namespace PhotoLikerUI
     {
         private const int Size = 16;
 
+        // The size the next picture is drawn at. A toolbar button is 16; the icon of a window is drawn again at each size a title bar or
+        // Alt+Tab can ask for (the drawings are in the units of 16, so they are scaled, and stay sharp). Set only by WindowIcon.
+        [ThreadStatic]
+        private static int _renderSize;
+
         // ── Open Source Folder ─────────────────────────────────────────────
         // Warm-yellow folder + magnifying-glass badge
         public static Bitmap OpenSourceFolder() => DrawOnBitmap(g =>
@@ -232,6 +237,78 @@ namespace PhotoLikerUI
             g.FillPolygon(hill, [new PointF(6.3f, 14.2f), new PointF(9.2f, 9.6f), new PointF(11.2f, 12.2f), new PointF(12.2f, 11f), new PointF(14.2f, 14.2f)]);
         });
 
+        // ── Help / About ──────────────────────────────────────────────────
+        // A blue disc with a white rim and a white question mark (the Help button, which opens the About box)
+        public static Bitmap Help() => DrawOnBitmap(g =>
+        {
+            using var disc = new LinearGradientBrush(new RectangleF(0.5f, 0.5f, 15, 15), Color.FromArgb(70, 185, 240), Color.FromArgb(20, 135, 210), 90f);
+            g.FillEllipse(disc, 0.8f, 0.8f, 14.4f, 14.4f);
+            using var rim = new Pen(Color.FromArgb(235, 255, 255, 255), 0.9f);
+            g.DrawEllipse(rim, 0.9f, 0.9f, 14.2f, 14.2f);
+
+            using var mark = new Pen(Color.White, 1.9f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
+            g.DrawArc(mark, 5.4f, 3.1f, 5.2f, 5f, 180f, 270f);
+            g.DrawLine(mark, 8f, 8.1f, 8f, 9.5f);
+            using var dot = new SolidBrush(Color.White);
+            g.FillEllipse(dot, 6.95f, 10.8f, 2.1f, 2.1f);
+        });
+
+        // ── The icon of a window ──────────────────────────────────────────
+        /// <summary>
+        /// The icon of a window that a toolbar button opens, made from the picture of the button: the same drawing at 16, 20, 24, 32, 40, 48 and
+        /// 64 px in one icon, so that Windows takes the nearest to what the title bar (at 100 % to 300 % scaling) or Alt+Tab asks for.
+        /// </summary>
+        /// <param name="toolbarIcon">One of the pictures of this class, e.g. <c>AppIcons.AlignDates</c>.</param>
+        public static Icon WindowIcon(Func<Bitmap> toolbarIcon)
+        {
+            int[] sizes = [16, 20, 24, 32, 40, 48, 64];
+            var pictures = new List<byte[]>();
+            foreach (var size in sizes)
+            {
+                _renderSize = size;
+                try
+                {
+                    using var bitmap = toolbarIcon();
+                    using var png = new MemoryStream();
+                    bitmap.Save(png, ImageFormat.Png);
+                    pictures.Add(png.ToArray());
+                }
+                finally
+                {
+                    _renderSize = 0;
+                }
+            }
+
+            // An .ico file: the header, one entry for each picture (its size and where it is), then the pictures (PNG, which Windows reads
+            // since Vista)
+            using var file = new MemoryStream();
+            using (var writer = new BinaryWriter(file, System.Text.Encoding.UTF8, leaveOpen: true))
+            {
+                writer.Write((short)0);
+                writer.Write((short)1);
+                writer.Write((short)sizes.Length);
+                var offset = 6 + (16 * sizes.Length);
+                for (var i = 0; i < sizes.Length; i++)
+                {
+                    writer.Write((byte)sizes[i]);
+                    writer.Write((byte)sizes[i]);
+                    writer.Write((byte)0);
+                    writer.Write((byte)0);
+                    writer.Write((short)1);
+                    writer.Write((short)32);
+                    writer.Write(pictures[i].Length);
+                    writer.Write(offset);
+                    offset += pictures[i].Length;
+                }
+
+                foreach (var picture in pictures)
+                    writer.Write(picture);
+            }
+
+            file.Position = 0;
+            return new Icon(file);
+        }
+
         // ── Main application icon ─────────────────────────────────────────
         public static Icon AppIcon()
         {
@@ -246,12 +323,14 @@ namespace PhotoLikerUI
 
         private static Bitmap DrawOnBitmap(Action<Graphics> draw)
         {
-            var bmp = new Bitmap(Size, Size, PixelFormat.Format32bppArgb);
+            var size = _renderSize > 0 ? _renderSize : Size;
+            var bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb);
             using var g = Graphics.FromImage(bmp);
             g.SmoothingMode     = SmoothingMode.AntiAlias;
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
             g.PixelOffsetMode   = PixelOffsetMode.HighQuality;
             g.Clear(Color.Transparent);
+            g.ScaleTransform(size / (float)Size, size / (float)Size);
             draw(g);
             return bmp;
         }
@@ -322,6 +401,30 @@ namespace PhotoLikerUI
         }
 
         #endregion
+    }
+
+    /// <summary>
+    /// The icons of the windows (dialogs) of the program: each one is the icon of the toolbar button that opens it (the date and the group
+    /// windows that a tool opens in turn have the one of that tool). Made when first asked for and kept, since a window does not dispose
+    /// its icon.
+    /// </summary>
+    internal static class DialogIcons
+    {
+        private static Icon? _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help;
+
+        public static Icon GenerateVideo => _generateVideo ??= AppIcons.WindowIcon(AppIcons.GenerateVideo);
+
+        public static Icon AlignDates => _alignDates ??= AppIcons.WindowIcon(AppIcons.AlignDates);
+
+        public static Icon FindDuplicates => _findDuplicates ??= AppIcons.WindowIcon(AppIcons.FindDuplicates);
+
+        public static Icon RemoveEmptyFolders => _removeEmptyFolders ??= AppIcons.WindowIcon(AppIcons.RemoveEmptyFolders);
+
+        public static Icon People => _people ??= AppIcons.WindowIcon(AppIcons.People);
+
+        public static Icon FaceRecognition => _faceRecognition ??= AppIcons.WindowIcon(AppIcons.FaceRecognition);
+
+        public static Icon Help => _help ??= AppIcons.WindowIcon(AppIcons.Help);
     }
 
     internal static class GraphicsExtensions

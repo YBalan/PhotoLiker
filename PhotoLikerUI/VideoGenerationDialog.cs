@@ -131,7 +131,8 @@ namespace PhotoLikerUI
             _generateVideoAsync = generateVideoAsync;
 
             Text = MainFormStrings.VideoDialogTitle;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            FormBorderStyle = FormBorderStyle.FixedSingle; // not FixedDialog: Windows shows no icon in the caption of that frame
+            Icon = DialogIcons.GenerateVideo;
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false;
             MinimizeBox = false;

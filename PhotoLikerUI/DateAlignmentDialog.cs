@@ -77,6 +77,7 @@ namespace PhotoLikerUI
 
             Text = DateAlignmentStrings.Title;
             StartPosition = FormStartPosition.CenterParent;
+            Icon = DialogIcons.AlignDates;
             MinimizeBox = false;
             ShowInTaskbar = false;
             ClientSize = new Size(1020, 640);

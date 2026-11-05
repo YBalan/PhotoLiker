@@ -115,7 +115,7 @@ in the background, nothing runs at startup.
 Searching is what PhotoLiker is mostly for. For a library of thousands of old photos on a NAS, PhotoLiker can look at every photo once (**Index photos**, in the strip
 above the viewer) and then answer questions about them. Nothing is uploaded: the analysis runs on this computer.
 
-![The search strip above the viewer, dark theme: the index menu, Index photos, the search box, More like this, the faces icon and the precision slider](docs/images/17-search-bar.png)
+![The search strip above the viewer, dark theme: the index menu, Index photos, the search box, More like this, the faces icon, the people icon and the precision slider](docs/images/17-search-bar.png)
 
 1. **Index photos** analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the
    time left. You can keep browsing, stop it (the button turns into **Stop indexing**) and continue later: only new or
@@ -334,6 +334,13 @@ work on the photo again.
 | **Find duplicates** (two overlapping photos) | Find photos that are the same file in different folders and move the copies in the worse folders away, see [Finding duplicates](#finding-duplicates). |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
+
+The window that a button opens carries the icon of that button: in its title bar, and in Alt+Tab. Generate Video, Align dates (also the window that gives
+photos a date), Remove empty folders, Find duplicates and the About box (the question mark) have theirs; the People window, the windows that
+rename a person or a group and the one that copies results into a group have the icon of the People button of the search strip, and the one that
+names a face has the faces icon. They are drawn from the same pictures as the buttons, again at each size a title bar can ask for (16 to 64 px), so
+they stay sharp at any scaling of the screen. (A window with the dialog frame has no icon in its title bar in Windows, so those windows have a thin
+fixed frame instead.)
 
 #### Generate Video
 
@@ -1121,6 +1128,18 @@ instead of running it). Its pictures are `12-generate-video-button` to `16-about
 ```powershell
 dotnet run -c Release --project tools\SmokeTour -- --only-dialogs --screenshots docs\images
 ```
+
+`--only-search` is another: it indexes the demo folder **for real**, with the models the app has already downloaded (they are linked, read only, into
+the tour's own data folder with a junction, which is taken out again; nothing is written to `%LocalAppData%\PhotoLiker`), presses **More like
+this** on the first photo and photographs the search strip: `17-search-bar`, `18-search-wide` and `19-search-precise` of `docs\images`. It needs
+those models (it says so and stops if they are not there), and takes a minute or two:
+
+```powershell
+dotnet run -c Release --project tools\SmokeTour -- --only-search --screenshots docs\images
+```
+
+The mouse pointer is parked in the corner of the screen before each picture, so that no tip of a button it rests on is in it. The pictures `28-people-groups`
+and `29-face-menu-groups` are made by hand with made-up people (no tour makes them), and `20-search-model` shows the model box with its list open.
 
 `--only-language` is a third, short one: it changes the **Language** row of the settings grid to Ukrainian, checks that the buttons of the toolbar and
 the search strip, the status bar, the help of the grid and the lines of the model box are Ukrainian at once and that the language went to

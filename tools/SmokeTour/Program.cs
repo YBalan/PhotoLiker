@@ -15,6 +15,9 @@ namespace SmokeTour;
 ///                          (the pictures of the user manual and of docs/how-to-generate-video.md, in a minute or so)
 ///   --only-language        instead of the tour: change the Language row of the settings to Ukrainian and back, open the dialogs in
 ///                          Ukrainian and check their texts
+///   --only-search          instead of the tour: index the demo folder for real and photograph the search strip (the pictures 17-19).
+///                          It needs the models the app has downloaded: they are linked, read only, into the tour's own data folder
+///                          (a junction, removed again), so the real %LocalAppData%\PhotoLiker is not written to. A minute or two.
 ///
 /// The window takes the screen for about a minute (it is photographed as it is on screen, and one step clicks and types
 /// for real): leave the mouse and the keyboard alone.
@@ -28,6 +31,7 @@ internal static class Program
         var keep = args.Contains("--keep");
         var onlyDialogs = args.Contains("--only-dialogs");
         var onlyLanguage = args.Contains("--only-language");
+        var onlySearch = args.Contains("--only-search");
         var demoFolder = Path.GetFullPath(ValueOf(args, "--demo-folder") ?? DefaultDemoFolder());
 
         // Keep the real %LocalAppData%\PhotoLiker (last folder, crash log) out of this. Has to happen before anything reads AppPaths.
@@ -35,6 +39,12 @@ internal static class Program
         Environment.SetEnvironmentVariable(AppPaths.DataFolderVariable, appData);
 
         var checks = new Checks();
+        var modelsLinked = false;
+        if (onlySearch)
+        {
+            modelsLinked = LinkModels(appData);
+            Console.WriteLine(modelsLinked ? "The models of the app are linked into the tour's data folder." : "The app has no models folder: the search cannot be indexed.");
+        }
 
         ApplicationConfiguration.Initialize();
         Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
@@ -44,7 +54,8 @@ internal static class Program
         typeof(MainForm).Assembly.GetType("PhotoLikerUI.SettingsPresentation")!.GetMethod("Register")!.Invoke(null, null);
 
         var area = Screen.PrimaryScreen!.WorkingArea;
-        var window = new Rectangle(area.Left + 30, area.Top + 20, Math.Min(1500, area.Width - 60), Math.Min(900, area.Height - 40));
+        // The search strip is about a thousand pixels long: the window of that mode takes the width of the screen
+        var window = new Rectangle(area.Left + 30, area.Top + 20, onlySearch ? area.Width - 60 : Math.Min(1500, area.Width - 60), Math.Min(900, area.Height - 40));
         try
         {
             DemoFolder.Create(demoFolder, window);
@@ -52,7 +63,7 @@ internal static class Program
         catch (InvalidOperationException ex)
         {
             Console.WriteLine(ex.Message);
-            TryDelete(appData);
+            TryDeleteAppData(appData);
             return 2;
         }
 
@@ -65,7 +76,7 @@ internal static class Program
         {
             try
             {
-                await (onlyDialogs ? tour.RunDialogs() : onlyLanguage ? tour.RunLanguage() : tour.Run());
+                await (onlyDialogs ? tour.RunDialogs() : onlyLanguage ? tour.RunLanguage() : onlySearch ? tour.RunSearch() : tour.Run());
             }
             catch (Exception ex)
             {
@@ -80,7 +91,7 @@ internal static class Program
 
         Application.Run(form);
 
-        if (!onlyDialogs && !onlyLanguage)
+        if (!onlyDialogs && !onlyLanguage && !onlySearch)
         {
             try
             {
@@ -96,7 +107,7 @@ internal static class Program
         checks.That(!File.Exists(CrashLog.FilePath), "no crash log was written");
         checks.That(File.Exists(Path.Combine(appData, "global-config.json")), "the last folder went to the redirected app-data folder, not the real one");
 
-        TryDelete(appData);
+        TryDeleteAppData(appData);
         if (!keep)
             TryDelete(demoFolder);
 
@@ -111,6 +122,60 @@ internal static class Program
 
     private static string DefaultDemoFolder() =>
         Path.Combine(Path.GetPathRoot(AppContext.BaseDirectory)!, "PhotoLikerDemo", "Holiday");
+
+    /// <summary>
+    /// Makes %LocalAppData%\PhotoLiker\models of the tour's own data folder a junction to the real one, so that the search finds the models
+    /// the app has downloaded (they are hundreds of megabytes: not copied). Nothing is written there while they are whole.
+    /// </summary>
+    private static bool LinkModels(string appData)
+    {
+        var real = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PhotoLiker", "models");
+        if (!Directory.Exists(real))
+            return false;
+
+        Directory.CreateDirectory(appData);
+        var link = Path.Combine(appData, "models");
+        var start = new System.Diagnostics.ProcessStartInfo("cmd.exe", $"/c mklink /J \"{link}\" \"{real}\"")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        using var process = System.Diagnostics.Process.Start(start)!;
+        process.StandardOutput.ReadToEnd();
+        process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        return IsLink(link);
+    }
+
+    private static bool IsLink(string path) => Directory.Exists(path) && new DirectoryInfo(path).LinkTarget is not null;
+
+    /// <summary>
+    /// Deletes the tour's data folder, after taking the link to the models out of it (deleting a junction without recursion removes the link
+    /// and nothing of what it points to). If the link cannot be removed the folder is left, rather than risk the real models.
+    /// </summary>
+    private static void TryDeleteAppData(string appData)
+    {
+        var link = Path.Combine(appData, "models");
+        try
+        {
+            if (IsLink(link))
+                Directory.Delete(link, recursive: false);
+        }
+        catch
+        {
+            // fall through: the check below
+        }
+
+        if (IsLink(link))
+        {
+            Console.WriteLine($"The link to the models could not be removed, so {appData} is left for you to delete (take the link 'models' out of it first).");
+            return;
+        }
+
+        TryDelete(appData);
+    }
 
     private static void TryDelete(string folder)
     {
