@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace PhotoLiker.Core
+namespace PhotoLiker.GenerateVideo
 {
     /// <summary>A length of time as people read it on a player: <c>3:25</c>, <c>1:02:15</c>, and <c>4.5 s</c> for a very short one.</summary>
     public static class DurationText
@@ -11,7 +11,7 @@ namespace PhotoLiker.Core
                 seconds = 0;
 
             if (seconds < 10)
-                return string.Format(CultureInfo.InvariantCulture, CoreStrings.DurationSecondsFormat, seconds);
+                return string.Format(CultureInfo.InvariantCulture, GenerateVideoStrings.DurationSecondsFormat, seconds);
 
             var total = (long)Math.Round(seconds);
             var hours = total / 3600;

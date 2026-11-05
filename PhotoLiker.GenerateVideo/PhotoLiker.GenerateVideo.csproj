@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Making a video of photos: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run, the audio (its length,
+    a WAV to listen to, its rhythm), and the settings of a video kept with its folder. No user interface and nothing of Windows, so any front end
+    can use it. It uses Core for the photos (PhotoFile, the sort orders, the scanner) and for the texts of the language files.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PhotoLiker.GenerateVideo</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="PhotoLiker.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLiker.GenerateVideo.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

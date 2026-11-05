@@ -1,4 +1,4 @@
-namespace PhotoLiker.Core
+namespace PhotoLiker.GenerateVideo
 {
     /// <summary>
     /// Lists the photos a video can be made of besides the loaded ones: the copies in the liked folder or in one of its group

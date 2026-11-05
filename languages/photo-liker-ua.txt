@@ -59,12 +59,6 @@ CoreStrings.JpegDamaged = JPEG пошкоджено.
 CoreStrings.ExifTooShort = Блок Exif закороткий.
 CoreStrings.ExifByteOrder = У блоці Exif невідомий порядок байтів.
 CoreStrings.ExifNotTiff = Блок Exif не є блоком TIFF.
-CoreStrings.FfmpegFailedFormat = ffmpeg завершився з помилкою (код виходу {0}).
-CoreStrings.FfmpegNoOutputFormat = ffmpeg завершився, але вихідний файл не створено: {0}
-CoreStrings.FfmpegNotFound = Виконуваний файл ffmpeg не знайдено. Покладіть ffmpeg.exe у підпапку «ffmpeg» поруч із програмою або подбайте, щоб ffmpeg був доступний у PATH.
-CoreStrings.TooManyRepeatsFormat = Щоб тривати стільки, скільки аудіо, фото довелося б повторити {0:N0} разів: це забагато. Нехай програються один раз.
-CoreStrings.AudioUnreadable = ffmpeg не може прочитати цей файл як аудіо
-CoreStrings.DurationSecondsFormat = {0:0.0} с
 CoreStrings.UpdateAnswerUnreadable = Відповідь GitHub про останній випуск не вдалося прочитати.
 CoreStrings.UpdateTagUnreadableFormat = Останній випуск називається «{0}», а це не номер версії.
 CoreStrings.UpdateDownloadDamaged = Завантажений файл пошкоджений (його розмір або контрольна сума не такі, як дає GitHub), тому його викинуто.
@@ -191,6 +185,14 @@ SearchLibStrings.PersonNeedsName = Людині потрібне ім’я.
 SearchLibStrings.NoSuchPersonFormat = Немає людини з іменем «{0}».
 SearchLibStrings.DownloadingFormat = Завантаження {0}: {1} з {2} МБ
 SearchLibStrings.DownloadingNoTotalFormat = Завантаження {0}: {1} МБ
+
+# ──────────── GenerateVideoStrings ────────────
+GenerateVideoStrings.FfmpegFailedFormat = ffmpeg завершився з помилкою (код виходу {0}).
+GenerateVideoStrings.FfmpegNoOutputFormat = ffmpeg завершився, але вихідний файл не створено: {0}
+GenerateVideoStrings.FfmpegNotFound = Виконуваний файл ffmpeg не знайдено. Покладіть ffmpeg.exe у підпапку «ffmpeg» поруч із програмою або подбайте, щоб ffmpeg був доступний у PATH.
+GenerateVideoStrings.TooManyRepeatsFormat = Щоб тривати стільки, скільки аудіо, фото довелося б повторити {0:N0} разів: це забагато. Нехай програються один раз.
+GenerateVideoStrings.AudioUnreadable = ffmpeg не може прочитати цей файл як аудіо
+GenerateVideoStrings.DurationSecondsFormat = {0:0.0} с
 
 # ──────────── AboutStrings ────────────
 AboutStrings.Heading = PhotoLiker
@@ -890,6 +892,22 @@ VideoStrings.EnterFileName = Впишіть назву файлу відео.
 VideoStrings.InvalidFileName = Назва файлу містить недопустимі символи.
 VideoStrings.AudioNotThere = Аудіофайлу немає.
 VideoStrings.CoverFileNotThere = Файлу обкладинки немає.
+VideoStrings.LabelRhythm = Ритм (експеримент):
+VideoStrings.CutOnBeat = Міняти фото в такт
+VideoStrings.CutOnBeatHint = Експериментально. Знаходить удари (такти) аудіо і міняє фото на ударі: кожне фото показується ціле число ударів, якнайближче до його часу (від «Від» до «До»), а обкладинка на початку зсувається до найближчого удару. Смуги нижче показують, наскільки сильно б’є звук, знайдені удари і місця зміни фото. «Випадково» та «Фото: Повтор» вимкнено, поки стоїть ця позначка (фото грають один раз).
+VideoStrings.RhythmAnalyzing = Аналіз ритму...
+VideoStrings.RhythmFoundFormat = {0:0} уд./хв, ударів: {1}
+VideoStrings.RhythmNoBeat = Чіткого ритму не знайдено: час фото такий, як задано.
+VideoStrings.RhythmFailed = Не вдалося проаналізувати аудіо.
+VideoStrings.RhythmSlowerHint = Удвічі менше ударів: лишає кожен другий. Для випадку, коли знайдених ударів удвічі більше, ніж треба.
+VideoStrings.RhythmFasterHint = Удвічі більше ударів: додає один між кожними двома. Для випадку, коли знайдених ударів удвічі менше, ніж треба.
+VideoStrings.RhythmViewHint = Сині смуги: наскільки сильно б’є звук. Помаранчеві лінії: знайдені удари. Зелені позначки: де змінюються фото. Пересувайтеся по аудіо смугою прокрутки або колесом миші.
+VideoStrings.LogBeatsFormat = Фото змінюються на ударах аудіо ({0:0} уд./хв, знайдено ударів: {1}).
+VideoStrings.LogBeatsCoverFormat = Обкладинку на початку зсунуто до удару: вона показується {0:0.##} с.
+VideoStrings.LogBeatsNone = У аудіо немає чіткого ритму: час фото такий, як задано.
+VideoStrings.LogBeatsFailedFormat = Не вдалося знайти ритм аудіо ({0}): час фото такий, як задано.
+VideoStrings.LogSettingsSavedFormat = Налаштування цього відео збережено в {0}: наступного разу, коли ви виберете цю папку, діалог почне з них.
+VideoStrings.LogSettingsNotSavedFormat = Не вдалося зберегти налаштування цього відео ({0}).
 
 # ──────────── DialogStrings ────────────
 DialogStrings.ContextMenuEntry = Відкрити в Photo Liker

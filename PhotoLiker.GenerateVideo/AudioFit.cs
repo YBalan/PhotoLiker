@@ -1,4 +1,4 @@
-namespace PhotoLiker.Core
+namespace PhotoLiker.GenerateVideo
 {
     /// <summary>What happens to the audio of a video that plays its photos once: it is played over and over when it is shorter, and cut where the video ends when it is longer.</summary>
     public enum AudioFit

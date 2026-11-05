@@ -1,6 +1,6 @@
 using PhotoLiker.Core;
 
-namespace PhotoLiker.Tests;
+namespace PhotoLiker.GenerateVideo.Tests;
 
 public class DurationTextTests
 {
@@ -22,6 +22,16 @@ public class DurationTextTests
     public void Format_ReadsLikeAPlayer(double seconds, string expected)
     {
         Assert.Equal(expected, DurationText.Format(seconds));
+    }
+
+    [Fact]
+    public void Format_SaysSecondsInTheLanguage()
+    {
+        Assert.Equal("4.5 s", DurationText.Format(4.5));
+
+        using var _ = Loc.Use(AppLanguage.Find("ua"));
+        Assert.Equal("4.5 с", DurationText.Format(4.5));
+        Assert.Equal("3:25", DurationText.Format(205));
     }
 
     [Theory]

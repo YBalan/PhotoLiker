@@ -276,16 +276,6 @@ public class LocTests
     }
 
     [Fact]
-    public void DurationText_SaysSecondsInTheLanguage()
-    {
-        Assert.Equal("4.5 s", DurationText.Format(4.5));
-
-        using var _ = Loc.Use(AppLanguage.Find("ua"));
-        Assert.Equal("4.5 с", DurationText.Format(4.5));
-        Assert.Equal("3:25", DurationText.Format(205));
-    }
-
-    [Fact]
     public void TheDescriptionsOfTheMetadataRows_AreSentencesInEveryLanguage()
     {
         foreach (var language in AppLanguage.Available())
@@ -574,6 +564,7 @@ public class LanguageFilesOfTheRepositoryTests
     [Theory]
     [InlineData("PhotoLiker.Core")]
     [InlineData("PhotoLiker.Search")]
+    [InlineData("PhotoLiker.GenerateVideo")]
     [InlineData("PhotoLikerUI")]
     public void TheCodeAsksForNothingThatIsNotThere_AndEveryTextIsAskedFor(string project)
     {
@@ -603,7 +594,7 @@ public class LanguageFilesOfTheRepositoryTests
             }
         }
 
-        // Which assembly a text belongs to is the class that offers it: the texts of the classes of the other two are not asked for here
+        // Which assembly a text belongs to is the class that offers it: the texts of the classes of the other projects are not asked for here
         var ofThisProject = AppLanguage.EnglishTexts.Keys.Where(key => classes.Contains(key.Split('.')[0])).ToList();
         string[] dynamic = ["AboutStrings.Shortcut", "MetadataDescriptions.Tag", "MetadataDescriptions.Decoded", "SearchStrings.ModelName", "SearchStrings.ModelLanguages", "SearchStrings.ModelDescription"];
         var unused = ofThisProject.Where(key => !asked.Contains(key) && !dynamic.Any(prefix => key.StartsWith(prefix, StringComparison.Ordinal))).ToList();
@@ -616,7 +607,7 @@ public class LanguageFilesOfTheRepositoryTests
     {
         var offered = new HashSet<string>();
         var klass = new Regex(@"static class (?<class>\w+)");
-        foreach (var project in new[] { "PhotoLiker.Core", "PhotoLiker.Search", "PhotoLikerUI" })
+        foreach (var project in new[] { "PhotoLiker.Core", "PhotoLiker.Search", "PhotoLiker.GenerateVideo", "PhotoLikerUI" })
             foreach (var file in Directory.EnumerateFiles(Path.Combine(Root, project), "*.cs", SearchOption.TopDirectoryOnly))
             {
                 var text = File.ReadAllText(file);

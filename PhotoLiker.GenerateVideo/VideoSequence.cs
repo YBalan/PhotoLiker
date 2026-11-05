@@ -1,4 +1,4 @@
-namespace PhotoLiker.Core
+namespace PhotoLiker.GenerateVideo
 {
     /// <summary>
     /// What goes into a video, picture by picture: the files in their order, the time each is shown (cover first, when there is one), and

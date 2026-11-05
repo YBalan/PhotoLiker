@@ -1,4 +1,4 @@
-namespace PhotoLiker.Core
+namespace PhotoLiker.GenerateVideo
 {
     /// <summary>
     /// Turns the audio file chosen for a video into a plain WAV file that can be listened to, with the same ffmpeg that makes the
@@ -113,7 +113,7 @@ namespace PhotoLiker.Core
             if (process.ExitCode != 0)
             {
                 var lastLine = (await error).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault();
-                throw new InvalidOperationException(CoreStrings.AudioUnreadable + (lastLine is null ? "." : ": " + lastLine));
+                throw new InvalidOperationException(GenerateVideoStrings.AudioUnreadable + (lastLine is null ? "." : ": " + lastLine));
             }
         }
     }

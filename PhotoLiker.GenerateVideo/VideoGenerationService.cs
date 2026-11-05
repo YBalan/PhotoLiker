@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace PhotoLiker.Core
+namespace PhotoLiker.GenerateVideo
 {
     public static class VideoGenerationService
     {
@@ -103,10 +103,10 @@ namespace PhotoLiker.Core
                 await Task.WhenAll(stdOutTask, stdErrTask, process.WaitForExitAsync());
 
                 if (process.ExitCode != 0)
-                    throw new InvalidOperationException(string.Format(CoreStrings.FfmpegFailedFormat, process.ExitCode));
+                    throw new InvalidOperationException(string.Format(GenerateVideoStrings.FfmpegFailedFormat, process.ExitCode));
 
                 if (!File.Exists(outputPath))
-                    throw new FileNotFoundException(string.Format(CoreStrings.FfmpegNoOutputFormat, outputPath), outputPath);
+                    throw new FileNotFoundException(string.Format(GenerateVideoStrings.FfmpegNoOutputFormat, outputPath), outputPath);
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
@@ -178,7 +178,7 @@ namespace PhotoLiker.Core
             _ => string.Empty,
         };
 
-        internal static string FfmpegNotFoundMessage => CoreStrings.FfmpegNotFound;
+        internal static string FfmpegNotFoundMessage => GenerateVideoStrings.FfmpegNotFound;
 
         internal static string ResolveFfmpegExecutablePath()
         {
@@ -300,6 +300,57 @@ namespace PhotoLiker.Core
         }
 
         /// <summary>
+        /// Cuts the photos on the beats of an audio (the experimental "Cut on the beat"). Each photo gets the time that
+        /// <see cref="BuildFrameDurations"/> gives it, but rounded to a whole number of beats (at least one), so that every photo
+        /// changes on a beat; the numbers of beats are counted along the beats themselves, so the cuts do not drift away from them when
+        /// the tempo moves a little. The cover at the start is rounded to a beat as well (it is the first cut); without one, the first
+        /// photo ends on the beat that is the nearest to its time. The photos play once: a repeat for the audio has no place here.
+        /// </summary>
+        /// <param name="photoCount">The photos (not counting the cover).</param>
+        /// <param name="coverSeconds">How long the cover is shown before the photos; null for not at the start.</param>
+        /// <returns>The time of the cover (moved to the nearest beat; null if it had none) and of each photo.</returns>
+        public static (double? CoverSeconds, double[] Durations) PlanOnBeats(
+            int photoCount,
+            double startFrameTimeSeconds,
+            double endFrameTimeSeconds,
+            IReadOnlyList<double>? randomSamples,
+            double? coverSeconds,
+            RhythmAnalysis rhythm)
+        {
+            var targets = BuildFrameDurations(photoCount, startFrameTimeSeconds, endFrameTimeSeconds, randomSamples);
+            var durations = new double[targets.Count];
+            var period = rhythm.BeatPeriodSeconds;
+            var time = 0d;
+            var index = -1; // the beat that the cuts are counted from; none until the first cut
+            double? cover = coverSeconds;
+            if (coverSeconds is { } coverTarget)
+            {
+                index = Math.Max(0, rhythm.NearestBeatIndex(coverTarget));
+                while (rhythm.BeatTime(index) < LastFrameSeconds)
+                    index++;
+
+                time = rhythm.BeatTime(index);
+                cover = time;
+            }
+
+            for (var i = 0; i < durations.Length; i++)
+            {
+                var next = index < 0
+                    ? Math.Max(0, rhythm.NearestBeatIndex(targets[i]))
+                    : index + Math.Max(1, (int)Math.Round(targets[i] / period, MidpointRounding.AwayFromZero));
+                while (rhythm.BeatTime(next) - time < LastFrameSeconds)
+                    next++;
+
+                var end = rhythm.BeatTime(next);
+                durations[i] = end - time;
+                time = end;
+                index = next;
+            }
+
+            return (cover, durations);
+        }
+
+        /// <summary>
         /// How long the photos take (not the cover), once through: what the times of <see cref="BuildFrameDurations"/> add up to, worked
         /// out without making them (there can be tens of thousands of photos, and the dialog asks at every change of a setting). A
         /// photo that has no sample is counted at the middle of the range.
@@ -341,6 +392,7 @@ namespace PhotoLiker.Core
         /// <param name="repeatToAudio">The photos play over and over until the audio ends (when it is longer than they are).</param>
         /// <param name="audioSeconds">The length of the audio, if there is one and it is known.</param>
         /// <param name="coverEndSeconds">How long the cover is shown after the photos; null for not at all.</param>
+        /// <param name="rhythm">The photos are cut on its beats (see <see cref="PlanOnBeats"/>; they then play once); null: not.</param>
         public static double EstimateLength(
             int photoCount,
             double startFrameTimeSeconds,
@@ -349,9 +401,22 @@ namespace PhotoLiker.Core
             double? coverSeconds,
             bool repeatToAudio,
             double? audioSeconds,
-            double? coverEndSeconds = null)
+            double? coverEndSeconds = null,
+            RhythmAnalysis? rhythm = null)
         {
-            var photoPass = PhotoSeconds(photoCount, startFrameTimeSeconds, endFrameTimeSeconds, randomSamples);
+            double photoPass;
+            if (rhythm is { HasBeats: true })
+            {
+                var plan = PlanOnBeats(photoCount, startFrameTimeSeconds, endFrameTimeSeconds, randomSamples, coverSeconds, rhythm);
+                coverSeconds = plan.CoverSeconds;
+                photoPass = plan.Durations.Sum();
+                repeatToAudio = false;
+            }
+            else
+            {
+                photoPass = PhotoSeconds(photoCount, startFrameTimeSeconds, endFrameTimeSeconds, randomSamples);
+            }
+
             var once = (coverSeconds ?? 0) + photoPass + (coverEndSeconds ?? 0);
             if (RepeatsForAudio(repeatToAudio, audioSeconds, once, photoPass))
                 return audioSeconds!.Value;
@@ -390,6 +455,10 @@ namespace PhotoLiker.Core
         /// The cover is shown after the last photo, for this long; null for not at all. When the photos repeat for the audio, the cover
         /// takes the last seconds of it, and the photo that is playing then is cut short.
         /// </param>
+        /// <param name="rhythm">
+        /// The photos are cut on the beats of the audio (see <see cref="PlanOnBeats"/>; the cover at the start is moved to a beat as well);
+        /// they then play once, whatever <paramref name="repeatToAudio"/> says. Null: the times as they are.
+        /// </param>
         /// <exception cref="InvalidOperationException">The photos would have to be listed more than <see cref="MaxListedFiles"/> times in all.</exception>
         public static VideoSequence BuildSequence(
             IReadOnlyList<string> photoFiles,
@@ -401,9 +470,22 @@ namespace PhotoLiker.Core
             bool repeatToAudio,
             bool repeatAudio,
             double? audioSeconds,
-            double? coverEndSeconds = null)
+            double? coverEndSeconds = null,
+            RhythmAnalysis? rhythm = null)
         {
-            var photoDurations = BuildFrameDurations(photoFiles.Count, startFrameTimeSeconds, endFrameTimeSeconds, randomSamples);
+            IReadOnlyList<double> photoDurations;
+            if (rhythm is { HasBeats: true })
+            {
+                var plan = PlanOnBeats(photoFiles.Count, startFrameTimeSeconds, endFrameTimeSeconds, randomSamples, coverFile is null ? null : coverSeconds, rhythm);
+                photoDurations = plan.Durations;
+                coverSeconds = coverFile is null ? coverSeconds : plan.CoverSeconds;
+                repeatToAudio = false;
+            }
+            else
+            {
+                photoDurations = BuildFrameDurations(photoFiles.Count, startFrameTimeSeconds, endFrameTimeSeconds, randomSamples);
+            }
+
             var files = new List<string>(photoFiles.Count + 2);
             var durations = new List<double>(photoFiles.Count + 2);
             if (coverFile is not null && coverSeconds is { } startCover)
@@ -441,7 +523,7 @@ namespace PhotoLiker.Core
                 var photosUntil = audio - coverEnd;
                 var passesToAdd = Math.Ceiling((photosUntil - shownOnce) / photoPass);
                 if ((passesToAdd * photoFiles.Count) + files.Count + 1 > MaxListedFiles)
-                    throw new InvalidOperationException(string.Format(CoreStrings.TooManyRepeatsFormat, passesToAdd));
+                    throw new InvalidOperationException(string.Format(GenerateVideoStrings.TooManyRepeatsFormat, passesToAdd));
 
                 var elapsed = shownOnce;
                 for (var pass = 0; pass < passesToAdd && elapsed < photosUntil; pass++)
@@ -468,7 +550,7 @@ namespace PhotoLiker.Core
 
             var morePasses = Math.Ceiling((audio + RepeatMarginSeconds - once) / photoPass);
             if ((morePasses * photoFiles.Count) + files.Count > MaxListedFiles)
-                throw new InvalidOperationException(string.Format(CoreStrings.TooManyRepeatsFormat, morePasses));
+                throw new InvalidOperationException(string.Format(GenerateVideoStrings.TooManyRepeatsFormat, morePasses));
 
             for (var pass = 0; pass < morePasses; pass++)
             {

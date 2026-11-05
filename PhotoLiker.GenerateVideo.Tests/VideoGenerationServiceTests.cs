@@ -1,6 +1,6 @@
 using PhotoLiker.Core;
 
-namespace PhotoLiker.Tests;
+namespace PhotoLiker.GenerateVideo.Tests;
 
 public class VideoGenerationServiceTests
 {

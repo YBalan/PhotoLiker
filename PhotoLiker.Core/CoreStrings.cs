@@ -34,12 +34,6 @@ namespace PhotoLiker.Core
         public static string ExifTooShort => T();
         public static string ExifByteOrder => T();
         public static string ExifNotTiff => T();
-        public static string FfmpegFailedFormat => T();
-        public static string FfmpegNoOutputFormat => T();
-        public static string FfmpegNotFound => T();
-        public static string TooManyRepeatsFormat => T();
-        public static string AudioUnreadable => T();
-        public static string DurationSecondsFormat => T();
         public static string UpdateAnswerUnreadable => T();
         public static string UpdateTagUnreadableFormat => T();
         public static string UpdateDownloadDamaged => T();

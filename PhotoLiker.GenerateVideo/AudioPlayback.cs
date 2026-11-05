@@ -1,4 +1,4 @@
-namespace PhotoLiker.Core
+namespace PhotoLiker.GenerateVideo
 {
     /// <summary>How the audio of a video goes with its pictures.</summary>
     public enum AudioPlayback
