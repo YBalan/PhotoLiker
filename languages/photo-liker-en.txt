@@ -73,12 +73,6 @@ CoreStrings.JpegDamaged = The JPEG is damaged.
 CoreStrings.ExifTooShort = The Exif block is too short.
 CoreStrings.ExifByteOrder = The Exif block has an unknown byte order.
 CoreStrings.ExifNotTiff = The Exif block is not a TIFF block.
-CoreStrings.FfmpegFailedFormat = ffmpeg failed with exit code {0}.
-CoreStrings.FfmpegNoOutputFormat = ffmpeg completed but output file was not created: {0}
-CoreStrings.FfmpegNotFound = ffmpeg executable not found. Place ffmpeg.exe in the 'ffmpeg' subfolder next to the app, or ensure ffmpeg is available in PATH.
-CoreStrings.TooManyRepeatsFormat = The photos would have to be repeated {0:N0} times to last as long as the audio: too many. Let them play once.
-CoreStrings.AudioUnreadable = ffmpeg cannot read this file as audio
-CoreStrings.DurationSecondsFormat = {0:0.0} s
 CoreStrings.UpdateAnswerUnreadable = GitHub's answer about the latest release could not be read.
 CoreStrings.UpdateTagUnreadableFormat = The latest release is called '{0}', which is not a version number.
 CoreStrings.UpdateDownloadDamaged = The download is damaged (its size or checksum is not the one GitHub gives for it), so it was thrown away.
@@ -205,6 +199,14 @@ SearchLibStrings.PersonNeedsName = A person needs a name.
 SearchLibStrings.NoSuchPersonFormat = There is nobody called {0}.
 SearchLibStrings.DownloadingFormat = Downloading {0}: {1} of {2} MB
 SearchLibStrings.DownloadingNoTotalFormat = Downloading {0}: {1} MB
+
+# ──────────── GenerateVideoStrings ────────────
+GenerateVideoStrings.FfmpegFailedFormat = ffmpeg failed with exit code {0}.
+GenerateVideoStrings.FfmpegNoOutputFormat = ffmpeg completed but output file was not created: {0}
+GenerateVideoStrings.FfmpegNotFound = ffmpeg executable not found. Place ffmpeg.exe in the 'ffmpeg' subfolder next to the app, or ensure ffmpeg is available in PATH.
+GenerateVideoStrings.TooManyRepeatsFormat = The photos would have to be repeated {0:N0} times to last as long as the audio: too many. Let them play once.
+GenerateVideoStrings.AudioUnreadable = ffmpeg cannot read this file as audio
+GenerateVideoStrings.DurationSecondsFormat = {0:0.0} s
 
 # ──────────── AboutStrings ────────────
 AboutStrings.Heading = PhotoLiker
@@ -904,6 +906,22 @@ VideoStrings.EnterFileName = Please enter an output file name.
 VideoStrings.InvalidFileName = Output file name contains invalid characters.
 VideoStrings.AudioNotThere = The audio file is not there.
 VideoStrings.CoverFileNotThere = The cover image is not there.
+VideoStrings.LabelRhythm = Rhythm (experimental):
+VideoStrings.CutOnBeat = Cut photos on the beat
+VideoStrings.CutOnBeatHint = Experimental. Finds the beats of the audio and changes the photo on a beat: each photo is shown for a whole number of beats, as near its time (Start to End) as that can be, and the cover at the start is moved to the nearest beat. The bars below show how hard the sound hits, the beats found, and where the photos change. Use random and Photos: Repeat are off while this is ticked (the photos play once).
+VideoStrings.RhythmAnalyzing = Analyzing the rhythm...
+VideoStrings.RhythmFoundFormat = {0:0} BPM, {1} beats
+VideoStrings.RhythmNoBeat = No clear beat found: the times are used as set.
+VideoStrings.RhythmFailed = The audio could not be analyzed.
+VideoStrings.RhythmSlowerHint = Half as many beats: keeps every second one. For when the beats found are twice as many as they should be.
+VideoStrings.RhythmFasterHint = Twice as many beats: puts one between each two. For when the beats found are half as many as they should be.
+VideoStrings.RhythmViewHint = Blue bars: how hard the sound hits. Orange lines: the beats found. Green marks: where the photos change. Move along the audio with the scroll bar or the mouse wheel.
+VideoStrings.LogBeatsFormat = The photos are cut on the beats of the audio ({0:0} BPM, {1} beats found).
+VideoStrings.LogBeatsCoverFormat = The cover at the start is moved to a beat: it is shown for {0:0.##} sec.
+VideoStrings.LogBeatsNone = No clear beat in the audio: the photo times are used as set.
+VideoStrings.LogBeatsFailedFormat = The rhythm of the audio could not be found ({0}): the photo times are used as set.
+VideoStrings.LogSettingsSavedFormat = The settings of this video are saved in {0}: the dialog starts from them the next time you pick this folder.
+VideoStrings.LogSettingsNotSavedFormat = The settings of this video could not be saved ({0}).
 
 # ──────────── DialogStrings ────────────
 DialogStrings.ContextMenuEntry = Open in Photo Liker

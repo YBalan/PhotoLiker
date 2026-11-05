@@ -24,7 +24,8 @@ namespace PhotoLikerUI
             _plan = plan;
 
             Text = string.Format(GroupCopyStrings.ProgressTitleFormat, groupName);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            FormBorderStyle = FormBorderStyle.FixedSingle; // not FixedDialog: Windows shows no icon in the caption of that frame
+            Icon = DialogIcons.People;
             StartPosition = FormStartPosition.CenterParent;
             ControlBox = false; // the way out is Cancel, which stops cleanly
             MaximizeBox = false;

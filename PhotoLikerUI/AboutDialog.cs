@@ -24,7 +24,8 @@ namespace PhotoLikerUI
         public AboutDialog(bool dark)
         {
             Text = MainFormStrings.AboutTitle;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            FormBorderStyle = FormBorderStyle.FixedSingle; // not FixedDialog: Windows shows no icon in the caption of that frame
+            Icon = DialogIcons.Help;
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false;
             MinimizeBox = false;

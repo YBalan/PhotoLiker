@@ -115,7 +115,7 @@ in the background, nothing runs at startup.
 Searching is what PhotoLiker is mostly for. For a library of thousands of old photos on a NAS, PhotoLiker can look at every photo once (**Index photos**, in the strip
 above the viewer) and then answer questions about them. Nothing is uploaded: the analysis runs on this computer.
 
-![The search strip above the viewer, dark theme: the index menu, Index photos, the search box, More like this, the faces icon and the precision slider](docs/images/17-search-bar.png)
+![The search strip above the viewer, dark theme: the index menu, Index photos, the search box, More like this, the faces icon, the people icon and the precision slider](docs/images/17-search-bar.png)
 
 1. **Index photos** analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the
    time left. You can keep browsing, stop it (the button turns into **Stop indexing**) and continue later: only new or
@@ -335,6 +335,13 @@ work on the photo again.
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
 
+The window that a button opens carries the icon of that button: in its title bar, and in Alt+Tab. Generate Video, Align dates (also the window that gives
+photos a date), Remove empty folders, Find duplicates and the About box (the question mark) have theirs; the People window, the windows that
+rename a person or a group and the one that copies results into a group have the icon of the People button of the search strip, and the one that
+names a face has the faces icon. They are drawn from the same pictures as the buttons, again at each size a title bar can ask for (16 to 64 px), so
+they stay sharp at any scaling of the screen. (A window with the dialog frame has no icon in its title bar in Windows, so those windows have a thin
+fixed frame instead.)
+
 #### Generate Video
 
 Turns photos into a video with ffmpeg. A copy of `ffmpeg.exe` ships with the app; otherwise the one on your `PATH` is used. The dialog opens
@@ -350,6 +357,16 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   It starts on **Liked**, and every entry shows its number of photos, "Liked (123)" (the folders are counted in the background, one after
   the other, so a count shows `...` until it is known).
 - **Output folder** follows the pick: the folder of the photos, or the Liked or group folder. One that you typed or browsed to is left alone.
+- **The settings are kept with the photos.** When you press *Generate*, every value of the dialog is written to `photo-liker-video.json` in the
+  folder of the picked source (the Liked or group folder, or the folder of the loaded photos), and the next time you open the dialog or pick that
+  folder in *Photos from* they are put back. The log says where they were saved.
+  - What is kept: the sort order, the output folder and file name, the audio and its Repeat/Once, the cover with its ticks and times, the
+    resolution, *Start*, *End* and *Use random*, the codec, the quality, and the cut on the beat with its ÷2/×2.
+  - Paths below the folder or beside it are stored relative to it (`"AudioPath": "..\\music\\song.mp3"`), so a folder that is moved or opened from
+    another machine keeps working. A file name the dialog made itself (`timelapse_<date>_<time>.mp4`) is not put back, a new one is made each time.
+    The random times are not kept: they are drawn again.
+  - The file is plain, indented JSON that you may edit. A value that is missing, or one that makes no sense, leaves the dialog as it is; a
+    file that cannot be read is ignored. *Photos from* itself is not in it: it is the folder the file is in.
 - **Sort order** is the order of the photos in the video. It starts as the *SortOrder* setting.
   - Oldest first, newest first: by file date, as the *SortOrder* setting does. A copy in Liked or a group goes by the date of its photo, not by
     when it was liked.
@@ -382,6 +399,21 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   - The length of the audio is shown beside it (`Length: 3:25`; ffmpeg reads it, `unknown` if the file has none).
   - A longer audio is cut where the video ends (unless the photos repeat for it, see below), and a shorter one is played over and over
     until the video ends (or once, see below).
+- **Rhythm (experimental)**, **Cut photos on the beat**: finds the beats of the audio (it needs an audio file, and starts when you tick the box;
+  a few seconds for a song) and changes the photo on a beat.
+  - Each photo is shown for a whole number of beats, as near its time (*Start* to *End*) as that can be, and at least one beat. The cover at
+    the start is moved to the nearest beat, so that the first photo starts on one. The photos play once, and the video is as long as they are
+    (the audio is cut, or played over and over, as it always is).
+  - The dialog grows by a strip of **bars**: how hard the sound hits (blue), the beats found (orange) and where the photos change (green).
+    It shows 20 seconds of the audio at a time; the scroll bar, the mouse wheel (click the strip first) or dragging moves along it.
+  - The tempo found and the number of beats are shown beside the box. The beat is sometimes taken for half or double of what you would tap:
+    **÷2** keeps every second beat, **×2** puts a beat between each two (the photos follow at once).
+  - **Use random** and **Photos: Repeat** do not go with it: they are put off and greyed while the box is ticked, and are what they were
+    when you untick it. With no clear beat in the audio (speech, ambient music...) or a file ffmpeg cannot read, the times are used as set.
+  - How it works: ffmpeg decodes the audio, the rise of the spectrum (in 40 bands, as the ear hears pitch) gives the hits, the tempo comes from
+    how they repeat and the beats from dynamic programming (Ellis, "Beat Tracking by Dynamic Programming", 2007). No library is added.
+    Checked on clicks at known times (cuts land within a video frame of them) and on six real songs (the strength at the beats is several
+    times that between them); how it *sounds* is for you to judge.
 - **Repeat or once** has a box for the photos and one for the audio (both are off without an audio file). Each one matters when the other is the longer.
   - **Photos: Once** plays the photos once, so that a longer audio is cut.
   - **Photos: Repeat** plays them over and over, in the same order and with the same times, until the audio ends, when the audio is longer than
@@ -959,10 +991,12 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | Project | What it is |
 |---|---|
 | `PhotoLikerUI` | The Windows (WinForms) app. Everything that needs WinForms or GDI+: the window, decoding and caching of photos, the settings grid with its editors, themes, the context menu registration. |
-| `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown, the ffmpeg video service. Shared by all front ends. |
+| `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown. Shared by all front ends. |
+| `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run, the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
+| `PhotoLiker.GenerateVideo.Tests` | xUnit tests of the video library: the order and the times of the photos, the sequence of a video (cover, repeats, audio), the ffmpeg arguments, the cuts on the beat, the rhythm analysis (on synthetic songs), the settings file. They need no ffmpeg. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |
@@ -977,6 +1011,7 @@ You need the .NET 10 SDK (see `global.json`) on Windows.
 ```powershell
 dotnet build PhotoLikerUI\PhotoLikerUI.csproj          # build the app
 dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests of the Core library
+dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.csproj  # run the tests of the video library
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
 installer\build-installer.ps1                           # publish and pack the installer (needs Inno Setup 6)
 ```
@@ -1093,6 +1128,18 @@ instead of running it). Its pictures are `12-generate-video-button` to `16-about
 ```powershell
 dotnet run -c Release --project tools\SmokeTour -- --only-dialogs --screenshots docs\images
 ```
+
+`--only-search` is another: it indexes the demo folder **for real**, with the models the app has already downloaded (they are linked, read only, into
+the tour's own data folder with a junction, which is taken out again; nothing is written to `%LocalAppData%\PhotoLiker`), presses **More like
+this** on the first photo and photographs the search strip: `17-search-bar`, `18-search-wide` and `19-search-precise` of `docs\images`. It needs
+those models (it says so and stops if they are not there), and takes a minute or two:
+
+```powershell
+dotnet run -c Release --project tools\SmokeTour -- --only-search --screenshots docs\images
+```
+
+The mouse pointer is parked in the corner of the screen before each picture, so that no tip of a button it rests on is in it. The pictures `28-people-groups`
+and `29-face-menu-groups` are made by hand with made-up people (no tour makes them), and `20-search-model` shows the model box with its list open.
 
 `--only-language` is a third, short one: it changes the **Language** row of the settings grid to Ukrainian, checks that the buttons of the toolbar and
 the search strip, the status bar, the help of the grid and the lines of the model box are Ukrainian at once and that the language went to

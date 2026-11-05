@@ -30,6 +30,29 @@ namespace PhotoLikerUI
         private int _audioLengthGeneration;
         private CancellationTokenSource? _audioLengthCancellation;
 
+        // The experimental cut on the beat. The rhythm is found when the box is ticked (not before: it takes a few seconds and a file read) for
+        // the audio that is in the box; _rhythmFound is what the analysis gave, _rhythm that with the ÷2 and ×2 pressed (_tempoOctaves) put
+        // on it. The latest audio asked for wins, as with its length.
+        private RhythmAnalysis? _rhythmFound;
+        private RhythmAnalysis? _rhythm;
+        private int _tempoOctaves;
+        private int _wantedTempoOctaves; // from the saved settings: put on the rhythm when it has been found
+        private bool _analyzingRhythm;
+        private string? _rhythmError;
+        private int _rhythmGeneration;
+        private CancellationTokenSource? _rhythmCancellation;
+        private Task _rhythmTask = Task.CompletedTask;
+        private RhythmCacheEntry? _rhythmCache;
+        private ToolTip? _beatToolTip;
+
+        // The latest folder asked for wins: settings read for the folder picked before it are thrown away
+        private int _settingsGeneration;
+
+        // While the photos are cut on the beat, Use random and Photos: Repeat do not apply: they are put off, and back to what they were after
+        private bool _beatLocked;
+        private bool _randomBeforeBeats;
+        private bool _repeatPhotosBeforeBeats;
+
         // True while an item of the source combo gets its new text (a count), which is not a pick
         private bool _refreshingSourceItem;
 
@@ -64,6 +87,11 @@ namespace PhotoLikerUI
         private readonly CheckBox _randomFrameTimesCheckBox = new();
         private readonly ComboBox _playModeCombo = new();
         private readonly ComboBox _audioPlayModeCombo = new();
+        private readonly CheckBox _beatCheckBox = new();
+        private readonly Label _beatStatusLabel = new();
+        private readonly Button _slowerBeatButton = new();
+        private readonly Button _fasterBeatButton = new();
+        private readonly RhythmView _rhythmView = new();
         private readonly ComboBox _codecCombo = new();
         private readonly NumericUpDown _crfNumeric = new();
         private readonly ProgressBar _progressBar = new();
@@ -103,7 +131,8 @@ namespace PhotoLikerUI
             _generateVideoAsync = generateVideoAsync;
 
             Text = MainFormStrings.VideoDialogTitle;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            FormBorderStyle = FormBorderStyle.FixedSingle; // not FixedDialog: Windows shows no icon in the caption of that frame
+            Icon = DialogIcons.GenerateVideo;
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false;
             MinimizeBox = false;
@@ -116,12 +145,12 @@ namespace PhotoLikerUI
                 Dock = DockStyle.Fill,
                 Padding = new Padding(12),
                 ColumnCount = 3,
-                RowCount = 18
+                RowCount = 20
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, _labelColumnWidth));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, _buttonColumnWidth));
-            for (var row = 0; row < 16; row++)
+            for (var row = 0; row < 18; row++)
                 layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -263,6 +292,21 @@ namespace PhotoLikerUI
             _audioPlayModeCombo.SelectedIndex = 0;
             toolTip.SetToolTip(_audioPlayModeCombo, VideoStrings.AudioPlayModeHint);
 
+            _beatCheckBox.Text = VideoStrings.CutOnBeat;
+            _beatCheckBox.AutoSize = true;
+            _beatStatusLabel.AutoSize = true;
+            _beatStatusLabel.Margin = new Padding(8, 6, 0, 0);
+            _slowerBeatButton.Text = "÷2";
+            _fasterBeatButton.Text = "×2";
+            foreach (var button in new[] { _slowerBeatButton, _fasterBeatButton })
+                button.Size = new Size(40, 25);
+            toolTip.SetToolTip(_beatCheckBox, VideoStrings.CutOnBeatHint);
+            toolTip.SetToolTip(_beatStatusLabel, VideoStrings.CutOnBeatHint);
+            toolTip.SetToolTip(_slowerBeatButton, VideoStrings.RhythmSlowerHint);
+            toolTip.SetToolTip(_fasterBeatButton, VideoStrings.RhythmFasterHint);
+            toolTip.SetToolTip(_rhythmView, VideoStrings.RhythmViewHint);
+            _beatToolTip = toolTip;
+
             _codecCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _codecCombo.Items.AddRange(["libx264", "libx265"]);
             _codecCombo.SelectedIndex = 0;
@@ -307,9 +351,21 @@ namespace PhotoLikerUI
             layout.Controls.Add(audioPanel, 1, 5);
             layout.SetColumnSpan(audioPanel, 2);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelCover, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 6);
-            layout.Controls.Add(_coverTextBox, 1, 6);
-            layout.Controls.Add(coverBrowseButton, 2, 6);
+            // Experimental: cut the photos on the beat of the audio. A tick, what was found, and two buttons for when the tempo was found
+            // as half or double of the beat. The bars of the rhythm are in a row of their own, under the hint (they open the dialog up).
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelRhythm, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 6);
+            var beatPanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
+            beatPanel.Controls.Add(_beatCheckBox);
+            beatPanel.Controls.Add(_beatStatusLabel);
+            layout.Controls.Add(beatPanel, 1, 6);
+            var beatTempoPanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0) };
+            beatTempoPanel.Controls.Add(_slowerBeatButton);
+            beatTempoPanel.Controls.Add(_fasterBeatButton);
+            layout.Controls.Add(beatTempoPanel, 2, 6);
+
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelCover, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 7);
+            layout.Controls.Add(_coverTextBox, 1, 7);
+            layout.Controls.Add(coverBrowseButton, 2, 7);
 
             // The picture on the left; on its right when it is shown (at the start, at the end) and for how long, and the button to take it away.
             // A table, so that the boxes and the "(sec)" of the two rows stand one under the other.
@@ -337,51 +393,51 @@ namespace PhotoLikerUI
             var coverPanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
             coverPanel.Controls.Add(_coverPreviewBox);
             coverPanel.Controls.Add(coverSidePanel);
-            layout.Controls.Add(coverPanel, 1, 7);
+            layout.Controls.Add(coverPanel, 1, 8);
             layout.SetColumnSpan(coverPanel, 2);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelResolution, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 8);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelResolution, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 9);
             var resolutionPanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
             resolutionPanel.Controls.Add(_widthNumeric);
             resolutionPanel.Controls.Add(new Label { Text = "x", AutoSize = true, Margin = new Padding(8, 6, 8, 0) });
             resolutionPanel.Controls.Add(_heightNumeric);
-            layout.Controls.Add(resolutionPanel, 1, 8);
+            layout.Controls.Add(resolutionPanel, 1, 9);
 
             // Not AutoSize: that only ever grows, and the first layout pass of the table measures it in a narrow cell (a button 96 px tall)
             _firstImageButton.Text = VideoStrings.UseFirstImage;
             _firstImageButton.Dock = DockStyle.Fill;
             _firstImageButton.Click += (_, _) => ApplyFirstImageResolution();
-            layout.Controls.Add(_firstImageButton, 2, 8);
+            layout.Controls.Add(_firstImageButton, 2, 9);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelFrameTimeRange, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 9);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelFrameTimeRange, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 10);
             var frameRangePanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
             frameRangePanel.Controls.Add(new Label { Text = VideoStrings.LabelStart, AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
             frameRangePanel.Controls.Add(_frameTimeStartNumeric);
             frameRangePanel.Controls.Add(new Label { Text = VideoStrings.LabelEnd, AutoSize = true, Margin = new Padding(12, 6, 6, 0) });
             frameRangePanel.Controls.Add(_frameTimeEndNumeric);
             frameRangePanel.Controls.Add(_randomFrameTimesCheckBox);
-            layout.Controls.Add(frameRangePanel, 1, 9);
+            layout.Controls.Add(frameRangePanel, 1, 10);
             layout.SetColumnSpan(frameRangePanel, 2);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelRepeatOrOnce, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 10);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelRepeatOrOnce, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 11);
             var playPanel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false };
             playPanel.Controls.Add(new Label { Text = VideoStrings.LabelPhotos, AutoSize = true, Margin = new Padding(0, 6, 6, 0) });
             playPanel.Controls.Add(_playModeCombo);
             playPanel.Controls.Add(new Label { Text = VideoStrings.LabelAudioShort, AutoSize = true, Margin = new Padding(16, 6, 6, 0) });
             playPanel.Controls.Add(_audioPlayModeCombo);
-            layout.Controls.Add(playPanel, 1, 10);
+            layout.Controls.Add(playPanel, 1, 11);
             layout.SetColumnSpan(playPanel, 2);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelVideoLength, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 11);
-            layout.Controls.Add(_videoLengthLabel, 1, 11);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelVideoLength, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 12);
+            layout.Controls.Add(_videoLengthLabel, 1, 12);
             layout.SetColumnSpan(_videoLengthLabel, 2);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelCodec, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 12);
-            layout.Controls.Add(_codecCombo, 1, 12);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelCodec, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 13);
+            layout.Controls.Add(_codecCombo, 1, 13);
             layout.SetColumnSpan(_codecCombo, 2);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelQuality, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 13);
-            layout.Controls.Add(_crfNumeric, 1, 13);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelQuality, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 14);
+            layout.Controls.Add(_crfNumeric, 1, 14);
             layout.SetColumnSpan(_crfNumeric, 2);
 
             var hintLabel = new Label
@@ -391,15 +447,22 @@ namespace PhotoLikerUI
                 ForeColor = SystemColors.GrayText,
                 Margin = new Padding(0, 8, 0, 0)
             };
-            layout.Controls.Add(hintLabel, 0, 14);
+            layout.Controls.Add(hintLabel, 0, 15);
             layout.SetColumnSpan(hintLabel, 3);
+
+            _rhythmView.Dock = DockStyle.Fill;
+            _rhythmView.Height = RhythmViewHeight;
+            _rhythmView.Margin = new Padding(0, 6, 0, 0);
+            _rhythmView.Visible = false;
+            layout.Controls.Add(_rhythmView, 0, 16);
+            layout.SetColumnSpan(_rhythmView, 3);
 
             _progressBar.Dock = DockStyle.Fill;
             _progressBar.Minimum = 0;
             _progressBar.Maximum = 100;
             _progressBar.Visible = false;
             TaskbarProgress.Watch(_progressBar, () => _isGenerating); // the bar stays on the dialog after the video is made
-            layout.Controls.Add(_progressBar, 0, 15);
+            layout.Controls.Add(_progressBar, 0, 17);
             layout.SetColumnSpan(_progressBar, 3);
 
             _outputLogTextBox.Multiline = true;
@@ -408,7 +471,7 @@ namespace PhotoLikerUI
             _outputLogTextBox.ScrollBars = ScrollBars.Both;
             _outputLogTextBox.Dock = DockStyle.Fill;
             _outputLogTextBox.Visible = false;
-            layout.Controls.Add(_outputLogTextBox, 0, 16);
+            layout.Controls.Add(_outputLogTextBox, 0, 18);
             layout.SetColumnSpan(_outputLogTextBox, 3);
 
             var buttonsPanel = new FlowLayoutPanel
@@ -442,7 +505,7 @@ namespace PhotoLikerUI
             buttonsPanel.Controls.Add(_runButton);
             buttonsPanel.Controls.Add(_cancelButton);
 
-            layout.Controls.Add(buttonsPanel, 0, 17);
+            layout.Controls.Add(buttonsPanel, 0, 19);
             layout.SetColumnSpan(buttonsPanel, 3);
 
             Controls.Add(layout);
@@ -483,6 +546,7 @@ namespace PhotoLikerUI
             {
                 _audioPreview.Stop();
                 UpdateAudioButtons();
+                StartRhythmAnalysis();
                 await ShowAudioLengthAsync();
             };
             _audioPlayButton.Click += async (_, _) => await PlayAudioAsync();
@@ -493,6 +557,7 @@ namespace PhotoLikerUI
             {
                 _audioPreview.Dispose();
                 _audioLengthCancellation?.Cancel();
+                _rhythmCancellation?.Cancel();
             };
             UpdateAudioButtons();
 
@@ -507,6 +572,12 @@ namespace PhotoLikerUI
             _playModeCombo.SelectedIndexChanged += (_, _) => UpdateVideoLength();
             _audioPlayModeCombo.SelectedIndexChanged += (_, _) => UpdateVideoLength();
             UpdatePlayModeCombo();
+
+            // The experimental cut on the beat: ticking it finds the rhythm of the audio
+            _beatCheckBox.CheckedChanged += (_, _) => StartRhythmAnalysis();
+            _slowerBeatButton.Click += (_, _) => ChangeTempo(-1);
+            _fasterBeatButton.Click += (_, _) => ChangeTempo(1);
+            UpdateRhythmUi();
             _coverStartSecondsNumeric.ValueChanged += (_, _) => UpdateVideoLength();
             _coverEndSecondsNumeric.ValueChanged += (_, _) => UpdateVideoLength();
             foreach (var checkBox in new[] { _coverAtStartCheckBox, _coverAtEndCheckBox })
@@ -541,6 +612,8 @@ namespace PhotoLikerUI
             foreach (var input in Flatten(layout).Where(control => control is TextBox or NumericUpDown or ComboBox))
                 input.BackColor = inputBack;
             _coverPreviewBox.BackColor = inputBack;
+            _rhythmView.BackColor = inputBack;
+            _rhythmView.TextColor = dark ? Color.FromArgb(160, 160, 160) : SystemColors.GrayText;
 
             // The loaded photos are known at once; the folders are listed in the background and counted one by one
             _sourceCombo.SelectedIndexChanged += async (_, _) =>
@@ -549,9 +622,11 @@ namespace PhotoLikerUI
                     return;
 
                 FollowOutputFolder();
+                _ = LoadSettingsAsync(); // the settings the last video of this folder was made with, if there are any
                 await ShowSourceAsync();
             };
             _ = ShowSourceAsync();
+            _ = LoadSettingsAsync();
             _ = CountFoldersAsync();
         }
 
@@ -722,6 +797,10 @@ namespace PhotoLikerUI
             var options = CreateOptions();
             var sortOrder = SelectedSortOrder;
 
+            // Kept with the photos, for the next video of this folder (the values as they are now, before generating changes anything)
+            var settings = CurrentSettings();
+            var settingsFolder = SelectedSource.OutputFolder;
+
             _audioPreview.Stop();
             ExpandForProgress();
             SetBusyState(true);
@@ -729,6 +808,11 @@ namespace PhotoLikerUI
 
             try
             {
+                var (saved, saveError) = await Task.Run(() => (VideoSettingsFile.TrySave(settingsFolder, settings, out var why), why));
+                AppendOutput(saved
+                    ? string.Format(VideoStrings.LogSettingsSavedFormat, VideoSettingsFile.GetPath(settingsFolder))
+                    : string.Format(VideoStrings.LogSettingsNotSavedFormat, saveError));
+
                 // Which photos are still there is found out here and not when the dialog opens, which would keep it from opening on a slow disk
                 AppendOutput(string.Format(VideoStrings.LogCheckingFormat, Plural.Count(photos.Count, VideoStrings.Photo)));
                 var (files, missing) = await Task.Run(() => FindFiles(photos, sortOrder));
@@ -770,6 +854,21 @@ namespace PhotoLikerUI
                     AppendOutput(string.Format(VideoStrings.LogFailedFormat, Plural.Count(upright.Failed, VideoStrings.Picture)));
                 SetProgress(0);
 
+                // Cut on the beat: the rhythm is the one found when the box was ticked (waited for, if that is still going on)
+                RhythmAnalysis? rhythm = null;
+                if (_beatCheckBox.Checked && options.AudioPath is not null)
+                {
+                    if (_analyzingRhythm)
+                        AppendOutput(VideoStrings.RhythmAnalyzing);
+
+                    await _rhythmTask;
+                    rhythm = BeatRhythm;
+                    if (rhythm is null)
+                    {
+                        AppendOutput(_rhythmError is null ? VideoStrings.LogBeatsNone : string.Format(VideoStrings.LogBeatsFailedFormat, _rhythmError));
+                    }
+                }
+
                 // The times: the random ones are the ones drawn for the length that is shown, so the video is as long as it says
                 var samples = options.RandomFrameTimes ? RandomSamples() : null;
                 var repeat = options.RepeatToAudio && options.AudioPath is not null;
@@ -788,7 +887,15 @@ namespace PhotoLikerUI
                     repeat,
                     options.RepeatAudio,
                     audioSeconds,
-                    options.CoverEndSeconds);
+                    options.CoverEndSeconds,
+                    rhythm);
+
+                if (rhythm is not null)
+                {
+                    AppendOutput(string.Format(VideoStrings.LogBeatsFormat, rhythm.Bpm, rhythm.Beats.Count));
+                    if (cover is not null && options.CoverSeconds is not null)
+                        AppendOutput(string.Format(VideoStrings.LogBeatsCoverFormat, sequence.Durations[0]));
+                }
 
                 if (samples is not null)
                 {
@@ -932,7 +1039,33 @@ namespace PhotoLikerUI
 
             _progressBar.Visible = true;
             _outputLogTextBox.Visible = true;
-            ClientSize = new Size(840, _collapsedHeight + LogHeight);
+            UpdateDialogSize();
+        }
+
+        /// <summary>
+        /// The dialog is as tall as its rows need, and taller by the bars of the rhythm when they are shown and by the log when the video is
+        /// being made (which also makes it wider). It grows downwards, so it is moved up if that would put it off the screen.
+        /// </summary>
+        private void UpdateDialogSize()
+        {
+            if (_collapsedHeight == 0)
+                return; // still being built
+
+            var logShown = _progressBar.Visible;
+            var width = logShown ? ExpandedWidth : _dialogWidth;
+            var height = _collapsedHeight + (_rhythmView.Visible ? _rhythmView.Height + _rhythmView.Margin.Vertical : 0) + (logShown ? LogHeight : 0);
+            if (ClientSize.Width == width && ClientSize.Height == height)
+                return;
+
+            ClientSize = new Size(width, height);
+            if (!IsHandleCreated)
+                return;
+
+            var area = Screen.FromControl(this).WorkingArea;
+            var left = Math.Max(area.Left, Math.Min(Left, area.Right - Width));
+            var top = Math.Max(area.Top, Math.Min(Top, area.Bottom - Height));
+            if (left != Left || top != Top)
+                Location = new Point(left, top);
         }
 
         private void SetBusyState(bool busy)
@@ -947,6 +1080,7 @@ namespace PhotoLikerUI
             UpdatePlayModeCombo();
             _cancelButton.Enabled = !busy;
             _runButton.Enabled = !busy && !string.IsNullOrWhiteSpace(GeneratedOutputPath) && File.Exists(GeneratedOutputPath);
+            UpdateRhythmUi(); // the box and the buttons of the rhythm, and the two settings it turns off (which the loop above has just enabled)
         }
 
         private void SetProgress(int percent)
@@ -1106,6 +1240,7 @@ namespace PhotoLikerUI
 
             var line = " ";
             string text;
+            List<double> cuts = [];
             if (SelectedSource.Photos is not { } photos)
             {
                 text = SelectedSource.Failed ? "-" : VideoStrings.CountingPhotos;
@@ -1129,17 +1264,30 @@ namespace PhotoLikerUI
                     var repeat = RepeatPhotosSelected;
 
                     var coverEndSeconds = CoverEndSeconds;
-                    var length = VideoGenerationService.EstimateLength(photoCount, start, end, samples, coverSeconds, repeat, _audioLength?.TotalSeconds, coverEndSeconds);
+                    var rhythm = BeatRhythm;
+                    var plan = rhythm is null ? ((double? Cover, double[] Durations)?)null : VideoGenerationService.PlanOnBeats(photoCount, start, end, samples, coverSeconds, rhythm);
+                    var length = VideoGenerationService.EstimateLength(photoCount, start, end, samples, coverSeconds, repeat, _audioLength?.TotalSeconds, coverEndSeconds, rhythm);
                     text = string.Format(VideoStrings.AboutLengthFormat, DurationText.Format(length));
-                    line = AudioLine(photoCount, start, end, samples, coverSeconds, repeat, coverEndSeconds);
+                    line = AudioLine(photoCount, start, end, samples, coverSeconds, repeat, coverEndSeconds, plan);
+                    if (plan is { } cutPlan && rhythm is not null)
+                        cuts = CutTimes(cutPlan, rhythm.DurationSeconds);
                 }
             }
 
             _videoLengthLabel.Text = text + "\n" + line;
+            _rhythmView.SetCuts(cuts);
         }
 
         /// <summary>The second line under the video length: what becomes of the audio (or why "Repeat" is not doing anything).</summary>
-        private string AudioLine(int photoCount, double start, double end, double[]? samples, double? coverSeconds, bool repeat, double? coverEndSeconds)
+        private string AudioLine(
+            int photoCount,
+            double start,
+            double end,
+            double[]? samples,
+            double? coverSeconds,
+            bool repeat,
+            double? coverEndSeconds,
+            (double? Cover, double[] Durations)? beatPlan)
         {
             if (AudioPath is null)
                 return repeat ? VideoStrings.RepeatNeedsAudio : " ";
@@ -1150,8 +1298,9 @@ namespace PhotoLikerUI
                 return repeat && !_readingAudioLength ? VideoStrings.AudioLengthUnknown : " ";
             }
 
-            var photoPass = VideoGenerationService.PhotoSeconds(photoCount, start, end, samples);
-            var cover = (coverSeconds ?? 0) + (coverEndSeconds ?? 0);
+            // Cut on the beat: the times are the ones of the plan (the cover at the start is moved to a beat), and the photos play once
+            var photoPass = beatPlan is { } plan ? plan.Durations.Sum() : VideoGenerationService.PhotoSeconds(photoCount, start, end, samples);
+            var cover = ((beatPlan is { } moved ? moved.Cover : coverSeconds) ?? 0) + (coverEndSeconds ?? 0);
             var once = cover + photoPass;
             if (repeat && photoPass > 0 && audio.TotalSeconds > once)
                 return string.Format(VideoStrings.PhotosPlayTimesFormat, TimesText((audio.TotalSeconds - cover) / photoPass));
@@ -1227,8 +1376,298 @@ namespace PhotoLikerUI
                 return;
 
             var enabled = !_isGenerating && AudioPath is not null;
-            _playModeCombo.Enabled = enabled;
+            _playModeCombo.Enabled = enabled && !_beatLocked; // cut on the beat: the photos play once
             _audioPlayModeCombo.Enabled = enabled;
+        }
+
+        // ── The settings kept with the photos ───────────────────────────────────
+
+        /// <summary>The names the dialog makes itself (timelapse_20261105_093015.mp4): they are not put back, a new one is made each time.</summary>
+        private static readonly System.Text.RegularExpressions.Regex AutomaticFileName =
+            new(@"^timelapse_\d{8}_\d{6}\.mp4$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// Every value of the dialog, as it is to be kept (see <see cref="VideoSettings"/>). What Use random and Photos: Repeat were
+        /// before the cuts on the beat put them off is what is kept, not their greyed state.
+        /// </summary>
+        private VideoSettings CurrentSettings() => new()
+        {
+            SortOrder = SelectedSortOrder.ToString(),
+            OutputFolder = _outputFolderTextBox.Text.Trim(),
+            OutputFileName = _outputFileNameTextBox.Text.Trim(),
+            AudioPath = _audioTextBox.Text.Trim(),
+            RepeatPhotos = _beatLocked ? _repeatPhotosBeforeBeats : RepeatPhotosSelected,
+            RepeatAudio = RepeatAudioSelected,
+            CoverPath = _coverTextBox.Text.Trim(),
+            CoverAtStart = _coverAtStartCheckBox.Checked,
+            CoverStartSeconds = (double)_coverStartSecondsNumeric.Value,
+            CoverAtEnd = _coverAtEndCheckBox.Checked,
+            CoverEndSeconds = (double)_coverEndSecondsNumeric.Value,
+            Width = (int)_widthNumeric.Value,
+            Height = (int)_heightNumeric.Value,
+            StartFrameTimeSeconds = (double)_frameTimeStartNumeric.Value,
+            EndFrameTimeSeconds = (double)_frameTimeEndNumeric.Value,
+            UseRandom = _beatLocked ? _randomBeforeBeats : _randomFrameTimesCheckBox.Checked,
+            Codec = _codecCombo.SelectedItem?.ToString(),
+            Crf = (int)_crfNumeric.Value,
+            CutOnBeat = _beatCheckBox.Checked,
+            TempoOctaves = _tempoOctaves,
+        };
+
+        /// <summary>
+        /// Reads the settings the last video of the picked source's folder was made with, and puts them in the dialog. Read away from the
+        /// window (the folder may be on a slow disk); only the latest folder asked for is used, and nothing is touched while a video is made.
+        /// </summary>
+        private async Task LoadSettingsAsync()
+        {
+            var generation = ++_settingsGeneration;
+            var folder = SelectedSource.OutputFolder;
+            var settings = await Task.Run(() => VideoSettingsFile.Load(folder));
+            if (settings is null || IsDisposed || generation != _settingsGeneration || _isGenerating)
+                return;
+
+            ApplySettings(settings);
+        }
+
+        /// <summary>
+        /// Puts the values the file has in the dialog (ones it does not have, and ones that make no sense, are left as they are; numbers are
+        /// brought into the range of their box). The cut on the beat is put off first and on last, so that the two settings it holds are
+        /// free while the others are put in, and hold what is put in.
+        /// </summary>
+        private void ApplySettings(VideoSettings settings)
+        {
+            var beatBefore = _beatCheckBox.Checked;
+            _beatCheckBox.Checked = false;
+
+            if (settings.GetSortOrder() is { } order)
+            {
+                var index = _sortOrderCombo.Items.Cast<Choice<PhotoSortOrder>>().ToList().FindIndex(choice => choice.Value == order);
+                if (index >= 0)
+                    _sortOrderCombo.SelectedIndex = index;
+            }
+
+            if (!string.IsNullOrWhiteSpace(settings.OutputFolder))
+                _outputFolderTextBox.Text = settings.OutputFolder;
+            if (!string.IsNullOrWhiteSpace(settings.OutputFileName) && !AutomaticFileName.IsMatch(settings.OutputFileName))
+                _outputFileNameTextBox.Text = settings.OutputFileName;
+
+            if (settings.AudioPath is not null)
+                _audioTextBox.Text = settings.AudioPath;
+            if (settings.RepeatPhotos is { } repeatPhotos)
+                _playModeCombo.SelectedIndex = repeatPhotos ? 1 : 0;
+            if (settings.RepeatAudio is { } repeatAudio)
+                _audioPlayModeCombo.SelectedIndex = repeatAudio ? 0 : 1;
+
+            if (settings.CoverPath is not null)
+                _coverTextBox.Text = settings.CoverPath;
+            if (settings.CoverAtStart is { } atStart)
+                _coverAtStartCheckBox.Checked = atStart;
+            SetNumeric(_coverStartSecondsNumeric, settings.CoverStartSeconds);
+            if (settings.CoverAtEnd is { } atEnd)
+                _coverAtEndCheckBox.Checked = atEnd;
+            SetNumeric(_coverEndSecondsNumeric, settings.CoverEndSeconds);
+
+            SetNumeric(_widthNumeric, settings.Width);
+            SetNumeric(_heightNumeric, settings.Height);
+            SetNumeric(_frameTimeStartNumeric, settings.StartFrameTimeSeconds);
+            SetNumeric(_frameTimeEndNumeric, settings.EndFrameTimeSeconds);
+            if (settings.UseRandom is { } random)
+                _randomFrameTimesCheckBox.Checked = random;
+
+            if (settings.Codec is { } codec && _codecCombo.Items.Contains(codec))
+                _codecCombo.SelectedItem = codec;
+            SetNumeric(_crfNumeric, settings.Crf);
+
+            _wantedTempoOctaves = Math.Clamp(settings.TempoOctaves ?? 0, -MaxTempoOctaves, MaxTempoOctaves);
+            _beatCheckBox.Checked = settings.CutOnBeat ?? beatBefore;
+        }
+
+        /// <summary>Puts a number in a box, brought into its range (a number that is not one, or is missing, is left out).</summary>
+        private static void SetNumeric(NumericUpDown box, double? value)
+        {
+            if (value is not { } number || double.IsNaN(number) || double.IsInfinity(number))
+                return;
+
+            box.Value = (decimal)Math.Clamp(number, (double)box.Minimum, (double)box.Maximum);
+        }
+
+        // ── Cut on the beat (experimental) ──────────────────────────────────────
+
+        /// <summary>The rhythm the photos are cut on: ticked, an audio file, and beats found in it. Otherwise null, and the times are as set.</summary>
+        private RhythmAnalysis? BeatRhythm => _beatCheckBox.Checked && AudioPath is not null && _rhythm is { HasBeats: true } ? _rhythm : null;
+
+        /// <summary>
+        /// Starts finding the rhythm of the audio in the box (or throws away what was found, when the box is not ticked or there is no
+        /// audio). Only the latest audio asked for counts; the one before it is stopped. A path that is being typed costs nothing: ffmpeg
+        /// is started for a file that is there.
+        /// </summary>
+        private void StartRhythmAnalysis()
+        {
+            _rhythmCancellation?.Cancel();
+            var generation = ++_rhythmGeneration;
+            var path = AudioPath;
+
+            _rhythmFound = null;
+            _rhythm = null;
+            _tempoOctaves = 0;
+            _rhythmError = null;
+            _analyzingRhythm = _beatCheckBox.Checked && path is not null;
+            _rhythmTask = _analyzingRhythm ? AnalyzeRhythmAsync(path!, generation) : Task.CompletedTask;
+            UpdateRhythmUi();
+        }
+
+        private async Task AnalyzeRhythmAsync(string path, int generation)
+        {
+            var cancellation = _rhythmCancellation = new CancellationTokenSource();
+            RhythmAnalysis? found = null;
+            string? error = null;
+            try
+            {
+                var stamp = await Task.Run(() =>
+                {
+                    var info = new FileInfo(path);
+                    return info.Exists ? ((DateTime, long)?)(info.LastWriteTimeUtc, info.Length) : null;
+                }, cancellation.Token);
+
+                if (stamp is not { } file)
+                {
+                    // Not there (yet: it may be being typed): nothing to find, and nothing to complain about
+                }
+                else if (_rhythmCache is { } cache && cache.Path == path && cache.Written == file.Item1 && cache.Length == file.Item2)
+                {
+                    found = cache.Found;
+                }
+                else
+                {
+                    found = await RhythmAnalyzer.AnalyzeAsync(path, cancellation.Token);
+                    _rhythmCache = new RhythmCacheEntry(path, file.Item1, file.Item2, found);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+            }
+
+            // Closed, or another audio asked for, while this one was read
+            if (IsDisposed || generation != _rhythmGeneration)
+                return;
+
+            _analyzingRhythm = false;
+            _rhythmError = error;
+            _rhythmFound = found;
+            _tempoOctaves = found is { HasBeats: true } ? _wantedTempoOctaves : 0; // ÷2 / ×2 as saved with the folder, for the first rhythm found
+            _wantedTempoOctaves = 0;
+            _rhythm = found?.Scaled(_tempoOctaves);
+            UpdateRhythmUi();
+        }
+
+        private sealed record RhythmCacheEntry(string Path, DateTime Written, long Length, RhythmAnalysis Found);
+
+        /// <summary>÷2 / ×2: takes the beats found as half, or twice, as many.</summary>
+        private void ChangeTempo(int octaves)
+        {
+            if (_rhythmFound is not { HasBeats: true } found)
+                return;
+
+            _tempoOctaves = Math.Clamp(_tempoOctaves + octaves, -MaxTempoOctaves, MaxTempoOctaves);
+            _rhythm = found.Scaled(_tempoOctaves);
+            UpdateRhythmUi();
+        }
+
+        /// <summary>
+        /// Brings everything about the rhythm up to date: the tick and the two buttons, what is said of the rhythm, the bars (shown when the
+        /// box is ticked, which makes the dialog taller), the two settings that do not go with it, and the length of the video.
+        /// </summary>
+        private void UpdateRhythmUi()
+        {
+            if (IsDisposed || Disposing)
+                return;
+
+            var hasAudio = AudioPath is not null;
+            var ticked = _beatCheckBox.Checked;
+            _beatCheckBox.Enabled = !_isGenerating && hasAudio;
+
+            string status;
+            if (!ticked || !hasAudio)
+                status = string.Empty;
+            else if (_analyzingRhythm)
+                status = VideoStrings.RhythmAnalyzing;
+            else if (_rhythmError is not null)
+                status = VideoStrings.RhythmFailed;
+            else if (_rhythm is null)
+                status = string.Empty;
+            else if (_rhythm.HasBeats)
+                status = string.Format(VideoStrings.RhythmFoundFormat, _rhythm.Bpm, _rhythm.Beats.Count);
+            else
+                status = VideoStrings.RhythmNoBeat;
+
+            _beatStatusLabel.Text = status;
+            _beatToolTip?.SetToolTip(_beatStatusLabel, _rhythmError is null ? VideoStrings.CutOnBeatHint : $"{VideoStrings.RhythmFailed} {_rhythmError}");
+
+            var found = ticked && !_analyzingRhythm && _rhythm is { HasBeats: true };
+            _slowerBeatButton.Enabled = !_isGenerating && found && _tempoOctaves > -MaxTempoOctaves;
+            _fasterBeatButton.Enabled = !_isGenerating && found && _tempoOctaves < MaxTempoOctaves;
+
+            // The bars: shown when there is something to say with them (being found, found, or failed)
+            _rhythmView.Visible = ticked && hasAudio && (_analyzingRhythm || _rhythm is not null || _rhythmError is not null);
+            _rhythmView.SetAnalysis(_rhythm, _analyzingRhythm ? VideoStrings.RhythmAnalyzing : _rhythmError is null ? string.Empty : $"{VideoStrings.RhythmFailed} {_rhythmError}");
+
+            ApplyBeatLock();
+            UpdateVideoLength();
+            UpdateDialogSize();
+        }
+
+        /// <summary>
+        /// While the photos are cut on the beat, Use random and Photos: Repeat do nothing (every photo gets a whole number of beats, and the
+        /// photos play once), so they are turned off and greyed, and are what they were when the cuts are off again.
+        /// </summary>
+        private void ApplyBeatLock()
+        {
+            var lockIt = BeatRhythm is not null;
+            if (lockIt && !_beatLocked)
+            {
+                _beatLocked = true;
+                _randomBeforeBeats = _randomFrameTimesCheckBox.Checked;
+                _repeatPhotosBeforeBeats = RepeatPhotosSelected;
+                _randomFrameTimesCheckBox.Checked = false;
+                _playModeCombo.SelectedIndex = 0;
+            }
+            else if (!lockIt && _beatLocked)
+            {
+                _beatLocked = false;
+                _randomFrameTimesCheckBox.Checked = _randomBeforeBeats;
+                _playModeCombo.SelectedIndex = _repeatPhotosBeforeBeats ? 1 : 0;
+            }
+
+            _randomFrameTimesCheckBox.Enabled = !_isGenerating && !_beatLocked;
+            UpdatePlayModeCombo();
+        }
+
+        /// <summary>The times, from the start of the video, where one picture gives way to the next, up to the end of the audio.</summary>
+        private static List<double> CutTimes((double? Cover, double[] Durations) plan, double limitSeconds)
+        {
+            var cuts = new List<double>();
+            var time = 0d;
+            if (plan.Cover is { } cover)
+            {
+                time = cover;
+                cuts.Add(time);
+            }
+
+            foreach (var duration in plan.Durations)
+            {
+                time += duration;
+                if (time > limitSeconds)
+                    break;
+
+                cuts.Add(time);
+            }
+
+            return cuts;
         }
 
         // The width of the dialog and of its label and button columns with the texts of English: wider where the texts of the language need it
@@ -1263,7 +1702,7 @@ namespace PhotoLikerUI
                 VideoStrings.LabelPhotosFrom, VideoStrings.LabelSortOrder, VideoStrings.LabelOutputFolder, VideoStrings.LabelOutputFileName,
                 VideoStrings.LabelAudio, VideoStrings.LabelCover, VideoStrings.LabelResolution, VideoStrings.LabelFrameTimeRange,
                 VideoStrings.LabelRepeatOrOnce, VideoStrings.LabelVideoLength, VideoStrings.LabelCodec, VideoStrings.LabelQuality,
-                VideoStrings.LengthReading, VideoStrings.LengthUnknown, VideoStrings.FileNotFound,
+                VideoStrings.LabelRhythm, VideoStrings.LengthReading, VideoStrings.LengthUnknown, VideoStrings.FileNotFound,
             ];
             _labelColumnWidth = Math.Max(BaseLabelColumnWidth, labels.Max(Wide) + LabelColumnPadding);
             _buttonColumnWidth = Math.Max(BaseButtonColumnWidth, Wide(VideoStrings.UseFirstImage) + ButtonColumnPadding);
@@ -1277,6 +1716,14 @@ namespace PhotoLikerUI
 
         /// <summary>The height that makes room for the log and the progress bar, on top of the one of the rows.</summary>
         private const int LogHeight = 150;
+
+        /// <summary>The height of the bars of the rhythm (the strip and its scroll bar), which the dialog grows by when they are shown.</summary>
+        private const int RhythmViewHeight = 118;
+
+        private const int ExpandedWidth = 840;
+
+        /// <summary>÷2 and ×2 can be pressed this many times in a row (a quarter of the tempo found, or four times it).</summary>
+        private const int MaxTempoOctaves = 2;
 
         private int _collapsedHeight;
 

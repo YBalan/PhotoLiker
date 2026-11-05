@@ -17,6 +17,16 @@ internal static class ScreenCapture
         return Rectangle.FromLTRB(rect.Left, rect.Top, rect.Right, rect.Bottom);
     }
 
+    /// <summary>
+    /// Puts the mouse pointer in the bottom right corner of the screen, so that it does not rest on the window being photographed: a pointer
+    /// over a button shows its tip in the picture. The caller waits a moment after it, for the tip to go.
+    /// </summary>
+    public static void ParkMouse()
+    {
+        var screen = Screen.PrimaryScreen!.Bounds;
+        Cursor.Position = new Point(screen.Right - 1, screen.Bottom - 1);
+    }
+
     public static Bitmap Capture(IntPtr window) => Capture(FrameBounds(window));
 
     public static Bitmap Capture(Rectangle screenBounds)

@@ -77,6 +77,7 @@ namespace PhotoLikerUI
 
             Text = PeopleStrings.Title;
             StartPosition = FormStartPosition.CenterParent;
+            Icon = DialogIcons.People;
             MinimizeBox = false;
             ShowInTaskbar = false;
             ClientSize = new Size(900, 580);

@@ -1,6 +1,6 @@
 using PhotoLiker.Core;
 
-namespace PhotoLiker.Tests;
+namespace PhotoLiker.GenerateVideo.Tests;
 
 /// <summary>The photos a video can be made of besides the loaded ones: the copies in the liked folder or in one of its group folders.</summary>
 public class VideoSourcesTests : IDisposable

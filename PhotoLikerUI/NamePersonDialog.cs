@@ -17,7 +17,8 @@ namespace PhotoLikerUI
         {
             _check = check;
             Text = SearchStrings.NamePersonTitle;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
+            FormBorderStyle = FormBorderStyle.FixedSingle; // not FixedDialog: Windows shows no icon in the caption of that frame
+            Icon = DialogIcons.FaceRecognition;
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false;
             MinimizeBox = false;

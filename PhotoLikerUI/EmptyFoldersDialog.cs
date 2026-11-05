@@ -78,6 +78,7 @@ namespace PhotoLikerUI
 
             Text = EmptyFoldersStrings.Title;
             StartPosition = FormStartPosition.CenterParent;
+            Icon = DialogIcons.RemoveEmptyFolders;
             MinimizeBox = false;
             ShowInTaskbar = false;
             ClientSize = new Size(900, 560);

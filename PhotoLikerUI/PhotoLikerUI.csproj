@@ -2,11 +2,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
+    <ProjectReference Include="..\PhotoLiker.GenerateVideo\PhotoLiker.GenerateVideo.csproj" />
     <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="PhotoLiker.Core" />
+    <Using Include="PhotoLiker.GenerateVideo" />
   </ItemGroup>
 
   <PropertyGroup>

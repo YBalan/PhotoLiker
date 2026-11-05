@@ -39,6 +39,9 @@ jobs:
       - name: Test the Core library
         run: dotnet test PhotoLiker.Tests/PhotoLiker.Tests.csproj --configuration Release
 
+      - name: Test the video library
+        run: dotnet test PhotoLiker.GenerateVideo.Tests/PhotoLiker.GenerateVideo.Tests.csproj --configuration Release
+
       - name: Test the search library
         run: dotnet test PhotoLiker.Search.Tests/PhotoLiker.Search.Tests.csproj --configuration Release
 

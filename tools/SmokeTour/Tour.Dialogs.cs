@@ -181,7 +181,8 @@ internal sealed partial class Tour
         // The window is TopMost (nothing may cover it), which the dialog above it is not: it has to be too, or the photo of the window is what is on screen there
         dialog.TopMost = true;
         ScreenCapture.BringToFront(dialog.Handle);
-        await Settle(600);
+        ScreenCapture.ParkMouse();
+        await Settle(900);
         using var picture = ScreenCapture.Capture(dialog.Handle);
         Save(picture, name);
     }

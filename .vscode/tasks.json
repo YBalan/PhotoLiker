@@ -87,6 +87,17 @@
       ],
       "problemMatcher": "$msCompile",
       "group": { "kind": "test", "isDefault": true }
+    },
+    {
+      "label": "test-generate-video",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "test",
+        "${workspaceFolder}/PhotoLiker.GenerateVideo.Tests/PhotoLiker.GenerateVideo.Tests.csproj"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": "test"
     }
   ],
   "inputs": [

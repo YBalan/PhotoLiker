@@ -112,5 +112,21 @@ namespace PhotoLikerUI
         public static string InvalidFileName => T();
         public static string AudioNotThere => T();
         public static string CoverFileNotThere => T();
+        public static string LabelRhythm => T();
+        public static string CutOnBeat => T();
+        public static string CutOnBeatHint => T();
+        public static string RhythmAnalyzing => T();
+        public static string RhythmFoundFormat => T();
+        public static string RhythmNoBeat => T();
+        public static string RhythmFailed => T();
+        public static string RhythmSlowerHint => T();
+        public static string RhythmFasterHint => T();
+        public static string RhythmViewHint => T();
+        public static string LogBeatsFormat => T();
+        public static string LogBeatsCoverFormat => T();
+        public static string LogBeatsNone => T();
+        public static string LogBeatsFailedFormat => T();
+        public static string LogSettingsSavedFormat => T();
+        public static string LogSettingsNotSavedFormat => T();
     }
 }
