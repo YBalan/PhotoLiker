@@ -36,6 +36,7 @@
     <li><a href="#exif">EXIF and GPS</a></li>
     <li><a href="#tools">Tidying up: dates, empty folders, duplicates</a></li>
     <li><a href="#video">Making a video</a></li>
+    <li><a href="#videos">Videos in the folder</a></li>
     <li><a href="#theme">Dark and light theme</a></li>
     <li><a href="#files">What PhotoLiker keeps, and where</a></li>
     <li><a href="#about">About box and this manual</a></li>
@@ -219,6 +220,9 @@ photo again.</p></div>
     <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger.</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd></td><td>Rotate the photo a quarter clockwise / counterclockwise and save it (see <a href="#rotate">Rotating photos</a>).</td></tr>
     <tr><td><kbd>Ctrl</kbd>+mouse wheel</td><td>Over the photo: zoom, then drag to move the picture. Over the thumbnails: change their size.</td></tr>
+    <tr><td><kbd>Enter</kbd></td><td>On a video: play it, or pause / resume it (see <a href="#videos">Videos in the folder</a>). A click on the poster plays it, a click on the playing picture pauses it.</td></tr>
+    <tr><td><kbd>Shift</kbd>+<kbd>→</kbd> / <kbd>←</kbd>, <kbd>Ctrl</kbd>+<kbd>→</kbd> / <kbd>←</kbd></td><td>While a video plays: 5 seconds / 30 seconds ahead or back.</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd></td><td>While a video plays: the volume up / down.</td></tr>
     <tr><td><kbd>Esc</kbd></td><td>Close the search results; in the slideshow, go back.</td></tr>
     <tr><td><kbd>Enter</kbd> in the search box</td><td>Search.</td></tr>
     <tr><td><kbd>Shift</kbd>+drag over the photo</td><td>Mark a face the program missed (with the face icon switched on).</td></tr>
@@ -350,6 +354,8 @@ description: select it and the pane under the table says what it is for.</p>
     <tr><td><strong>LikedFolder</strong></td><td>Where liked photos are copied. By default the folder <code>Liked</code> inside the photo folder. Click the <strong>…</strong> button for a folder picker.</td></tr>
     <tr><td><strong>GoThroughSubFolders</strong></td><td>Also list the photos in the subfolders. The Liked folder itself is left out.</td></tr>
     <tr><td><strong>Extensions</strong></td><td>The kinds of file that count as photos, separated by <code>;</code> or <code>,</code>, each with its dot: <code>.jpg; .png</code>.</td></tr>
+    <tr><td><strong>SupportVideo</strong></td><td>List the videos of the folder with its photos (off by default). See <a href="#videos">Videos in the folder</a>.</td></tr>
+    <tr><td><strong>VideoExtensions</strong></td><td>The kinds of file that count as videos when <strong>SupportVideo</strong> is on: <code>.mp4; .mov; .avi; .mkv</code> ... (the usual ones are listed already).</td></tr>
     <tr><td><strong>SortOrder</strong></td><td>The order of the photos, see <a href="#order">Order of the photos</a>.</td></tr>
     <tr><td><strong>CacheSize</strong></td><td>How many photos on each side of the shown one are kept ready in memory, so that the arrow keys feel instant.</td></tr>
     <tr><td><strong>ThumbnailSize</strong></td><td>Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the thumbnails changes it.</td></tr>
@@ -595,7 +601,37 @@ when it is what you want.</p></div>
 PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe</code> on your <code>PATH</code>.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="theme">17. Dark and light theme</h2>
+<h2 id="videos">17. Videos in the folder</h2>
+
+<p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. Turn <strong>SupportVideo</strong> on in the settings
+table (it is off by default, so a folder looks as it always did until you do) and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
+<strong>GoThroughSubFolders</strong> is on. Which files are videos is the <strong>VideoExtensions</strong> row; the player plays nearly every format there is. A folder that holds only
+videos works the same: open it as a folder of its own. Changing either row lists the folder again at once.</p>
+
+<h3>What you see</h3>
+<p>A video shows its poster picture (a frame from a tenth of the way in, at most 5 seconds in) with a round play mark and its length in the corner; its thumbnail has a small play mark.
+Instead of EXIF the grid under the settings has a category <strong>0. Video</strong>: <strong>Duration</strong>, <strong>Frame size</strong>, <strong>Frame rate</strong>, <strong>Video codec</strong>,
+<strong>Audio</strong>, <strong>Bitrate</strong>, <strong>File size</strong>, <strong>Recorded</strong>, <strong>Date from</strong> and <strong>File dates</strong>. <strong>Recorded</strong> is the date the camera or
+phone wrote into the video (else the date of the file); <strong>File dates</strong> shows the dates of the file next to it, and says <code>≠ Recorded</code> when they differ: a copied file is created when it is
+copied, so it is often days younger than the recording.</p>
+
+<h3>Playing</h3>
+<p><kbd>Enter</kbd>, or a click on the poster, puts the player over the picture. Under it: play / pause, where you are (<code>0:12 / 1:17</code>), a slider to go anywhere (click or drag),
+a <strong>Go to</strong> box where you type a time and press <kbd>Enter</kbd> (<code>83</code>, <code>1:23</code>, <code>1:02:03</code> or <code>1m23s</code>), a mute button and the volume.
+A click on the picture pauses and plays. <kbd>Shift</kbd>+<kbd>←</kbd> / <kbd>→</kbd> go 5 seconds and <kbd>Ctrl</kbd>+<kbd>←</kbd> / <kbd>→</kbd> 30 seconds,
+<kbd>Ctrl</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd> change the volume, <kbd>Esc</kbd> goes back to the poster. Going to another item stops the video.</p>
+<p>The first start of the player after an installation can take ten seconds or more while the virus scanner looks at its files; it starts in the background as soon as a video is shown, and the bar
+says <strong>Starting the video player...</strong> until it is ready. If it cannot start at all, the video is opened in the program Windows plays such files with.</p>
+
+<h3>What works on a video, and what does not</h3>
+<p><kbd>Space</kbd> likes it, a group key sorts it, <kbd>Delete</kbd> moves it to the <code>Deleted</code> folder (a video that is playing is let go of first), <kbd>Ctrl</kbd>+<kbd>C</kbd> copies the file: all as for a photo.
+The search and its index, the slideshow, rotating, the date tools, duplicates and Generate Video work on photos only for now: the videos are left out of them.</p>
+
+<p>What PhotoLiker has read from a video (its size, length, codec and dates) and its poster picture are kept on this computer in a catalog of their own, next to the photo index, so that a folder of videos on a network
+share is not read again on every visit. It can be deleted at any time; it only costs the time to read the videos again. The player is VLC's engine (the <code>libvlc</code> folder next to the program,
+with its licence and the place to get its source).</p>
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="theme">18. Dark and light theme</h2>
 
 <p>The theme button of the toolbar switches between the two. The choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
@@ -606,7 +642,7 @@ see <a href="#language">Language</a>.)</p>
 </figure>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="files">18. What PhotoLiker keeps, and where</h2>
+<h2 id="files">19. What PhotoLiker keeps, and where</h2>
 
 <ul>
   <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
@@ -621,7 +657,7 @@ see <a href="#language">Language</a>.)</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="about">19. About box and this manual</h2>
+<h2 id="about">20. About box and this manual</h2>
 
 <p>The <strong>Help</strong> button (the question mark) at the end of the toolbar, or the <kbd>F1</kbd> key, opens the About box: the version and build date of the program, the
 keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and two buttons that open this manual, in English or in Ukrainian.

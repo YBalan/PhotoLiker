@@ -565,6 +565,7 @@ public class LanguageFilesOfTheRepositoryTests
     [InlineData("PhotoLiker.Core")]
     [InlineData("PhotoLiker.Search")]
     [InlineData("PhotoLiker.GenerateVideo")]
+    [InlineData("PhotoLiker.Video")]
     [InlineData("PhotoLikerUI")]
     public void TheCodeAsksForNothingThatIsNotThere_AndEveryTextIsAskedFor(string project)
     {
@@ -607,7 +608,7 @@ public class LanguageFilesOfTheRepositoryTests
     {
         var offered = new HashSet<string>();
         var klass = new Regex(@"static class (?<class>\w+)");
-        foreach (var project in new[] { "PhotoLiker.Core", "PhotoLiker.Search", "PhotoLiker.GenerateVideo", "PhotoLikerUI" })
+        foreach (var project in new[] { "PhotoLiker.Core", "PhotoLiker.Search", "PhotoLiker.GenerateVideo", "PhotoLiker.Video", "PhotoLikerUI" })
             foreach (var file in Directory.EnumerateFiles(Path.Combine(Root, project), "*.cs", SearchOption.TopDirectoryOnly))
             {
                 var text = File.ReadAllText(file);

@@ -21,6 +21,19 @@ namespace PhotoLiker.Core
         public bool   GoThroughSubFoldersAlternateSpelling { set => GoThroughSubFolders = value; }
 
         public string[] Extensions   { get; set; } = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"];
+        /// <summary>
+        /// Whether the videos of the folder are listed with its photos (see <see cref="VideoExtensions"/>): they are shown, played, liked, sorted into groups and
+        /// deleted like photos. Off by default, so a folder that holds videos looks as it always did until this is turned on.
+        /// </summary>
+        public bool   SupportVideo   { get; set; } = false;
+
+        /// <summary>The file extensions that count as videos when <see cref="SupportVideo"/> is on, see <see cref="MediaKinds.DefaultVideoExtensions"/>.</summary>
+        public string[] VideoExtensions { get; set; } = [.. MediaKinds.DefaultVideoExtensions];
+
+        /// <summary>What the folder listing takes for files of the folder: the photos, and the videos too if <see cref="SupportVideo"/> is on. Indexing and the tools work on <see cref="Extensions"/>, photos only.</summary>
+        [JsonIgnore]
+        public string[] ListedExtensions => SupportVideo ? [.. Extensions, .. VideoExtensions] : Extensions;
+
         [JsonConverter(typeof(PhotoSortOrderConverter))]
         public PhotoSortOrder SortOrder { get; set; } = PhotoSortOrder.OldestFirst;
         public int    CacheSize      { get; set; } = 20;

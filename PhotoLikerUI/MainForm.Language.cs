@@ -44,6 +44,7 @@ namespace PhotoLikerUI
             try
             {
                 ApplyControlTexts();
+                _player?.ApplyTexts();
 
                 // Those that depend on how things stand
                 ApplyTheme(_currentConfig.IsDarkTheme);

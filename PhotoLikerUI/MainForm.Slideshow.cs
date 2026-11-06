@@ -36,7 +36,8 @@ namespace PhotoLikerUI
         /// <summary>The slideshow of the list that is open (the photos of the folder, or the search results while they are shown); null if it has no photos.</summary>
         private SlideshowSession? CreateSlideshow()
         {
-            var files = _currentConfig.Files;
+            // The slideshow shows photos: the videos of the list are left out of it
+            var files = _currentConfig.Files.Where(f => !f.IsVideo).ToList();
             if (files.Count == 0)
                 return null;
 

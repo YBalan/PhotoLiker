@@ -22,6 +22,9 @@ namespace PhotoLiker.Core
         /// <summary>The description of a raw metadata entry (a row of the EXIF, Image, Thumbnail, GPS or Unknown category).</summary>
         public static string For(MetadataEntry entry)
         {
+            if (entry.Description is { Length: > 0 } own)
+                return own;
+
             if (TagIds.Contains(entry.TagId) && ExifTagMap.Tags.ContainsKey(entry.TagId))
                 return OfTag(entry.TagId);
 

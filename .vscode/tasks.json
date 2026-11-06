@@ -98,6 +98,17 @@
       ],
       "problemMatcher": "$msCompile",
       "group": "test"
+    },
+    {
+      "label": "test-video",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "test",
+        "${workspaceFolder}/PhotoLiker.Video.Tests/PhotoLiker.Video.Tests.csproj"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": "test"
     }
   ],
   "inputs": [

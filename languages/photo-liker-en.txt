@@ -208,6 +208,26 @@ GenerateVideoStrings.TooManyRepeatsFormat = The photos would have to be repeated
 GenerateVideoStrings.AudioUnreadable = ffmpeg cannot read this file as audio
 GenerateVideoStrings.DurationSecondsFormat = {0:0.0} s
 
+# ──────────── VideoLibStrings ────────────
+VideoLibStrings.FfmpegNotFound = ffmpeg was not found next to the program (in its ffmpeg folder), so videos cannot be read.
+VideoLibStrings.UnreadableFormat = The video cannot be read: {0}
+VideoLibStrings.DateFromVideo = the date written in the video
+VideoLibStrings.DateFromFile = the date of the file (the video has no date that can be believed)
+VideoLibStrings.DateNone = none
+VideoLibStrings.NoAudio = none
+VideoLibStrings.DescDuration = How long the video plays: minutes and seconds, then the length in seconds.
+VideoLibStrings.DescFrameSize = The size of the picture in pixels as it is shown, width × height. A video that a phone recorded held upright is stored sideways and turned by the player; the stored size and the turn are then given in brackets.
+VideoLibStrings.DescFrameRate = How many pictures a second the video has (fps).
+VideoLibStrings.DescVideoCodec = How the pictures are stored: h264, hevc, mjpeg (the Motion JPEG of many cameras), mpeg4 ... The player handles all of them; the name tells why a file is large or small.
+VideoLibStrings.DescAudio = The first sound track: how it is stored, its sampling rate and its channels. none: the video has no sound.
+VideoLibStrings.DescBitrate = How much data a second of the file takes, sound included: the larger it is, the larger the file for its length.
+VideoLibStrings.DescRecorded = When the video was recorded: the date the camera or the phone wrote into the video, else the date of the file (the Date from row says which). The same rules as for the date a photo was taken.
+VideoLibStrings.DescDateFrom = Where the Recorded date comes from: written into the video by the camera, or the date of the file (a copied file is created when it is copied, which can be days after the recording). A camera whose clock was never set writes a date that cannot be told from a true one.
+VideoLibStrings.DescLocation = Where the phone says the video was recorded: latitude and longitude in degrees. Videos from cameras, and downloaded ones, have none.
+VideoLibStrings.DescEncoder = The program or the device that wrote the file.
+VideoLibStrings.DescFileSize = The size of the file on the disk.
+VideoLibStrings.DescFileDates = The dates of the file on the disk, next to the date of recording: = if they are the same as Recorded, ≠ if not (a copied file is created when it is copied, so a copy of an old video is newer than the recording).
+
 # ──────────── AboutStrings ────────────
 AboutStrings.Heading = PhotoLiker
 AboutStrings.VersionFormat = Version: {0}\nBuild date: {1:yyyy-MM-dd HH:mm:ss}
@@ -263,6 +283,10 @@ AboutStrings.ShortcutZoomInput = Ctrl+mouse wheel
 AboutStrings.ShortcutZoomAction = Zoom the photo (drag to pan); over the strip: thumbnail size
 AboutStrings.ShortcutSlideshowInput = Alt+Enter
 AboutStrings.ShortcutSlideshowAction = Slideshow on the whole screen (Right / Left: the photo next to the shown one, Down / Up: the next / previous effect, Esc: back)
+AboutStrings.ShortcutPlayInput = Enter
+AboutStrings.ShortcutPlayAction = A video: play / pause (a click on the picture does the same)
+AboutStrings.ShortcutSeekInput = Shift+Right / Left, Ctrl+Right / Left, Ctrl+Up / Down
+AboutStrings.ShortcutSeekAction = While a video plays: 5 seconds / 30 seconds ahead or back, volume
 AboutStrings.ShortcutCloseInput = Esc
 AboutStrings.ShortcutCloseAction = Close the search results
 AboutStrings.ShortcutSearchInput = Enter
@@ -788,6 +812,8 @@ SettingsStrings.SavedInFolders = Every folder that holds a copy of the shown pho
 SettingsStrings.LikedFolder = Where liked photos are copied to; the group folders ('1 - Group' ... 'Z - Group') are made inside it. By default the folder 'Liked' inside the photo folder. Click the '...' button to choose another folder; a folder with any other name than 'Liked' is kept as it is, wherever it is.
 SettingsStrings.GoThroughSubFolders = True: the photos of all subfolders are listed too (the Liked folder itself is left out). False: only the photos of the folder itself. Changing it lists the folder again at once.
 SettingsStrings.Extensions = The file extensions that count as photos, separated by ; or , each with its dot: .jpg; .png. Case does not matter. Changing it lists the folder again at once.
+SettingsStrings.SupportVideo = True: the videos of the folder (the extensions of the VideoExtensions row, also in the subfolders if GoThroughSubFolders is on) are listed with its photos. A video shows its first picture with a play mark; Enter or a click plays it, and Shift+Left/Right, Ctrl+Left/Right, the slider and the Go to box move about in it. It is liked, sorted into groups and deleted like a photo. The search, the slideshow, rotating and the date tools work on photos only. False (the default): only photos are listed. Changing it lists the folder again at once.
+SettingsStrings.VideoExtensions = The file extensions that count as videos when SupportVideo is on, separated by ; or , each with its dot: .mp4; .avi; .mov. Case does not matter. Add any format the player knows (it knows nearly all). Changing it lists the folder again at once.
 SettingsStrings.SortOrder = The order of the photos: OldestFirst or NewestFirst by the date the file was created (a copied file is created when it is copied), ByName by the name of the file as Explorer lists it (IMG_2 before IMG_10), Random in a new random order each time the folder is listed, None for the order the file system gives, usually by name. Changing it lists the folder again at once. Search results follow it too, by the date the photos were taken (None: best match first).
 SettingsStrings.CacheSize = How many photos on each side of the shown one are kept decoded in memory, so that the arrow keys show them at once. A larger number browses faster over a slow network but uses more memory.
 SettingsStrings.ThumbnailSize = The size of the thumbnails in the strip at the right, in pixels. Ctrl + mouse wheel over the strip changes it.
@@ -927,6 +953,21 @@ VideoStrings.LogBeatsNone = No clear beat in the audio: the photo times are used
 VideoStrings.LogBeatsFailedFormat = The rhythm of the audio could not be found ({0}): the photo times are used as set.
 VideoStrings.LogSettingsSavedFormat = The settings of this video are saved in {0}: the dialog starts from them the next time you pick this folder.
 VideoStrings.LogSettingsNotSavedFormat = The settings of this video could not be saved ({0}).
+
+# ──────────── VideoPlayerStrings ────────────
+VideoPlayerStrings.PlayTooltip = Play / pause (Enter)
+VideoPlayerStrings.GoToLabel = Go to
+VideoPlayerStrings.GoToTooltip = A time to jump to: seconds (83), minutes and seconds (1:23), hours too (1:02:03), or 1m23s. Press Enter.
+VideoPlayerStrings.GoToNotATimeFormat = '{0}' is not a time. Type seconds (83), minutes and seconds (1:23), hours too (1:02:03), or 1m23s.
+VideoPlayerStrings.MuteTooltip = Mute / unmute
+VideoPlayerStrings.VolumeTooltip = Volume (Ctrl+Up, Ctrl+Down)
+VideoPlayerStrings.StartingEngine = Starting the video player...
+VideoPlayerStrings.EngineFailedFormat = The video player could not start: {0}
+VideoPlayerStrings.PlayFailedFormat = The video cannot be played: {0}
+VideoPlayerStrings.StatusVideoShownFormat = Playing '{0}'. Enter pauses, Shift+Left/Right goes 5 seconds, Ctrl+Left/Right 30 seconds, Escape returns to the picture.
+VideoPlayerStrings.StatusVideoCopiedFormat = Video '{0}' copied to the clipboard as a file.
+VideoPlayerStrings.StatusVideoOpenedElsewhereFormat = The video player could not start, so '{0}' was opened in the program Windows plays it with.
+VideoPlayerStrings.StatusVideoFileMissingFormat = The video '{0}' is not there any more.
 
 # ──────────── DialogStrings ────────────
 DialogStrings.ContextMenuEntry = Open in Photo Liker

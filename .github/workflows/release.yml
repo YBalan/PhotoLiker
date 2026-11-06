@@ -42,6 +42,9 @@ jobs:
       - name: Test the video library
         run: dotnet test PhotoLiker.GenerateVideo.Tests/PhotoLiker.GenerateVideo.Tests.csproj --configuration Release
 
+      - name: Test the library of videos in the archive
+        run: dotnet test PhotoLiker.Video.Tests/PhotoLiker.Video.Tests.csproj --configuration Release
+
       - name: Test the search library
         run: dotnet test PhotoLiker.Search.Tests/PhotoLiker.Search.Tests.csproj --configuration Release
 

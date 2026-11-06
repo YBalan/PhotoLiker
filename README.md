@@ -26,6 +26,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Deleting photos](#deleting-photos)
 - [Rotating photos](#rotating-photos)
 - [Slideshow](#slideshow)
+- [Videos](#videos)
 - [Big folders open at once](#big-folders-open-at-once)
 - [EXIF and GPS](#exif-and-gps)
 - [Aligning file dates](#aligning-file-dates)
@@ -59,6 +60,9 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
   with a time for each photo, an effect between the photos (fade, slide, zoom, Ken Burns or a random one) and the year or the date and time the photo was taken in the
   bottom right corner. <kbd>Right</kbd> / <kbd>Left</kbd> go to the photos next to the shown one, also in
   the random mode, and holding a key scrolls at the speed of the key repeat (see [Slideshow](#slideshow)).
+- **Videos** next to the photos, when **SupportVideo** is on: a poster picture with a play mark in the viewer and the strip, and an
+  embedded player (any format: AVI of a camera, MP4 and MOV of a phone ...) with a slider, a box to type a time to jump to, and keys to step 5 or 30 seconds.
+  They are liked, grouped, copied and deleted like photos. See [Videos](#videos).
 - **Settings grid** next to the photo, with a folder picker for the liked folder. Changing which photos are listed,
   or in what order, reloads the folder at once.
 - **EXIF and GPS** of the shown photo, GPS decoded to coordinates and a link to the map.
@@ -91,6 +95,8 @@ The installer and the zip also carry the [user manual](#user-manual), in English
 `ffmpeg.exe` (Generate Video) is not part of PhotoLiker: it is GPL v3 software by the [FFmpeg](https://ffmpeg.org/) project (the
 [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) build), run as a separate program. Its licence and the place to get its source are in
 `ffmpeg\COPYING.GPLv3.txt` and `ffmpeg\FFMPEG-NOTICE.txt` beside the program, in the installer and in the zip.
+The player of videos is the engine of [VLC](https://www.videolan.org/) (libvlc, LGPL 2.1 or later), in `libvlc\win-x64` beside the program; its licence and the place to get its source
+are in `libvlc\win-x64\COPYING.LGPLv2.1.txt` and `libvlc\win-x64\VLC-NOTICE.txt`.
 
 ### Updating
 
@@ -317,6 +323,10 @@ What is kept where:
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
 | <kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd> | Rotate the photo a quarter clockwise / counterclockwise and save it (see [Rotating photos](#rotating-photos)). The plus of the main keyboard (with or without <kbd>Shift</kbd>) and the numpad keys both work. |
 | <kbd>Ctrl</kbd>+mouse wheel | Over the photo: zoom, then drag to pan. Over the thumbnail strip: change the size of the thumbnails. |
+| <kbd>Enter</kbd> | On a video: play it, or pause / resume it ([Videos](#videos)). A click on the poster plays it, a click on the playing picture pauses it. |
+| <kbd>Shift</kbd>+<kbd>Right</kbd> / <kbd>Left</kbd>, <kbd>Ctrl</kbd>+<kbd>Right</kbd> / <kbd>Left</kbd> | While a video plays: 5 seconds / 30 seconds ahead or back. |
+| <kbd>Ctrl</kbd>+<kbd>Up</kbd> / <kbd>Down</kbd> | While a video plays: the volume up / down. |
+| <kbd>Esc</kbd> | While a video plays: back to its poster picture (the next <kbd>Esc</kbd> closes search results). |
 
 Keys are ignored while you type into a text box: the value you are editing in a grid, the search box. A click on the
 photo (or on a thumbnail, or on the empty space around the photo) takes the keyboard focus out of the text box, so the keys
@@ -474,6 +484,8 @@ the top whenever another photo is shown:
 | **LikedFolder** | Where liked photos are copied. By default the folder `Liked` inside the photo folder. Click the **...** button for a folder picker. A folder with any other name than `Liked` is kept as it is, wherever it is. |
 | **GoThroughSubFolders** | Also list the photos in the subfolders. The Liked folder itself is left out. |
 | **Extensions** | The file extensions that count as photos, separated by `;` or `,`, each with its dot: `.jpg; .png`. Case does not matter. |
+| **SupportVideo** | List the videos of the folder with its photos (off by default). See [Videos](#videos). |
+| **VideoExtensions** | The file extensions that count as videos when **SupportVideo** is on: `.mp4; .mov; .avi; .mkv ...` (the default list has the usual ones). |
 | **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, `Random` in a random order, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
 | **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
 | **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
@@ -684,6 +696,36 @@ nearest that is ready first, so holding a key scrolls as fast as the photos can 
 (12 MP test photos) a held key showed 59 of the 60 photos, at the 30 a second the keyboard repeats at; over a network share the reads set the pace.
 A photo that cannot be read is passed over (a list of only such photos says so on the black screen).
 
+## Videos
+
+A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. Turn **SupportVideo** on in the
+[settings grid](#settings) (it is off by default, so a folder looks as it always did until you do) and the videos of the folder are listed with its photos,
+in the same order, also in the subfolders if **GoThroughSubFolders** is on. Which files are videos is the **VideoExtensions** row; the player is VLC's, so it plays
+nearly every format there is. A folder that holds only videos works the same: open it as a folder of its own. Changing either row lists the folder again at once.
+
+**What you see.** A video shows its poster picture (a frame from a tenth of the way in, at most 5 seconds in) with a round play mark and its length in the corner; its
+thumbnail in the strip has a small play mark. The grid under the settings has a category **0. Video** instead of EXIF: **Duration**, **Frame size** (as it is seen: a phone
+video held upright is stored sideways, and the row says so), **Frame rate**, **Video codec**, **Audio**, **Bitrate**, **File size**, **Recorded**, **Date from** and **File dates**
+(and **Location** and **Encoder** where the video has them). **Recorded** is the date the camera or phone wrote into the video, by the same rules as for photos
+(see [Photo search](#photo-search)); a Canon camera writes its own clock, a phone writes UTC, which is shown as local time. **File dates** shows the dates of the file next to it:
+a copied file is created when it is copied, so it is often days younger than the recording (`≠ Recorded`).
+
+**Playing.** <kbd>Enter</kbd>, or a click on the poster, puts the player over the picture; under it are the play / pause button, where you are (`0:12 / 1:17`), a slider to go
+anywhere (click or drag), a **Go to** box where you type a time and press <kbd>Enter</kbd> (`83`, `1:23`, `1:02:03` or `1m23s`), a mute button and the volume. A click on the
+picture pauses and plays. The keys are in the [table above](#keyboard-and-mouse): <kbd>Enter</kbd> pauses, <kbd>Shift</kbd>+<kbd>Left</kbd> / <kbd>Right</kbd> go 5 seconds and
+<kbd>Ctrl</kbd>+<kbd>Left</kbd> / <kbd>Right</kbd> 30 seconds, <kbd>Ctrl</kbd>+<kbd>Up</kbd> / <kbd>Down</kbd> change the volume, <kbd>Esc</kbd> goes back to the poster. Going to
+another item of the list stops the video. The first start of the player after an installation can take ten seconds or more while the virus scanner looks at its files; it starts in the background as soon as a video is shown,
+and the bar says **Starting the video player...** until it is ready. If it cannot start at all, the video is opened in the program Windows plays such files with.
+
+**What works on a video, and what does not.** <kbd>Space</kbd> likes it, a group key sorts it, <kbd>Delete</kbd> moves it to the `Deleted` folder (a video that is playing is let go of first),
+<kbd>Ctrl</kbd>+<kbd>C</kbd> copies the file: all as for a photo. The [search](#photo-search) and its index, the [slideshow](#slideshow), rotating, [Align dates](#aligning-file-dates),
+duplicates and Generate Video work on photos only for now: the videos are left out of them.
+
+**Where it keeps what it knows.** What ffmpeg reads from a video (its size, length, codec and dates) and its poster picture are kept in a catalog of their own, `video-<folder>-<hash>.db`
+next to the photo index in `%LocalAppData%\PhotoLiker\index`: a separate file, so the photos and the videos never get in each other's way. A video is read when it is first shown and not again
+until the file changes: on a router, 24 videos of a Canon camera took 9 seconds the first time and 17 milliseconds the second. The catalog is a cache: deleting it costs nothing but that time.
+
+The engine is in `libvlc\win-x64` next to the program (about 86 MB; VLC's libvlc, LGPL 2.1 or later, with its licence and the place to get its source in `libvlc\win-x64\VLC-NOTICE.txt`).
 ## Big folders open at once
 
 Listing a folder on a network share costs a round trip per subfolder, however few photos each holds: 6.6 seconds for
@@ -965,6 +1007,8 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
   "SlideshowTimeout": 2,
   "SlideshowWatermark": "DateTime",
   "SlideshowEffect": "Fade",
+  "SupportVideo": true,
+  "VideoExtensions": [ ".avi", ".mp4", ".mov" ],
   "IsDarkTheme": true,
   "WindowLeft": 30, "WindowTop": 20, "WindowWidth": 1500, "WindowHeight": 900,
   "ScreenIndex": 0,
@@ -1014,9 +1058,11 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown. Shared by all front ends. |
 | `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run, the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
+| `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, and the catalog of the videos of a folder in an SQLite file of its own. Uses Core and Search (the rules of the dates). Windows only. |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
 | `PhotoLiker.GenerateVideo.Tests` | xUnit tests of the video library: the order and the times of the photos, the sequence of a video (cover, repeats, audio), the ffmpeg arguments, the cuts on the beat, the rhythm analysis (on synthetic songs), the settings file. They need no ffmpeg. |
+| `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg). The tests that make a short video do so with the ffmpeg of the repository and do nothing without it. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |
@@ -1033,6 +1079,7 @@ dotnet build PhotoLikerUI\PhotoLikerUI.csproj          # build the app
 dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests of the Core library
 dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.csproj  # run the tests of the video library
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
+dotnet test  PhotoLiker.Video.Tests\PhotoLiker.Video.Tests.csproj  # run the tests of the video library (videos in the archive)
 installer\build-installer.ps1                           # publish and pack the installer (needs Inno Setup 6)
 ```
 

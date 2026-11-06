@@ -194,6 +194,26 @@ GenerateVideoStrings.TooManyRepeatsFormat = Щоб тривати стільки
 GenerateVideoStrings.AudioUnreadable = ffmpeg не може прочитати цей файл як аудіо
 GenerateVideoStrings.DurationSecondsFormat = {0:0.0} с
 
+# ──────────── VideoLibStrings ────────────
+VideoLibStrings.FfmpegNotFound = ffmpeg не знайдено поруч із програмою (у її теці ffmpeg), тому відео прочитати неможливо.
+VideoLibStrings.UnreadableFormat = Відео не вдається прочитати: {0}
+VideoLibStrings.DateFromVideo = дата, записана у відео
+VideoLibStrings.DateFromFile = дата файлу (у відео немає дати, якій можна вірити)
+VideoLibStrings.DateNone = немає
+VideoLibStrings.NoAudio = немає
+VideoLibStrings.DescDuration = Скільки триває відео: хвилини й секунди, далі тривалість у секундах.
+VideoLibStrings.DescFrameSize = Розмір картинки в пікселях, як її видно: ширина × висота. Відео, яке телефон записав у вертикальному положенні, зберігається боком і повертається програвачем; тоді в дужках указано збережений розмір і поворот.
+VideoLibStrings.DescFrameRate = Скільки кадрів за секунду має відео (fps).
+VideoLibStrings.DescVideoCodec = Як зберігається картинка: h264, hevc, mjpeg (Motion JPEG багатьох фотоапаратів), mpeg4 ... Програвач відтворює всі ці формати; за назвою видно, чому файл великий чи малий.
+VideoLibStrings.DescAudio = Перша звукова доріжка: як вона збережена, частота дискретизації та канали. немає: у відео немає звуку.
+VideoLibStrings.DescBitrate = Скільки даних займає секунда файлу разом зі звуком: що більше число, то більший файл для тієї самої тривалості.
+VideoLibStrings.DescRecorded = Коли записано відео: дата, яку фотоапарат чи телефон записав у відео, а як її немає, то дата файлу (рядок Date from каже, яка саме). Ті самі правила, що й для дати зйомки фото.
+VideoLibStrings.DescDateFrom = Звідки взято дату Recorded: записана у відео камерою або дата файлу (скопійований файл створюється під час копіювання, а це може бути за кілька днів після зйомки). Камера, в якої годинник ніколи не налаштовували, пише дату, яку не відрізнити від правдивої.
+VideoLibStrings.DescLocation = Де, за даними телефона, записано відео: широта й довгота в градусах. У відео з фотоапаратів і завантажених їх немає.
+VideoLibStrings.DescEncoder = Програма або пристрій, що записали файл.
+VideoLibStrings.DescFileSize = Розмір файлу на диску.
+VideoLibStrings.DescFileDates = Дати файлу на диску поруч із датою запису: = якщо вони збігаються з Recorded, ≠ якщо ні (скопійований файл створюється під час копіювання, тож копія старого відео новіша за сам запис).
+
 # ──────────── AboutStrings ────────────
 AboutStrings.Heading = PhotoLiker
 AboutStrings.VersionFormat = Версія: {0}\nДата збірки: {1:yyyy-MM-dd HH:mm:ss}
@@ -249,6 +269,10 @@ AboutStrings.ShortcutZoomInput = Ctrl+колесо миші
 AboutStrings.ShortcutZoomAction = Збільшити фото (перетягуйте, щоб зсунути); над стрічкою: розмір мініатюр
 AboutStrings.ShortcutSlideshowInput = Alt+Enter
 AboutStrings.ShortcutSlideshowAction = Показ слайдів на весь екран (Вправо / Вліво — сусіднє з показаного фото, Вниз / Вгору — наступний / попередній ефект, Esc — назад)
+AboutStrings.ShortcutPlayInput = Enter
+AboutStrings.ShortcutPlayAction = Відео: відтворити / пауза (клацання по картинці робить те саме)
+AboutStrings.ShortcutSeekInput = Shift+Вправо / Вліво, Ctrl+Вправо / Вліво, Ctrl+Вгору / Вниз
+AboutStrings.ShortcutSeekAction = Під час відтворення відео: на 5 секунд / 30 секунд уперед чи назад, гучність
 AboutStrings.ShortcutCloseInput = Esc
 AboutStrings.ShortcutCloseAction = Закрити результати пошуку
 AboutStrings.ShortcutSearchInput = Enter
@@ -774,6 +798,8 @@ SettingsStrings.SavedInFolders = Кожна папка, де є копія по�
 SettingsStrings.LikedFolder = Куди копіюються вподобані фото; усередині створюються папки груп («1 - Group» ... «Z - Group»). За замовчуванням — папка «Liked» усередині папки з фото. Натисніть кнопку «...», щоб вибрати іншу папку; папка з будь-якою іншою назвою, ніж «Liked», лишається такою, як є, де б вона не була.
 SettingsStrings.GoThroughSubFolders = True: у списку також фото всіх підпапок (сама папка Liked пропускається). False: лише фото самої папки. Зміна одразу складає список папки наново.
 SettingsStrings.Extensions = Розширення файлів, які вважаються фото, через ; або , кожне з крапкою: .jpg; .png. Регістр не має значення. Зміна одразу складає список папки наново.
+SettingsStrings.SupportVideo = True: відео теки (з розширеннями рядка VideoExtensions, а також у підтеках, якщо GoThroughSubFolders увімкнено) показуються в списку разом із фото. Відео показує свій перший кадр зі знаком відтворення; Enter або клацання запускає його, а Shift+Вліво/Вправо, Ctrl+Вліво/Вправо, повзунок і поле «Перейти до» переміщують по ньому. Його можна вподобати, розкласти по групах і видалити як фото. Пошук, слайдшоу, повороти та інструменти дат працюють лише з фото. False (за замовчуванням): у списку лише фото. Зміна одразу перечитує теку.
+SettingsStrings.VideoExtensions = Розширення файлів, які вважаються відео, коли SupportVideo увімкнено, через ; або , кожне з крапкою: .mp4; .avi; .mov. Регістр не має значення. Можна додати будь-який формат, який знає програвач (він знає майже всі). Зміна одразу перечитує теку.
 SettingsStrings.SortOrder = Порядок фото: OldestFirst або NewestFirst — за датою створення файлу (скопійований файл створюється, коли його копіюють), ByName — за назвою файлу, як її впорядковує Провідник (IMG_2 перед IMG_10), Random — у новому випадковому порядку щоразу, коли папку перелічують, None — у порядку, який дає файлова система, зазвичай за назвою. Зміна одразу складає список папки наново. Результати пошуку теж йдуть за ним, за датою зйомки фото (None: спершу найкращий збіг).
 SettingsStrings.CacheSize = Скільки фото з кожного боку від показаного тримається декодованими в пам’яті, щоб клавіші зі стрілками показували їх миттєво. Більше число пришвидшує перегляд по повільній мережі, але вимагає більше пам’яті.
 SettingsStrings.ThumbnailSize = Розмір мініатюр у стрічці праворуч, у пікселях. Його змінює Ctrl + колесо миші над стрічкою.
@@ -913,6 +939,21 @@ VideoStrings.LogBeatsNone = У аудіо немає чіткого ритму: 
 VideoStrings.LogBeatsFailedFormat = Не вдалося знайти ритм аудіо ({0}): час фото такий, як задано.
 VideoStrings.LogSettingsSavedFormat = Налаштування цього відео збережено в {0}: наступного разу, коли ви виберете цю папку, діалог почне з них.
 VideoStrings.LogSettingsNotSavedFormat = Не вдалося зберегти налаштування цього відео ({0}).
+
+# ──────────── VideoPlayerStrings ────────────
+VideoPlayerStrings.PlayTooltip = Відтворити / пауза (Enter)
+VideoPlayerStrings.GoToLabel = Перейти до
+VideoPlayerStrings.GoToTooltip = Час, до якого перейти: секунди (83), хвилини й секунди (1:23), з годинами (1:02:03) або 1m23s. Натисніть Enter.
+VideoPlayerStrings.GoToNotATimeFormat = «{0}» — це не час. Введіть секунди (83), хвилини й секунди (1:23), з годинами (1:02:03) або 1m23s.
+VideoPlayerStrings.MuteTooltip = Вимкнути / увімкнути звук
+VideoPlayerStrings.VolumeTooltip = Гучність (Ctrl+Вгору, Ctrl+Вниз)
+VideoPlayerStrings.StartingEngine = Запуск відеопрогравача...
+VideoPlayerStrings.EngineFailedFormat = Відеопрогравач не запустився: {0}
+VideoPlayerStrings.PlayFailedFormat = Відео не вдається відтворити: {0}
+VideoPlayerStrings.StatusVideoShownFormat = Відтворюється «{0}». Enter ставить на паузу, Shift+Вліво/Вправо — на 5 секунд, Ctrl+Вліво/Вправо — на 30 секунд, Escape повертає до картинки.
+VideoPlayerStrings.StatusVideoCopiedFormat = Відео «{0}» скопійовано в буфер обміну як файл.
+VideoPlayerStrings.StatusVideoOpenedElsewhereFormat = Відеопрогравач не запустився, тому «{0}» відкрито в програмі, якою Windows відтворює такі файли.
+VideoPlayerStrings.StatusVideoFileMissingFormat = Відео «{0}» уже немає на місці.
 
 # ──────────── DialogStrings ────────────
 DialogStrings.ContextMenuEntry = Відкрити в Photo Liker

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The video library uses the search library, which decodes photos with WPF's imaging component: these tests need the Windows target too. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="System.IO" />
+    <Using Include="PhotoLiker.Core" />
+    <Using Include="PhotoLiker.Video" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoLiker.Video\PhotoLiker.Video.csproj" />
+  </ItemGroup>
+
+  <!-- The same set-up as the tests of Core: the real app data is left alone, and the language files are found in the repository. -->
+  <ItemGroup>
+    <Compile Include="..\PhotoLiker.Tests\TestEnvironment.cs" Link="TestEnvironment.cs" />
+  </ItemGroup>
+
+</Project>
