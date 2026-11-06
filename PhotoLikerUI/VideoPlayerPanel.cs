@@ -133,6 +133,9 @@ namespace PhotoLikerUI
                 _ = StartEngine().ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
         }
 
+        /// <summary>The engine, started if it was not (the slideshow plays its videos with the same one). Fails if the engine is not there.</summary>
+        internal static Task<LibVLC> EngineAsync() => StartEngine();
+
         private static Task<LibVLC> StartEngine()
         {
             lock (EngineGate)

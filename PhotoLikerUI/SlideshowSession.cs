@@ -21,6 +21,12 @@ namespace PhotoLikerUI
     /// or zooms (the same way on all the screens, at the same moment); a key puts the photo there at once, because whoever presses it wants to get on, but
     /// the photo moves if the effect is Ken Burns. A random effect is drawn anew for every change. Down and Up choose the next and the previous effect while the
     /// show runs: the name is written in a corner of every screen for a moment, and the next change is made by it (a Ken Burns photo starts to move at once).
+    ///
+    /// Videos (when <see cref="SlideshowVideoOptions"/> are given) are not part of the photos: the photos go on exactly as above, and a video is played in between, on
+    /// the screen of the main window only (<see cref="_primary"/>); the other screens keep their photos until it is over, and the show goes on with the next set. In the
+    /// one-by-one mode a video is played where it lies among the photos (after the photo it follows in the list, when the screen of the window passes it); in the random mode
+    /// videos are drawn in as often as they are among the items (each once before any comes again). A list of videos only is played one after the other, on that screen alone.
+    /// What of a video is played (the whole, or the places a search found) and the sound (muted, or the others turned down) is in <see cref="SlideshowVideoOptions"/>.
     /// </summary>
     internal sealed class SlideshowSession : IDisposable
     {
@@ -32,7 +38,7 @@ namespace PhotoLikerUI
         private const int PrefetchRandom = 3;                  // the next sets of photos of the random order
         private const int MaxQueuedSteps = 3;                  // keys kept while their photos are being made
 
-        private readonly PhotoFile[] _photos;
+        private readonly PhotoFile[] _photos;                  // the photos only: the videos are played in between (see below)
         private readonly SlideshowScreen[] _screens;           // left to right
         private readonly int _primary;                         // the place of the screen the main window is on: it has the photo that was shown there
         private readonly int[] _first;                         // the photos to begin with, one for each screen
@@ -51,27 +57,94 @@ namespace PhotoLikerUI
         private bool _closing;
         private bool _cursorHidden;
 
-        /// <param name="start">The place in <paramref name="photos"/> of the photo that is shown in the main window.</param>
+        // Videos
+        private readonly SlideshowVideoOptions? _videoOptions;
+        private readonly VideoSlot[] _videos;                  // in the order of the list
+        private readonly List<int>[] _videosAfter;             // for each photo: the videos that follow it in the list (those before the first photo follow the last one, as the list goes round)
+        private readonly SlideshowShuffle? _videoShuffle;      // the random order of the videos
+        private readonly int _startVideo;                      // the video the show begins with (the one the window shows), -1 if none
+        private readonly Queue<int> _videoQueue = new();       // videos to play now, one after the other
+        private bool _interlude;                               // videos are playing: what is wanted next (_jump) waits for them
+        private int _videoNow = -1;                            // the video that is on the screen of the window, -1 if none
+        private int _videoCursor;                              // the video played last (for a show of videos only)
+        private int _quickFinishes;                            // videos in a row that ended at once: a show of videos only gives up when none of them can be played
+        private long _videoStartedAt;
+        private IDisposable? _ducking;                         // what puts the other programs' sound back
+
+        /// <summary>A video, and the place it has among the photos: it follows the photo <paramref name="AfterPhoto"/> of the list of photos (-1: it comes before the first).</summary>
+        private readonly record struct VideoSlot(PhotoFile File, int AfterPhoto);
+
+        /// <param name="items">The photos, and the videos too when <paramref name="video"/> is given (without it they are left out), in the order of the list.</param>
+        /// <param name="start">The place in <paramref name="items"/> of the photo (or video) that is shown in the main window.</param>
         /// <param name="screens">The bounds of the screens, left to right.</param>
-        /// <param name="primary">Which of them the main window is on. With more screens than photos, those farthest from it are left out.</param>
+        /// <param name="primary">Which of them the main window is on. With more screens than photos, those farthest from it are left out. The videos play on this one only.</param>
+        /// <param name="video">How the videos are played; null leaves them out of the show.</param>
         public SlideshowSession(
-            IReadOnlyList<PhotoFile> photos, int start, SlideshowMode mode, double timeoutSeconds, SlideshowWatermark watermark,
-            IReadOnlyList<Rectangle> screens, int primary, SlideshowEffect effect = SlideshowEffect.None)
+            IReadOnlyList<PhotoFile> items, int start, SlideshowMode mode, double timeoutSeconds, SlideshowWatermark watermark,
+            IReadOnlyList<Rectangle> screens, int primary, SlideshowEffect effect = SlideshowEffect.None, SlideshowVideoOptions? video = null)
         {
-            ArgumentOutOfRangeException.ThrowIfZero(photos.Count);
+            ArgumentOutOfRangeException.ThrowIfZero(items.Count);
             ArgumentOutOfRangeException.ThrowIfZero(screens.Count);
 
+            // The photos and the videos apart; a video knows the photo it follows, and the show begins with the photo that follows the item that is shown
+            var photos = new List<PhotoFile>();
+            var videos = new List<VideoSlot>();
+            start = Math.Clamp(start, 0, items.Count - 1);
+            var startPhoto = -1;
+            _startVideo = -1;
+            for (var i = 0; i < items.Count; i++)
+            {
+                if (items[i].IsVideo)
+                {
+                    if (video is not null)
+                        videos.Add(new VideoSlot(items[i], photos.Count - 1));
+                    if (i == start)
+                    {
+                        startPhoto = photos.Count; // the photo that comes after it
+                        _startVideo = video is not null ? videos.Count - 1 : -1;
+                    }
+                }
+                else
+                {
+                    if (i == start)
+                        startPhoto = photos.Count;
+                    photos.Add(items[i]);
+                }
+            }
+            ArgumentOutOfRangeException.ThrowIfZero(photos.Count + videos.Count);
+
             _photos = [.. photos];
-            start = Math.Clamp(start, 0, _photos.Length - 1);
+            _videos = [.. videos];
+            _videoOptions = _videos.Length > 0 ? video : null;
+            startPhoto = _photos.Length == 0 ? 0 : startPhoto < 0 || startPhoto >= _photos.Length ? 0 : startPhoto;
             primary = Math.Clamp(primary, 0, screens.Count - 1);
 
-            var chosen = Slideshow.ChooseScreens(screens.Count, primary, _photos.Length);
+            _videosAfter = new List<int>[Math.Max(1, _photos.Length)];
+            for (var i = 0; i < _videosAfter.Length; i++)
+                _videosAfter[i] = [];
+            if (_photos.Length > 0)
+            {
+                for (var v = 0; v < _videos.Length; v++)
+                {
+                    if (_videos[v].AfterPhoto >= 0)
+                        _videosAfter[_videos[v].AfterPhoto].Add(v);
+                }
+                for (var v = 0; v < _videos.Length; v++)
+                {
+                    if (_videos[v].AfterPhoto < 0)
+                        _videosAfter[^1].Add(v); // the list goes round: what is before the first photo is after the last
+                }
+            }
+
+            var chosen = Slideshow.ChooseScreens(screens.Count, primary, Math.Max(1, _photos.Length)); // videos alone: the screen of the window only
             _primary = Array.IndexOf(chosen, primary);
             _shown = new int[chosen.Length];
             Array.Fill(_shown, -1);
 
-            _shuffle = mode == SlideshowMode.Random ? new SlideshowShuffle(_photos.Length, shown: start) : null;
-            _first = FirstPhotos(start, chosen.Length);
+            _shuffle = mode == SlideshowMode.Random && _photos.Length > 0 ? new SlideshowShuffle(_photos.Length, shown: startPhoto) : null;
+            _videoShuffle = mode == SlideshowMode.Random && _videos.Length > 1 ? new SlideshowShuffle(_videos.Length, shown: Math.Max(-1, _startVideo)) : null;
+            _videoCursor = Math.Max(0, _startVideo);
+            _first = _photos.Length > 0 ? FirstPhotos(startPhoto, chosen.Length) : [];
 
             var frameBytes = MaxFrameBytes / chosen.Length;
             var parallelLoads = Math.Max(2, MaxParallelLoads / chosen.Length);
@@ -80,6 +153,7 @@ namespace PhotoLikerUI
             {
                 screen.Frames.Loaded += (_, _) => Advance();
                 screen.Frames.LoadFailed += (_, _) => Advance();
+                screen.VideoFinished += OnVideoFinished;
             }
 
             _effect = effect;
@@ -93,8 +167,11 @@ namespace PhotoLikerUI
         /// <summary>The effect the show has now: the one it began with, or the one Down and Up chose last.</summary>
         public SlideshowEffect Effect => _effect;
 
-        /// <summary>The file of the photo that was on the screen of the main window last; null if none was shown.</summary>
-        public string? LastShownPath => PathOf(_shown[_primary]);
+        /// <summary>The file of the photo (or video) that was on the screen of the main window last; null if none was shown.</summary>
+        public string? LastShownPath =>
+            _videoNow >= 0 ? _videos[_videoNow].File.OriginalFilePath
+            : _photos.Length == 0 ? _videos[_videoCursor].File.OriginalFilePath
+            : PathOf(_shown[_primary]);
 
         /// <summary>The file of the photo on each screen, left to right; null for one that has none yet.</summary>
         internal IReadOnlyList<string?> ShownPaths => [.. _shown.Select(PathOf)];
@@ -134,8 +211,19 @@ namespace PhotoLikerUI
         /// <summary>Starts with the photo that was shown in the window (and the others that go with it).</summary>
         internal void Begin()
         {
+            if (_photos.Length == 0)
+            {
+                PlayVideos([_videoCursor]); // videos only
+                return;
+            }
+
             _jump = _first;
             Prefetch();
+            if (_startVideo >= 0)
+            {
+                PlayVideos([_startVideo]); // the video that was shown in the window comes first; the photos that wait begin when it is over
+                return;
+            }
             Advance();
         }
 
@@ -208,6 +296,7 @@ namespace PhotoLikerUI
         {
             _closing = true;
             _timer.Stop();
+            ReleaseDucking();
 
             // The dialog last: when it closes the main window gets back control
             foreach (var screen in _screens.Where(screen => screen != closed && screen != _screens[_primary]))
@@ -225,6 +314,23 @@ namespace PhotoLikerUI
         /// <summary>Right / Left: the photo next to the shown one on every screen, in either mode.</summary>
         internal void Step(int direction)
         {
+            if (_photos.Length == 0)
+            {
+                StepVideos(direction); // videos only: the next or the previous one
+                return;
+            }
+
+            if (_interlude)
+            {
+                // The person takes over from the video: it stops, and the photos that were waiting for it are shown (that is the step: the video is skipped)
+                StopInterlude();
+                if (_jump is not null)
+                {
+                    Advance();
+                    return;
+                }
+            }
+
             if (_photos.Length < 2 || _shown.Any(place => place < 0))
                 return;
 
@@ -279,6 +385,11 @@ namespace PhotoLikerUI
             }
 
             Prefetch();
+            if (VideosBefore(_jump) is { Count: > 0 } videos && _videoOptions is not null)
+            {
+                PlayVideos(videos); // the photos that were asked for wait until they are over
+                return;
+            }
             Advance();
         }
 
@@ -304,8 +415,8 @@ namespace PhotoLikerUI
         /// </summary>
         private void Advance()
         {
-            if (_closing)
-                return;
+            if (_closing || _interlude)
+                return; // while a video plays what is wanted waits
 
             for (var attempts = 0; _jump is { } jump; attempts++)
             {
@@ -515,9 +626,161 @@ namespace PhotoLikerUI
             }
         }
 
+        // ── videos ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// The videos to play before the photos that are wanted (<paramref name="jump"/>) are shown. One-by-one: those that lie between the photo on the screen of the window and
+        /// the one it goes to (in the list). Random: one now and then, so that they come as often as they are among the items, each before any comes again.
+        /// </summary>
+        private List<int> VideosBefore(int[] jump)
+        {
+            var found = new List<int>();
+            if (_videoOptions is null || _videos.Length == 0 || _photos.Length == 0)
+                return found;
+
+            if (_shuffle is not null)
+            {
+                var share = _videos.Length / (_videos.Length + _photos.Length / (double)_screens.Length);
+                if (Random.Shared.NextDouble() < share)
+                    found.Add(_videoShuffle?.Take(avoid: _videoCursor) ?? 0);
+                return found;
+            }
+
+            var from = _shown[_primary];
+            var to = jump[_primary];
+            if (from < 0 || to < 0)
+                return found;
+
+            if (_photos.Length == 1)
+            {
+                found.AddRange(Enumerable.Range(0, _videos.Length)); // the one photo is all there is to pass: every video once
+                return found;
+            }
+
+            var place = from;
+            for (var passed = 0; place != to && passed < _photos.Length; passed++)
+            {
+                found.AddRange(_videosAfter[place]); // the videos that follow each photo the screen goes past
+                place = (place + 1) % _photos.Length;
+            }
+            return found;
+        }
+
+        /// <summary>Plays the videos <paramref name="order"/> on the screen of the window, one after the other.</summary>
+        private void PlayVideos(IEnumerable<int> order)
+        {
+            if (_videoOptions is null)
+                return;
+
+            _videoQueue.Clear();
+            foreach (var index in order)
+                _videoQueue.Enqueue(index);
+            _interlude = true;
+            _timer.Stop();
+            PlayNextVideo();
+        }
+
+        private void PlayNextVideo()
+        {
+            if (_closing)
+                return;
+            if (_videoQueue.Count == 0)
+            {
+                EndInterlude();
+                return;
+            }
+
+            var options = _videoOptions!;
+            var index = _videoQueue.Dequeue();
+            _videoNow = _videoCursor = index;
+
+            var file = _videos[index].File.OriginalFilePath;
+            var facts = options.FactsOf(file);
+            var segments = SlideshowVideo.Segments(options.Part, facts.Found, facts.LengthMs);
+
+            // The others' sound is turned down for as long as videos play with theirs (and put back when they are over)
+            if (_ducking is null && !options.Mute && SlideshowVideo.LowerOtherAudioOf(options.LowerOtherAudio) > 0)
+            {
+                var level = SlideshowVideo.LevelOfOthers(options.LowerOtherAudio);
+                _ducking = options.Duck is { } duck ? duck(level) : AudioDucking.Lower(level);
+            }
+
+            _videoStartedAt = Stopwatch.GetTimestamp();
+            _screens[_primary].ShowVideo(file, segments, options.Mute, facts.Taken);
+        }
+
+        private void OnVideoFinished(SlideshowScreen screen)
+        {
+            if (_closing || !_interlude || !ReferenceEquals(screen, _screens[_primary]))
+                return;
+
+            // A video that was over at once could not be played; when that is all that happens (a show of videos only) it ends
+            var seconds = (Stopwatch.GetTimestamp() - _videoStartedAt) / (double)Stopwatch.Frequency;
+            _quickFinishes = seconds < 1 ? _quickFinishes + 1 : 0;
+            _videoNow = -1;
+
+            if (_photos.Length == 0 && _quickFinishes > _videos.Length)
+            {
+                _interlude = false;
+                ReleaseDucking();
+                screen.ShowMessage(SlideshowStrings.NothingToShow);
+                return;
+            }
+            PlayNextVideo();
+        }
+
+        /// <summary>The videos that were to be played are over: the photos that waited are shown, or in a show of videos only the next video is played.</summary>
+        private void EndInterlude()
+        {
+            ReleaseDucking();
+            _videoNow = -1;
+            _interlude = false;
+            if (_closing)
+                return;
+
+            if (_photos.Length == 0)
+            {
+                PlayVideos([NextVideoOf(_videoCursor, 1)]);
+                return;
+            }
+            Advance();
+        }
+
+        /// <summary>A key (or the end of the show) takes over from the videos: what plays stops, and none of the queue is played.</summary>
+        private void StopInterlude()
+        {
+            _videoQueue.Clear();
+            _screens[_primary].StopVideo();
+            ReleaseDucking();
+            _videoNow = -1;
+            _interlude = false;
+        }
+
+        /// <summary>A show of videos only: Right and Left play the next and the previous video.</summary>
+        private void StepVideos(int direction)
+        {
+            if (_videos.Length == 0)
+                return;
+
+            var target = _videoNow >= 0 || _interlude ? NextVideoOf(_videoCursor, direction) : _videoCursor;
+            StopInterlude();
+            PlayVideos([target]);
+        }
+
+        /// <summary>The video after (or before) <paramref name="from"/>: the next of the list, or a random one in the random mode.</summary>
+        private int NextVideoOf(int from, int direction) =>
+            _videoShuffle is not null && direction > 0 ? _videoShuffle.Take(avoid: from) : Slideshow.Wrap(from + direction, _videos.Length);
+
+        private void ReleaseDucking()
+        {
+            _ducking?.Dispose();
+            _ducking = null;
+        }
+
         public void Dispose()
         {
             _closing = true;
+            ReleaseDucking();
             ShowCursor();
             _timer.Dispose();
             foreach (var screen in _screens)

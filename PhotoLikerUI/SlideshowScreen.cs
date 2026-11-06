@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
+using System.Globalization;
+using LibVLCSharp.Shared;
+using LibVLCSharp.WinForms;
 
 namespace PhotoLikerUI
 {
@@ -28,6 +31,9 @@ namespace PhotoLikerUI
         private const int WatermarkBackgroundAlpha = 150;
         private const int AnimationIntervalMs = 10;       // Windows rounds it up to about 16: 60 steps a second at most
         private const int NoticeMs = 1800;                // how long the name of a new effect stays in the corner
+        private const int VideoWatchMs = 100;             // how often it is looked at whether a stretch of a video is over
+        private const int VideoStartTimeoutMs = 15_000;   // a video that has not begun to play by then is given up
+        private const int VideoSettleMs = 400;            // after a stretch is started the player still says what it said before: not believed for this long
 
         private readonly SlideshowSession _session;
         private readonly SlideshowWatermark _watermark;
@@ -43,6 +49,15 @@ namespace PhotoLikerUI
         private double _transitionSeconds;
         private PixelCanvas? _canvas;                      // what the effects are put together on, the size of the screen
         private string? _message = SlideshowStrings.Loading;
+
+        // A video on this screen: a player over the whole window (see ShowVideo)
+        private readonly System.Windows.Forms.Timer _videoWatch = new() { Interval = VideoWatchMs };
+        private VideoView? _videoView;
+        private MediaPlayer? _videoPlayer;
+        private LibVLC? _videoEngine;                      // the one the player was made with (it belongs to VideoPlayerPanel and is not disposed here)
+        private Label? _videoMark;                         // the date of the video, in the corner, as a photo has it
+        private VideoRun? _video;                          // what is playing; null when nothing is
+        private int _videoGeneration;                      // changes with every video and when one is stopped, so that what a video that has been replaced does is ignored
 
         public SlideshowScreen(SlideshowSession session, Rectangle bounds, SlideshowWatermark watermark, long frameBytes, int minFrames, int parallelLoads)
         {
@@ -61,14 +76,15 @@ namespace PhotoLikerUI
             _watermarkFont = new Font(Font.FontFamily, Math.Max(MinWatermarkFontPixels, bounds.Height / WatermarkHeightDivisor), FontStyle.Bold, GraphicsUnit.Pixel);
             _animation.Tick += (_, _) => OnAnimationTick();
             _noticeTimer.Tick += (_, _) => HideNotice();
+            _videoWatch.Tick += (_, _) => OnVideoWatch();
             Frames = new SlideshowFrames(bounds.Size, frameBytes, minFrames, parallelLoads);
         }
 
         /// <summary>The photos made ready for this screen.</summary>
         public SlideshowFrames Frames { get; }
 
-        /// <summary>Whether a photo is on this screen yet.</summary>
-        public bool HasPhoto => _current is not null;
+        /// <summary>Whether a photo (or a video) is on this screen yet.</summary>
+        public bool HasPhoto => _current is not null || _videoView is { Visible: true };
 
         /// <summary>The file of the photo that is leaving the screen while an effect lasts; null when none is. <see cref="Frames"/> must not let go of it before.</summary>
         public string? OutgoingPath => _outgoing?.Frame.Path;
@@ -79,6 +95,9 @@ namespace PhotoLikerUI
         /// <summary>Puts a photo on the screen, in place of the one that is there, as <paramref name="plan"/> says.</summary>
         public void ShowFrame(SlideshowFrame frame, SlideshowShowPlan plan = default)
         {
+            if (_videoView is { Visible: true })
+                StopVideo(); // a photo takes the place of the video
+
             var previous = _current;
             _message = null;
             _outgoing = null;
@@ -140,6 +159,192 @@ namespace PhotoLikerUI
             Invalidate();
         }
 
+        // ── a video ────────────────────────────────────────────────────────
+
+        /// <summary>Raised once for each video that was shown, when its last stretch is over, or when it could not be played; not for one that was stopped or replaced.</summary>
+        internal event Action<SlideshowScreen>? VideoFinished;
+
+        /// <summary>Whether a video is playing on this screen (it has not finished and has not been stopped).</summary>
+        internal bool IsPlayingVideo => _video is not null;
+
+        /// <summary>
+        /// Plays a video over the whole screen, in place of the photo that is there (no effect: the video just begins), each of <paramref name="segments"/> after the other, then raises
+        /// <see cref="VideoFinished"/>. <paramref name="taken"/> is written in the corner as a photo's is. A photo shown after it (see <see cref="ShowFrame"/>) takes the screen back.
+        /// </summary>
+        internal async void ShowVideo(string path, IReadOnlyList<VideoSegment> segments, bool mute, DateTime? taken)
+        {
+            var generation = ++_videoGeneration;
+            _animation.Stop();
+            _current = null;
+            _outgoing = null;
+            _transition = SlideshowTransition.None;
+            _message = null;
+            _video = new VideoRun(path, segments.Count > 0 ? segments : [new VideoSegment(0, null)], mute);
+
+            EnsureVideoView();
+            _videoView!.Visible = true;
+            ShowVideoMark(taken);
+            Invalidate();
+
+            try
+            {
+                var engine = await VideoPlayerPanel.EngineAsync();
+                if (generation != _videoGeneration || IsDisposed)
+                    return; // another video, a photo, or the end of the show came while the engine started
+
+                _videoEngine = engine;
+                StartSegment(engine);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                FinishVideo(generation); // the engine is not there, or the file will not play: on to the next
+            }
+        }
+
+        /// <summary>Stops what plays and shows nothing of it; no <see cref="VideoFinished"/> follows.</summary>
+        internal void StopVideo()
+        {
+            _videoGeneration++;
+            _videoWatch.Stop();
+            _video = null;
+
+            if (_videoPlayer is { } player)
+                _ = Task.Run(() => { try { player.Stop(); } catch (Exception ex) when (ex is not OutOfMemoryException) { /* it is going away */ } });
+            if (_videoView is { } view)
+                view.Visible = false;
+            if (_videoMark is { } mark)
+                mark.Visible = false;
+        }
+
+        private void EnsureVideoView()
+        {
+            if (_videoView is not null)
+                return;
+
+            _videoMark = new Label
+            {
+                AutoSize = true, BackColor = Color.Black, ForeColor = Color.White, Font = _watermarkFont, Visible = false, UseMnemonic = false,
+            };
+            _videoView = new VideoView { Dock = DockStyle.Fill, BackColor = Color.Black, TabStop = false, Visible = false };
+            Controls.Add(_videoMark);
+            Controls.Add(_videoView);
+            Controls.SetChildIndex(_videoMark, 0); // over the video, which is a window of its own
+        }
+
+        private void ShowVideoMark(DateTime? taken)
+        {
+            if (_videoMark is not { } mark)
+                return;
+
+            var text = Slideshow.WatermarkText(_watermark, taken);
+            if (text is null)
+            {
+                mark.Visible = false;
+                return;
+            }
+
+            mark.Text = text;
+            var size = mark.PreferredSize;
+            var margin = ClientSize.Height / 40;
+            mark.Location = new Point(ClientSize.Width - margin - size.Width, ClientSize.Height - margin - size.Height);
+            mark.Visible = true;
+            mark.BringToFront();
+        }
+
+        private void StartSegment(LibVLC engine)
+        {
+            if (_video is not { } run)
+                return;
+
+            var segment = run.Segments[run.Index];
+            if (_videoPlayer is null)
+            {
+                _videoPlayer = new MediaPlayer(engine) { EnableKeyInput = false, EnableMouseInput = false };
+                _videoView!.MediaPlayer = _videoPlayer;
+            }
+
+            using var media = new Media(engine, run.Path, FromType.FromPath);
+            if (segment.StartMs > 0)
+                media.AddOption(":start-time=" + Seconds(segment.StartMs));
+            if (segment.EndMs is { } end)
+                media.AddOption(":stop-time=" + Seconds(end));
+
+            _videoPlayer.Mute = run.Mute;
+            run.StartedAt = Stopwatch.GetTimestamp();
+            run.SawPlaying = false;
+            if (!_videoPlayer.Play(media))
+                throw new InvalidOperationException(run.Path);
+
+            _videoWatch.Start();
+        }
+
+        private static string Seconds(long ms) => (ms / 1000.0).ToString("0.###", CultureInfo.InvariantCulture);
+
+        /// <summary>Is the stretch over? The player says it has ended or stopped, or the time has come to its end (it does not always say so at the end it was told).</summary>
+        private void OnVideoWatch()
+        {
+            if (_video is not { } run || _videoPlayer is not { } player)
+            {
+                _videoWatch.Stop();
+                return;
+            }
+
+            var state = player.State;
+            if (state == VLCState.Playing)
+                run.SawPlaying = true;
+
+            var sinceStart = (Stopwatch.GetTimestamp() - run.StartedAt) * 1000.0 / Stopwatch.Frequency;
+            var segment = run.Segments[run.Index];
+            var settled = sinceStart > VideoSettleMs;
+            var over = state == VLCState.Error
+                || (settled && state == VLCState.Ended)
+                || (settled && state == VLCState.Stopped && run.SawPlaying)
+                || (run.SawPlaying && segment.EndMs is { } end && player.Time >= end)
+                || (!run.SawPlaying && sinceStart > VideoStartTimeoutMs);
+            if (!over)
+                return;
+
+            if (state != VLCState.Error && run.SawPlaying && run.Index + 1 < run.Segments.Count)
+            {
+                run.Index++;
+                try
+                {
+                    StartSegment(_videoEngine!);
+                    return;
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    // the next stretch cannot be played: the video is over
+                }
+            }
+
+            FinishVideo(_videoGeneration);
+        }
+
+        private void FinishVideo(int generation)
+        {
+            if (generation != _videoGeneration || _video is null)
+                return;
+
+            _videoWatch.Stop();
+            _video = null;
+            if (_videoPlayer is { } player)
+                _ = Task.Run(() => { try { player.Stop(); } catch (Exception ex) when (ex is not OutOfMemoryException) { /* it is going away */ } });
+
+            VideoFinished?.Invoke(this);
+        }
+
+        /// <summary>The video that is playing: where, the stretches of it, which one is on, whether it is silent, and how its stretch is going.</summary>
+        private sealed class VideoRun(string path, IReadOnlyList<VideoSegment> segments, bool mute)
+        {
+            public string Path { get; } = path;
+            public IReadOnlyList<VideoSegment> Segments { get; } = segments;
+            public bool Mute { get; } = mute;
+            public int Index { get; set; }
+            public long StartedAt { get; set; }
+            public bool SawPlaying { get; set; }
+        }
+
         // ── effects ────────────────────────────────────────────────────────
 
         private void OnAnimationTick()
@@ -168,6 +373,8 @@ namespace PhotoLikerUI
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            _videoGeneration++;
+            _videoWatch.Stop();
             _animation.Stop();
             _noticeTimer.Stop();
             base.OnFormClosed(e);
@@ -330,6 +537,15 @@ namespace PhotoLikerUI
             {
                 _animation.Dispose();
                 _noticeTimer.Dispose();
+                _videoWatch.Dispose();
+                if (_videoView is not null)
+                    _videoView.MediaPlayer = null;
+                if (_videoPlayer is { } player)
+                {
+                    try { player.Stop(); } catch (Exception ex) when (ex is not OutOfMemoryException) { /* the engine is going away */ }
+                    player.Dispose();
+                    _videoPlayer = null;
+                }
                 Frames.Dispose(); // the frames on the screen go with it
                 _current = null;
                 _outgoing = null;
