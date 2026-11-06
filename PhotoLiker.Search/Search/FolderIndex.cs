@@ -113,8 +113,9 @@ namespace PhotoLiker.Search
 
         public Task<IndexSummary> IndexAsync(
             ModelHub models, string? excludedFolder, IReadOnlyCollection<string> extensions,
-            IProgress<IndexProgress>? progress, CancellationToken cancellationToken) =>
-            IndexingJob.RunAsync(Index, models, ClipModel, excludedFolder, extensions, progress, cancellationToken);
+            IProgress<IndexProgress>? progress, CancellationToken cancellationToken,
+            Func<ModelDownload, bool>? confirmDownload = null, bool downloadForSearch = false) =>
+            IndexingJob.RunAsync(Index, models, ClipModel, excludedFolder, extensions, progress, cancellationToken, confirmDownload, downloadForSearch);
 
         // ── searching ──────────────────────────────────────────────────────
 

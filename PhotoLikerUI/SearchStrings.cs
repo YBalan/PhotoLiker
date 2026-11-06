@@ -30,6 +30,9 @@ namespace PhotoLikerUI
         public static string DownloadQuestionModelFormat => T();
         public static string DownloadQuestionFacesFormat => T();
         public static string DownloadQuestionEnd => T();
+        public static string DownloadQuestionEndNoIndexing => T();
+        public static string StatusDownloadDeclined => T();
+        public static string StatusModelDownloadedFormat => T();
         public static string DurationHoursFormat => T();
         public static string DurationMinutesFormat => T();
         public static string DurationSecondsFormat => T();
@@ -59,12 +62,12 @@ namespace PhotoLikerUI
                 ? string.Format(SizeGigabytesFormat, megabytes / 1000.0)
                 : string.Format(SizeMegabytesFormat, Math.Max(10, (int)Math.Round(megabytes / 10.0) * 10));
 
-        /// <summary>The question before models are downloaded: what is missing, for the model that is chosen.</summary>
-        public static string DownloadQuestionFor(ClipModelInfo model, bool modelMissing, bool facesMissing, int totalMegabytes) =>
-            string.Format(DownloadQuestionIntroFormat, Size(totalMegabytes)) +
-            (modelMissing ? string.Format(DownloadQuestionModelFormat, model.Title, Size(model.Megabytes)) : string.Empty) +
-            (facesMissing ? string.Format(DownloadQuestionFacesFormat, Size(ModelFiles.FacePackMegabytes)) : string.Empty) +
-            DownloadQuestionEnd;
+        /// <summary>The question before models are downloaded: what is missing and is going to be used.</summary>
+        public static string DownloadQuestionFor(ModelDownload download) =>
+            string.Format(DownloadQuestionIntroFormat, Size(download.Megabytes)) +
+            (download.Clip is { } model ? string.Format(DownloadQuestionModelFormat, model.Title, Size(model.Megabytes)) : string.Empty) +
+            (download.Faces ? string.Format(DownloadQuestionFacesFormat, Size(ModelFiles.FacePackMegabytes)) : string.Empty) +
+            (download.WithIndexing ? DownloadQuestionEnd : DownloadQuestionEndNoIndexing);
 
         // Index button and progress
         public static string IndexButton => T();

@@ -251,7 +251,9 @@ What is kept where:
   strip: import / export), bring the `.plindex` file over, open the same photos there (whatever the drive letter) and choose
   **I/E > Import index...**.
   **Update index** then brings it up to date: photos whose size and date are the same are not analyzed again. The models
-  are downloaded there on first use, or copy the `models` folder (below) along.
+  are downloaded there on first use, or copy the `models` folder (below) along. A search by description needs the search
+  model's files, so **Update index** asks to download them also when every photo is in the imported index already (only the
+  search model then, the face models wait until a photo needs them).
 - **The names you give** are kept in `photo-liker-people.json` in the photo folder, next to the photos: the face examples of each
   person. It is plain JSON, and a rebuilt index finds the same people again. (The only other file PhotoLiker adds to a folder is the
   copy of the groups, `photo-liker-groups.json`, see below.)
