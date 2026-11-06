@@ -46,6 +46,9 @@ namespace PhotoLikerUI
         private ToolStripButton _similarButton = null!;
         private ToolStripButton _facesButton = null!;
         private ToolStripButton _peopleButton = null!;
+        private ToolStripSeparator _scopeSeparator = null!;
+        private ToolStripButton _photosToggle = null!; // what a search looks through when videos are listed: the photos, the videos, or both
+        private ToolStripButton _videosToggle = null!;
         private TrackBar _precisionBar = null!;
         private ToolStripControlHost _precisionHost = null!;
         private ToolStripComboBox _modelBox = null!;
@@ -132,6 +135,31 @@ namespace PhotoLikerUI
             };
             _peopleButton.Click += (_, _) => OpenPeopleDialog();
 
+            // With videos listed: both on searches photos and videos, one off searches only the other kind. Not there when videos are off.
+            _scopeSeparator = new ToolStripSeparator { Visible = false };
+            _photosToggle = new ToolStripButton(VideoSearchStrings.ScopePhotosButton)
+            {
+                Name = "searchPhotosToolStripButton",
+                DisplayStyle = ToolStripItemDisplayStyle.Image, // the text is still the accessible name
+                Image = AppIcons.Photo(),
+                ToolTipText = VideoSearchStrings.ScopePhotosTooltip,
+                CheckOnClick = true,
+                Checked = true,
+                Visible = false,
+            };
+            _videosToggle = new ToolStripButton(VideoSearchStrings.ScopeVideosButton)
+            {
+                Name = "searchVideosToolStripButton",
+                DisplayStyle = ToolStripItemDisplayStyle.Image, // the text is still the accessible name
+                Image = AppIcons.Video(),
+                ToolTipText = VideoSearchStrings.ScopeVideosTooltip,
+                CheckOnClick = true,
+                Checked = true,
+                Visible = false,
+            };
+            _photosToggle.Click += (_, _) => ScopeToggled(_photosToggle, _videosToggle);
+            _videosToggle.Click += (_, _) => ScopeToggled(_videosToggle, _photosToggle);
+
             // Wide to precise: how much the searches let through (the cutoffs are in SearchTuning), kept in the folder's settings file
             _precisionBar = new TrackBar
             {
@@ -191,6 +219,7 @@ namespace PhotoLikerUI
                 _indexButton, _indexProgress, _indexLabel,
                 new ToolStripSeparator(),
                 _searchBox, _searchButton, _closeResultsButton, _similarButton, _facesButton, _peopleButton,
+                _scopeSeparator, _photosToggle, _videosToggle,
                 new ToolStripSeparator(),
                 _precisionWideLabel,
                 _precisionHost,
@@ -251,6 +280,10 @@ namespace PhotoLikerUI
             _facesButton.ToolTipText = SearchStrings.FacesTooltip;
             _peopleButton.Text = SearchStrings.PeopleButton;
             _peopleButton.ToolTipText = SearchStrings.PeopleTooltip;
+            _photosToggle.Text = VideoSearchStrings.ScopePhotosButton;
+            _photosToggle.ToolTipText = VideoSearchStrings.ScopePhotosTooltip;
+            _videosToggle.Text = VideoSearchStrings.ScopeVideosButton;
+            _videosToggle.ToolTipText = VideoSearchStrings.ScopeVideosTooltip;
             _exportItem.Text = SearchStrings.ExportIndexMenu;
             _importItem.Text = SearchStrings.ImportIndexMenu;
             _transferButton.Text = SearchStrings.IndexFileButton;
@@ -303,6 +336,7 @@ namespace PhotoLikerUI
             _searchButton.Enabled = searchable;
             _facesButton.Enabled = searchable;
             _peopleButton.Enabled = _folderSearch is not null; // the people and their groups are there as soon as the folder has an index
+            ShowSearchKinds(searchable);
             _precisionBar.Enabled = searchable;
             ShowSearchPrecision();
             ShowSearchModel();
@@ -312,6 +346,33 @@ namespace PhotoLikerUI
             _exportItem.Enabled = searchable && !_transferBusy;
             _importItem.Enabled = folderKnown && !indexing && !_transferBusy;
             UpdateSimilarEnabled();
+        }
+
+        /// <summary>Shows the Photos and Videos toggles (only when videos are listed) as the settings of the folder have them.</summary>
+        private void ShowSearchKinds(bool searchable)
+        {
+            var listed = _currentConfig.SupportVideo;
+            var (photos, videos) = _currentConfig.SearchKinds();
+            _scopeSeparator.Visible = _photosToggle.Visible = _videosToggle.Visible = listed;
+            _photosToggle.Checked = photos;
+            _videosToggle.Checked = videos;
+            _photosToggle.Enabled = _videosToggle.Enabled = searchable;
+        }
+
+        /// <summary>A toggle was clicked: something has to stay searched, so the last one on cannot be turned off. The choice is kept with the folder, and shown results are searched again.</summary>
+        private void ScopeToggled(ToolStripButton clicked, ToolStripButton other)
+        {
+            if (!clicked.Checked && !other.Checked)
+                other.Checked = true;
+
+            _currentConfig.SearchPhotos = _photosToggle.Checked;
+            _currentConfig.SearchVideos = _videosToggle.Checked;
+            if (!string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder))
+                SaveSettingsToJson();
+
+            FocusViewer(); // the arrow keys are the viewer's
+            if (_resultsActive)
+                _ = RepeatSearchAsync();
         }
 
         private void UpdateSimilarEnabled() =>
@@ -694,6 +755,13 @@ namespace PhotoLikerUI
             if (search is null || text.Length == 0)
                 return;
 
+            // Only the videos asked for, and none analyzed yet: say so instead of finding nothing
+            if (!_currentConfig.SearchKinds().Photos && !(VideoLibrary.Current?.CountAnalyzed(SearchModel.Id).Videos > 0))
+            {
+                SetStatus(VideoSearchStrings.StatusNoVideosIndexed);
+                return;
+            }
+
             // The name of a person is searched in the faces, and a date in the dates: neither needs the text model
             if (search.NeedsTextModel(text))
             {
@@ -717,11 +785,17 @@ namespace PhotoLikerUI
             await RepeatSearchAsync();
         }
 
-        /// <summary>One search of the photos and, when there is a catalog of videos, of the videos too: one result, the better fits first.</summary>
+        /// <summary>
+        /// One search of the photos and, when there is a catalog of videos, of the videos too: one result, the better fits first. The Photos and Videos toggles of the
+        /// strip are read as the search runs (the precision slider and the toggles run the last search again), so one of them off leaves that kind out.
+        /// </summary>
         private SearchResult SearchPhotosAndVideos(FolderIndex search, VideoCatalog? videos, string text, SearchTuning tuning)
         {
+            var (inPhotos, inVideos) = _currentConfig.SearchKinds();
             var photos = search.Search(_models, text, tuning);
-            if (videos is null || search.Plan(text) is not { } plan)
+            if (!inPhotos)
+                photos = VideoSearch.WithoutPhotos(photos);
+            if (videos is null || !inVideos || search.Plan(text) is not { } plan)
                 return photos;
 
             var model = search.ClipModel;
@@ -901,9 +975,12 @@ namespace PhotoLikerUI
 
             var unfinished = _indexCts is not null && ReferenceEquals(_folderSearch, _indexingSearch);
             var withVideos = result.Hits.Any(h => h.Moments is not null);
-            var titleFormat = withVideos
-                ? result.Weak ? VideoSearchStrings.ResultsTitleWeakVideosFormat : VideoSearchStrings.ResultsTitleVideosFormat
-                : result.Weak ? SearchStrings.ResultsTitleWeakFormat : SearchStrings.ResultsTitleFormat;
+            var onlyVideos = withVideos && result.Hits.All(h => h.Moments is not null);
+            var titleFormat = onlyVideos
+                ? result.Weak ? VideoSearchStrings.ResultsTitleWeakOnlyVideosFormat : VideoSearchStrings.ResultsTitleOnlyVideosFormat
+                : withVideos
+                    ? result.Weak ? VideoSearchStrings.ResultsTitleWeakVideosFormat : VideoSearchStrings.ResultsTitleVideosFormat
+                    : result.Weak ? SearchStrings.ResultsTitleWeakFormat : SearchStrings.ResultsTitleFormat;
             var title = string.Format(titleFormat, result.Description, files.Count)
                 + (unfinished ? SearchStrings.ResultsPartialNote : string.Empty);
 
@@ -935,9 +1012,12 @@ namespace PhotoLikerUI
                 _indexByPath[files[i].OriginalFilePath] = i;
 
             UpdateSearchControls();
-            SetStatus((withVideos
-                ? string.Format(VideoSearchStrings.StatusResultsShownVideosFormat, result.Description, files.Count, result.SearchedPhotos, result.SearchedVideos)
-                : string.Format(SearchStrings.StatusResultsShown, result.Description, files.Count, result.SearchedPhotos)) + DateNotes(result) + ModelNotes(result));
+            SetStatus((onlyVideos
+                    ? string.Format(VideoSearchStrings.StatusResultsShownOnlyVideosFormat, result.Description, files.Count, result.SearchedVideos)
+                    : withVideos
+                        ? string.Format(VideoSearchStrings.StatusResultsShownVideosFormat, result.Description, files.Count, result.SearchedPhotos, result.SearchedVideos)
+                        : string.Format(SearchStrings.StatusResultsShown, result.Description, files.Count, result.SearchedPhotos))
+                + DateNotes(result) + ModelNotes(result));
             LoadFirstPhoto(files[0].OriginalFilePath);
             settingsPropertyGrid.Refresh();
 
@@ -1291,11 +1371,14 @@ namespace PhotoLikerUI
                 return;
 
             // The person is looked for in the faces of the moments of the videos too, with the same examples and the same closeness
-            var videos = _currentConfig.SupportVideo ? VideoLibrary.Current : null;
             var named = label.Confirmed && label.Name is not null;
             _repeatSearch = tuning =>
             {
+                var (inPhotos, inVideos) = _currentConfig.SearchKinds(); // read as the search runs: the toggles run it again
+                var videos = inVideos ? VideoLibrary.Current : null;
                 var photos = named ? search.SearchPerson(label.Name!, tuning) : search.SearchPerson(label.Face, label.Name, tuning);
+                if (!inPhotos)
+                    photos = VideoSearch.WithoutPhotos(photos);
                 if (videos is null)
                     return photos;
 
@@ -1342,8 +1425,10 @@ namespace PhotoLikerUI
             SetStatus(SearchStrings.StatusExporting);
             try
             {
-                await Task.Run(() => search.Index.ExportTo(file));
-                SetStatus(string.Format(SearchStrings.StatusExported, file, search.Index.PhotoCount, search.Index.FaceCount, new FileInfo(file).Length / 1048576.0));
+                // The photo index, and with it the catalog of the videos when any video has been analyzed: one file carries both
+                var videos = await Task.Run(() => IndexBundle.Export(search.Index, file));
+                SetStatus(string.Format(SearchStrings.StatusExported, file, search.Index.PhotoCount, search.Index.FaceCount, new FileInfo(file).Length / 1048576.0)
+                    + (videos is null ? string.Empty : string.Format(VideoSearchStrings.StatusExportedVideosFormat, videos.Videos, videos.Moments, videos.Speech)));
             }
             catch (Exception ex)
             {
@@ -1383,23 +1468,34 @@ namespace PhotoLikerUI
             _transferBusy = true;
             UpdateSearchControls();
             var closed = false;
+            var closedVideos = false;
             try
             {
-                var info = await Task.Run(() => PhotoIndex.Inspect(file));
+                var contents = await Task.Run(() => IndexBundle.Inspect(file));
+                var info = contents.Photos;
 
                 var madeFor = info.Root is null ? string.Empty
                     : string.Format(SearchStrings.ImportMadeForFormat, info.Root, info.ExportedAt is { } at ? $" on {at:g}" : string.Empty);
+                var videoNote = contents.Videos is { } held ? string.Format(VideoSearchStrings.ImportVideosNoteFormat, held.Videos, held.Moments, held.Speech) : string.Empty;
                 var current = _folderSearch?.Index.PhotoCount ?? 0;
                 var replaces = current > 0 ? string.Format(SearchStrings.ImportReplaceNoteFormat, current) : string.Empty;
-                var question = string.Format(SearchStrings.ImportQuestionFormat, folder, info.Photos, info.Faces, madeFor, replaces);
+                var question = string.Format(SearchStrings.ImportQuestionFormat, folder, info.Photos, info.Faces, madeFor + videoNote, replaces);
                 if (MessageBox.Show(this, question, SearchStrings.ImportIndexTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                     return;
 
                 // A file that is open can not be replaced
                 ShowIndex(null);
                 closed = true;
-                await Task.Run(() => PhotoIndex.Import(folder, file));
-                SetStatus(string.Format(SearchStrings.StatusImported, info.Photos, info.Faces));
+                if (contents.Videos is not null)
+                {
+                    VideoLibrary.Close();
+                    closedVideos = true;
+                }
+                await Task.Run(() => IndexBundle.Import(folder, file));
+                SetStatus(string.Format(SearchStrings.StatusImported, info.Photos, info.Faces)
+                    + (contents.Videos is not { } added ? string.Empty
+                        : string.Format(VideoSearchStrings.StatusImportedVideosFormat, added.Videos, added.Moments, added.Speech)
+                            + (_currentConfig.SupportVideo ? string.Empty : VideoSearchStrings.StatusImportedVideosOffNote)));
             }
             catch (Exception ex)
             {
@@ -1412,6 +1508,8 @@ namespace PhotoLikerUI
                 // The imported index is opened; if the import failed this is the one the folder had before
                 if (closed)
                     await ReopenIndexAsync(folder);
+                if (closedVideos)
+                    PrepareVideoCatalog();
 
                 _transferBusy = false;
                 UpdateSearchControls();

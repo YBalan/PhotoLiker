@@ -393,4 +393,43 @@ public sealed class VideoSearchTests : IDisposable
         Assert.Equal(photos.Hits, merged.Hits);
         Assert.Equal(0, merged.SearchedVideos);
     }
+
+    // ── the videos only ────────────────────────────────────────────────
+
+    [Fact]
+    public void WithoutItsPhotos_ThePhotoResult_KeepsWhatWasSearchedFor_AndNothingElse()
+    {
+        var photos = Photos(true, Hit("a.jpg", 0.30f)) with { Dates = new DateFilter(2010, 2010, null, null) };
+
+        var without = VideoSearch.WithoutPhotos(photos);
+
+        Assert.Empty(without.Hits);
+        Assert.False(without.Weak);
+        Assert.Equal(("beach", 0, 0), (without.Description, without.SearchedPhotos, without.OtherModelPhotos));
+        Assert.Equal(photos.Dates, without.Dates);
+    }
+
+    [Fact]
+    public void ASearchOfTheVideosOnly_IsTheVideosThatFit_NoPhotoAmongThem()
+    {
+        var merged = VideoSearch.Merge(
+            VideoSearch.WithoutPhotos(Photos(false, Hit("a.jpg", 0.40f), Hit("b.jpg", 0.30f))),
+            Videos(false, 7, Hit("v1.mp4", 0.35f, 4000)),
+            WordsPlan);
+
+        Assert.Equal(["v1.mp4"], merged.Hits.Select(h => Path.GetFileName(h.FullPath)));
+        Assert.Equal(("beach", 0, 7), (merged.Description, merged.SearchedPhotos, merged.SearchedVideos));
+    }
+
+    [Fact]
+    public void ASearchOfTheVideosOnly_WhereNoneFitsWell_ShowsTheClosestVideos_AsWeak()
+    {
+        var merged = VideoSearch.Merge(
+            VideoSearch.WithoutPhotos(Photos(false, Hit("strong.jpg", 0.50f))), // a photo that fits well must not push the videos out
+            Videos(true, 3, Hit("v1.mp4", 0.20f, 0), Hit("v2.mp4", 0.19f, 0)),
+            WordsPlan);
+
+        Assert.True(merged.Weak);
+        Assert.Equal(["v1.mp4", "v2.mp4"], merged.Hits.Select(h => Path.GetFileName(h.FullPath)));
+    }
 }

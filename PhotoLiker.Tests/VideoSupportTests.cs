@@ -167,6 +167,48 @@ public class VideoSupportTests : IDisposable
     }
 
     [Fact]
+    public void ASearch_LooksAtBothKinds_UnlessOneIsSwitchedOff()
+    {
+        var settings = new Settings { SupportVideo = true };
+        Assert.Equal((true, true), settings.SearchKinds());
+
+        settings.SearchVideos = false;
+        Assert.Equal((true, false), settings.SearchKinds());
+
+        settings.SearchPhotos = false;
+        settings.SearchVideos = true;
+        Assert.Equal((false, true), settings.SearchKinds());
+    }
+
+    [Fact]
+    public void BothKindsOff_CountsAsBothOn_SomethingHasToBeSearched()
+    {
+        var settings = new Settings { SupportVideo = true, SearchPhotos = false, SearchVideos = false };
+
+        Assert.Equal((true, true), settings.SearchKinds());
+    }
+
+    [Fact]
+    public void WithVideosNotListed_OnlyThePhotosAreSearched_WhateverTheTogglesSay()
+    {
+        var settings = new Settings { SupportVideo = false, SearchPhotos = false, SearchVideos = true };
+
+        Assert.Equal((true, false), settings.SearchKinds());
+    }
+
+    [Fact]
+    public void TheKindsOfASearch_AreKeptWithTheFolder_AndAnOldFileSearchesBoth()
+    {
+        new Settings { CurrentFolder = _root, SupportVideo = true, SearchPhotos = false }.Save(_root);
+        var loaded = Settings.Load(_root);
+        Assert.Equal((false, true), (loaded.SearchPhotos, loaded.SearchVideos));
+        Assert.Equal((false, true), loaded.SearchKinds());
+
+        File.WriteAllText(Settings.GetFilePath(_root), """{ "SupportVideo": true }""");
+        Assert.Equal((true, true), Settings.Load(_root).SearchKinds());
+    }
+
+    [Fact]
     public void TheListedExtensions_AreNotWrittenToTheFile()
     {
         new Settings { CurrentFolder = _root, SupportVideo = true }.Save(_root);

@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using System.Drawing.Drawing2D;
+using System.Net.Http;
 using PhotoLiker.Search;
 using PhotoLiker.Video;
 
@@ -55,6 +56,113 @@ namespace PhotoLikerUI
             }
         }
 
+        // ── the engine that plays videos ───────────────────────────────────
+
+        // A release does not carry the engine (VlcEngine): it is downloaded the first time videos are turned on or played, after asking
+        private Task<bool>? _engineDownload;      // a download that is going on: whoever needs the engine waits for it
+        private bool _engineDeclined;             // the answer was no: videos open in the program Windows has for them, until SupportVideo is turned on again
+        private CancellationTokenSource? _engineStop;
+        private long _engineShownMegabytes = -1;
+        private bool _engineFinished;             // reports are posted to the window's thread: the last of them can arrive after "ready" and must not replace it
+
+        /// <summary>Asked before the engine is downloaded: what it is, how big and from where. A test answers it.</summary>
+        protected virtual bool ConfirmEngineDownload(ComponentSource source) =>
+            MessageBox.Show(this, string.Format(VideoPlayerStrings.EngineDownloadQuestionFormat, Megabytes(source.Bytes), source.Host),
+                VideoPlayerStrings.EngineDownloadTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK;
+
+        /// <summary>Opens a file in the program Windows has for it. A test answers it (it would start a player on the desktop).</summary>
+        protected virtual string? OpenInDefaultProgram(string file) => ShellOpen.Photo(file);
+
+        /// <summary>True when the engine is there to play videos with, after asking whether to download it, and downloading it, if it is not.</summary>
+        private async Task<bool> EnsureVideoEngineAsync()
+        {
+            if (VideoPlayerPanel.EngineInstalled)
+                return true;
+            if (_engineDownload is { } running)
+                return await running;
+            if (_engineDeclined)
+                return false;
+
+            _engineDownload = DownloadEngineAsync();
+            try
+            {
+                return await _engineDownload;
+            }
+            finally
+            {
+                _engineDownload = null;
+            }
+        }
+
+        private async Task<bool> DownloadEngineAsync()
+        {
+            _engineStop ??= new CancellationTokenSource();
+            var token = _engineStop.Token;
+            try
+            {
+                SetStatus(VideoPlayerStrings.StatusEngineLooking);
+                var source = await VlcEngine.ResolveAsync(token);
+                if (source is null)
+                {
+                    SetStatus(VideoPlayerStrings.StatusEngineOffline);
+                    return false;
+                }
+
+                if (!ConfirmEngineDownload(source))
+                {
+                    _engineDeclined = true;
+                    SetStatus(VideoPlayerStrings.StatusEngineDeclined);
+                    return false;
+                }
+
+                _engineShownMegabytes = -1;
+                _engineFinished = false;
+                await VlcEngine.DownloadAsync(new Progress<ComponentProgress>(ShowEngineProgress), token, source);
+                _engineFinished = true;
+                SetStatus(VideoPlayerStrings.StatusEngineReady);
+                VideoPlayerPanel.WarmUp();
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                return false; // the window is closing
+            }
+            catch (Exception ex) when (ex is IOException or HttpRequestException or UnauthorizedAccessException)
+            {
+                SetStatus(string.Format(VideoPlayerStrings.StatusEngineFailedFormat, ex.Message));
+                return false;
+            }
+        }
+
+        private void ShowEngineProgress(ComponentProgress progress)
+        {
+            if (_engineFinished)
+                return;
+
+            if (progress.Stage == ComponentStage.Unpacking)
+            {
+                SetStatus(string.Format(VideoPlayerStrings.StatusEngineUnpackingFormat, progress.Done, progress.Total));
+                return;
+            }
+
+            var megabytes = Megabytes(progress.Done);
+            if (megabytes != _engineShownMegabytes)
+            {
+                _engineShownMegabytes = megabytes;
+                SetStatus(string.Format(VideoPlayerStrings.StatusEngineDownloadingFormat, megabytes, Megabytes(progress.Total)));
+            }
+        }
+
+        private static long Megabytes(long bytes) => (bytes + (1 << 19)) >> 20; // 82,765,861 bytes are 79 MB (of 1,048,576), as Windows says
+
+        /// <summary>The engine cannot be had (not downloaded, or it cannot start): the video is still worth seeing, in whatever Windows plays it with.</summary>
+        private void OpenVideoElsewhere(string file, string message, string openedFormat)
+        {
+            HidePlayer();
+            var problem = OpenInDefaultProgram(file);
+            SetStatus(problem is null ? string.Format(openedFormat, Path.GetFileName(file)) : message + " " + problem);
+        }
+
         private VideoPlayerPanel EnsurePlayer()
         {
             if (_player is { } existing)
@@ -99,6 +207,16 @@ namespace PhotoLikerUI
                 return;
             }
 
+            // The engine may have to be downloaded first; the person may have gone to another item by the time it is there
+            if (!await EnsureVideoEngineAsync())
+            {
+                if (pictureBox1.Tag is string stillShown && stillShown == file)
+                    OpenVideoElsewhere(file, VideoPlayerStrings.EngineNotInstalled, VideoPlayerStrings.StatusVideoOpenedNoEngineFormat);
+                return;
+            }
+            if (pictureBox1.Tag is not string current || current != file)
+                return;
+
             var player = EnsurePlayer();
             player.Visible = true;
             player.BringToFront();
@@ -138,10 +256,7 @@ namespace PhotoLikerUI
             if (!engineProblem || pictureBox1.Tag is not string file)
                 return;
 
-            // The engine cannot start (its files are missing): the video is still worth seeing, in whatever Windows plays it with
-            HidePlayer();
-            var problem = ShellOpen.Photo(file);
-            SetStatus(problem is null ? string.Format(VideoPlayerStrings.StatusVideoOpenedElsewhereFormat, Path.GetFileName(file)) : message + " " + problem);
+            OpenVideoElsewhere(file, message, VideoPlayerStrings.StatusVideoOpenedElsewhereFormat);
         }
 
         /// <summary>The keys of a video that is shown. Returns true if the key was one of them.</summary>

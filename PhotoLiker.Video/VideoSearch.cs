@@ -206,6 +206,12 @@ namespace PhotoLiker.Video
             };
         }
 
+        /// <summary>
+        /// The result of a photo search with its photos taken out, for a search that looks through the videos only (to be given to <see cref="Merge"/>): what was searched
+        /// for stays, but no photo is a hit and none counts as looked through, so nothing is said about photos that were left out of the search.
+        /// </summary>
+        public static SearchResult WithoutPhotos(SearchResult photos) => photos with { Hits = [], Weak = false, SearchedPhotos = 0, OtherModelPhotos = 0 };
+
         private static IReadOnlyList<SearchHit> Order(IEnumerable<SearchHit> hits, FolderIndex.SearchPlan plan) =>
             plan.DateOnly
                 ? [.. hits.OrderBy(h => h.Taken).ThenBy(h => h.FullPath, StringComparer.OrdinalIgnoreCase)]

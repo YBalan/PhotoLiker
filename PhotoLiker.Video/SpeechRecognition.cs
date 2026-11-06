@@ -37,7 +37,9 @@ namespace PhotoLiker.Video
         {
             var builder = _factory.CreateBuilder().WithThreads(_threads).WithNoSpeechThreshold(NoSpeechCutoff);
             builder = string.Equals(language, "auto", StringComparison.OrdinalIgnoreCase) ? builder.WithLanguageDetection() : builder.WithLanguage(language);
-            using var processor = builder.Build();
+            // Not "using": Stop cancels while the model is still working, and the processor refuses to be disposed then (it throws "Cannot dispose while processing"
+            // and that was what the user saw instead of "stopped"); DisposeAsync waits until the model has let go
+            await using var processor = builder.Build();
 
             await using var stream = File.OpenRead(wavPath);
             var heard = "";

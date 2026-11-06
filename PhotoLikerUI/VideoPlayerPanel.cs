@@ -123,16 +123,28 @@ namespace PhotoLikerUI
             LayoutBar();
         }
 
-        /// <summary>Starts the engine without playing anything, so that the first video does not wait for it (it takes half a second, much more the first time after an install).</summary>
-        public static void WarmUp() => _ = StartEngine().ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+        /// <summary>Whether the engine is there to be started: it comes with the program or has been downloaded (<see cref="VlcEngine"/>).</summary>
+        public static bool EngineInstalled => VlcEngine.Find() is not null;
+
+        /// <summary>Starts the engine without playing anything, so that the first video does not wait for it (it takes half a second, much more the first time after an install). Does nothing while the engine is not there.</summary>
+        public static void WarmUp()
+        {
+            if (EngineInstalled)
+                _ = StartEngine().ContinueWith(t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+        }
 
         private static Task<LibVLC> StartEngine()
         {
             lock (EngineGate)
             {
+                // A start that failed (the engine was not there yet) is not kept: the next one tries again, with the engine that has been downloaded since
+                if (_engine is { IsFaulted: true })
+                    _engine = null;
+
                 return _engine ??= Task.Run(() =>
                 {
-                    Core.Initialize(); // finds libvlc\win-x64 next to the program
+                    var folder = VlcEngine.Find() ?? throw new FileNotFoundException(VideoPlayerStrings.EngineNotInstalled);
+                    Core.Initialize(folder);
                     return new LibVLC("--no-video-title-show", "--no-snapshot-preview", "--no-sub-autodetect-file", "--quiet");
                 });
             }

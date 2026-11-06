@@ -77,6 +77,19 @@ namespace PhotoLiker.Core
         public string SearchModel { get; set; } = DefaultSearchModel;
         public const string DefaultSearchModel = "clip-vit-b32";
 
+        /// <summary>With videos listed (<see cref="SupportVideo"/>): whether a search looks through the photos. The "Photos" toggle of the search strip; both off counts as both on.</summary>
+        public bool SearchPhotos { get; set; } = true;
+
+        /// <summary>With videos listed: whether a search looks through the videos. The "Videos" toggle of the search strip; both off counts as both on.</summary>
+        public bool SearchVideos { get; set; } = true;
+
+        /// <summary>
+        /// What a search looks through right now: the photos, the videos. The videos only when they are listed; the photos and the videos together when both
+        /// toggles are on or both are off (something has to be searched).
+        /// </summary>
+        public (bool Photos, bool Videos) SearchKinds() =>
+            !SupportVideo ? (true, false) : SearchPhotos == SearchVideos ? (true, true) : (SearchPhotos, SearchVideos);
+
         /// <summary>Which photo the slideshow (Alt+Enter) shows next: a random one, or the next of the list.</summary>
         [JsonConverter(typeof(SlideshowModeConverter))]
         public SlideshowMode SlideshowMode { get; set; } = SlideshowMode.Random;

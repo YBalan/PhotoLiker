@@ -95,8 +95,9 @@ The installer and the zip also carry the [user manual](#user-manual), in English
 `ffmpeg.exe` (Generate Video) is not part of PhotoLiker: it is GPL v3 software by the [FFmpeg](https://ffmpeg.org/) project (the
 [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) build), run as a separate program. Its licence and the place to get its source are in
 `ffmpeg\COPYING.GPLv3.txt` and `ffmpeg\FFMPEG-NOTICE.txt` beside the program, in the installer and in the zip.
-The player of videos is the engine of [VLC](https://www.videolan.org/) (libvlc, LGPL 2.1 or later), in `libvlc\win-x64` beside the program; its licence and the place to get its source
-are in `libvlc\win-x64\COPYING.LGPLv2.1.txt` and `libvlc\win-x64\VLC-NOTICE.txt`.
+The player of videos is the engine of [VLC](https://www.videolan.org/) (libvlc, LGPL 2.1 or later). The installer and the zip of a release do not carry it, which keeps the installer at 32 MB
+instead of 55 MB: it is [downloaded once](#videos) when videos are turned on. A build from the source has it in `libvlc\win-x64`. Its licence and the place to get its source are in
+`libvlc\COPYING.LGPLv2.1.txt` and `libvlc\VLC-NOTICE.txt` beside the program.
 
 ### Updating
 
@@ -256,7 +257,8 @@ What is kept where:
   (except by [Align dates](#aligning-file-dates), which you press yourself).
   To use it on another computer (or to index on the faster one), choose **I/E > Export index...** (the first button of the
   strip: import / export), bring the `.plindex` file over, open the same photos there (whatever the drive letter) and choose
-  **I/E > Import index...**.
+  **I/E > Import index...**. When videos have been analyzed the same file carries them (their moments, faces and the speech that was read): the question of the import says so, and the videos analyzed
+  for that folder are replaced by them; a file made without videos leaves the folder's videos as they are.
   **Update index** then brings it up to date: photos whose size and date are the same are not analyzed again. The models
   are downloaded there on first use, or copy the `models` folder (below) along. A search by description needs the search
   model's files, so **Update index** asks to download them also when every photo is in the imported index already (only the
@@ -481,22 +483,36 @@ the top whenever another photo is shown:
 
 ![The settings grid, LikedFolder selected with its "..." button](docs/images/06-settings.png)
 
+The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Settings**, **4. Photo Settings**, **5. Video Settings** and **6. Slideshow**.
+
+**3. Common Settings** (the whole program, photos and videos alike):
+
 | Setting | Meaning |
 |---|---|
+| **Language** | The language of the program, `English` or `Українська`. It changes at once and is kept for all folders. See [Language](#language). |
 | **LikedFolder** | Where liked photos are copied. By default the folder `Liked` inside the photo folder. Click the **...** button for a folder picker. A folder with any other name than `Liked` is kept as it is, wherever it is. |
+| **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
+| **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
+
+**4. Photo Settings** (which files are listed, and in what order):
+
+| Setting | Meaning |
+|---|---|
 | **GoThroughSubFolders** | Also list the photos in the subfolders. The Liked folder itself is left out. |
 | **Extensions** | The file extensions that count as photos, separated by `;` or `,`, each with its dot: `.jpg; .png`. Case does not matter. |
+| **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, `Random` in a random order, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
+
+**5. Video Settings:**
+
+| Setting | Meaning |
+|---|---|
 | **SupportVideo** | List the videos of the folder with its photos (off by default). See [Videos](#videos). |
 | **VideoExtensions** | The file extensions that count as videos when **SupportVideo** is on: `.mp4; .mov; .avi; .mkv ...` (the default list has the usual ones). |
 | **VideoSpeech** | Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See [Videos](#videos). |
 | **SpeechModel** | `tiny`, `base` or `small` (the one to use). |
 | **SpeechLanguage** | The language that is spoken: `ru`, `uk`, `en` ..., or `auto` (the model hears it for each video). |
-| **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, `Random` in a random order, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
-| **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
-| **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
-| **Language** | The language of the program, `English` or `Українська`. It changes at once and is kept for all folders. See [Language](#language). |
 
-The category **Slideshow** has its own five rows, **Mode**, **Monitors**, **Timeout**, **Watermark** and **Effect**; see [Slideshow](#slideshow).
+The group **6. Slideshow** has its own five rows, **Mode**, **Monitors**, **Timeout**, **Watermark** and **Effect**; see [Slideshow](#slideshow).
 
 The rows of **Current File** and **TotalFiles** are read-only. **CurrentIndex** is the number of the shown photo, counted
 from 0: type another number into it to jump to that photo (a number outside the list goes to the nearest end).
@@ -664,7 +680,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   `Fade`, `Slide`, `Zoom`, `KenBurns`, `Random`) while the show runs. The name is written in the top left corner of every monitor for about two seconds
   (`Effect: Slide`), the next change of photo is made by that effect, and with `KenBurns` the photo that is on the screen begins to move at once. The effect
   the show ended with becomes the setting: the **Effect** row shows it afterwards, and it is saved with the other settings of the folder.
-- The settings are the five rows of the **4. Slideshow** category of the settings grid. They are kept in the settings file of the folder, so a
+- The settings are the five rows of the **6. Slideshow** group of the settings grid. They are kept in the settings file of the folder, so a
   folder can have its own.
 
 | Setting | Meaning |
@@ -728,7 +744,8 @@ video every two seconds (the key frames only, where a video has them: 60 times f
 photos and videos together: words ("a cat"), a person ("Mom", or "Mom and Dad"), a date ("September 2009"), or any mix, and the result is one list, the better fits first. A video is in it
 once, and the viewer shows where it fits: under the picture is a strip of the moments of the video, the ones the search found marked in orange, and the slider has orange ticks at the same
 places. <kbd>Enter</kbd> (or a click) plays from the best fitting place, a click on a picture of the strip goes there, and <kbd>.</kbd> / <kbd>,</kbd> go to the next / the previous place that
-was found (without a search, the next moment of all). The precision slider works on videos too; a picture out of a video has to fit a little better than a photo to count, because motion blur and
+was found (without a search, the next moment of all). Two buttons in the search strip, a picture (**Photos**) and a video camera (**Videos**) (there while **SupportVideo** is on; hold the pointer over one for its name), choose what a search looks through: both on is the default, **Photos** off searches the videos only ("a cat" among
+the videos), **Videos** off the photos only; the last one on cannot be switched off, the choice is kept with the folder, and a search that is shown is run again when it changes. The precision slider works on videos too; a picture out of a video has to fit a little better than a photo to count, because motion blur and
 compression make words match by chance more often (on clips with no cat in them, "a cat" scored as high as a photo needs to). A person is found by the faces in the moments, with the examples from
 the photos: a video is searched for people from the photos you named. On the real clips this was made with (a Canon camera, 640 x 480): 144 seconds of video took 19 seconds with faces.
 Switching the search model makes the moments again with the new model, like the photos.
@@ -753,7 +770,12 @@ are kept in a catalog of their own, `video-<folder>-<hash>.db`
 next to the photo index in `%LocalAppData%\PhotoLiker\index`: a separate file, so the photos and the videos never get in each other's way. A video is read when it is first shown and not again
 until the file changes: on a router, 24 videos of a Canon camera took 9 seconds the first time and 17 milliseconds the second. The catalog is a cache: deleting it costs nothing but that time.
 
-The engine is in `libvlc\win-x64` next to the program (about 86 MB; VLC's libvlc, LGPL 2.1 or later, with its licence and the place to get its source in `libvlc\win-x64\VLC-NOTICE.txt`).
+**The video player is downloaded.** The engine that plays videos (VLC's libvlc, LGPL 2.1 or later) is not in the installer or the zip of a release (23 MB of the installer): the first time **SupportVideo**
+is turned on, or a video is played, the program says how big it is and where it comes from, and asks. Yes downloads it once, with the progress in the status bar, into
+`%LocalAppData%\PhotoLiker\libvlc\<version>` (40 MB from the releases of this project on GitHub; if it is not there, 83 MB, the same files, from VideoLAN's own server). A download is used only if it is the file whose
+SHA-256 the program knows, and the folder is made whole or not at all. No means that videos open in the program Windows plays them with, and the question comes again when **SupportVideo** is turned off and on.
+A build from the source, and an installer made with `installer\build-installer.ps1 -BundleVlc` (for a computer with no internet), have the engine in `libvlc\win-x64` next to the program (86 MB) and download nothing.
+`installer\pack-libvlc.ps1` makes the zip for a new version of VLC (and the list of its files, `PhotoLiker.Video\libvlc-files.txt`); it is attached once to a pre-release named `libvlc-<version>`. Its licence and the place to get the source of VLC are in `libvlc\VLC-NOTICE.txt`.
 ## Big folders open at once
 
 Listing a folder on a network share costs a round trip per subfolder, however few photos each holds: 6.6 seconds for

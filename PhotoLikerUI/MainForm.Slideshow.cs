@@ -2,7 +2,7 @@ namespace PhotoLikerUI
 {
     /// <summary>
     /// Alt+Enter: the photos of the list as a slideshow on the whole screen the window is on, or on every screen (see <see cref="SlideshowSession"/>), beginning with the
-    /// photo that is shown. How it runs is in the rows of the "4. Slideshow" category of the settings. When it ends the window shows the photo it ended on, on
+    /// photo that is shown. How it runs is in the rows of the "6. Slideshow" category of the settings. When it ends the window shows the photo it ended on, on
     /// the screen of the window.
     /// </summary>
     public partial class MainForm

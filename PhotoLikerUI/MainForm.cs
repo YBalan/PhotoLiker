@@ -213,6 +213,7 @@
             _folderGeneration++;
             StopListingCheck();
             SaveListingOnClose();
+            _engineStop?.Cancel();
             _photoCache.Dispose();
             _player?.Dispose();
             _strip?.Dispose();
@@ -430,6 +431,13 @@
             SaveSettingsToJson();
             ClearDisplay();
             LoadFolder();
+
+            // Videos were just turned on: the engine that plays them may have to be downloaded, and now is when the person expects to be asked
+            if (name == nameof(Settings.SupportVideo) && _currentConfig.SupportVideo)
+            {
+                _engineDeclined = false;
+                _ = EnsureVideoEngineAsync();
+            }
         }
 
         private void OpenSourceFolderToolStripButton_Click(object? sender, EventArgs e)

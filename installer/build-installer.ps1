@@ -14,11 +14,17 @@ Defaults to the assembly version of the freshly published build, and then the pr
 
 .PARAMETER IsccPath
 Path to ISCC.exe when Inno Setup is not on PATH or in its default install folders.
+
+.PARAMETER BundleVlc
+Puts the VLC engine that plays videos (libvlc, 23 MB of the installer) into the installer. Without it (the default, and what a release is) the installer is
+that much smaller and the program downloads the engine the first time videos are turned on or played (PhotoLiker.Video\VlcEngine.cs; installer\pack-libvlc.ps1
+makes the zip it downloads). Use it for an installer that has to work on a computer with no internet.
 #>
 [CmdletBinding()]
 param(
     [string]$Version,
-    [string]$IsccPath
+    [string]$IsccPath,
+    [switch]$BundleVlc
 )
 
 $ErrorActionPreference = 'Stop'
@@ -53,6 +59,7 @@ if (Test-Path $stageDir) { Remove-Item $stageDir -Recurse -Force }
 Write-Host "Publishing PhotoLikerUI to $stageDir"
 $publishArgs = @($project, '-c', 'Release', '-r', 'win-x64', '--self-contained', 'false', '-o', $stageDir)
 if ($Version) { $publishArgs += "-p:Version=$Version" }
+if (-not $BundleVlc) { $publishArgs += '-p:BundleVlc=false' }
 dotnet publish @publishArgs
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed with exit code $LASTEXITCODE" }
 

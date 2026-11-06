@@ -59,7 +59,9 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Installing Inno Setup failed with exit code $LASTEXITCODE" }
           }
 
-      # Publishes the app (framework-dependent, win-x64, stamped with the version) into publish\PhotoLikerUI and packs it
+      # Publishes the app (framework-dependent, win-x64, stamped with the version) into publish\PhotoLikerUI and packs it. The VLC engine is not in it (23 MB of the
+      # installer): the program downloads it when videos are turned on, from the release libvlc-<VLC version> that installer\pack-libvlc.ps1 makes the zip for
+      # (once for each VLC version; without it the program falls back to VideoLAN's own zip).
       - name: Build installer
         shell: pwsh
         run: ./installer/build-installer.ps1 -Version '${{ steps.version.outputs.version }}'

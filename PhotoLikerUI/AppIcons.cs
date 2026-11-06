@@ -237,6 +237,41 @@ namespace PhotoLikerUI
             g.FillPolygon(hill, [new PointF(6.3f, 14.2f), new PointF(9.2f, 9.6f), new PointF(11.2f, 12.2f), new PointF(12.2f, 11f), new PointF(14.2f, 14.2f)]);
         });
 
+        // ── Photos (the search filter) ────────────────────────────────────
+        // A picture: sky, sun and a green hill in a navy frame (readable on the blue of a checked button, and on the dark and the light strip)
+        public static Bitmap Photo() => DrawOnBitmap(g =>
+        {
+            using var sky = new LinearGradientBrush(new RectangleF(1, 2, 14, 12), Color.FromArgb(200, 230, 255), Color.FromArgb(140, 190, 245), 90f);
+            g.FillRoundedRectangle(sky, 1, 2, 14, 12, 1.5f);
+
+            using var sun = new SolidBrush(Color.FromArgb(250, 170, 40));
+            g.FillEllipse(sun, 9.4f, 3.8f, 3.2f, 3.2f);
+            using var hill = new SolidBrush(Color.FromArgb(45, 150, 80));
+            g.FillPolygon(hill, [new PointF(2f, 13.2f), new PointF(6.2f, 7.4f), new PointF(9.2f, 11f), new PointF(10.8f, 9.2f), new PointF(14f, 13.2f)]);
+
+            using var rim = new Pen(Color.FromArgb(25, 55, 130), 1.2f);
+            g.DrawRectangle(rim, 1.5f, 2.5f, 13f, 11f);
+        });
+
+        // ── Videos (the search filter) ────────────────────────────────────
+        // A video camera: a dark body with a light rim and a red recording light, and the lens (the dark body and the light rim keep it
+        // readable on the blue of a checked button, and on the dark and the light strip)
+        public static Bitmap Video() => DrawOnBitmap(g =>
+        {
+            using var body = new LinearGradientBrush(new RectangleF(1, 4, 9.5f, 8), Color.FromArgb(85, 95, 125), Color.FromArgb(35, 40, 65), 90f);
+            g.FillRoundedRectangle(body, 1, 4, 9.5f, 8, 1.5f);
+            using var rim = new Pen(Color.FromArgb(235, 240, 250), 1f);
+            g.DrawRectangle(rim, 1.5f, 4.5f, 8.5f, 7f);
+
+            using var lens = new SolidBrush(Color.FromArgb(225, 232, 245));
+            g.FillPolygon(lens, [new PointF(10.8f, 7f), new PointF(15f, 4.6f), new PointF(15f, 11.4f), new PointF(10.8f, 9f)]);
+            using var lensEdge = new Pen(Color.FromArgb(35, 40, 65), 0.7f);
+            g.DrawPolygon(lensEdge, [new PointF(10.8f, 7f), new PointF(15f, 4.6f), new PointF(15f, 11.4f), new PointF(10.8f, 9f)]);
+
+            using var light = new SolidBrush(Color.FromArgb(240, 60, 60));
+            g.FillEllipse(light, 2.8f, 5.6f, 2.4f, 2.4f);
+        });
+
         // ── Help / About ──────────────────────────────────────────────────
         // A blue disc with a white rim and a white question mark (the Help button, which opens the About box)
         public static Bitmap Help() => DrawOnBitmap(g =>

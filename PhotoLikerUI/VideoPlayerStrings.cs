@@ -23,5 +23,16 @@ namespace PhotoLikerUI
         public static string StatusFrameSavedFormat => T();
         public static string StatusFrameNoFolder => T();
         public static string StatusFrameErrorFormat => T();
+        public static string EngineNotInstalled => T();
+        public static string EngineDownloadTitle => T();
+        public static string EngineDownloadQuestionFormat => T();
+        public static string StatusEngineLooking => T();
+        public static string StatusEngineOffline => T();
+        public static string StatusEngineDeclined => T();
+        public static string StatusEngineDownloadingFormat => T();
+        public static string StatusEngineUnpackingFormat => T();
+        public static string StatusEngineReady => T();
+        public static string StatusEngineFailedFormat => T();
+        public static string StatusVideoOpenedNoEngineFormat => T();
     }
 }

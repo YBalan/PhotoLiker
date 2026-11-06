@@ -30,5 +30,17 @@ namespace PhotoLikerUI
         public static string StatusSpeechSilentPartFormat => T();
         public static string SpeechDownloadQuestionFormat => T();
         public static string SpeechDownloadTitle => T();
+        public static string ScopePhotosButton => T();
+        public static string ScopePhotosTooltip => T();
+        public static string ScopeVideosButton => T();
+        public static string ScopeVideosTooltip => T();
+        public static string StatusNoVideosIndexed => T();
+        public static string ResultsTitleOnlyVideosFormat => T();
+        public static string ResultsTitleWeakOnlyVideosFormat => T();
+        public static string StatusResultsShownOnlyVideosFormat => T();
+        public static string StatusExportedVideosFormat => T();
+        public static string ImportVideosNoteFormat => T();
+        public static string StatusImportedVideosFormat => T();
+        public static string StatusImportedVideosOffNote => T();
     }
 }

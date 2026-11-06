@@ -148,7 +148,8 @@ them. Nothing is uploaded: the analysis runs on this computer, and your photos a
   No graphics card is needed.</li>
   <li><strong>Dates of the photos.</strong> The date comes from the camera (EXIF). If it is missing or cannot be believed (before 1995, in the future, or a camera that
   lost its clock), the date the file was created is used, and the status bar says how many results are dated that way.</li>
-  <li><strong>Another computer.</strong> Use <strong>I/E &gt; Export index…</strong> (the first button of the strip) to save the index in a file, and <strong>I/E &gt; Import index…</strong> on the other computer. Then press <strong>Update index</strong>: it asks to download the search model there (also when every photo is in the imported index already), because searching by description needs it.</li>
+  <li><strong>Another computer.</strong> Use <strong>I/E &gt; Export index…</strong> (the first button of the strip) to save the index in a file, and <strong>I/E &gt; Import index…</strong> on the other computer. When videos have been analyzed the same file carries them too (their moments, faces and the speech that was read), and the
+  import replaces the videos analyzed for that folder; a file made without videos leaves them as they are. Then press <strong>Update index</strong>: it asks to download the search model there (also when every photo is in the imported index already), because searching by description needs it.</li>
   <li><strong>Visual C++ runtime.</strong> The AI models need the current Microsoft Visual C++ runtime. It comes with Windows updates, or install the
   <em>Visual C++ Redistributable (x64)</em> if loading the models stops with a message that says so.</li>
 </ul>
@@ -323,7 +324,7 @@ file the status bar says so and nothing is written.</p>
   <li>A photo that cannot be read is passed over.</li>
 </ul>
 
-<p>The five settings are in the group <strong>4. Slideshow</strong> of the settings table, and are kept for the folder:</p>
+<p>The five settings are in the group <strong>6. Slideshow</strong> of the settings table, and are kept for the folder:</p>
 
 <div class="table-scroll">
 <table class="wide-first">
@@ -349,29 +350,53 @@ description: select it and the pane under the table says what it is for.</p>
   <figcaption>The settings table, with the <strong>LikedFolder</strong> row selected.</figcaption>
 </figure>
 
+<p>The rows are in six groups: <strong>1. Progress</strong>, <strong>2. Current File</strong>, <strong>3. Common Settings</strong>, <strong>4. Photo Settings</strong>, <strong>5. Video Settings</strong> and <strong>6. Slideshow</strong>.</p>
+
+<p><strong>3. Common Settings</strong> (the whole program, photos and videos alike):</p>
+
 <div class="table-scroll">
 <table class="wide-first">
   <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
   <tbody>
+    <tr><td><strong>Language</strong></td><td>The language of the program, <strong>English</strong> or <strong>Українська</strong>. See <a href="#language">Language</a>.</td></tr>
     <tr><td><strong>LikedFolder</strong></td><td>Where liked photos are copied. By default the folder <code>Liked</code> inside the photo folder. Click the <strong>…</strong> button for a folder picker.</td></tr>
+    <tr><td><strong>CacheSize</strong></td><td>How many photos on each side of the shown one are kept ready in memory, so that the arrow keys feel instant.</td></tr>
+    <tr><td><strong>ThumbnailSize</strong></td><td>Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the thumbnails changes it.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>4. Photo Settings</strong> (which files are listed, and in what order):</p>
+
+<div class="table-scroll">
+<table class="wide-first">
+  <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
+  <tbody>
     <tr><td><strong>GoThroughSubFolders</strong></td><td>Also list the photos in the subfolders. The Liked folder itself is left out.</td></tr>
     <tr><td><strong>Extensions</strong></td><td>The kinds of file that count as photos, separated by <code>;</code> or <code>,</code>, each with its dot: <code>.jpg; .png</code>.</td></tr>
+    <tr><td><strong>SortOrder</strong></td><td>The order of the photos, see <a href="#order">Order of the photos</a>.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>5. Video Settings</strong>:</p>
+
+<div class="table-scroll">
+<table class="wide-first">
+  <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
+  <tbody>
     <tr><td><strong>SupportVideo</strong></td><td>List the videos of the folder with its photos (off by default). See <a href="#videos">Videos in the folder</a>.</td></tr>
     <tr><td><strong>VideoExtensions</strong></td><td>The kinds of file that count as videos when <strong>SupportVideo</strong> is on: <code>.mp4; .mov; .avi; .mkv</code> ... (the usual ones are listed already).</td></tr>
     <tr><td><strong>VideoSpeech</strong></td><td>Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See <a href="#videos">Videos in the folder</a>.</td></tr>
     <tr><td><strong>SpeechModel</strong></td><td><code>tiny</code>, <code>base</code> or <code>small</code> (the one to use).</td></tr>
     <tr><td><strong>SpeechLanguage</strong></td><td>The language that is spoken: <code>ru</code>, <code>uk</code>, <code>en</code> ..., or <code>auto</code> (the model hears it for each video).</td></tr>
-    <tr><td><strong>SortOrder</strong></td><td>The order of the photos, see <a href="#order">Order of the photos</a>.</td></tr>
-    <tr><td><strong>CacheSize</strong></td><td>How many photos on each side of the shown one are kept ready in memory, so that the arrow keys feel instant.</td></tr>
-    <tr><td><strong>ThumbnailSize</strong></td><td>Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the thumbnails changes it.</td></tr>
-    <tr><td><strong>Language</strong></td><td>The language of the program, <strong>English</strong> or <strong>Українська</strong>. See <a href="#language">Language</a>.</td></tr>
   </tbody>
 </table>
 </div>
 
 <p><strong>CurrentIndex</strong> is the number of the shown photo, counted from 0: type another number into it to jump to that
 photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong> and the other rows
-that show information cannot be changed. The group <strong>4. Slideshow</strong> has five rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
+that show information cannot be changed. The group <strong>6. Slideshow</strong> has five rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
 
 <h3 id="language">Language</h3>
 <p>The <strong>Language</strong> row of the settings table chooses the language of the program: pick <strong>English</strong> or <strong>Українська</strong> (Ukrainian) in the list. The
@@ -634,7 +659,9 @@ two seconds and the model looks at it; a picture that is no longer like the last
 in it). The search box then searches photos and videos together: words (<q>a cat</q>), a person (<q>Mom</q>), a date (<q>September 2009</q>), or any mix of them, and the result is one list, the better
 fits first. A video is in it once, and the viewer shows where it fits: under the picture is a strip of the moments of the video, the ones the search found marked in orange, and the slider has orange ticks
 at the same places. <kbd>Enter</kbd> (or a click) plays from the best fitting place, a click on a picture of the strip goes there, and <kbd>.</kbd> / <kbd>,</kbd> go to the next / the previous place
-that was found. The precision slider works on videos too. A person is found by the faces in the moments, with the examples from the photos you named.</p>
+that was found. Two buttons in the search strip, a picture (<strong>Photos</strong>) and a video camera (<strong>Videos</strong>) (there while <strong>SupportVideo</strong> is on; hold the pointer over one for its name), choose what a search looks through: both on is the default,
+<strong>Photos</strong> off searches the videos only (<q>a cat</q> among the videos), <strong>Videos</strong> off the photos only. The last one on cannot be switched off, the choice is kept with the folder, and a
+search that is shown is run again when it changes. The precision slider works on videos too. A person is found by the faces in the moments, with the examples from the photos you named.</p>
 <p>On a Canon camera's 640 &times; 480 clips, 144 seconds of video took 19 seconds to index, faces included; a library of 3 hours takes about 20 minutes, plus the time to read it from a network share.</p>
 
 <h3>What is said</h3>
@@ -653,8 +680,10 @@ speaks one language. Nothing leaves the computer.</p>
 The slideshow, rotating, the date tools, duplicates, <q>More like this</q> and Generate Video work on photos only for now: the videos are left out of them.</p>
 
 <p>What PhotoLiker has read from a video (its size, length, codec and dates) and its poster picture are kept on this computer in a catalog of their own, next to the photo index, so that a folder of videos on a network
-share is not read again on every visit. It can be deleted at any time; it only costs the time to read the videos again. The player is VLC's engine (the <code>libvlc</code> folder next to the program,
-with its licence and the place to get its source).</p>
+share is not read again on every visit. It can be deleted at any time; it only costs the time to read the videos again. The player is VLC's engine. It is not in the installer (that keeps the installer at 32 MB instead of 55 MB):
+the first time <strong>SupportVideo</strong> is turned on, or a video is played, the program says how big it is (about 40 MB) and where it comes from, and asks. <strong>OK</strong> downloads it once, with the progress in
+the status bar, and it stays on your computer, in <code>%LocalAppData%\PhotoLiker\libvlc</code>; nothing else is changed. If you say no, videos open in the program Windows plays them with, and you are asked again when you turn
+<strong>SupportVideo</strong> off and on. Its licence and the place to get its source are in the <code>libvlc</code> folder next to the program.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="theme">18. Dark and light theme</h2>
 
