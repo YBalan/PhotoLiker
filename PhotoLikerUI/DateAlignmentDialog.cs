@@ -1,12 +1,14 @@
 using System.Diagnostics;
 using System.Globalization;
 using PhotoLiker.Search;
+using PhotoLiker.Video;
 
 namespace PhotoLikerUI
 {
     /// <summary>
     /// Shows what "Align dates" would do - how many photos, and which - and does it when asked. The photos are looked at once
-    /// (the start of each file is read); what the ticks mean for each of them is worked out again at once whenever a tick changes.
+    /// (the start of each file is read); what the ticks mean for each of them is worked out again at once whenever a tick changes. Videos (when they are listed) are
+    /// looked at too: the date a video says it was recorded is its date taken, and only the dates of its file change (nothing is written into a video).
     /// </summary>
     internal sealed class DateAlignmentDialog : Form
     {
@@ -22,9 +24,10 @@ namespace PhotoLikerUI
         private readonly IReadOnlyCollection<string> _extensions;
         private readonly string _likedFolder;
         private readonly PhotoIndex? _index;
+        private readonly VideoCatalog? _videos;        // the videos of the folder, when they are listed; null: the videos are left out
         private readonly bool _dark;
 
-        private readonly Label _intro = new() { Dock = DockStyle.Fill, Height = 62, Padding = new Padding(0, 0, 0, 6) };
+        private readonly Label _intro = new() { Dock = DockStyle.Fill, Height = 84, Padding = new Padding(0, 0, 0, 6) };
         private readonly CheckBox _created = new() { Text = DateAlignmentStrings.OptionCreated, Checked = true, AutoSize = true };
         private readonly CheckBox _modified = new() { Text = DateAlignmentStrings.OptionModified, Checked = true, AutoSize = true };
         private readonly CheckBox _exif = new() { Text = DateAlignmentStrings.OptionExif, Checked = false, AutoSize = true };
@@ -66,13 +69,15 @@ namespace PhotoLikerUI
         private Phase _phase = Phase.Scanning;
         private CancellationTokenSource? _cts;
 
-        public DateAlignmentDialog(string folder, bool recursive, IReadOnlyCollection<string> extensions, string likedFolder, PhotoIndex? index, bool dark)
+        /// <param name="extensions">The files that are looked at: the photos, and the videos too when <paramref name="videos"/> is given.</param>
+        public DateAlignmentDialog(string folder, bool recursive, IReadOnlyCollection<string> extensions, string likedFolder, PhotoIndex? index, VideoCatalog? videos, bool dark)
         {
             _folder = folder;
             _recursive = recursive;
             _extensions = extensions;
             _likedFolder = likedFolder;
             _index = index;
+            _videos = videos;
             _dark = dark;
 
             Text = DateAlignmentStrings.Title;
@@ -279,11 +284,21 @@ namespace PhotoLikerUI
                 if (IsDisposed)
                     return;
 
+                // The photos are read from the start of the file; a video by its header (ffmpeg, as the viewer does, and kept for next time)
+                var photoFiles = files.Where(f => !f.IsVideo).ToList();
+                var videoFiles = _videos is null ? [] : files.Where(f => f.IsVideo).ToList();
+                files = [.. photoFiles, .. videoFiles];
+
                 var clock = Stopwatch.StartNew();
                 var now = DateTime.Now;
                 ShowBar(0, files.Count);
-                var progress = new Progress<int>(done => ShowScanProgress(done, files.Count, clock));
-                var facts = await Task.Run(() => DateAlignment.InspectAll(files, now, progress, cts.Token), cts.Token);
+                var photoProgress = new Progress<int>(done => ShowScanProgress(done, files.Count, clock));
+                var photoFacts = await Task.Run(() => DateAlignment.InspectAll(photoFiles, now, photoProgress, cts.Token), cts.Token);
+                var videoProgress = new Progress<int>(done => ShowScanProgress(photoFiles.Count + done, files.Count, clock));
+                var videoFacts = videoFiles.Count == 0 ? [] : await VideoDateFacts.InspectAllAsync(_videos!, videoFiles, videoProgress, cts.Token);
+                var facts = new PhotoDateFacts[files.Count];
+                photoFacts.CopyTo(facts, 0);
+                videoFacts.CopyTo(facts, photoFacts.Length);
                 if (IsDisposed)
                     return;
 
@@ -351,9 +366,7 @@ namespace PhotoLikerUI
         private void Replan(bool preferChange = false)
         {
             var options = CurrentOptions();
-            _entries = [.. _facts.Select(f => _assigned.TryGetValue(f.Path, out var given)
-                ? DateAlignment.Plan(f, options, given.Date, given.WriteTaken)
-                : DateAlignment.Plan(f, options))];
+            _entries = [.. _facts.Select(f => PlanOf(f, options))];
 
             Array.Clear(_counts);
             foreach (var entry in _entries)
@@ -369,6 +382,19 @@ namespace PhotoLikerUI
                 _filters.First(f => f.Status == wanted).Button.Checked = true;
             }
             RebuildView();
+        }
+
+        /// <summary>
+        /// What the options mean for one file. A video has no place for a date inside it, so the dates inside and a date taken that would be written into the file are for photos
+        /// only: of a video only the dates of the file are changed.
+        /// </summary>
+        private DateAlignmentEntry PlanOf(PhotoDateFacts facts, DateAlignmentOptions options)
+        {
+            var video = MediaKinds.IsVideo(facts.Path);
+            var own = video ? options with { ExifFields = false } : options;
+            return _assigned.TryGetValue(facts.Path, out var given)
+                ? DateAlignment.Plan(facts, own, given.Date, given.WriteTaken && !video)
+                : DateAlignment.Plan(facts, own);
         }
 
         private void RebuildView()
@@ -745,7 +771,10 @@ namespace PhotoLikerUI
                 return;
 
             var now = DateTime.Now;
-            var facts = await Task.Run(() => DateAlignment.InspectAll(fresh, now, null, CancellationToken.None));
+            var photos = fresh.Where(f => !f.IsVideo).ToList();
+            var facts = await Task.Run(() => DateAlignment.InspectAll(photos, now, null, CancellationToken.None));
+            if (_videos is not null && fresh.Any(f => f.IsVideo))
+                facts = [.. facts, .. await VideoDateFacts.InspectAllAsync(_videos, [.. fresh.Where(f => f.IsVideo)], null, CancellationToken.None)];
             if (IsDisposed)
                 return;
 
@@ -789,27 +818,35 @@ namespace PhotoLikerUI
             }
         }
 
-        /// <summary>Tells the index of the folder that the photos are the same, so that "Update index" does not analyze them again.</summary>
-        private async Task<string> UpdateIndexAsync(IReadOnlyList<AlignedFile> photos)
+        /// <summary>Tells the index of the folder (and the catalog of its videos) that the files are the same, so that "Update index" does not analyze them again.</summary>
+        private async Task<string> UpdateIndexAsync(IReadOnlyList<AlignedFile> done)
         {
-            if (_index is null || photos.Count == 0)
+            if (done.Count == 0)
                 return string.Empty;
 
-            var stamps = photos.Select(p => (p.Path, p.PreviousModifiedUtc.Ticks, p.ModifiedUtc.Ticks)).ToArray();
+            var photos = done.Where(p => !MediaKinds.IsVideo(p.Path)).ToList();
+            var videos = done.Where(p => MediaKinds.IsVideo(p.Path)).ToList();
             try
             {
                 await Task.Run(() =>
                 {
-                    _index.UpdateStamps(stamps);
-                    var now = DateTime.Now;
-                    foreach (var p in photos)
+                    if (_index is not null && photos.Count > 0)
                     {
-                        // The picture is the one that was analyzed; a date taken that was written or taken out changes the date the index has
-                        if (p.Length != p.PreviousLength)
-                            _index.Turn(p.Path, 0, p.PreviousLength, p.Length);
-                        if (p.Written.HasFlag(ExifDateFields.Original) || p.Length != p.PreviousLength)
-                            _index.RefreshDate(p.Path, p.CreatedUtc, p.ModifiedUtc, now);
+                        _index.UpdateStamps(photos.Select(p => (p.Path, p.PreviousModifiedUtc.Ticks, p.ModifiedUtc.Ticks)).ToArray());
+                        var now = DateTime.Now;
+                        foreach (var p in photos)
+                        {
+                            // The picture is the one that was analyzed; a date taken that was written or taken out changes the date the index has
+                            if (p.Length != p.PreviousLength)
+                                _index.Turn(p.Path, 0, p.PreviousLength, p.Length);
+                            if (p.Written.HasFlag(ExifDateFields.Original) || p.Length != p.PreviousLength)
+                                _index.RefreshDate(p.Path, p.CreatedUtc, p.ModifiedUtc, now);
+                        }
                     }
+
+                    // A video whose file has another date of change is another video to the catalog: its moments and its speech would be made again
+                    if (_videos is not null && videos.Count > 0)
+                        _videos.UpdateStamps(videos.Select(p => (p.Path, p.PreviousModifiedUtc.Ticks, p.ModifiedUtc.Ticks)).ToArray());
                 });
                 return string.Empty;
             }

@@ -21,7 +21,7 @@ namespace PhotoLikerUI
             toolStrip1.Items.Insert(toolStrip1.Items.IndexOf(generateVideoToolStripButton) + 1, _alignDatesButton);
         }
 
-        private void AlignDates()
+        private async void AlignDates()
         {
             var folder = _currentConfig.CurrentFolder;
             if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
@@ -36,11 +36,21 @@ namespace PhotoLikerUI
                 return;
             }
 
+            // A video that plays holds its file open: Windows would not let its dates be set
+            if (_player is { Visible: true })
+            {
+                HidePlayer();
+                await _player.StopAsync();
+            }
+
             _currentConfig.ApplyDefaultLikedFolder();
             var index = _folderSearch is { } search && SameFolder(search.Folder, folder) ? search.Index : null;
 
+            // With videos listed the dialog looks at them too (by the date recorded in them); without, as before, at the photos
+            var videos = _currentConfig.SupportVideo ? VideoLibrary.Current : null;
             using var dialog = new DateAlignmentDialog(
-                folder, _currentConfig.GoThroughSubFolders, _currentConfig.Extensions, _currentConfig.LikedFolder, index, _currentConfig.IsDarkTheme);
+                folder, _currentConfig.GoThroughSubFolders, videos is null ? _currentConfig.Extensions : _currentConfig.ListedExtensions, _currentConfig.LikedFolder, index, videos,
+                _currentConfig.IsDarkTheme);
             dialog.ShowDialog(this);
 
             if (!dialog.Changed)

@@ -512,7 +512,7 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 | **SpeechModel** | `tiny`, `base` or `small` (the one to use). |
 | **SpeechLanguage** | The language that is spoken: `ru`, `uk`, `en` ..., or `auto` (the model hears it for each video). |
 
-The group **6. Slideshow** has its own five rows, **Mode**, **Monitors**, **Timeout**, **Watermark** and **Effect**; see [Slideshow](#slideshow).
+The group **6. Slideshow** has its own nine rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **Effect**, **UseVideo**, **MuteVideo**, **VideoPart** and **LowerOtherAudio**; see [Slideshow](#slideshow).
 
 The rows of **Current File** and **TotalFiles** are read-only. **CurrentIndex** is the number of the shown photo, counted
 from 0: type another number into it to jump to that photo (a number outside the list goes to the nearest end).
@@ -680,7 +680,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   `Fade`, `Slide`, `Zoom`, `KenBurns`, `Random`) while the show runs. The name is written in the top left corner of every monitor for about two seconds
   (`Effect: Slide`), the next change of photo is made by that effect, and with `KenBurns` the photo that is on the screen begins to move at once. The effect
   the show ended with becomes the setting: the **Effect** row shows it afterwards, and it is saved with the other settings of the folder.
-- The settings are the five rows of the **6. Slideshow** group of the settings grid. They are kept in the settings file of the folder, so a
+- The settings are the nine rows of the **6. Slideshow** group of the settings grid (the last four are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
   folder can have its own.
 
 | Setting | Meaning |
@@ -690,6 +690,10 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 | **Timeout** | How many seconds a photo stays on the screen: 2 by default, not less than 0.2. The time counts from the moment the photo is on the screen, so a photo that is slow to come (a network share) is not shortened. |
 | **Watermark** | What is written in the bottom right corner, white on a dark band: `DateTime` (the default), the day and the time the photo was taken (`14 Aug 2025 09:12:07`, as everywhere in the program), `Year`, or `None`. The date is the one the search and <kbd>PageUp</kbd> / <kbd>PageDown</kbd> use: the date the camera wrote into the photo if it can be believed, else the date of the file (see [Aligning file dates](#aligning-file-dates)). A photo with no date at all gets no text. |
 | **Effect** | How one photo takes the place of the last. `Fade` (the default): the old photo dissolves into the new one. `Slide`: the new photo pushes the old one out to the left (the date in the corner stays where it is). `Zoom`: the new photo grows from 80% of its size while it fades in over the old one. `KenBurns`: every photo drifts and zooms slowly all the time it is on the screen (in or out, by 8 to 16%, around a point of the picture chosen at random, and never so that part of the screen it covered at the start is left bare), and dissolves into the next. `Random`: one of those four for every change, never the same twice in a row. `None`: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the **Timeout** (so a short timeout still leaves the photo on the screen for most of it); it begins when the timer ends, and the time of the new photo counts from then. While a change is under way the date fades out in the first half and the new one fades in in the second, so two dates are never written over each other. <kbd>Right</kbd> / <kbd>Left</kbd> put the next photo there at once, with no change (whoever holds a key wants to get on), but with `KenBurns` it still moves. <kbd>Down</kbd> / <kbd>Up</kbd> change the effect while the show runs (see above). With **Monitors** `All` all the monitors change at the same moment, each by the same effect. |
+| **UseVideo** | `False` (the default): the slideshow shows photos only. `True`: it plays the videos of the list as well, between the photos (there are videos in the list while **SupportVideo** is on). See [below](#videos-in-the-slideshow). |
+| **MuteVideo** | `True`: the videos of the slideshow play without their sound. `False` (the default). |
+| **VideoPart** | How much of a video is played. `OnlyFoundTimeFrames` (the default): only the places a search found in it, 6 seconds around each (2 before, 4 after; places that touch are one stretch); a video of a folder, where nothing was searched for, has none and is played whole. `FullVideo`: the whole video. |
+| **LowerOtherAudio** | While a video plays with its sound, the sound of the other programs (a player in the background, a browser) is turned down by this many percent, and put back when the video ends: 50 by default, 0 leaves them as they are, 100 silences them. Not used when **MuteVideo** is `True`. |
 
 **How the effects stay smooth.** GDI+, which draws everything else in the program, needs 13 ms (plus 7 ms for the black around it) to draw a full HD photo that is only partly there and 23 to 43 ms
 to draw one that is magnified (four times that on a 4K monitor: 50 ms, and 85 to 190 ms): that is a slide show of slides. So while an effect lasts, the photos are put together by a small compositor of our
@@ -716,6 +720,24 @@ A key that comes while its photo is still being made is not lost: up to three ar
 nearest that is ready first, so holding a key scrolls as fast as the photos can be made and never stands still. In a test on a local disk
 (12 MP test photos) a held key showed 59 of the 60 photos, at the 30 a second the keyboard repeats at; over a network share the reads set the pace.
 A photo that cannot be read is passed over (a list of only such photos says so on the black screen).
+
+
+### Videos in the slideshow
+
+With **UseVideo** on, the videos of the list are part of the show: the shown folder, or the results of a search (the **Photos** and **Videos** buttons of the search strip make them videos only, for
+a slideshow of what a search found in them). The photos go on exactly as they did; a video is played **in between**, and when it is over the show goes on.
+
+- **Where it plays.** On the screen PhotoLiker is on, and only there: with **Monitors** set to `All` the other monitors keep their photos while the video plays (the photos change together again when
+  it is over). A video that was shown in the window when <kbd>Alt</kbd>+<kbd>Enter</kbd> was pressed plays first.
+- **Where in the show.** `OneByOne`: a video plays where it lies in the list, after the photo it follows, when the screen goes past that photo. `Random`: videos are drawn in as often as they are
+  among the items, each once before any comes again. A list of videos only plays them one after the other (also in this order, or at random), on that screen.
+- **What is played.** With `OnlyFoundTimeFrames` and the results of a search shown, the places the search found (the orange places of the viewer's strip), 2 seconds before to 4 after each; a search by
+  date alone finds nothing in a video, so such a video is played whole. The date the video was recorded is written in the corner, as a photo's is.
+- **Keys.** <kbd>Right</kbd> / <kbd>Left</kbd> skip a video that plays (and in a list of videos only go to the next / the previous one); <kbd>Esc</kbd> and <kbd>Alt</kbd>+<kbd>Enter</kbd> go back.
+- **Sound.** The other programs' sound is turned down by **LowerOtherAudio** percent through the Windows mixer (every program has a volume of its own there) and put back when the videos are over
+  or the show ends; a volume you changed meanwhile is left as you set it. With **MuteVideo** nothing is touched.
+- **The player.** Videos are played by the same engine as in the viewer; if it has to be [downloaded](#videos), you are asked before the show starts. It is started before the first video so that
+  the screen does not wait for it (the first start can take seconds).
 
 ## Videos
 
@@ -773,7 +795,7 @@ until the file changes: on a router, 24 videos of a Canon camera took 9 seconds 
 **The video player is downloaded.** The engine that plays videos (VLC's libvlc, LGPL 2.1 or later) is not in the installer or the zip of a release (23 MB of the installer): the first time **SupportVideo**
 is turned on, or a video is played, the program says how big it is and where it comes from, and asks. Yes downloads it once, with the progress in the status bar, into
 `%LocalAppData%\PhotoLiker\libvlc\<version>` (40 MB from the releases of this project on GitHub; if it is not there, 83 MB, the same files, from VideoLAN's own server). A download is used only if it is the file whose
-SHA-256 the program knows, and the folder is made whole or not at all. No means that videos open in the program Windows plays them with, and the question comes again when **SupportVideo** is turned off and on.
+SHA-256 the program knows, and the folder is made whole or not at all. No means that videos open in the program Windows plays them with, and the question comes again when **SupportVideo** is turned off and on. When it was turning **SupportVideo** on that started the download, the folder is listed again once the player is there (as <kbd>F5</kbd> does); a download started by playing a video does not interrupt the video.
 A build from the source, and an installer made with `installer\build-installer.ps1 -BundleVlc` (for a computer with no internet), have the engine in `libvlc\win-x64` next to the program (86 MB) and download nothing.
 `installer\pack-libvlc.ps1` makes the zip for a new version of VLC (and the list of its files, `PhotoLiker.Video\libvlc-files.txt`); it is attached once to a pre-release named `libvlc-<version>`. Its licence and the place to get the source of VLC are in `libvlc\VLC-NOTICE.txt`.
 ## Big folders open at once
@@ -855,6 +877,10 @@ even on a network drive, and can be stopped) and shows, before anything is touch
 - A photo can be taken out of the run: select it, then <kbd>Space</kbd> or the right-click menu *Leave out of this run*.
 - A **double click** on a row opens the photo in the program Windows has for it (the right-click menu also has *Open* and *Show in
   File Explorer*, which opens the folder with the file selected), to look at it before deciding. This works while a run is in progress too.
+- **Videos.** With **SupportVideo** on, the videos of the folder are looked at too: the date a video says it was recorded (read from its header with ffmpeg, kept in the video catalog, and believed by the
+  same rules) is its date taken, and its file dates are set to it. Nothing is written into a video (it has no EXIF), so *Dates inside the photo too* and writing a given date into the file
+  are for photos only; a video is the same byte for byte after a run. The catalog of the videos is told the new date of change, so that **Update index** does not analyze them again.
+  The first look reads the header of every video that has not been read (about 0.4 seconds each over a network share, a few at a time).
 - Only the date the camera wrote is used, and only if PhotoLiker believes it (see [Photo search](#photo-search): not before
   1995, not in the future, not a camera that lost its clock). A photo without such a date is listed under **No usable EXIF
   date** and left as it is, unless you give it one (next list). The date of the camera has no time zone, so it is taken as the

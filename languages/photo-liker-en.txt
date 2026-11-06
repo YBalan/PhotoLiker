@@ -307,7 +307,7 @@ DateAlignmentStrings.StatusIndexing = Stop indexing before aligning dates.
 DateAlignmentStrings.StatusDone = Dates aligned: {0:N0} photos changed.
 DateAlignmentStrings.StatusUndone = Dates put back: {0:N0} photos.
 DateAlignmentStrings.Title = Align file dates with the date taken
-DateAlignmentStrings.Intro = Sets the dates of the photo files to the date taken - the date the camera wrote into the photo (EXIF). A copied file gets the day of the copy, so without this the file dates say nothing about when a photo was shot. The pictures are not changed. Nothing happens until you press the button at the bottom; every run is logged in the photo folder and can be undone.
+DateAlignmentStrings.Intro = Sets the dates of the photo files to the date taken - the date the camera wrote into the photo (EXIF). A copied file gets the day of the copy, so without this the file dates say nothing about when a photo was shot. The pictures are not changed. Nothing happens until you press the button at the bottom; every run is logged in the photo folder and can be undone. Videos (when SupportVideo is on) are aligned the same way, by the date recorded in the video: only the dates of the video file change, the video itself is never written.
 DateAlignmentStrings.OptionCreated = File created date
 DateAlignmentStrings.OptionModified = File modified date
 DateAlignmentStrings.OptionExif = Dates inside the photo too (Date Time Digitized and Date Last Saved follow Date Taken (Original))
@@ -830,6 +830,10 @@ SettingsStrings.SlideshowMonitors = Which screens the slideshow covers. Current:
 SettingsStrings.SlideshowTimeout = How many seconds the slideshow keeps a photo on the screen; 2 by default, not less than 0.2. The time counts from the moment the photo appears, and Left or Right start it again.
 SettingsStrings.SlideshowWatermark = What the slideshow writes in the bottom right corner of the screen: Year or DateTime (the day and the time) the photo was taken, or None. The date is the one the search and PageUp / PageDown use: the date the camera wrote into the photo, else the date of the file; a photo without a date gets no text.
 SettingsStrings.SlideshowEffect = How the slideshow changes from one photo to the next. None: at once. Fade: the old photo dissolves into the new one. Slide: the new photo pushes the old one out to the left. Zoom: the new photo grows from a smaller size as it fades in. KenBurns: every photo drifts and zooms slowly all the time it is shown, and dissolves into the next. Random: one of Fade, Slide, Zoom and KenBurns for every change, never the same twice in a row. A change takes 0.8 seconds at most and never more than 40% of the Timeout. Left and Right put the next photo there at once (with KenBurns it still moves).
+SettingsStrings.SlideshowUseVideo = True: the slideshow (Alt+Enter) plays the videos of the list as well, between the photos (there are videos in the list while SupportVideo is on). False: it shows photos only. With several screens a video plays on the screen PhotoLiker is on only; the others go on with photos.
+SettingsStrings.SlideshowMuteVideo = True: the videos of the slideshow play without their sound.
+SettingsStrings.SlideshowVideoPart = How much of a video the slideshow plays. OnlyFoundTimeFrames: only the places a search found in it, 6 seconds around each (2 before and 4 after); a video in the slideshow of a folder, where nothing was searched for, has none and is played whole. FullVideo: the whole video.
+SettingsStrings.SlideshowLowerOtherAudio = While a video plays with its sound, the sound of the other programs (a player in the background, a browser) is turned down by this many percent, and put back when the video ends. 50 by default; 0 leaves them as they are, 100 silences them. Not used when MuteVideo is True.
 
 # ──────────── SlideshowStrings ────────────
 SlideshowStrings.Loading = Loading...

@@ -109,6 +109,19 @@ namespace PhotoLiker.Core
         [JsonConverter(typeof(SlideshowEffectConverter))]
         public SlideshowEffect SlideshowEffect { get; set; } = SlideshowEffect.Fade;
 
+        /// <summary>Whether the slideshow plays the videos of the list as well (there are some only while <see cref="SupportVideo"/> is on). Off by default: a slideshow shows photos.</summary>
+        public bool SlideshowUseVideo { get; set; } = false;
+
+        /// <summary>Whether the videos of the slideshow play without their sound.</summary>
+        public bool SlideshowMuteVideo { get; set; } = false;
+
+        /// <summary>How much of a video the slideshow plays: the places a search found in it (the default), or all of it.</summary>
+        [JsonConverter(typeof(SlideshowVideoPartConverter))]
+        public SlideshowVideoPart SlideshowVideoPart { get; set; } = SlideshowVideoPart.OnlyFoundTimeFrames;
+
+        /// <summary>By how many percent the sound of the other programs is turned down while a video plays with its sound (50: to half of what it was; 0: left alone), see <see cref="SlideshowVideo.LowerOtherAudioOf"/>.</summary>
+        public int SlideshowLowerOtherAudio { get; set; } = SlideshowVideo.DefaultLowerOtherAudioPercent;
+
         // Main window of the WinForms app
         public int    WindowLeft     { get; set; } = 100;
         public int    WindowTop      { get; set; } = 100;

@@ -436,7 +436,7 @@
             if (name == nameof(Settings.SupportVideo) && _currentConfig.SupportVideo)
             {
                 _engineDeclined = false;
-                _ = EnsureVideoEngineAsync();
+                _ = RelistAfterEngineAsync();
             }
         }
 

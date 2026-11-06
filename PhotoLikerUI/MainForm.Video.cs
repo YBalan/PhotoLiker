@@ -94,6 +94,25 @@ namespace PhotoLikerUI
             }
         }
 
+        /// <summary>
+        /// Videos were just turned on: if the engine that plays them has to be downloaded, the folder is listed again once it is there (like F5), so that the list and the viewer
+        /// are made with the player in place. Nothing is listed again when the engine was there already, when the answer was no or the download failed, or when the person has gone
+        /// to another folder or turned videos off meanwhile.
+        /// </summary>
+        private async Task RelistAfterEngineAsync()
+        {
+            var folder = _currentConfig.CurrentFolder;
+            var wasMissing = !VideoPlayerPanel.EngineInstalled;
+            if (!await EnsureVideoEngineAsync() || !wasMissing)
+                return;
+
+            if (IsDisposed || !_currentConfig.SupportVideo || string.IsNullOrWhiteSpace(folder) || !SameFolder(folder, _currentConfig.CurrentFolder))
+                return;
+
+            ClearDisplay();
+            LoadFolder(useSavedList: false);
+        }
+
         private async Task<bool> DownloadEngineAsync()
         {
             _engineStop ??= new CancellationTokenSource();
