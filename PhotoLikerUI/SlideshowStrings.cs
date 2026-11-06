@@ -8,6 +8,7 @@ namespace PhotoLikerUI
         // On the screen of the slideshow
         public static string Loading => T();
         public static string NothingToShow => T();
+        public static string EffectFormat => T();
 
         // Status bar of the main window
         public static string StatusNoPhotos => T();

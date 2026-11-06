@@ -248,7 +248,7 @@ AboutStrings.ShortcutRotateAction = Повернути фото на чверт�
 AboutStrings.ShortcutZoomInput = Ctrl+колесо миші
 AboutStrings.ShortcutZoomAction = Збільшити фото (перетягуйте, щоб зсунути); над стрічкою: розмір мініатюр
 AboutStrings.ShortcutSlideshowInput = Alt+Enter
-AboutStrings.ShortcutSlideshowAction = Показ слайдів на весь екран (Вправо / Вліво — сусіднє з показаного фото, Esc — назад)
+AboutStrings.ShortcutSlideshowAction = Показ слайдів на весь екран (Вправо / Вліво — сусіднє з показаного фото, Вниз / Вгору — наступний / попередній ефект, Esc — назад)
 AboutStrings.ShortcutCloseInput = Esc
 AboutStrings.ShortcutCloseAction = Закрити результати пошуку
 AboutStrings.ShortcutSearchInput = Enter
@@ -782,10 +782,12 @@ SettingsStrings.SlideshowMode = Яке фото показ слайдів (Alt+E
 SettingsStrings.SlideshowMonitors = Які екрани охоплює показ слайдів. Current — екран, на якому PhotoLiker. All — усі підключені екрани, кожен зі своїм фото, і ніколи те саме фото на двох екранах; вони змінюються разом. У режимі Random кожен екран бере наступне фото випадкового порядку; в OneByOne екрани зліва направо показують фото, що йдуть одне за одним (показане фото лишається на екрані, де вікно), і наступний набір починається там, де закінчився цей. Вправо і Вліво переводять кожен екран до сусіднього фото. Якщо екранів більше, ніж фото, найвіддаленіші від вікна не використовуються.
 SettingsStrings.SlideshowTimeout = Скільки секунд показ слайдів тримає фото на екрані; за замовчуванням 2, не менше 0,2. Час відлічується від появи фото, а Вправо чи Вліво починають його знову.
 SettingsStrings.SlideshowWatermark = Що показ слайдів пише в правому нижньому куті екрана: Year — рік або DateTime — день і час зйомки фото, або None. Дата та сама, що в пошуку та PageUp / PageDown: дата, яку камера записала у фото, а якщо її немає — дата файлу; фото без дати лишається без напису.
+SettingsStrings.SlideshowEffect = Як показ слайдів переходить від одного фото до наступного. None — одразу. Fade — старе фото розчиняється в новому. Slide — нове фото виштовхує старе вліво. Zoom — нове фото виростає з меншого розміру, проявляючись. KenBurns — кожне фото повільно зсувається й наближається весь час, поки воно показане, і розчиняється в наступному. Random — одне з Fade, Slide, Zoom і KenBurns для кожної зміни, ніколи двічі поспіль те саме. Зміна триває не довше 0,8 секунди і не більше 40% від Timeout. Вправо і Вліво ставлять наступне фото одразу (з KenBurns воно все одно рухається).
 
 # ──────────── SlideshowStrings ────────────
 SlideshowStrings.Loading = Завантаження...
 SlideshowStrings.NothingToShow = Жодного фото не вдається показати.
+SlideshowStrings.EffectFormat = Ефект: {0}
 SlideshowStrings.StatusNoPhotos = Немає фото для показу слайдів.
 SlideshowStrings.StatusEndedFormat = Показ слайдів завершено на «{0}» ({1} з {2}).
 

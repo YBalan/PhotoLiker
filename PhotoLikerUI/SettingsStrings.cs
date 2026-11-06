@@ -31,5 +31,6 @@ namespace PhotoLikerUI
         public static string SlideshowMonitors => T();
         public static string SlideshowTimeout => T();
         public static string SlideshowWatermark => T();
+        public static string SlideshowEffect => T();
     }
 }

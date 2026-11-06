@@ -24,23 +24,26 @@ public class SlideshowTests : IDisposable
         Assert.Equal(SlideshowMonitors.Current, settings.SlideshowMonitors);
         Assert.Equal(2, settings.SlideshowTimeout);
         Assert.Equal(SlideshowWatermark.DateTime, settings.SlideshowWatermark);
+        Assert.Equal(SlideshowEffect.Fade, settings.SlideshowEffect);
     }
 
     [Fact]
     public void TheSettings_AreKeptInTheFileOfTheFolder_ByName()
     {
-        new Settings { CurrentFolder = _tempDir, SlideshowMode = SlideshowMode.OneByOne, SlideshowMonitors = SlideshowMonitors.All, SlideshowTimeout = 0.5, SlideshowWatermark = SlideshowWatermark.Year }.Save(_tempDir);
+        new Settings { CurrentFolder = _tempDir, SlideshowMode = SlideshowMode.OneByOne, SlideshowMonitors = SlideshowMonitors.All, SlideshowTimeout = 0.5, SlideshowWatermark = SlideshowWatermark.Year, SlideshowEffect = SlideshowEffect.KenBurns }.Save(_tempDir);
 
         var json = File.ReadAllText(Settings.GetFilePath(_tempDir));
         Assert.Contains("\"SlideshowMode\": \"OneByOne\"", json);
         Assert.Contains("\"SlideshowWatermark\": \"Year\"", json);
         Assert.Contains("\"SlideshowMonitors\": \"All\"", json);
+        Assert.Contains("\"SlideshowEffect\": \"KenBurns\"", json);
 
         var loaded = Settings.Load(_tempDir);
         Assert.Equal(SlideshowMode.OneByOne, loaded.SlideshowMode);
         Assert.Equal(SlideshowMonitors.All, loaded.SlideshowMonitors);
         Assert.Equal(0.5, loaded.SlideshowTimeout);
         Assert.Equal(SlideshowWatermark.Year, loaded.SlideshowWatermark);
+        Assert.Equal(SlideshowEffect.KenBurns, loaded.SlideshowEffect);
     }
 
     [Fact]
@@ -53,13 +56,14 @@ public class SlideshowTests : IDisposable
         Assert.Equal(7, loaded.CacheSize);
         Assert.Equal(SlideshowMode.Random, loaded.SlideshowMode);
         Assert.Equal(SlideshowWatermark.DateTime, loaded.SlideshowWatermark);
+        Assert.Equal(SlideshowEffect.Fade, loaded.SlideshowEffect);
     }
 
     [Fact]
     public void AName_ThisVersionDoesNotKnow_DoesNotSpoilTheRestOfTheFile()
     {
         File.WriteAllText(Settings.GetFilePath(_tempDir),
-            """{ "CacheSize": 7, "SlideshowMode": "Spiral", "SlideshowWatermark": 12, "SlideshowMonitors": "Both", "SlideshowTimeout": 3 }""");
+            """{ "CacheSize": 7, "SlideshowMode": "Spiral", "SlideshowWatermark": 12, "SlideshowMonitors": "Both", "SlideshowEffect": "Spin", "SlideshowTimeout": 3 }""");
 
         var loaded = Settings.Load(_tempDir);
 
@@ -68,6 +72,7 @@ public class SlideshowTests : IDisposable
         Assert.Equal(SlideshowMode.Random, loaded.SlideshowMode);
         Assert.Equal(SlideshowMonitors.Current, loaded.SlideshowMonitors);
         Assert.Equal(SlideshowWatermark.DateTime, loaded.SlideshowWatermark);
+        Assert.Equal(SlideshowEffect.Fade, loaded.SlideshowEffect);
     }
 
     [Theory]

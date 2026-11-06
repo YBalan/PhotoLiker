@@ -66,6 +66,10 @@ namespace PhotoLiker.Core
         [JsonConverter(typeof(SlideshowWatermarkConverter))]
         public SlideshowWatermark SlideshowWatermark { get; set; } = SlideshowWatermark.DateTime;
 
+        /// <summary>How the slideshow changes from one photo to the next, and whether a photo moves while it is shown, see <see cref="SlideshowEffects"/>.</summary>
+        [JsonConverter(typeof(SlideshowEffectConverter))]
+        public SlideshowEffect SlideshowEffect { get; set; } = SlideshowEffect.Fade;
+
         // Main window of the WinForms app
         public int    WindowLeft     { get; set; } = 100;
         public int    WindowTop      { get; set; } = 100;

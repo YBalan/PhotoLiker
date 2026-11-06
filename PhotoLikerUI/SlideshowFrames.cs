@@ -1,18 +1,89 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 
 namespace PhotoLikerUI
 {
     /// <summary>
+    /// Pixels in a Format32bppPArgb bitmap that can be reached as an array as well: the array is kept where the garbage collector does not move it and the
+    /// bitmap is a view of it, so GDI+ can draw the pixels (a plain copy to the screen) and <see cref="FrameCompositor"/> can work on them (the effects), with
+    /// one copy of them in memory and no pointers in our code.
+    /// </summary>
+    internal sealed class PixelCanvas : IDisposable
+    {
+        public PixelCanvas(int width, int height)
+        {
+            Width = width;
+            Height = height;
+            Pixels = GC.AllocateUninitializedArray<uint>(width * height, pinned: true);
+            Image = new Bitmap(width, height, width * 4, PixelFormat.Format32bppPArgb, Marshal.UnsafeAddrOfPinnedArrayElement(Pixels, 0));
+        }
+
+        public int Width { get; }
+        public int Height { get; }
+        public uint[] Pixels { get; }
+        public Bitmap Image { get; }
+
+        /// <summary>A canvas with the pixels of <paramref name="source"/>, which is disposed: it has been used up.</summary>
+        public static PixelCanvas Take(Bitmap source)
+        {
+            var canvas = new PixelCanvas(source.Width, source.Height);
+            try
+            {
+                using (var g = Graphics.FromImage(canvas.Image))
+                {
+                    g.CompositingMode = CompositingMode.SourceCopy;
+                    g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                    g.PixelOffsetMode = PixelOffsetMode.Half;
+                    g.DrawImage(source, new Rectangle(0, 0, canvas.Width, canvas.Height));
+                }
+                source.Dispose();
+                return canvas;
+            }
+            catch
+            {
+                canvas.Dispose();
+                source.Dispose();
+                throw;
+            }
+        }
+
+        public void Dispose() => Image.Dispose(); // the array goes when nobody has the canvas any more, the bitmap must not outlive it
+    }
+
+    /// <summary>
     /// A photo of the slideshow, already scaled to the screen it is shown on (so it is drawn as it is, with no scaling at all), and the date it was taken,
     /// for the watermark. It is a tenth of the size of the decoded photo that <see cref="PhotoCache"/> keeps: 8 MB on a full HD screen, for a 24 MP photo of 96 MB.
     /// </summary>
-    internal sealed class SlideshowFrame(Bitmap image, DateTime? taken) : IDisposable
+    internal sealed class SlideshowFrame : IDisposable
     {
-        public Bitmap Image { get; } = image;
-        public DateTime? Taken { get; } = taken;
-        public long Bytes { get; } = (long)image.Width * image.Height * 4;
+        private readonly PixelCanvas _canvas;
 
-        public void Dispose() => Image.Dispose();
+        /// <summary>Takes <paramref name="image"/>: its pixels are copied and it is disposed.</summary>
+        public SlideshowFrame(Bitmap image, DateTime? taken, string path)
+        {
+            _canvas = PixelCanvas.Take(image);
+            Taken = taken;
+            Path = path;
+            Bytes = (long)_canvas.Width * _canvas.Height * 4;
+        }
+
+        public Bitmap Image => _canvas.Image;
+
+        /// <summary>The same pixels as an array, for <see cref="FrameCompositor"/>.</summary>
+        public uint[] Pixels => _canvas.Pixels;
+
+        public int Width => _canvas.Width;
+        public int Height => _canvas.Height;
+        public DateTime? Taken { get; }
+
+        /// <summary>The file the photo is from.</summary>
+        public string Path { get; }
+
+        public long Bytes { get; }
+
+        public void Dispose() => _canvas.Dispose();
     }
 
     /// <summary>
@@ -39,6 +110,7 @@ namespace PhotoLikerUI
         private IReadOnlyList<PhotoFile> _window = [];
         private HashSet<string> _wanted = new(StringComparer.Ordinal);
         private string? _pinned;
+        private string? _alsoPinned;
         private long _bytes;
         private int _activePumps;
 
@@ -64,12 +136,13 @@ namespace PhotoLikerUI
         /// <summary>
         /// Says which photos to have ready, the one that is needed first at the front: what is not among them is dropped (the farthest first, if the frames
         /// weigh more than the memory allowed), what is missing is made in that order. The frame on the screen is <paramref name="pinned"/>:
-        /// it stays whatever happens, because it is being painted.
+        /// it stays whatever happens, because it is being painted; so is <paramref name="alsoPinned"/>, the one that is leaving it while an effect lasts.
         /// </summary>
-        public void SetWindow(IReadOnlyList<PhotoFile> mostNeededFirst, string? pinned)
+        public void SetWindow(IReadOnlyList<PhotoFile> mostNeededFirst, string? pinned, string? alsoPinned = null)
         {
             _window = mostNeededFirst;
             _pinned = pinned;
+            _alsoPinned = alsoPinned;
             _wanted = new HashSet<string>(mostNeededFirst.Select(photo => photo.OriginalFilePath), StringComparer.Ordinal);
 
             foreach (var path in _frames.Keys.Where(p => !_wanted.Contains(p) && !IsPinned(p)).ToList())
@@ -96,7 +169,8 @@ namespace PhotoLikerUI
             _bytes = 0;
         }
 
-        private bool IsPinned(string path) => string.Equals(path, _pinned, StringComparison.Ordinal);
+        private bool IsPinned(string path) =>
+            string.Equals(path, _pinned, StringComparison.Ordinal) || string.Equals(path, _alsoPinned, StringComparison.Ordinal);
 
         private void StartPumps()
         {

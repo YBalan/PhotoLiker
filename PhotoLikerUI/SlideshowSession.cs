@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace PhotoLikerUI
 {
     /// <summary>
@@ -14,6 +16,11 @@ namespace PhotoLikerUI
     /// (<see cref="SlideshowFrames"/>): the few next to the shown one of each screen, more of them in the direction the person is going, and the next random ones,
     /// which are decided ahead. And a key that comes while the photos it wants are still being made is kept (up to <see cref="MaxQueuedSteps"/>) and shown when they are
     /// there, the nearest set that is ready first, rather than skipped, so holding a key scrolls as fast as the photos can be made and never freezes.
+    ///
+    /// The effect (<see cref="SlideshowEffect"/>) is chosen here and carried out by the screens: the timer's change of photos is the one that dissolves, slides
+    /// or zooms (the same way on all the screens, at the same moment); a key puts the photo there at once, because whoever presses it wants to get on, but
+    /// the photo moves if the effect is Ken Burns. A random effect is drawn anew for every change. Down and Up choose the next and the previous effect while the
+    /// show runs: the name is written in a corner of every screen for a moment, and the next change is made by it (a Ken Burns photo starts to move at once).
     /// </summary>
     internal sealed class SlideshowSession : IDisposable
     {
@@ -31,11 +38,15 @@ namespace PhotoLikerUI
         private readonly int[] _first;                         // the photos to begin with, one for each screen
         private readonly SlideshowShuffle? _shuffle;           // in the random mode
         private readonly System.Windows.Forms.Timer _timer = new();
+        private SlideshowEffect _effect;
+        private readonly double _timeoutSeconds;
 
         private readonly int[] _shown;                         // the place in the list of the photo on each screen, -1 before the first
         private int _direction = 1;                            // the way the person goes, 1 right and -1 left
         private int _steps;                                    // Right (+1) and Left (-1) keys not shown yet, up to MaxQueuedSteps either way
         private int[]? _jump;                                  // the photos the timer or the start asks for, while they are being made
+        private bool _jumpByTimer;                             // _jump is the timer's, so its photos come with the effect (not the start's)
+        private SlideshowEffect _lastEffect;                   // the effect of the last change, so a random one is not the same twice
         private bool _scrolling;                               // a key was used since the timer last picked random photos
         private bool _closing;
         private bool _cursorHidden;
@@ -45,7 +56,7 @@ namespace PhotoLikerUI
         /// <param name="primary">Which of them the main window is on. With more screens than photos, those farthest from it are left out.</param>
         public SlideshowSession(
             IReadOnlyList<PhotoFile> photos, int start, SlideshowMode mode, double timeoutSeconds, SlideshowWatermark watermark,
-            IReadOnlyList<Rectangle> screens, int primary)
+            IReadOnlyList<Rectangle> screens, int primary, SlideshowEffect effect = SlideshowEffect.None)
         {
             ArgumentOutOfRangeException.ThrowIfZero(photos.Count);
             ArgumentOutOfRangeException.ThrowIfZero(screens.Count);
@@ -71,11 +82,16 @@ namespace PhotoLikerUI
                 screen.Frames.LoadFailed += (_, _) => Advance();
             }
 
-            _timer.Interval = (int)Math.Round(Slideshow.TimeoutOf(timeoutSeconds) * 1000);
+            _effect = effect;
+            _timeoutSeconds = Slideshow.TimeoutOf(timeoutSeconds);
+            _timer.Interval = (int)Math.Round(_timeoutSeconds * 1000);
             _timer.Tick += (_, _) => AdvanceByTimer();
         }
 
         public int ScreenCount => _screens.Length;
+
+        /// <summary>The effect the show has now: the one it began with, or the one Down and Up chose last.</summary>
+        public SlideshowEffect Effect => _effect;
 
         /// <summary>The file of the photo that was on the screen of the main window last; null if none was shown.</summary>
         public string? LastShownPath => PathOf(_shown[_primary]);
@@ -161,6 +177,12 @@ namespace PhotoLikerUI
                 case Keys.Left:
                     Step(-1);
                     return true;
+                case Keys.Down: // down the drop-down of the Effect row
+                    ChangeEffect(1);
+                    return true;
+                case Keys.Up:
+                    ChangeEffect(-1);
+                    return true;
                 default:
                     return false;
             }
@@ -209,6 +231,7 @@ namespace PhotoLikerUI
             _direction = direction;
             _scrolling = true;
             _jump = null; // the person takes over from the timer
+            _jumpByTimer = false;
             _steps = Math.Clamp(_steps + direction, -MaxQueuedSteps, MaxQueuedSteps);
             _timer.Stop(); // the photos that come start it again
             Prefetch();    // the way may have changed
@@ -218,12 +241,31 @@ namespace PhotoLikerUI
                 RestartTimer(); // Right and Left cancelled each other: nothing new comes to start it
         }
 
+        /// <summary>Down / Up: the next / previous effect, from now on; the person is told which, on every screen.</summary>
+        internal void ChangeEffect(int direction)
+        {
+            _effect = SlideshowEffects.Next(_effect, direction);
+
+            var text = string.Format(SlideshowStrings.EffectFormat, _effect);
+            foreach (var screen in _screens)
+                screen.ShowNotice(text);
+
+            if (_effect == SlideshowEffect.KenBurns)
+            {
+                // The photo that is on the screen has none yet: it begins to move now, not at the next change
+                var plan = PlanEffect(byTimer: false);
+                foreach (var screen in _screens)
+                    screen.StartMotion(plan);
+            }
+        }
+
         // ── what comes next ────────────────────────────────────────────────
 
         private void AdvanceByTimer()
         {
             _timer.Stop(); // the photos that come start it again
             _steps = 0;
+            _jumpByTimer = true;
 
             if (_shuffle is not null)
             {
@@ -269,8 +311,10 @@ namespace PhotoLikerUI
             {
                 if (TryGetFrames(jump, out var frames))
                 {
+                    var byTimer = _jumpByTimer;
                     _jump = null;
-                    ShowFrames(jump, frames);
+                    _jumpByTimer = false;
+                    ShowFrames(jump, frames, byTimer);
                     return;
                 }
 
@@ -365,16 +409,35 @@ namespace PhotoLikerUI
             }
         }
 
-        private void ShowFrames(int[] photos, SlideshowFrame[] frames)
+        /// <param name="byTimer">The change is the timer's: the photos take each other's place by the effect. Else (a key, the start) they are just there.</param>
+        private void ShowFrames(int[] photos, SlideshowFrame[] frames, bool byTimer = false)
         {
+            var plan = PlanEffect(byTimer);
             for (var screen = 0; screen < photos.Length; screen++)
             {
                 _shown[screen] = photos[screen];
-                _screens[screen].ShowFrame(frames[screen]);
+                _screens[screen].ShowFrame(frames[screen], plan);
             }
 
             Prefetch(); // the photos that were shown before can go now
             RestartTimer();
+        }
+
+        /// <summary>What the screens do with the photos of this change: one plan for all of them, with one clock, so that they change in step.</summary>
+        private SlideshowShowPlan PlanEffect(bool byTimer)
+        {
+            if (_effect == SlideshowEffect.None)
+                return default;
+
+            var effect = SlideshowEffects.Resolve(_effect, _lastEffect, Random.Shared.Next);
+            _lastEffect = effect;
+
+            var transition = byTimer ? SlideshowEffects.TransitionOf(effect) : SlideshowTransition.None;
+            var seconds = SlideshowEffects.TransitionSeconds(effect, _timeoutSeconds);
+            return new SlideshowShowPlan(
+                transition, transition == SlideshowTransition.None ? 0 : seconds,
+                SlideshowEffects.HasMotion(effect), SlideshowEffects.MotionSeconds(_timeoutSeconds, seconds),
+                Stopwatch.GetTimestamp());
         }
 
         private void RestartTimer()
@@ -447,7 +510,8 @@ namespace PhotoLikerUI
                         Add(coming[i]);
                 }
 
-                _screens[screen].Frames.SetWindow([.. order.Select(index => _photos[index])], PathOf(_shown[screen]));
+                // The photo that is leaving while an effect lasts is still being painted: it stays as well
+                _screens[screen].Frames.SetWindow([.. order.Select(index => _photos[index])], PathOf(_shown[screen]), _screens[screen].OutgoingPath);
             }
         }
 

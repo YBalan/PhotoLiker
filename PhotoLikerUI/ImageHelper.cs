@@ -135,7 +135,7 @@ namespace PhotoLikerUI
                 // A file the Windows imaging component will not take, which GDI+ (what the window reads with) may
                 frame = SlideWithGdi(bytes, screen);
             }
-            return new SlideshowFrame(frame, taken);
+            return new SlideshowFrame(frame, taken, photo.OriginalFilePath); // takes the bitmap: its pixels are copied into the frame's own canvas
         }
 
         /// <summary>
