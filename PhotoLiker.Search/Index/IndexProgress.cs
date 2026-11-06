@@ -9,6 +9,12 @@ namespace PhotoLiker.Search
 
         /// <summary>Only the dates of photos that are indexed already are read: quick, and no models are needed.</summary>
         ReadingDates,
+
+        /// <summary>The videos of the folder are read and their pictures analyzed (PhotoLiker.Video); <c>Done</c> and <c>Total</c> are seconds of video.</summary>
+        Videos,
+
+        /// <summary>What is said in the videos of the folder is turned into text (PhotoLiker.Video); <c>Done</c> and <c>Total</c> are videos, the speed is seconds of speech read in a second.</summary>
+        Speech,
     }
 
     /// <summary>What the indexing is doing right now, for a progress bar and a line of text.</summary>

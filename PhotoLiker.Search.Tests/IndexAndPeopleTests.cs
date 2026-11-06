@@ -12,7 +12,7 @@ public class PhotoIndexTests : IDisposable
         _data.Dispose();
     }
 
-    private static IndexedPhoto Photo(string path, float[]? clip, params (float X, float Y, float W, float H, float[] Embedding)[] faces)
+    private static IndexedPhoto Photo(string path, float[] clip, params (float X, float Y, float W, float H, float[] Embedding)[] faces)
     {
         var photo = new IndexedPhoto(path, length: 1000, modifiedTicks: 5000)
         {
@@ -400,7 +400,7 @@ public class FolderIndexTests : IDisposable
 
     private int _added;
 
-    private IndexedPhoto Add(string path, float[]? clip, params float[][] faceVectors)
+    private IndexedPhoto Add(string path, float[] clip, params float[][] faceVectors)
     {
         // A size of its own: photos of one size, time and picture are copies of one photo, which a search shows once
         var photo = new IndexedPhoto(path, length: 10 + _added++, modifiedTicks: 20) { Clips = Vectors.Clips(clip), FaceVersion = 1 };

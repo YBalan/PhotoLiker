@@ -2,7 +2,7 @@ namespace PhotoLikerUI
 {
     /// <summary>
     /// Alt+Enter: the photos of the list as a slideshow on the whole screen the window is on, or on every screen (see <see cref="SlideshowSession"/>), beginning with the
-    /// photo that is shown. How it runs is in the rows of the "4. Slideshow" category of the settings. When it ends the window shows the photo it ended on, on
+    /// photo that is shown. How it runs is in the rows of the "6. Slideshow" category of the settings. When it ends the window shows the photo it ended on, on
     /// the screen of the window.
     /// </summary>
     public partial class MainForm
@@ -18,21 +18,34 @@ namespace PhotoLikerUI
             using (slideshow)
             {
                 slideshow.Run(this);
+                KeepTheEffectThatWasChosen(slideshow.Effect);
                 ShowWhereSlideshowEnded(slideshow.LastShownPath);
             }
+        }
+
+        /// <summary>Down and Up change the effect while the slideshow runs; the one it ended with is the setting from then on (it is saved with the others, and the grid shows it).</summary>
+        private void KeepTheEffectThatWasChosen(SlideshowEffect effect)
+        {
+            if (_currentConfig.SlideshowEffect == effect)
+                return;
+
+            _currentConfig.SlideshowEffect = effect;
+            settingsPropertyGrid.Refresh();
         }
 
         /// <summary>The slideshow of the list that is open (the photos of the folder, or the search results while they are shown); null if it has no photos.</summary>
         private SlideshowSession? CreateSlideshow()
         {
-            var files = _currentConfig.Files;
+            // The slideshow shows photos: the videos of the list are left out of it
+            var files = _currentConfig.Files.Where(f => !f.IsVideo).ToList();
             if (files.Count == 0)
                 return null;
 
             var start = pictureBox1.Tag is string shown ? Math.Max(0, files.IndexOf(shown)) : 0;
             var (screens, primary) = SlideshowScreens();
             return new SlideshowSession(
-                files, start, _currentConfig.SlideshowMode, _currentConfig.SlideshowTimeout, _currentConfig.SlideshowWatermark, screens, primary);
+                files, start, _currentConfig.SlideshowMode, _currentConfig.SlideshowTimeout, _currentConfig.SlideshowWatermark, screens, primary,
+                _currentConfig.SlideshowEffect);
         }
 
         /// <summary>The screens the slideshow covers, left to right, and which of them the window is on: that one only, or every screen that is connected.</summary>

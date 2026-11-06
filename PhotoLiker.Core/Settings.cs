@@ -21,6 +21,32 @@ namespace PhotoLiker.Core
         public bool   GoThroughSubFoldersAlternateSpelling { set => GoThroughSubFolders = value; }
 
         public string[] Extensions   { get; set; } = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"];
+        /// <summary>
+        /// Whether the videos of the folder are listed with its photos (see <see cref="VideoExtensions"/>): they are shown, played, liked, sorted into groups and
+        /// deleted like photos. Off by default, so a folder that holds videos looks as it always did until this is turned on.
+        /// </summary>
+        public bool   SupportVideo   { get; set; } = false;
+
+        /// <summary>The file extensions that count as videos when <see cref="SupportVideo"/> is on, see <see cref="MediaKinds.DefaultVideoExtensions"/>.</summary>
+        public string[] VideoExtensions { get; set; } = [.. MediaKinds.DefaultVideoExtensions];
+
+        /// <summary>
+        /// Whether "Update index" also turns what is said in the videos into text (speech recognition on this computer), so that a word that is said finds the video: slow (about a third of
+        /// the length of the speech with the model that works) and a model of hundreds of megabytes to download, which is why it is asked for. Needs <see cref="SupportVideo"/>.
+        /// </summary>
+        public bool VideoSpeech { get; set; } = false;
+
+        /// <summary>The speech model, by the id the video library gives it ("tiny", "base", "small"); an id that is not known counts as the default, "small".</summary>
+        public string SpeechModel { get; set; } = DefaultSpeechModel;
+        public const string DefaultSpeechModel = "small";
+
+        /// <summary>The language that is spoken in the videos ("ru", "uk", "en" ...), or "auto" to let the model hear it for each video.</summary>
+        public string SpeechLanguage { get; set; } = "auto";
+
+        /// <summary>What the folder listing takes for files of the folder: the photos, and the videos too if <see cref="SupportVideo"/> is on. Indexing and the tools work on <see cref="Extensions"/>, photos only.</summary>
+        [JsonIgnore]
+        public string[] ListedExtensions => SupportVideo ? [.. Extensions, .. VideoExtensions] : Extensions;
+
         [JsonConverter(typeof(PhotoSortOrderConverter))]
         public PhotoSortOrder SortOrder { get; set; } = PhotoSortOrder.OldestFirst;
         public int    CacheSize      { get; set; } = 20;
@@ -51,6 +77,19 @@ namespace PhotoLiker.Core
         public string SearchModel { get; set; } = DefaultSearchModel;
         public const string DefaultSearchModel = "clip-vit-b32";
 
+        /// <summary>With videos listed (<see cref="SupportVideo"/>): whether a search looks through the photos. The "Photos" toggle of the search strip; both off counts as both on.</summary>
+        public bool SearchPhotos { get; set; } = true;
+
+        /// <summary>With videos listed: whether a search looks through the videos. The "Videos" toggle of the search strip; both off counts as both on.</summary>
+        public bool SearchVideos { get; set; } = true;
+
+        /// <summary>
+        /// What a search looks through right now: the photos, the videos. The videos only when they are listed; the photos and the videos together when both
+        /// toggles are on or both are off (something has to be searched).
+        /// </summary>
+        public (bool Photos, bool Videos) SearchKinds() =>
+            !SupportVideo ? (true, false) : SearchPhotos == SearchVideos ? (true, true) : (SearchPhotos, SearchVideos);
+
         /// <summary>Which photo the slideshow (Alt+Enter) shows next: a random one, or the next of the list.</summary>
         [JsonConverter(typeof(SlideshowModeConverter))]
         public SlideshowMode SlideshowMode { get; set; } = SlideshowMode.Random;
@@ -65,6 +104,10 @@ namespace PhotoLiker.Core
         /// <summary>What the slideshow writes in the bottom right corner of the screen: the year or the date and time the photo was taken, or nothing.</summary>
         [JsonConverter(typeof(SlideshowWatermarkConverter))]
         public SlideshowWatermark SlideshowWatermark { get; set; } = SlideshowWatermark.DateTime;
+
+        /// <summary>How the slideshow changes from one photo to the next, and whether a photo moves while it is shown, see <see cref="SlideshowEffects"/>.</summary>
+        [JsonConverter(typeof(SlideshowEffectConverter))]
+        public SlideshowEffect SlideshowEffect { get; set; } = SlideshowEffect.Fade;
 
         // Main window of the WinForms app
         public int    WindowLeft     { get; set; } = 100;

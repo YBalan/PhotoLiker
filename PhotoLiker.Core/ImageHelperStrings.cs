@@ -11,6 +11,7 @@ namespace PhotoLiker.Core
         public const string AllMetadataProperty   = "All Metadata";
         public const string AllMetadataLineFormat = "{0}: {1}";
         public const string AllMetadataSeparator  = "\r\n";
+        public const string CategoryVideo         = "0. Video";
         public const string CategoryGPS           = "3. GPS";
         public const string CategoryGPSDecoded    = "2. GPS Decoded";
         public const string CategoryImage         = "1. Image";

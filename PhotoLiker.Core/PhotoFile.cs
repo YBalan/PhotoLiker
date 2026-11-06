@@ -5,6 +5,9 @@ namespace PhotoLiker.Core
         public string OriginalFilePath { get; } = OriginalFilePath;
         public string LikedFilePath { get; set; } = LikedFilePath;
 
+        /// <summary>A video, not a photo (by its extension, see <see cref="MediaKinds"/>).</summary>
+        public bool IsVideo => MediaKinds.IsVideo(OriginalFilePath);
+
         // Size and timestamp from the folder listing; they tell same-named photos in different folders apart.
         // The size changes when the app adds the orientation to a photo it turns (see JpegOrientation); the times change when it gives
         // that photo its date taken for them.

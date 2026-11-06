@@ -6,6 +6,7 @@ namespace PhotoLiker.Core
     {
         public static ExifCategoryInfo GetCategory(int tagId) => tagId switch
         {
+            >= MetadataEntry.VideoTagBase => new ExifCategoryInfo(tagId, ImageHelperStrings.CategoryVideo, IsBrowsable: true),
             < 0x0100 => new ExifCategoryInfo(tagId, ImageHelperStrings.CategoryGPS, IsBrowsable: false),
             < 0x5000 => new ExifCategoryInfo(tagId, ImageHelperStrings.CategoryImage, IsBrowsable: true),
             < 0x6000 => new ExifCategoryInfo(tagId, ImageHelperStrings.CategoryThumbnail, IsBrowsable: true),

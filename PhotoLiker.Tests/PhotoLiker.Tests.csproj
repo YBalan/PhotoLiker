@@ -25,6 +25,7 @@
   <!-- A net10.0 project can't reference the net10.0-windows app, so the WinForms-free source under test is compiled in. -->
   <ItemGroup>
     <Compile Include="..\PhotoLikerUI\StringListConverter.cs" Link="PhotoLikerUI\StringListConverter.cs" />
+    <Compile Include="..\PhotoLikerUI\FrameCompositor.cs" Link="PhotoLikerUI\FrameCompositor.cs" />
   </ItemGroup>
 
 </Project>

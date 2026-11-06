@@ -3,7 +3,10 @@ using PhotoLiker.Core;
 namespace PhotoLiker.Search
 {
     /// <param name="Taken">When the photo was taken (see <see cref="PhotoDates"/>); null if the index has no date for it yet.</param>
-    public sealed record SearchHit(string FullPath, long Length, DateTime ModifiedUtc, float Score, DateSource DateSource = DateSource.None, DateTime? Taken = null);
+    /// <param name="TimeMs">For a hit that is a video: the place in it that fits best (milliseconds), where playing starts; null for a photo.</param>
+    /// <param name="Moments">For a hit that is a video: every place in it that fits, one for each stretch of the video that does (milliseconds, in order); null for a photo.</param>
+    public sealed record SearchHit(string FullPath, long Length, DateTime ModifiedUtc, float Score, DateSource DateSource = DateSource.None, DateTime? Taken = null,
+        long? TimeMs = null, IReadOnlyList<long>? Moments = null);
 
     /// <summary>
     /// The photos a search found, best first (a date alone: oldest first). <paramref name="Weak"/> means that nothing
@@ -11,7 +14,9 @@ namespace PhotoLiker.Search
     /// </summary>
     /// <param name="Dates">The date the search was limited to, if the text had one.</param>
     /// <param name="OtherModelPhotos">Photos a text or "More like this" search could not look at because they have not been through the folder's model yet (indexing makes its vector; they may have the vectors of other models).</param>
-    public sealed record SearchResult(string Description, IReadOnlyList<SearchHit> Hits, int SearchedPhotos, bool Weak = false, DateFilter? Dates = null, int OtherModelPhotos = 0)
+    /// <param name="SearchedVideos">How many videos were looked through (a video search, see PhotoLiker.Video, adds hits that are videos); 0 when videos are not part of the search.</param>
+    public sealed record SearchResult(string Description, IReadOnlyList<SearchHit> Hits, int SearchedPhotos, bool Weak = false, DateFilter? Dates = null, int OtherModelPhotos = 0,
+        int SearchedVideos = 0)
     {
         /// <summary>Hits whose date is the date of the file because the camera's date was missing or wrong.</summary>
         public int FileDated => Hits.Count(h => h.DateSource == DateSource.File);
@@ -120,14 +125,18 @@ namespace PhotoLiker.Search
         // ── searching ──────────────────────────────────────────────────────
 
         /// <summary>What a search text asks for: the people in it (none, one or several), the words that describe the picture (may be none), and the date.</summary>
-        private sealed record SearchPlan(IReadOnlyList<string> Names, string Words, DateFilter? Dates);
+        public sealed record SearchPlan(IReadOnlyList<string> Names, string Words, DateFilter? Dates)
+        {
+            /// <summary>The text asks for a date and nothing else: the answer is a list in order of time, not of how well things fit.</summary>
+            public bool DateOnly => Names.Count == 0 && Words.Length == 0;
+        }
 
         /// <summary>
         /// Reads a search text. The name of a person wins over everything, also one that reads like a date or a month. Otherwise a date is
         /// taken out of the text, and then the names of the known people: "Yurii playing guitar 2009" is Yurii, "playing guitar", 2009.
         /// A text in double quotes is a description, as it is.
         /// </summary>
-        private SearchPlan? Plan(string text)
+        public SearchPlan? Plan(string text)
         {
             text = text.Trim();
             if (text.Length == 0)
@@ -319,15 +328,18 @@ namespace PhotoLiker.Search
         /// How well a photo shows all of these people: every person needs a face of their own that is close enough to one of their faces
         /// (the faces are shared out so that the sum is the best), and the score is the mean of those closenesses; null if somebody is missing.
         /// </summary>
-        private static float? Together(IndexedPhoto photo, IReadOnlyList<IReadOnlyList<float[]>> people, float minScore)
+        private static float? Together(IndexedPhoto photo, IReadOnlyList<IReadOnlyList<float[]>> people, float minScore) =>
+            Together([.. photo.Faces.Select(face => face.Embedding)], people, minScore);
+
+        /// <summary>The same for any picture whose faces are given by their vectors (a picture taken out of a video).</summary>
+        internal static float? Together(IReadOnlyList<float[]> faces, IReadOnlyList<IReadOnlyList<float[]>> people, float minScore)
         {
-            var faces = photo.Faces;
             if (faces.Count < people.Count)
                 return null;
 
             // How close each face is to each person (a crowd of more than 64 faces is only looked at as far as that)
             var closeness = people
-                .Select(examples => faces.Take(64).Select(face => examples.Select(e => VectorMath.Dot(e, face.Embedding)).DefaultIfEmpty(0f).Max()).ToArray())
+                .Select(examples => faces.Take(64).Select(face => examples.Select(e => VectorMath.Dot(e, face)).DefaultIfEmpty(0f).Max()).ToArray())
                 .ToArray();
             return Share(closeness, person: 0, taken: 0UL, minScore) / people.Count;
         }

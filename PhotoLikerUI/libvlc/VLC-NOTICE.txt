@@ -1,0 +1,28 @@
+The VLC engine (libvlc)
+=======================
+
+PhotoLiker plays videos with the engine of VLC (libvlc): libvlc.dll, libvlccore.dll and the plugins (decoders, demuxers, outputs) in plugins\. They are VideoLAN's,
+unchanged; PhotoLiker calls them through the LibVLCSharp wrapper. PhotoLiker itself is under the MIT licence (LICENSE.txt, beside PhotoLikerUI.exe); the files of
+the engine are not.
+
+Where the engine is
+    A build from the source has them in libvlc\win-x64, next to this file. A release does not (that keeps the installer small): PhotoLiker downloads them, once,
+    the first time videos are turned on or played, after asking, into %LocalAppData%\PhotoLiker\libvlc\<version>, from a release of its own project on GitHub
+    (https://github.com/YBalan/PhotoLiker/releases) or, if that is not there, from VideoLAN (https://download.videolan.org/pub/videolan/vlc/). A download is used
+    only if it is the file whose SHA-256 the program knows. Either way they are the same files.
+
+What it is
+    LibVLC 3.0.x for Windows x64, from the NuGet package VideoLAN.LibVLC.Windows (https://code.videolan.org/videolan/libvlc-nuget), with the plugins that
+    streaming out, Lua, visualizations and a few encoders need left out (PhotoLiker only plays files).
+    LibVLCSharp (the .NET wrapper): https://github.com/videolan/libvlcsharp
+
+Licence
+    GNU Lesser General Public License, version 2.1 or later (libvlc and libvlccore). The text is in COPYING.LGPLv2.1.txt beside this file. VLC's plugins carry the
+    licences of their own libraries (mostly LGPL; see https://www.videolan.org/legal.html).
+
+Source code
+    VLC 3.0:  https://code.videolan.org/videolan/vlc/-/tree/3.0.x   and   https://get.videolan.org/vlc/
+    How the Windows binaries are made:  https://code.videolan.org/videolan/libvlc-nuget
+
+You can replace the files of the engine with another build of libvlc 3.0 for Windows x64 (the LGPL gives you that right): PhotoLiker looks for libvlc.dll in
+libvlc\win-x64 next to the program first, and then in the downloaded folder.

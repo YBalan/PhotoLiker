@@ -11,8 +11,10 @@ namespace PhotoLikerUI
     {
         private const string InfoCategory = "1. Progress";
         private const string CurrentFileCategory = "2. Current File";
-        private const string SettingsCategory = "3. Settings";
-        private const string SlideshowCategory = "4. Slideshow";
+        private const string CommonCategory = "3. Common Settings";
+        private const string PhotoCategory = "4. Photo Settings";
+        private const string VideoCategory = "5. Video Settings";
+        private const string SlideshowCategory = "6. Slideshow";
         private const string WindowCategory = "10. Window";
 
         // Declared before the table that uses them: static fields are initialized in the order they are written
@@ -22,23 +24,37 @@ namespace PhotoLikerUI
         private static readonly Dictionary<string, Attribute[]> Attributes = new()
         {
             [nameof(Settings.CurrentFolder)]  = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.CurrentFolder)],
-            [nameof(Settings.LikedFolder)]    = [Category(SettingsCategory), Editor<FolderPickerEditor>(), Describe(() => SettingsStrings.LikedFolder)],
-            [nameof(Settings.GoThroughSubFolders)] = [Category(SettingsCategory), Describe(() => SettingsStrings.GoThroughSubFolders)],
-            [nameof(Settings.GoThroughSubFoldersAlternateSpelling)] = [Hidden],
-            [nameof(Settings.Extensions)]     = [Category(SettingsCategory), new TypeConverterAttribute(typeof(PhotoExtsConverter)), Describe(() => SettingsStrings.Extensions)],
-            [nameof(Settings.SortOrder)]      = [Category(SettingsCategory), Describe(() => SettingsStrings.SortOrder)],
-            [nameof(Settings.CacheSize)]      =[Category(SettingsCategory), Describe(() => SettingsStrings.CacheSize)],
-            [nameof(Settings.ThumbnailSize)]  = [Category(SettingsCategory), Describe(() => SettingsStrings.ThumbnailSize)],
-            [nameof(Settings.Language)]       = [Category(SettingsCategory), new TypeConverterAttribute(typeof(LanguageConverter)), Describe(() => SettingsStrings.LanguageDescription)],
-            [nameof(Settings.IsDarkTheme)]    = [Category(SettingsCategory), Hidden],
-            [nameof(Settings.SearchPrecision)] = [Category(SettingsCategory), Hidden], // the slider of the search strip
-            [nameof(Settings.SearchModel)]    = [Category(SettingsCategory), Hidden], // the combo box at the right end of the search strip
+            // 3. Common Settings: what holds for the whole program, photos and videos alike
+            [nameof(Settings.Language)]       = [Category(CommonCategory), new TypeConverterAttribute(typeof(LanguageConverter)), Describe(() => SettingsStrings.LanguageDescription)],
+            [nameof(Settings.LikedFolder)]    = [Category(CommonCategory), Editor<FolderPickerEditor>(), Describe(() => SettingsStrings.LikedFolder)],
+            [nameof(Settings.CacheSize)]      = [Category(CommonCategory), Describe(() => SettingsStrings.CacheSize)],
+            [nameof(Settings.ThumbnailSize)]  = [Category(CommonCategory), Describe(() => SettingsStrings.ThumbnailSize)],
+            [nameof(Settings.IsDarkTheme)]    = [Category(CommonCategory), Hidden],
+            [nameof(Settings.SearchPrecision)] = [Category(CommonCategory), Hidden], // the slider of the search strip
+            [nameof(Settings.SearchModel)]    = [Category(CommonCategory), Hidden], // the combo box at the right end of the search strip
+            [nameof(Settings.SearchPhotos)]   = [Category(CommonCategory), Hidden], // the Photos and Videos toggles of the search strip
+            [nameof(Settings.SearchVideos)]   = [Category(CommonCategory), Hidden],
 
-            // The rows say what they are for under the heading of their category: Mode, Timeout, Watermark
+            // 4. Photo Settings: which files are listed and in what order
+            [nameof(Settings.GoThroughSubFolders)] = [Category(PhotoCategory), Describe(() => SettingsStrings.GoThroughSubFolders)],
+            [nameof(Settings.GoThroughSubFoldersAlternateSpelling)] = [Hidden],
+            [nameof(Settings.Extensions)]     = [Category(PhotoCategory), new TypeConverterAttribute(typeof(PhotoExtsConverter)), Describe(() => SettingsStrings.Extensions)],
+            [nameof(Settings.SortOrder)]      = [Category(PhotoCategory), Describe(() => SettingsStrings.SortOrder)],
+
+            // 5. Video Settings: the videos, and what is said in them
+            [nameof(Settings.SupportVideo)]   = [Category(VideoCategory), Describe(() => SettingsStrings.SupportVideo)],
+            [nameof(Settings.VideoExtensions)] = [Category(VideoCategory), new TypeConverterAttribute(typeof(PhotoExtsConverter)), Describe(() => SettingsStrings.VideoExtensions)],
+            [nameof(Settings.VideoSpeech)]    = [Category(VideoCategory), Describe(() => SettingsStrings.VideoSpeech)],
+            [nameof(Settings.SpeechModel)]    = [Category(VideoCategory), new TypeConverterAttribute(typeof(SpeechModelConverter)), Describe(() => SettingsStrings.SpeechModel)],
+            [nameof(Settings.SpeechLanguage)] = [Category(VideoCategory), Describe(() => SettingsStrings.SpeechLanguage)],
+            [nameof(Settings.ListedExtensions)] = [Hidden],
+
+            // The rows say what they are for under the heading of their category: Mode, Monitors, Timeout, Watermark, Effect
             [nameof(Settings.SlideshowMode)]  = [Category(SlideshowCategory), new DisplayNameAttribute("Mode"), Describe(() => SettingsStrings.SlideshowMode)],
             [nameof(Settings.SlideshowMonitors)] = [Category(SlideshowCategory), new DisplayNameAttribute("Monitors"), Describe(() => SettingsStrings.SlideshowMonitors)],
             [nameof(Settings.SlideshowTimeout)] = [Category(SlideshowCategory), new DisplayNameAttribute("Timeout"), Describe(() => SettingsStrings.SlideshowTimeout)],
             [nameof(Settings.SlideshowWatermark)] = [Category(SlideshowCategory), new DisplayNameAttribute("Watermark"), Describe(() => SettingsStrings.SlideshowWatermark)],
+            [nameof(Settings.SlideshowEffect)] = [Category(SlideshowCategory), new DisplayNameAttribute("Effect"), Describe(() => SettingsStrings.SlideshowEffect)],
 
             [nameof(Settings.WindowLeft)]     = [Category(WindowCategory), Hidden],
             [nameof(Settings.WindowTop)]      = [Category(WindowCategory), Hidden],

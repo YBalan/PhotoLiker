@@ -21,6 +21,9 @@ namespace PhotoLikerUI
         }
 
         public Image Full { get; }
+
+        /// <summary>How long the video plays, for an entry that is a video's poster; null for a photo.</summary>
+        public TimeSpan? VideoDuration { get; init; }
         public Bitmap? Thumb { get; private set; }
         public int ThumbSize { get; private set; }
         public IReadOnlyList<MetadataEntry> Metadata { get; }

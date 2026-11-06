@@ -26,6 +26,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Deleting photos](#deleting-photos)
 - [Rotating photos](#rotating-photos)
 - [Slideshow](#slideshow)
+- [Videos](#videos)
 - [Big folders open at once](#big-folders-open-at-once)
 - [EXIF and GPS](#exif-and-gps)
 - [Aligning file dates](#aligning-file-dates)
@@ -56,8 +57,12 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - **Rotate** turns the shown photo a quarter clockwise (or counterclockwise, with the button before it; <kbd>Ctrl</kbd>+<kbd>+</kbd> and <kbd>Ctrl</kbd>+<kbd>-</kbd>) from the buttons in the right corner of the status bar and saves
   it in its file, without losing anything (see [Rotating photos](#rotating-photos)).
 - **Slideshow** on the whole screen, or on every monitor with a different photo on each (<kbd>Alt</kbd>+<kbd>Enter</kbd>): random or one by one,
-  with a time for each photo and the year or the date and time the photo was taken in the bottom right corner. <kbd>Right</kbd> / <kbd>Left</kbd> go to the photos next to the shown one, also in
+  with a time for each photo, an effect between the photos (fade, slide, zoom, Ken Burns or a random one) and the year or the date and time the photo was taken in the
+  bottom right corner. <kbd>Right</kbd> / <kbd>Left</kbd> go to the photos next to the shown one, also in
   the random mode, and holding a key scrolls at the speed of the key repeat (see [Slideshow](#slideshow)).
+- **Videos** next to the photos, when **SupportVideo** is on: a poster picture with a play mark in the viewer and the strip, and an
+  embedded player (any format: AVI of a camera, MP4 and MOV of a phone ...) with a slider, a box to type a time to jump to, and keys to step 5 or 30 seconds.
+  They are liked, grouped, copied and deleted like photos. See [Videos](#videos).
 - **Settings grid** next to the photo, with a folder picker for the liked folder. Changing which photos are listed,
   or in what order, reloads the folder at once.
 - **EXIF and GPS** of the shown photo, GPS decoded to coordinates and a link to the map.
@@ -90,6 +95,9 @@ The installer and the zip also carry the [user manual](#user-manual), in English
 `ffmpeg.exe` (Generate Video) is not part of PhotoLiker: it is GPL v3 software by the [FFmpeg](https://ffmpeg.org/) project (the
 [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) build), run as a separate program. Its licence and the place to get its source are in
 `ffmpeg\COPYING.GPLv3.txt` and `ffmpeg\FFMPEG-NOTICE.txt` beside the program, in the installer and in the zip.
+The player of videos is the engine of [VLC](https://www.videolan.org/) (libvlc, LGPL 2.1 or later). The installer and the zip of a release do not carry it, which keeps the installer at 32 MB
+instead of 55 MB: it is [downloaded once](#videos) when videos are turned on. A build from the source has it in `libvlc\win-x64`. Its licence and the place to get its source are in
+`libvlc\COPYING.LGPLv2.1.txt` and `libvlc\VLC-NOTICE.txt` beside the program.
 
 ### Updating
 
@@ -249,7 +257,8 @@ What is kept where:
   (except by [Align dates](#aligning-file-dates), which you press yourself).
   To use it on another computer (or to index on the faster one), choose **I/E > Export index...** (the first button of the
   strip: import / export), bring the `.plindex` file over, open the same photos there (whatever the drive letter) and choose
-  **I/E > Import index...**.
+  **I/E > Import index...**. When videos have been analyzed the same file carries them (their moments, faces and the speech that was read): the question of the import says so, and the videos analyzed
+  for that folder are replaced by them; a file made without videos leaves the folder's videos as they are.
   **Update index** then brings it up to date: photos whose size and date are the same are not analyzed again. The models
   are downloaded there on first use, or copy the `models` folder (below) along. A search by description needs the search
   model's files, so **Update index** asks to download them also when every photo is in the imported index already (only the
@@ -309,13 +318,19 @@ What is kept where:
 | <kbd>1</kbd>-<kbd>9</kbd>, <kbd>A</kbd>-<kbd>Z</kbd> | Save the photo in a group, or take it out again (see [Groups](#groups)). |
 | <kbd>Alt</kbd>+<kbd>1</kbd>-<kbd>9</kbd> (also on the numpad), <kbd>Alt</kbd>+<kbd>A</kbd>-<kbd>Z</kbd> | While search results are shown: save *all* of them in the group, after telling how many photos and MB that is and asking. A group without a folder gets one named after the search (see [Groups](#groups)). |
 | <kbd>0</kbd> | Fit the image to the viewer (after zooming in). |
-| <kbd>Alt</kbd>+<kbd>Enter</kbd> | Show the photos of the list as a [slideshow](#slideshow) on the whole screen, beginning with the shown photo. In it <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one, and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back. Like F1-F3 it also works while you type into a text box. |
+| <kbd>Alt</kbd>+<kbd>Enter</kbd> | Show the photos of the list as a [slideshow](#slideshow) on the whole screen, beginning with the shown photo. In it <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one, <kbd>Down</kbd> / <kbd>Up</kbd> choose the next / previous effect, and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back. Like F1-F3 it also works while you type into a text box. |
 | <kbd>F1</kbd> | Open the [About box](#about-box). |
 | <kbd>F2</kbd> / <kbd>F3</kbd> | Open the [user manual](#user-manual) in Ukrainian / in English, in the browser. F1-F3 also work while you type into a text box. |
 | <kbd>F5</kbd> | List the folder again from scratch instead of from the saved list (see [Big folders open at once](#big-folders-open-at-once)). |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
 | <kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd> | Rotate the photo a quarter clockwise / counterclockwise and save it (see [Rotating photos](#rotating-photos)). The plus of the main keyboard (with or without <kbd>Shift</kbd>) and the numpad keys both work. |
 | <kbd>Ctrl</kbd>+mouse wheel | Over the photo: zoom, then drag to pan. Over the thumbnail strip: change the size of the thumbnails. |
+| <kbd>Enter</kbd> | On a video: play it, or pause / resume it ([Videos](#videos)). A click on the poster plays it, a click on the playing picture pauses it. |
+| <kbd>Shift</kbd>+<kbd>Right</kbd> / <kbd>Left</kbd>, <kbd>Ctrl</kbd>+<kbd>Right</kbd> / <kbd>Left</kbd> | While a video plays: 5 seconds / 30 seconds ahead or back. |
+| <kbd>Ctrl</kbd>+<kbd>Up</kbd> / <kbd>Down</kbd> | While a video plays: the volume up / down. |
+| <kbd>Esc</kbd> | While a video plays: back to its poster picture (the next <kbd>Esc</kbd> closes search results). |
+| <kbd>.</kbd> / <kbd>,</kbd> | On a video: go to the next / the previous place a search found in it (without a search, the next / previous moment), and play from there. |
+| <kbd>Ctrl</kbd>+<kbd>S</kbd> | On a video: save the picture it shows as a photo in the Liked folder, with the date it was recorded there. |
 
 Keys are ignored while you type into a text box: the value you are editing in a grid, the search box. A click on the
 photo (or on a thumbnail, or on the empty space around the photo) takes the keyboard focus out of the text box, so the keys
@@ -468,17 +483,36 @@ the top whenever another photo is shown:
 
 ![The settings grid, LikedFolder selected with its "..." button](docs/images/06-settings.png)
 
+The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Settings**, **4. Photo Settings**, **5. Video Settings** and **6. Slideshow**.
+
+**3. Common Settings** (the whole program, photos and videos alike):
+
 | Setting | Meaning |
 |---|---|
+| **Language** | The language of the program, `English` or `Українська`. It changes at once and is kept for all folders. See [Language](#language). |
 | **LikedFolder** | Where liked photos are copied. By default the folder `Liked` inside the photo folder. Click the **...** button for a folder picker. A folder with any other name than `Liked` is kept as it is, wherever it is. |
+| **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
+| **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
+
+**4. Photo Settings** (which files are listed, and in what order):
+
+| Setting | Meaning |
+|---|---|
 | **GoThroughSubFolders** | Also list the photos in the subfolders. The Liked folder itself is left out. |
 | **Extensions** | The file extensions that count as photos, separated by `;` or `,`, each with its dot: `.jpg; .png`. Case does not matter. |
 | **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, `Random` in a random order, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
-| **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
-| **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
-| **Language** | The language of the program, `English` or `Українська`. It changes at once and is kept for all folders. See [Language](#language). |
 
-The category **Slideshow** has its own three rows, **Mode**, **Timeout** and **Watermark**; see [Slideshow](#slideshow).
+**5. Video Settings:**
+
+| Setting | Meaning |
+|---|---|
+| **SupportVideo** | List the videos of the folder with its photos (off by default). See [Videos](#videos). |
+| **VideoExtensions** | The file extensions that count as videos when **SupportVideo** is on: `.mp4; .mov; .avi; .mkv ...` (the default list has the usual ones). |
+| **VideoSpeech** | Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See [Videos](#videos). |
+| **SpeechModel** | `tiny`, `base` or `small` (the one to use). |
+| **SpeechLanguage** | The language that is spoken: `ru`, `uk`, `en` ..., or `auto` (the model hears it for each video). |
+
+The group **6. Slideshow** has its own five rows, **Mode**, **Monitors**, **Timeout**, **Watermark** and **Effect**; see [Slideshow](#slideshow).
 
 The rows of **Current File** and **TotalFiles** are read-only. **CurrentIndex** is the number of the shown photo, counted
 from 0: type another number into it to jump to that photo (a number outside the list goes to the nearest end).
@@ -642,7 +676,11 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 - <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one **in the list, also in the random mode** (where only the timer picks
   at random), and give that photo its full time again. After the last photo comes the first, and before the first the last. A key that is held
   down keeps scrolling.
-- The settings are the four rows of the **4. Slideshow** category of the settings grid. They are kept in the settings file of the folder, so a
+- <kbd>Down</kbd> / <kbd>Up</kbd> choose **the next / previous effect** (in the order of the drop-down of the **Effect** row, round at the ends: `None`,
+  `Fade`, `Slide`, `Zoom`, `KenBurns`, `Random`) while the show runs. The name is written in the top left corner of every monitor for about two seconds
+  (`Effect: Slide`), the next change of photo is made by that effect, and with `KenBurns` the photo that is on the screen begins to move at once. The effect
+  the show ended with becomes the setting: the **Effect** row shows it afterwards, and it is saved with the other settings of the folder.
+- The settings are the five rows of the **6. Slideshow** group of the settings grid. They are kept in the settings file of the folder, so a
   folder can have its own.
 
 | Setting | Meaning |
@@ -651,6 +689,17 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 | **Monitors** | `Current` (the default): the screen PhotoLiker is on. `All`: every connected monitor, each with a photo of its own: **never the same photo on two monitors**, and all of them change together (a new set is shown once the photos of all are ready). In `Random` every monitor takes the next photo of the random order. In `OneByOne` the monitors, from left to right as Windows places them, show photos that follow each other (the shown photo stays on the monitor the window is on, the one before it is on the monitor to its left) and the next set begins where this one ends. <kbd>Right</kbd> / <kbd>Left</kbd> move every monitor to its neighbouring photo, so the row of photos moves a place. With more monitors than photos the ones farthest from the window are left out. |
 | **Timeout** | How many seconds a photo stays on the screen: 2 by default, not less than 0.2. The time counts from the moment the photo is on the screen, so a photo that is slow to come (a network share) is not shortened. |
 | **Watermark** | What is written in the bottom right corner, white on a dark band: `DateTime` (the default), the day and the time the photo was taken (`14 Aug 2025 09:12:07`, as everywhere in the program), `Year`, or `None`. The date is the one the search and <kbd>PageUp</kbd> / <kbd>PageDown</kbd> use: the date the camera wrote into the photo if it can be believed, else the date of the file (see [Aligning file dates](#aligning-file-dates)). A photo with no date at all gets no text. |
+| **Effect** | How one photo takes the place of the last. `Fade` (the default): the old photo dissolves into the new one. `Slide`: the new photo pushes the old one out to the left (the date in the corner stays where it is). `Zoom`: the new photo grows from 80% of its size while it fades in over the old one. `KenBurns`: every photo drifts and zooms slowly all the time it is on the screen (in or out, by 8 to 16%, around a point of the picture chosen at random, and never so that part of the screen it covered at the start is left bare), and dissolves into the next. `Random`: one of those four for every change, never the same twice in a row. `None`: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the **Timeout** (so a short timeout still leaves the photo on the screen for most of it); it begins when the timer ends, and the time of the new photo counts from then. While a change is under way the date fades out in the first half and the new one fades in in the second, so two dates are never written over each other. <kbd>Right</kbd> / <kbd>Left</kbd> put the next photo there at once, with no change (whoever holds a key wants to get on), but with `KenBurns` it still moves. <kbd>Down</kbd> / <kbd>Up</kbd> change the effect while the show runs (see above). With **Monitors** `All` all the monitors change at the same moment, each by the same effect. |
+
+**How the effects stay smooth.** GDI+, which draws everything else in the program, needs 13 ms (plus 7 ms for the black around it) to draw a full HD photo that is only partly there and 23 to 43 ms
+to draw one that is magnified (four times that on a 4K monitor: 50 ms, and 85 to 190 ms): that is a slide show of slides. So while an effect lasts, the photos are put together by a small compositor of our
+own (`FrameCompositor`) working on the pixels, on all the cores at once: the sum of the two photos by their shares (so the black around a photo dissolves too), copied
+as they are when they only move, and smoothed (bilinear) when they are magnified. The result goes into a buffer the size of the screen (8 MB at full HD, 33 MB at 4K,
+made when the first effect runs) which GDI+ copies on the screen, which takes 1 ms. The steps follow the clock and not a count, so a slow computer shows fewer
+steps and not a longer effect. When nothing moves, a photo is drawn as it always was. In a test on this PC, off screen, one step with everything (the photos, the
+buffer, the date) took 6 to 19 ms at full HD and 11 to 39 ms at 4K, in the middle of a Fade, Slide, Zoom or Ken Burns. To make that possible the pixels of a frame are kept in an
+array in memory that does not move, and the bitmap GDI+ draws is a view of the same array, so there is still one copy of each frame. The photo that is leaving stays in
+the cache while it is painted.
 
 **How it stays quick.** The slideshow does not show the decoded photos of the main window (a 24 MP photo is 96 MB, and every repaint
 would have to scale it to the screen). It makes **frames** of its own: each photo is decoded by the Windows imaging component straight at the
@@ -668,6 +717,65 @@ nearest that is ready first, so holding a key scrolls as fast as the photos can 
 (12 MP test photos) a held key showed 59 of the 60 photos, at the 30 a second the keyboard repeats at; over a network share the reads set the pace.
 A photo that cannot be read is passed over (a list of only such photos says so on the black screen).
 
+## Videos
+
+A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. Turn **SupportVideo** on in the
+[settings grid](#settings) (it is off by default, so a folder looks as it always did until you do) and the videos of the folder are listed with its photos,
+in the same order, also in the subfolders if **GoThroughSubFolders** is on. Which files are videos is the **VideoExtensions** row; the player is VLC's, so it plays
+nearly every format there is. A folder that holds only videos works the same: open it as a folder of its own. Changing either row lists the folder again at once.
+
+**What you see.** A video shows its poster picture (a frame from a tenth of the way in, at most 5 seconds in) with a round play mark and its length in the corner; its
+thumbnail in the strip has a small play mark. The grid under the settings has a category **0. Video** instead of EXIF: **Duration**, **Frame size** (as it is seen: a phone
+video held upright is stored sideways, and the row says so), **Frame rate**, **Video codec**, **Audio**, **Bitrate**, **File size**, **Recorded**, **Date from** and **File dates**
+(and **Location** and **Encoder** where the video has them). **Recorded** is the date the camera or phone wrote into the video, by the same rules as for photos
+(see [Photo search](#photo-search)); a Canon camera writes its own clock, a phone writes UTC, which is shown as local time. **File dates** shows the dates of the file next to it:
+a copied file is created when it is copied, so it is often days younger than the recording (`≠ Recorded`).
+
+**Playing.** <kbd>Enter</kbd>, or a click on the poster, puts the player over the picture; under it are the play / pause button, where you are (`0:12 / 1:17`), a slider to go
+anywhere (click or drag), a **Go to** box where you type a time and press <kbd>Enter</kbd> (`83`, `1:23`, `1:02:03` or `1m23s`), a mute button and the volume. A click on the
+picture pauses and plays. The keys are in the [table above](#keyboard-and-mouse): <kbd>Enter</kbd> pauses, <kbd>Shift</kbd>+<kbd>Left</kbd> / <kbd>Right</kbd> go 5 seconds and
+<kbd>Ctrl</kbd>+<kbd>Left</kbd> / <kbd>Right</kbd> 30 seconds, <kbd>Ctrl</kbd>+<kbd>Up</kbd> / <kbd>Down</kbd> change the volume, <kbd>Esc</kbd> goes back to the poster. Going to
+another item of the list stops the video. The first start of the player after an installation can take ten seconds or more while the virus scanner looks at its files; it starts in the background as soon as a video is shown,
+and the bar says **Starting the video player...** until it is ready. If it cannot start at all, the video is opened in the program Windows plays such files with.
+
+**Searching the videos.** With **SupportVideo** on, **Update index** goes through the videos after the photos, with the same model and the same Stop button. ffmpeg takes a picture out of each
+video every two seconds (the key frames only, where a video has them: 60 times faster than playing it) and the model looks at it; a picture that is no longer like the last one kept becomes a
+**moment** of the video (about one in three, with a small picture of it and the faces in it, found with the same models as in photos), and the rest are dropped. The search box then searches
+photos and videos together: words ("a cat"), a person ("Mom", or "Mom and Dad"), a date ("September 2009"), or any mix, and the result is one list, the better fits first. A video is in it
+once, and the viewer shows where it fits: under the picture is a strip of the moments of the video, the ones the search found marked in orange, and the slider has orange ticks at the same
+places. <kbd>Enter</kbd> (or a click) plays from the best fitting place, a click on a picture of the strip goes there, and <kbd>.</kbd> / <kbd>,</kbd> go to the next / the previous place that
+was found (without a search, the next moment of all). Two buttons in the search strip, a picture (**Photos**) and a video camera (**Videos**) (there while **SupportVideo** is on; hold the pointer over one for its name), choose what a search looks through: both on is the default, **Photos** off searches the videos only ("a cat" among
+the videos), **Videos** off the photos only; the last one on cannot be switched off, the choice is kept with the folder, and a search that is shown is run again when it changes. The precision slider works on videos too; a picture out of a video has to fit a little better than a photo to count, because motion blur and
+compression make words match by chance more often (on clips with no cat in them, "a cat" scored as high as a photo needs to). A person is found by the faces in the moments, with the examples from
+the photos: a video is searched for people from the photos you named. On the real clips this was made with (a Canon camera, 640 x 480): 144 seconds of video took 19 seconds with faces.
+Switching the search model makes the moments again with the new model, like the photos.
+
+**What is said.** Turn **VideoSpeech** on (it is off by default) and **Update index** also turns what is said in the videos into text, on this computer: Whisper (whisper.cpp), the **small** model
+(465 MB, downloaded the first time after asking), reads the sound of each video, a video with no sound worth reading (digital silence) is skipped, and what is heard is kept with the time of each
+sentence. It takes about a third of the length of the speech: 3 hours of video in about an hour; it continues where it stopped. A word that you type is then looked for in what is said, in whatever
+form it was said (<q>лошадка</q> finds <q>лошадку</q>), also when the sentence was cut in two by the model, and a video where it is said comes before the ones that only look right. The words are
+shown in a line under the player while the video plays. The text is the model's guess: it is good with adult speech and poor with children's and with noise (a song is written as its words), and the
+**SpeechLanguage** row (`ru`, `uk`, `en`, or `auto`) helps it when the family speaks one language. **SpeechModel** chooses `tiny`, `base` or `small`. Nothing leaves the computer.
+(The words are searched in the text whichever search model is chosen; for a query in Russian or Ukrainian the pictures are best searched with the XLM-R model of the [photo search](#photo-search).)
+
+**Saving a picture of a video.** <kbd>Ctrl</kbd>+<kbd>S</kbd> saves the picture the video shows now (the first one, if it is not playing) as a photo in the Liked folder: full size, named after the
+video and the place (`MVI_4069 1m23s.jpg`), with the date it was recorded at that place as its date taken, so it is a photo like any other.
+
+**What works on a video, and what does not.** <kbd>Space</kbd> likes it, a group key sorts it, <kbd>Delete</kbd> moves it to the `Deleted` folder (a video that is playing is let go of first),
+<kbd>Ctrl</kbd>+<kbd>C</kbd> copies the file: all as for a photo. The [slideshow](#slideshow), rotating, [Align dates](#aligning-file-dates), duplicates, "More like this" and Generate Video
+work on photos only for now: the videos are left out of them.
+
+**Where it keeps what it knows.** What ffmpeg reads from a video (its size, length, codec and dates), its poster picture, its moments (with their pictures, vectors and faces) and what is said in it
+are kept in a catalog of their own, `video-<folder>-<hash>.db`
+next to the photo index in `%LocalAppData%\PhotoLiker\index`: a separate file, so the photos and the videos never get in each other's way. A video is read when it is first shown and not again
+until the file changes: on a router, 24 videos of a Canon camera took 9 seconds the first time and 17 milliseconds the second. The catalog is a cache: deleting it costs nothing but that time.
+
+**The video player is downloaded.** The engine that plays videos (VLC's libvlc, LGPL 2.1 or later) is not in the installer or the zip of a release (23 MB of the installer): the first time **SupportVideo**
+is turned on, or a video is played, the program says how big it is and where it comes from, and asks. Yes downloads it once, with the progress in the status bar, into
+`%LocalAppData%\PhotoLiker\libvlc\<version>` (40 MB from the releases of this project on GitHub; if it is not there, 83 MB, the same files, from VideoLAN's own server). A download is used only if it is the file whose
+SHA-256 the program knows, and the folder is made whole or not at all. No means that videos open in the program Windows plays them with, and the question comes again when **SupportVideo** is turned off and on.
+A build from the source, and an installer made with `installer\build-installer.ps1 -BundleVlc` (for a computer with no internet), have the engine in `libvlc\win-x64` next to the program (86 MB) and download nothing.
+`installer\pack-libvlc.ps1` makes the zip for a new version of VLC (and the list of its files, `PhotoLiker.Video\libvlc-files.txt`); it is attached once to a pre-release named `libvlc-<version>`. Its licence and the place to get the source of VLC are in `libvlc\VLC-NOTICE.txt`.
 ## Big folders open at once
 
 Listing a folder on a network share costs a round trip per subfolder, however few photos each holds: 6.6 seconds for
@@ -948,6 +1056,9 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
   "SlideshowMonitors": "Current",
   "SlideshowTimeout": 2,
   "SlideshowWatermark": "DateTime",
+  "SlideshowEffect": "Fade",
+  "SupportVideo": true,
+  "VideoExtensions": [ ".avi", ".mp4", ".mov" ],
   "IsDarkTheme": true,
   "WindowLeft": 30, "WindowTop": 20, "WindowWidth": 1500, "WindowHeight": 900,
   "ScreenIndex": 0,
@@ -960,8 +1071,9 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
 shared between machines that may run different versions. The spelling `GoThroughSubFolders` (used by the MAUI app) is read
 as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized. `SortOrder` is written by name
 (`OldestFirst`, `NewestFirst`, `ByName`, `Random` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
-as `OldestFirst` and does not spoil the rest of the file. `SlideshowMode` (`Random`, `OneByOne`), `SlideshowMonitors` (`Current`, `All`) and `SlideshowWatermark` (`None`, `Year`, `DateTime`) are
-written by name and read the same way (an unknown name gives `Random` / `Current` / `DateTime`); `SlideshowTimeout` is in seconds. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
+as `OldestFirst` and does not spoil the rest of the file. `SlideshowMode` (`Random`, `OneByOne`), `SlideshowMonitors` (`Current`, `All`), `SlideshowWatermark` (`None`, `Year`, `DateTime`) and
+`SlideshowEffect` (`None`, `Fade`, `Slide`, `Zoom`, `KenBurns`, `Random`) are
+written by name and read the same way (an unknown name gives `Random` / `Current` / `DateTime` / `Fade`); `SlideshowTimeout` is in seconds. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
 settings of the [photo search](#photo-search).
 
 Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that
@@ -996,9 +1108,11 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown. Shared by all front ends. |
 | `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run, the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
+| `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form) and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
 | `PhotoLiker.GenerateVideo.Tests` | xUnit tests of the video library: the order and the times of the photos, the sequence of a video (cover, repeats, audio), the ffmpeg arguments, the cuts on the beat, the rhythm analysis (on synthetic songs), the settings file. They need no ffmpeg. |
+| `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg), the pictures taken out of a real video and their times, the choice of moments, the faces, the search (words, people, dates, speech) and its merge with the photos, the word forms of the speech and the speech job with a stand-in for the model, saving a picture. The tests that make a short video do so with the ffmpeg of the repository and do nothing without it; the one that runs the real CLIP model does nothing without it. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |
@@ -1015,6 +1129,7 @@ dotnet build PhotoLikerUI\PhotoLikerUI.csproj          # build the app
 dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests of the Core library
 dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.csproj  # run the tests of the video library
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
+dotnet test  PhotoLiker.Video.Tests\PhotoLiker.Video.Tests.csproj  # run the tests of the video library (videos in the archive)
 installer\build-installer.ps1                           # publish and pack the installer (needs Inno Setup 6)
 ```
 

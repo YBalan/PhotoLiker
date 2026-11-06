@@ -4,6 +4,29 @@
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
     <ProjectReference Include="..\PhotoLiker.GenerateVideo\PhotoLiker.GenerateVideo.csproj" />
     <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />
+    <ProjectReference Include="..\PhotoLiker.Video\PhotoLiker.Video.csproj" />
+  </ItemGroup>
+
+  <!-- Playing videos: VLC's engine (libvlc, LGPL) through LibVLCSharp. The package carries the engine for x86, x64 and ARM64, 300 MB in all: only x64 is
+       taken (the program is published for win-x64), and of its plugins only what playing a file needs (no streaming out, no Lua, no visualizations, no import
+       libraries). It sits in libvlc\win-x64 next to the program, where PhotoLiker looks for it first (VlcEngine). The first start of the engine after an install
+       can take ten seconds or more while the virus scanner looks at its 280 files; the player starts it in the background (VideoPlayerPanel).
+       BundleVlc=false (the installer and the zip of a release: installer\build-installer.ps1) leaves the engine out of the build, 23 MB of the installer: the program then
+       downloads it, once, when videos are turned on or the first video is played (VlcEngine, libvlc-files.txt lists the files of the engine). -->
+  <PropertyGroup>
+    <VlcWindowsX86Enabled>false</VlcWindowsX86Enabled>
+    <VlcWindowsArm64Enabled>false</VlcWindowsArm64Enabled>
+    <VlcWindowsX64Enabled Condition="'$(BundleVlc)' == 'false'">false</VlcWindowsX64Enabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="LibVLCSharp.WinForms" Version="3.10.2" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.24" />
+    <!-- Its licence (LGPL 2.1 or later) and where to get its source go with it, into libvlc\ (the engine is in libvlc\win-x64 when it is bundled, else in the
+         downloaded folder), and into the zip and the installer, which pack the published folder -->
+    <Content Include="libvlc\VLC-NOTICE.txt;libvlc\COPYING.LGPLv2.1.txt" Link="libvlc\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <VlcWindowsX64ExcludeFiles Include="libvlc.lib;libvlccore.lib;lua\%2A%2A;hrtfs\%2A%2A;plugins\access_output\%2A%2A;plugins\stream_out\%2A%2A;plugins\visualization\%2A%2A;plugins\mux\%2A%2A;plugins\services_discovery\%2A%2A;plugins\lua\%2A%2A;plugins\codec\libx26410b_plugin.dll;plugins\codec\libaom_plugin.dll" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,8 +44,8 @@
 
     <!-- The compiler fills in the * on every build (days since 2000-01-01 and seconds since midnight / 2), so the
          version grows with each build. AppVersionInfo reads the build date back from it. -->
-    <AssemblyVersion>2.0.*</AssemblyVersion>
-    <FileVersion>2.0.0.0</FileVersion>
+    <AssemblyVersion>3.0.*</AssemblyVersion>
+    <FileVersion>3.0.0.0</FileVersion>
     <Deterministic>false</Deterministic>
 
     <!-- The release workflow (.github\workflows\release.yml) and installer\build-installer.ps1 -Version pass the version of the tag

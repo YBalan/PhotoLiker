@@ -116,6 +116,7 @@
                 DrawSavedInFolders(e.Graphics, msgSize);
             }
 
+            DrawVideoMark(e.Graphics);
             DrawGroupLegend(e.Graphics);
             DrawFaces(e.Graphics);
         }
@@ -212,7 +213,11 @@
             _folderGeneration++;
             StopListingCheck();
             SaveListingOnClose();
+            _engineStop?.Cancel();
             _photoCache.Dispose();
+            _player?.Dispose();
+            _strip?.Dispose();
+            VideoLibrary.Close();
             DisposeTaskbarProgress();
             ShutDownSearch();
             SaveWindowPosition();
@@ -416,7 +421,8 @@
                 return;
             }
 
-            if (name != nameof(Settings.GoThroughSubFolders) && name != nameof(Settings.Extensions) && name != nameof(Settings.SortOrder))
+            if (name != nameof(Settings.GoThroughSubFolders) && name != nameof(Settings.Extensions) && name != nameof(Settings.SortOrder)
+                && name != nameof(Settings.SupportVideo) && name != nameof(Settings.VideoExtensions))
                 return;
 
             if (string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder))
@@ -425,6 +431,13 @@
             SaveSettingsToJson();
             ClearDisplay();
             LoadFolder();
+
+            // Videos were just turned on: the engine that plays them may have to be downloaded, and now is when the person expects to be asked
+            if (name == nameof(Settings.SupportVideo) && _currentConfig.SupportVideo)
+            {
+                _engineDeclined = false;
+                _ = EnsureVideoEngineAsync();
+            }
         }
 
         private void OpenSourceFolderToolStripButton_Click(object? sender, EventArgs e)
@@ -528,6 +541,9 @@
             // Abandon a folder scan that is still running
             _folderGeneration++;
 
+            HidePlayer(); // a video that is playing belongs to the list that is being replaced
+            UpdateMomentStrip(null);
+
             // Detach images from controls BEFORE disposing cache entries so
             // GDI+ never tries to access a disposed Image (e.g. FrameDimensionsList).
             pictureBox1.Image = null;
@@ -599,7 +615,8 @@
                 var folder = _currentConfig.CurrentFolder;
                 var sortOrder = _currentConfig.SortOrder;
                 var likedFolder = _currentConfig.LikedFolder;
-                var key = new ListingKey(folder, _currentConfig.GoThroughSubFolders, _currentConfig.Extensions, likedFolder);
+                PrepareVideoCatalog();
+                var key = new ListingKey(folder, _currentConfig.GoThroughSubFolders, _currentConfig.ListedExtensions, likedFolder);
                 SetStatus(string.Format(MainFormStrings.StatusFolderLoading, folder));
 
                 // The list of this same folder that is open already may know of photos deleted since it was saved
@@ -739,6 +756,13 @@
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            // Escape first puts the poster back where a video is playing; the next one closes the search results
+            if (keyData == Keys.Escape && PlayerShown && !IsTextEntry(msg.HWnd))
+            {
+                HidePlayer();
+                return true;
+            }
+
             if (keyData == Keys.Escape && _resultsActive)
             {
                 CloseSearchResults();
@@ -765,6 +789,9 @@
             // Typing in the search box (or any text box) is not a command for the viewer: Space, the arrows and the letters are its own
             if (IsTextEntry(msg.HWnd))
                 return base.ProcessCmdKey(ref msg, keyData);
+
+            if (ShowingVideo && TryHandleVideoKey(keyData))
+                return true;
 
             SetStatus(string.Format(MainFormStrings.StatusKeyPressed, keyData));
             if (keyData == (Keys.Control | Keys.C) && !IsTextEntry(msg.HWnd)) // a text box keeps copying its own text
@@ -958,6 +985,12 @@
                 if (!File.Exists(file))
                     throw new FileNotFoundException(null, file);
 
+                if (MediaKinds.IsVideo(file))
+                {
+                    CopyVideoToClipboard(file);
+                    return;
+                }
+
                 Clipboard.SetDataObject(PhotoClipboard.CreateDataObject(file, pictureBox1.Image), copy: true);
                 SetStatus(string.Format(MainFormStrings.StatusPhotoCopied, Path.GetFileName(file)));
             }
@@ -1007,6 +1040,13 @@
         private void PictureBox1_MouseDown(object? sender, MouseEventArgs e)
         {
             FocusViewer();
+
+            // A click on the poster of a video plays it
+            if (e.Button == MouseButtons.Left && ShowingVideo && !PlayerShown)
+            {
+                PlayCurrentVideo();
+                return;
+            }
 
             if (HandleFaceMouseDown(e))
                 return;
@@ -1102,6 +1142,9 @@
 
             try
             {
+                // A video that is playing is held open by the player: Windows would not move it
+                await ReleasePlayedVideoAsync(file);
+
                 // On the network share the move can take a moment
                 await Task.Run(() =>
                 {
@@ -1396,6 +1439,15 @@
         {
             try
             {
+                // Another item than the video that is playing: the player goes away
+                if (_player is { Visible: true } playing && !string.Equals(playing.CurrentFile, file, StringComparison.Ordinal))
+                    HidePlayer();
+
+                // The engine takes a while to start the first time after an install: it starts while the person looks at the poster, not when Enter is pressed
+                if (MediaKinds.IsVideo(file))
+                    VideoPlayerPanel.WarmUp();
+                UpdateMomentStrip(file);
+
                 // Navigation state is updated right away, so arrow keys keep working while the image is still loading
                 var index = _currentConfig.Files.IndexOf(file);
                 pictureBox1.Tag = file; // Store the file path in the Tag property
@@ -1658,6 +1710,9 @@
 
         private void ThumbPaint_LikedBadge(object? sender, PaintEventArgs e)
         {
+            if (sender is PictureBox { Tag: string videoPath } video && MediaKinds.IsVideo(videoPath))
+                DrawThumbVideoMark(e.Graphics, video.Size);
+
             if (sender is not PictureBox { Tag: string filePath } pb || !IsSaved(filePath)) return;
 
             var badge = AppStrings.LikedCheckmark;

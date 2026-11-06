@@ -208,6 +208,26 @@ GenerateVideoStrings.TooManyRepeatsFormat = The photos would have to be repeated
 GenerateVideoStrings.AudioUnreadable = ffmpeg cannot read this file as audio
 GenerateVideoStrings.DurationSecondsFormat = {0:0.0} s
 
+# ──────────── VideoLibStrings ────────────
+VideoLibStrings.FfmpegNotFound = ffmpeg was not found next to the program (in its ffmpeg folder), so videos cannot be read.
+VideoLibStrings.UnreadableFormat = The video cannot be read: {0}
+VideoLibStrings.DateFromVideo = the date written in the video
+VideoLibStrings.DateFromFile = the date of the file (the video has no date that can be believed)
+VideoLibStrings.DateNone = none
+VideoLibStrings.NoAudio = none
+VideoLibStrings.DescDuration = How long the video plays: minutes and seconds, then the length in seconds.
+VideoLibStrings.DescFrameSize = The size of the picture in pixels as it is shown, width × height. A video that a phone recorded held upright is stored sideways and turned by the player; the stored size and the turn are then given in brackets.
+VideoLibStrings.DescFrameRate = How many pictures a second the video has (fps).
+VideoLibStrings.DescVideoCodec = How the pictures are stored: h264, hevc, mjpeg (the Motion JPEG of many cameras), mpeg4 ... The player handles all of them; the name tells why a file is large or small.
+VideoLibStrings.DescAudio = The first sound track: how it is stored, its sampling rate and its channels. none: the video has no sound.
+VideoLibStrings.DescBitrate = How much data a second of the file takes, sound included: the larger it is, the larger the file for its length.
+VideoLibStrings.DescRecorded = When the video was recorded: the date the camera or the phone wrote into the video, else the date of the file (the Date from row says which). The same rules as for the date a photo was taken.
+VideoLibStrings.DescDateFrom = Where the Recorded date comes from: written into the video by the camera, or the date of the file (a copied file is created when it is copied, which can be days after the recording). A camera whose clock was never set writes a date that cannot be told from a true one.
+VideoLibStrings.DescLocation = Where the phone says the video was recorded: latitude and longitude in degrees. Videos from cameras, and downloaded ones, have none.
+VideoLibStrings.DescEncoder = The program or the device that wrote the file.
+VideoLibStrings.DescFileSize = The size of the file on the disk.
+VideoLibStrings.DescFileDates = The dates of the file on the disk, next to the date of recording: = if they are the same as Recorded, ≠ if not (a copied file is created when it is copied, so a copy of an old video is newer than the recording).
+
 # ──────────── AboutStrings ────────────
 AboutStrings.Heading = PhotoLiker
 AboutStrings.VersionFormat = Version: {0}\nBuild date: {1:yyyy-MM-dd HH:mm:ss}
@@ -262,7 +282,15 @@ AboutStrings.ShortcutRotateAction = Rotate the photo a quarter clockwise / count
 AboutStrings.ShortcutZoomInput = Ctrl+mouse wheel
 AboutStrings.ShortcutZoomAction = Zoom the photo (drag to pan); over the strip: thumbnail size
 AboutStrings.ShortcutSlideshowInput = Alt+Enter
-AboutStrings.ShortcutSlideshowAction = Slideshow on the whole screen (Right / Left: the photo next to the shown one, Esc: back)
+AboutStrings.ShortcutSlideshowAction = Slideshow on the whole screen (Right / Left: the photo next to the shown one, Down / Up: the next / previous effect, Esc: back)
+AboutStrings.ShortcutPlayInput = Enter
+AboutStrings.ShortcutPlayAction = A video: play / pause (a click on the picture does the same)
+AboutStrings.ShortcutSeekInput = Shift+Right / Left, Ctrl+Right / Left, Ctrl+Up / Down
+AboutStrings.ShortcutSeekAction = While a video plays: 5 seconds / 30 seconds ahead or back, volume
+AboutStrings.ShortcutFrameInput = Ctrl+S
+AboutStrings.ShortcutFrameAction = A video: save the picture it shows (or the first one) as a photo in the Liked folder
+AboutStrings.ShortcutMomentInput = . / ,
+AboutStrings.ShortcutMomentAction = A video: the next / previous moment (of those a search found, else of all)
 AboutStrings.ShortcutCloseInput = Esc
 AboutStrings.ShortcutCloseAction = Close the search results
 AboutStrings.ShortcutSearchInput = Enter
@@ -788,6 +816,11 @@ SettingsStrings.SavedInFolders = Every folder that holds a copy of the shown pho
 SettingsStrings.LikedFolder = Where liked photos are copied to; the group folders ('1 - Group' ... 'Z - Group') are made inside it. By default the folder 'Liked' inside the photo folder. Click the '...' button to choose another folder; a folder with any other name than 'Liked' is kept as it is, wherever it is.
 SettingsStrings.GoThroughSubFolders = True: the photos of all subfolders are listed too (the Liked folder itself is left out). False: only the photos of the folder itself. Changing it lists the folder again at once.
 SettingsStrings.Extensions = The file extensions that count as photos, separated by ; or , each with its dot: .jpg; .png. Case does not matter. Changing it lists the folder again at once.
+SettingsStrings.SupportVideo = True: the videos of the folder (the extensions of the VideoExtensions row, also in the subfolders if GoThroughSubFolders is on) are listed with its photos. A video shows its first picture with a play mark; Enter or a click plays it, and Shift+Left/Right, Ctrl+Left/Right, the slider and the Go to box move about in it. It is liked, sorted into groups and deleted like a photo. The search, the slideshow, rotating and the date tools work on photos only. False (the default): only photos are listed. Changing it lists the folder again at once.
+SettingsStrings.VideoExtensions = The file extensions that count as videos when SupportVideo is on, separated by ; or , each with its dot: .mp4; .avi; .mov. Case does not matter. Add any format the player knows (it knows nearly all). Changing it lists the folder again at once.
+SettingsStrings.VideoSpeech = True: "Update index" also turns what is said in the videos into text, on this computer (needs SupportVideo), so that a word that is said finds the video and the moment, whatever the picture shows; the text is shown under the player. It takes about a third of the length of the speech with the small model (3 hours of video: about an hour), and the model is downloaded first (465 MB, asked first). It reads the sound only; nothing is sent anywhere. False (the default): the videos are searched by their pictures and the people in them only.
+SettingsStrings.SpeechModel = The model that turns speech into text: tiny (75 MB, rough), base (142 MB, quick, makes many mistakes with children and noise) or small (465 MB, about 3 times faster than the speech, the one to use). Changing it means the speech is read again with the new model the next time 'Update index' runs; what the old one wrote stays and is searched meanwhile.
+SettingsStrings.SpeechLanguage = The language that is spoken in the videos: ru, uk, en and so on, or auto to let the model hear it for each video (a short video with little talk is sometimes taken for another language: set it when the family speaks one language).
 SettingsStrings.SortOrder = The order of the photos: OldestFirst or NewestFirst by the date the file was created (a copied file is created when it is copied), ByName by the name of the file as Explorer lists it (IMG_2 before IMG_10), Random in a new random order each time the folder is listed, None for the order the file system gives, usually by name. Changing it lists the folder again at once. Search results follow it too, by the date the photos were taken (None: best match first).
 SettingsStrings.CacheSize = How many photos on each side of the shown one are kept decoded in memory, so that the arrow keys show them at once. A larger number browses faster over a slow network but uses more memory.
 SettingsStrings.ThumbnailSize = The size of the thumbnails in the strip at the right, in pixels. Ctrl + mouse wheel over the strip changes it.
@@ -796,10 +829,12 @@ SettingsStrings.SlideshowMode = Which photo the slideshow (Alt+Enter) shows afte
 SettingsStrings.SlideshowMonitors = Which screens the slideshow covers. Current: the screen PhotoLiker is on. All: every connected screen, each with a photo of its own and never the same photo on two screens; they change together. In the Random mode every screen takes the next photo of the random order; in OneByOne the screens, from left to right, show photos that follow each other (the photo that was shown stays on the screen the window is on) and the next set begins where this one ends. Left and Right move every screen to its neighbouring photo. With more screens than photos the farthest from the window are left out.
 SettingsStrings.SlideshowTimeout = How many seconds the slideshow keeps a photo on the screen; 2 by default, not less than 0.2. The time counts from the moment the photo appears, and Left or Right start it again.
 SettingsStrings.SlideshowWatermark = What the slideshow writes in the bottom right corner of the screen: Year or DateTime (the day and the time) the photo was taken, or None. The date is the one the search and PageUp / PageDown use: the date the camera wrote into the photo, else the date of the file; a photo without a date gets no text.
+SettingsStrings.SlideshowEffect = How the slideshow changes from one photo to the next. None: at once. Fade: the old photo dissolves into the new one. Slide: the new photo pushes the old one out to the left. Zoom: the new photo grows from a smaller size as it fades in. KenBurns: every photo drifts and zooms slowly all the time it is shown, and dissolves into the next. Random: one of Fade, Slide, Zoom and KenBurns for every change, never the same twice in a row. A change takes 0.8 seconds at most and never more than 40% of the Timeout. Left and Right put the next photo there at once (with KenBurns it still moves).
 
 # ──────────── SlideshowStrings ────────────
 SlideshowStrings.Loading = Loading...
 SlideshowStrings.NothingToShow = None of the photos can be shown.
+SlideshowStrings.EffectFormat = Effect: {0}
 SlideshowStrings.StatusNoPhotos = There are no photos to show in a slideshow.
 SlideshowStrings.StatusEndedFormat = Slideshow ended at '{0}' ({1} of {2}).
 
@@ -925,6 +960,72 @@ VideoStrings.LogBeatsNone = No clear beat in the audio: the photo times are used
 VideoStrings.LogBeatsFailedFormat = The rhythm of the audio could not be found ({0}): the photo times are used as set.
 VideoStrings.LogSettingsSavedFormat = The settings of this video are saved in {0}: the dialog starts from them the next time you pick this folder.
 VideoStrings.LogSettingsNotSavedFormat = The settings of this video could not be saved ({0}).
+
+# ──────────── VideoPlayerStrings ────────────
+VideoPlayerStrings.PlayTooltip = Play / pause (Enter)
+VideoPlayerStrings.GoToLabel = Go to
+VideoPlayerStrings.GoToTooltip = A time to jump to: seconds (83), minutes and seconds (1:23), hours too (1:02:03), or 1m23s. Press Enter.
+VideoPlayerStrings.GoToNotATimeFormat = '{0}' is not a time. Type seconds (83), minutes and seconds (1:23), hours too (1:02:03), or 1m23s.
+VideoPlayerStrings.MuteTooltip = Mute / unmute
+VideoPlayerStrings.VolumeTooltip = Volume (Ctrl+Up, Ctrl+Down)
+VideoPlayerStrings.StartingEngine = Starting the video player...
+VideoPlayerStrings.EngineFailedFormat = The video player could not start: {0}
+VideoPlayerStrings.PlayFailedFormat = The video cannot be played: {0}
+VideoPlayerStrings.StatusVideoShownFormat = Playing '{0}'. Enter pauses, Shift+Left/Right goes 5 seconds, Ctrl+Left/Right 30 seconds, Escape returns to the picture.
+VideoPlayerStrings.StatusVideoCopiedFormat = Video '{0}' copied to the clipboard as a file.
+VideoPlayerStrings.StatusVideoOpenedElsewhereFormat = The video player could not start, so '{0}' was opened in the program Windows plays it with.
+VideoPlayerStrings.StatusVideoFileMissingFormat = The video '{0}' is not there any more.
+VideoPlayerStrings.StatusFrameSavedFormat = The picture of '{0}' at {1} is saved as '{2}' in the Liked folder, with the date it was recorded.
+VideoPlayerStrings.StatusFrameNoFolder = There is no Liked folder to save the picture in: set LikedFolder in the settings.
+VideoPlayerStrings.StatusFrameErrorFormat = The picture could not be saved: {0}
+VideoPlayerStrings.EngineNotInstalled = The video player is not downloaded yet.
+VideoPlayerStrings.EngineDownloadTitle = Video player
+VideoPlayerStrings.EngineDownloadQuestionFormat = Playing videos needs the VLC player engine. It is not in the installer (that keeps the download small), so it is downloaded once, {0:N0} MB from {1}, and stays on this computer.\n\nDownload it now?
+VideoPlayerStrings.StatusEngineLooking = Looking for the video player to download...
+VideoPlayerStrings.StatusEngineOffline = The video player could not be downloaded: no answer from the server. Turn SupportVideo off and on to try again.
+VideoPlayerStrings.StatusEngineDeclined = The video player is not downloaded: videos open in the program Windows plays them with. Turn SupportVideo off and on to be asked again.
+VideoPlayerStrings.StatusEngineDownloadingFormat = Downloading the video player: {0:N0} / {1:N0} MB
+VideoPlayerStrings.StatusEngineUnpackingFormat = Unpacking the video player: {0:N0} / {1:N0} files
+VideoPlayerStrings.StatusEngineReady = The video player is ready.
+VideoPlayerStrings.StatusEngineFailedFormat = The video player could not be downloaded: {0} Videos open in the program Windows plays them with; turn SupportVideo off and on to try again.
+VideoPlayerStrings.StatusVideoOpenedNoEngineFormat = The video player is not downloaded, so '{0}' was opened in the program Windows plays it with.
+
+# ──────────── VideoSearchStrings ────────────
+VideoSearchStrings.IndexedVideosFormat = {0:N0} videos, {1:N0} moments
+VideoSearchStrings.IndexVideosReadingFormat = Reading the videos: {0:N0} / {1:N0}
+VideoSearchStrings.IndexVideosProgressFormat = Video {0:N0} / {1:N0}   {3:0.0}x   {4} left   {2}
+VideoSearchStrings.IndexVideosProgressNoEstimateFormat = Video {0:N0} / {1:N0}: {2}
+VideoSearchStrings.IndexVideosTooltipFormat = {0:N0} of {1:N0} videos done, {2:N0} moments found so far. The number with x is how many seconds of video are analyzed in a second.
+VideoSearchStrings.StatusVideosDoneFormat = \sVideos: {0:N0} analyzed into {1:N0} moments in {2}{3}.
+VideoSearchStrings.StatusVideosUpToDateFormat = \sThe {0:N0} videos are up to date.
+VideoSearchStrings.StatusVideosStoppedFormat = \sVideo analysis stopped after {0:N0} videos. Start it again to continue.
+VideoSearchStrings.StatusVideosFailedPartFormat = , {0:N0} could not be read
+VideoSearchStrings.ResultsTitleVideosFormat = Search: {0} - {1:N0} photos and videos
+VideoSearchStrings.ResultsTitleWeakVideosFormat = Search: {0} - no strong match, the {1:N0} closest photos and videos
+VideoSearchStrings.StatusResultsShownVideosFormat = {0}: {1:N0} photos and videos, of {2:N0} indexed photos and {3:N0} videos.
+VideoSearchStrings.IndexedVideosSpeechFormat = {0:N0} videos, {1:N0} moments, {2:N0} with speech
+VideoSearchStrings.IndexSpeechProgressFormat = Speech {0:N0} / {1:N0}   {3:0.0}x   {4} left   {2}
+VideoSearchStrings.IndexSpeechProgressNoEstimateFormat = Speech {0:N0} / {1:N0}: {2}
+VideoSearchStrings.IndexSpeechTooltipFormat = {0:N0} of {1:N0} videos done, {2:N0} stretches of speech found so far. The number with x is how many seconds of speech are read in a second.
+VideoSearchStrings.StatusSpeechDoneFormat = \sSpeech: {0:N0} videos read, {1:N0} stretches of speech found in {2}{3}.
+VideoSearchStrings.StatusSpeechUpToDateFormat = \sThe speech of {0:N0} videos is up to date.
+VideoSearchStrings.StatusSpeechStoppedFormat = \sSpeech reading stopped after {0:N0} videos. Start it again to continue.
+VideoSearchStrings.StatusSpeechDeclined = \sThe speech model was not downloaded, so what is said in the videos is not read.
+VideoSearchStrings.StatusSpeechSilentPartFormat = , {0:N0} without any sound to read
+VideoSearchStrings.SpeechDownloadQuestionFormat = Reading what is said in the videos needs the speech model {0} ({1}). It is downloaded once and then works on this computer, with no internet.\n\nDownload it now?
+VideoSearchStrings.SpeechDownloadTitle = Speech model
+VideoSearchStrings.ScopePhotosButton = Photos
+VideoSearchStrings.ScopePhotosTooltip = Photos: search the photos. Switch it off, and a search looks through the videos only.
+VideoSearchStrings.ScopeVideosButton = Videos
+VideoSearchStrings.ScopeVideosTooltip = Videos: search the videos. Switch it off, and a search looks through the photos only.
+VideoSearchStrings.StatusNoVideosIndexed = No video is analyzed yet, so there is nothing to search. Press Update index to analyze the videos, or switch Photos on.
+VideoSearchStrings.ResultsTitleOnlyVideosFormat = Search: {0} - {1:N0} videos
+VideoSearchStrings.ResultsTitleWeakOnlyVideosFormat = Search: {0} - no strong match, the {1:N0} closest videos
+VideoSearchStrings.StatusResultsShownOnlyVideosFormat = {0}: {1:N0} videos, of {2:N0} analyzed videos.
+VideoSearchStrings.StatusExportedVideosFormat = \sThe videos are in it too: {0:N0} analyzed, {1:N0} moments, {2:N0} with speech.
+VideoSearchStrings.ImportVideosNoteFormat = \nIt holds the videos too: {0:N0} analyzed, {1:N0} moments, {2:N0} with speech. The videos of this folder that are analyzed now are replaced by them.
+VideoSearchStrings.StatusImportedVideosFormat = \sVideos: {0:N0} analyzed, {1:N0} moments, {2:N0} with speech.
+VideoSearchStrings.StatusImportedVideosOffNote = \sSupportVideo is off in this folder: turn it on to see them.
 
 # ──────────── DialogStrings ────────────
 DialogStrings.ContextMenuEntry = Open in Photo Liker

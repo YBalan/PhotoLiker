@@ -6,7 +6,7 @@ namespace PhotoLikerUI
     using System.Drawing.Imaging;
     using System.Runtime.InteropServices;
 
-    public static class ImageHelper
+    public static partial class ImageHelper
     {
         private const int ExifOrientationId = 0x0112; // 274
         private const int DateTakenId = 0x9003;
@@ -29,6 +29,9 @@ namespace PhotoLikerUI
         /// </summary>
         internal static PhotoEntry LoadPhoto(string path, int thumbSize)
         {
+            if (MediaKinds.IsVideo(path))
+                return LoadVideoPoster(path, thumbSize);
+
             var stream = new MemoryStream(FileReading.ReadAllBytesShared(path), writable: false);
             Image? source = null;
             var handedOver = false;
@@ -72,6 +75,9 @@ namespace PhotoLikerUI
         /// <summary>Decodes a photo just to make its thumbnail. Safe to call from any thread.</summary>
         internal static Bitmap LoadThumbnail(string path, int thumbSize)
         {
+            if (MediaKinds.IsVideo(path))
+                return LoadVideoThumbnail(path, thumbSize);
+
             using var stream = new MemoryStream(FileReading.ReadAllBytesShared(path), writable: false);
             using var source = Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: true);
 
@@ -135,7 +141,7 @@ namespace PhotoLikerUI
                 // A file the Windows imaging component will not take, which GDI+ (what the window reads with) may
                 frame = SlideWithGdi(bytes, screen);
             }
-            return new SlideshowFrame(frame, taken);
+            return new SlideshowFrame(frame, taken, photo.OriginalFilePath); // takes the bitmap: its pixels are copied into the frame's own canvas
         }
 
         /// <summary>
