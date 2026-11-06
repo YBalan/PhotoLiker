@@ -215,6 +215,7 @@
             SaveListingOnClose();
             _photoCache.Dispose();
             _player?.Dispose();
+            _strip?.Dispose();
             VideoLibrary.Close();
             DisposeTaskbarProgress();
             ShutDownSearch();
@@ -533,6 +534,7 @@
             _folderGeneration++;
 
             HidePlayer(); // a video that is playing belongs to the list that is being replaced
+            UpdateMomentStrip(null);
 
             // Detach images from controls BEFORE disposing cache entries so
             // GDI+ never tries to access a disposed Image (e.g. FrameDimensionsList).
@@ -1436,6 +1438,7 @@
                 // The engine takes a while to start the first time after an install: it starts while the person looks at the poster, not when Enter is pressed
                 if (MediaKinds.IsVideo(file))
                     VideoPlayerPanel.WarmUp();
+                UpdateMomentStrip(file);
 
                 // Navigation state is updated right away, so arrow keys keep working while the image is still loading
                 var index = _currentConfig.Files.IndexOf(file);

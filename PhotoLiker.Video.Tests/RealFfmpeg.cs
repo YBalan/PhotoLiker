@@ -40,7 +40,8 @@ internal static class RealFfmpeg
     /// A video of <paramref name="seconds"/> seconds, 320x240, with a sound, in <paramref name="folder"/>. <paramref name="recorded"/> is the date the
     /// container says (UTC text, "2012-03-04T05:06:07Z"), or none. Returns null where there is no ffmpeg.
     /// </summary>
-    internal static string? MakeVideo(string folder, string name, int seconds = 3, string? recorded = null)
+    /// <param name="sound">"loud" (a tone), "silent" (a track with nothing in it) or "none" (no sound track at all).</param>
+    internal static string? MakeVideo(string folder, string name, int seconds = 3, string? recorded = null, string sound = "loud")
     {
         if (Path is null)
             return null;
@@ -51,10 +52,12 @@ internal static class RealFfmpeg
         {
             "-hide_banner", "-loglevel", "error", "-y",
             "-f", "lavfi", "-i", "testsrc2=size=320x240:rate=25",
-            "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100",
-            "-t", seconds.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            "-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest",
         };
+        if (sound != "none")
+            arguments.AddRange(["-f", "lavfi", "-i", sound == "silent" ? "anullsrc=r=44100:cl=mono" : "sine=frequency=440:sample_rate=44100"]);
+        arguments.AddRange(["-t", seconds.ToString(System.Globalization.CultureInfo.InvariantCulture), "-c:v", "mpeg4", "-q:v", "5", "-pix_fmt", "yuv420p"]);
+        if (sound != "none")
+            arguments.AddRange(["-c:a", "aac", "-shortest"]);
         if (recorded is not null)
             arguments.AddRange(["-metadata", $"creation_time={recorded}"]);
         arguments.Add(file);

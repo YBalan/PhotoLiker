@@ -14,7 +14,7 @@ namespace PhotoLiker.Video
     /// header of one takes a fraction of a second, a picture about the same, and a folder holds hundreds). A video that changed on disk is read
     /// again. Safe to use from several threads; the methods that read a video block for as long as ffmpeg takes, so they belong on a background thread.
     /// </summary>
-    public sealed class VideoCatalog : IDisposable
+    public sealed partial class VideoCatalog : IDisposable
     {
         /// <summary>Raised when the way a video is read changes so that what was kept of it is wrong: it is read again when it is next asked for.</summary>
         public const int ProbeVersion = 1;
@@ -118,7 +118,11 @@ namespace PhotoLiker.Video
         public void Forget(string fullPath)
         {
             lock (_gate)
+            {
                 Execute("DELETE FROM videos WHERE path = $path", ("$path", RelativeOf(fullPath)));
+                BumpMomentsVersion();
+                BumpSpeechVersion();
+            }
         }
 
         public void Dispose()
@@ -143,35 +147,55 @@ namespace PhotoLiker.Video
                 ? record with { Date = VideoDates.Resolve(info, file.CreationTimeUtc, file.LastWriteTimeUtc, now) }
                 : record;
 
+        private const string RecordColumns = """
+            id, length, modified, probe_version, duration, width, height, rotation, fps, vcodec, acodec, bitrate, container_date, lat, lon, encoder,
+            taken, taken_source, date_version, failure, path
+            """;
+
         private Kept? Lookup(string relative)
         {
             lock (_gate)
             {
                 using var command = _db.CreateCommand();
-                command.CommandText = """
-                    SELECT id, length, modified, probe_version, duration, width, height, rotation, fps, vcodec, acodec, bitrate, container_date, lat, lon, encoder,
-                           taken, taken_source, date_version, failure
-                    FROM videos WHERE path = $path
-                    """;
+                command.CommandText = $"SELECT {RecordColumns} FROM videos WHERE path = $path";
                 command.Parameters.AddWithValue("$path", relative);
                 using var reader = command.ExecuteReader();
-                if (!reader.Read())
-                    return null;
-
-                var failure = reader.IsDBNull(19) ? null : reader.GetString(19);
-                VideoInfo? info = failure is not null ? null : new VideoInfo(
-                    reader.GetDouble(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetDouble(8), reader.GetString(9),
-                    reader.IsDBNull(10) ? null : reader.GetString(10), reader.GetInt64(11),
-                    reader.IsDBNull(12) ? null : new DateTime(reader.GetInt64(12), DateTimeKind.Unspecified),
-                    reader.IsDBNull(13) ? null : reader.GetDouble(13), reader.IsDBNull(14) ? null : reader.GetDouble(14),
-                    reader.IsDBNull(15) ? null : reader.GetString(15));
-                var date = new PhotoDate(
-                    reader.IsDBNull(16) ? null : new DateTime(reader.GetInt64(16), DateTimeKind.Unspecified), (DateSource)reader.GetInt32(17), reader.GetInt32(18));
-
-                return new Kept(new VideoRecord(reader.GetInt64(0), relative, reader.GetInt64(1), reader.GetInt64(2), info, date, failure), reader.GetInt32(3));
+                return reader.Read() ? ReadKept(reader) : null;
             }
         }
 
+        private static Kept ReadKept(SqliteDataReader reader)
+        {
+            var failure = reader.IsDBNull(19) ? null : reader.GetString(19);
+            VideoInfo? info = failure is not null ? null : new VideoInfo(
+                reader.GetDouble(4), reader.GetInt32(5), reader.GetInt32(6), reader.GetInt32(7), reader.GetDouble(8), reader.GetString(9),
+                reader.IsDBNull(10) ? null : reader.GetString(10), reader.GetInt64(11),
+                reader.IsDBNull(12) ? null : new DateTime(reader.GetInt64(12), DateTimeKind.Unspecified),
+                reader.IsDBNull(13) ? null : reader.GetDouble(13), reader.IsDBNull(14) ? null : reader.GetDouble(14),
+                reader.IsDBNull(15) ? null : reader.GetString(15));
+            var date = new PhotoDate(
+                reader.IsDBNull(16) ? null : new DateTime(reader.GetInt64(16), DateTimeKind.Unspecified), (DateSource)reader.GetInt32(17), reader.GetInt32(18));
+
+            return new Kept(new VideoRecord(reader.GetInt64(0), reader.GetString(20), reader.GetInt64(1), reader.GetInt64(2), info, date, failure), reader.GetInt32(3));
+        }
+
+        /// <summary>Every video the catalog knows, as it was read (also the ones that could not be), by path.</summary>
+        public IReadOnlyList<VideoRecord> Records()
+        {
+            lock (_gate)
+            {
+                using var command = _db.CreateCommand();
+                command.CommandText = $"SELECT {RecordColumns} FROM videos ORDER BY path";
+                using var reader = command.ExecuteReader();
+                var records = new List<VideoRecord>();
+                while (reader.Read())
+                    records.Add(ReadKept(reader).Record);
+                return records;
+            }
+        }
+
+        /// <summary>The full path of a video of this catalog.</summary>
+        public string FullPathOf(VideoRecord record) => Path.Combine(Root, record.RelativePath.Replace('/', Path.DirectorySeparatorChar));
         private VideoRecord Save(string relative, long length, long modified, VideoInfo? info, PhotoDate date, string? failure)
         {
             lock (_gate)
@@ -230,6 +254,9 @@ namespace PhotoLiker.Video
                     drop.Parameters.AddWithValue("$id", id);
                     drop.ExecuteNonQuery();
                 }
+
+                // So did what was made of its pictures: the moments and the faces in them are of another video now
+                DropAnalysisOf(transaction, id);
 
                 transaction.Commit();
                 return new VideoRecord(id, relative, length, modified, info, date, failure);
@@ -291,6 +318,7 @@ namespace PhotoLiker.Video
                     at_seconds REAL NOT NULL,
                     jpeg BLOB NOT NULL)
                 """);
+            PrepareMoments();
         }
 
         private void Execute(string sql, params (string Name, object Value)[] parameters)

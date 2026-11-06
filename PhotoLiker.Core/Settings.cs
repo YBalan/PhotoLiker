@@ -30,6 +30,19 @@ namespace PhotoLiker.Core
         /// <summary>The file extensions that count as videos when <see cref="SupportVideo"/> is on, see <see cref="MediaKinds.DefaultVideoExtensions"/>.</summary>
         public string[] VideoExtensions { get; set; } = [.. MediaKinds.DefaultVideoExtensions];
 
+        /// <summary>
+        /// Whether "Update index" also turns what is said in the videos into text (speech recognition on this computer), so that a word that is said finds the video: slow (about a third of
+        /// the length of the speech with the model that works) and a model of hundreds of megabytes to download, which is why it is asked for. Needs <see cref="SupportVideo"/>.
+        /// </summary>
+        public bool VideoSpeech { get; set; } = false;
+
+        /// <summary>The speech model, by the id the video library gives it ("tiny", "base", "small"); an id that is not known counts as the default, "small".</summary>
+        public string SpeechModel { get; set; } = DefaultSpeechModel;
+        public const string DefaultSpeechModel = "small";
+
+        /// <summary>The language that is spoken in the videos ("ru", "uk", "en" ...), or "auto" to let the model hear it for each video.</summary>
+        public string SpeechLanguage { get; set; } = "auto";
+
         /// <summary>What the folder listing takes for files of the folder: the photos, and the videos too if <see cref="SupportVideo"/> is on. Indexing and the tools work on <see cref="Extensions"/>, photos only.</summary>
         [JsonIgnore]
         public string[] ListedExtensions => SupportVideo ? [.. Extensions, .. VideoExtensions] : Extensions;

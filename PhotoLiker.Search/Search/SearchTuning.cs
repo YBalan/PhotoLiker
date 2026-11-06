@@ -44,6 +44,16 @@ namespace PhotoLiker.Search
         /// <summary>The lowest score a text search shows when the best photo scored <paramref name="best"/>.</summary>
         public float TextCutoff(float best) => Math.Max(MinTextScore, best - TextScoreBand);
 
+        /// <summary>
+        /// A picture taken out of a video is worse than a photo (motion blur, compression, a camera in a hand), and words match it less well and more by
+        /// chance: on four clips with no cat in them "a cat" scored 0.24 to 0.25 where a photo of a cat scores 0.25 to 0.35, so a frame has to score a little
+        /// more than a photo to count. The same step at every position of the slider. Measured on a few clips, not on a library.
+        /// </summary>
+        public const float VideoMargin = 0.02f;
+
+        /// <summary>The lowest score a text search shows for the moments of videos when the best moment scored <paramref name="best"/>.</summary>
+        public float VideoTextCutoff(float best) => Math.Max(MinTextScore + VideoMargin, best - TextScoreBand);
+
         private static float Lerp(float from, float to, float fraction) => from + (to - from) * fraction;
     }
 }

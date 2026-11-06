@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using System.Drawing.Drawing2D;
+using PhotoLiker.Search;
 using PhotoLiker.Video;
 
 namespace PhotoLikerUI
@@ -17,6 +18,13 @@ namespace PhotoLikerUI
         private const int VolumeStep = 10;
 
         private VideoPlayerPanel? _player;
+        private MomentStrip? _strip;
+        private int _stripGeneration;
+        private long _lastMomentMs;
+        private IReadOnlyList<SpeechSegment> _speech = []; // what is said in the shown video, if it was read (see SpeechIndexingJob)
+
+        // What the search that is shown found in each video of it, by path: where in the video, and which stretches (empty when no results are shown)
+        private Dictionary<string, SearchHit> _resultHits = new(StringComparer.Ordinal);
 
         private bool ShowingVideo => pictureBox1.Tag is string file && MediaKinds.IsVideo(file);
 
@@ -56,6 +64,12 @@ namespace PhotoLikerUI
             player.Used += FocusViewer;
             player.Failed += OnPlayerFailed;
             player.NotATime += SetStatus;
+            player.TimeChanged += ms =>
+            {
+                _lastMomentMs = ms;
+                _strip?.SetCurrent(ms);
+                ShowCaption(ms);
+            };
             scrollPanel.Controls.Add(player);
             player.BringToFront(); // in front of the picture, and the status bar (docked below) keeps its place
             _player = player;
@@ -63,11 +77,21 @@ namespace PhotoLikerUI
             return player;
         }
 
-        /// <summary>Plays the video that is shown, from <paramref name="startMs"/>. A search that found a moment in a video gives the time.</summary>
-        private async void PlayCurrentVideo(long startMs = 0)
+        /// <summary>The place in the shown video that a search found, if search results are shown and found one in it.</summary>
+        private SearchHit? HitOfShownVideo() =>
+            _resultsActive && pictureBox1.Tag is string file && _resultHits.TryGetValue(file, out var hit) ? hit : null;
+
+        /// <summary>
+        /// Plays the video that is shown, from <paramref name="startMs"/>; without a time, from the place a search found in it (the best fitting moment),
+        /// else from the start.
+        /// </summary>
+        private async void PlayCurrentVideo(long? startMs = null)
         {
             if (pictureBox1.Tag is not string file || !MediaKinds.IsVideo(file))
                 return;
+
+            var hit = HitOfShownVideo();
+            var from = startMs ?? hit?.TimeMs ?? 0;
 
             if (!File.Exists(file))
             {
@@ -80,7 +104,9 @@ namespace PhotoLikerUI
             player.BringToFront();
             pictureBox1.Invalidate();
             SetStatus(string.Format(VideoPlayerStrings.StatusVideoShownFormat, Path.GetFileName(file)));
-            await player.PlayAsync(file, startMs);
+            player.SetMarks(hit?.Moments);
+            _lastMomentMs = from;
+            await player.PlayAsync(file, from);
             FocusViewer();
         }
 
@@ -92,6 +118,7 @@ namespace PhotoLikerUI
 
             player.Visible = false;
             _ = player.StopAsync();
+            _strip?.SetCurrent(-1);
             pictureBox1.Invalidate();
         }
 
@@ -132,6 +159,15 @@ namespace PhotoLikerUI
                 case Keys.Escape when shown:
                     HidePlayer();
                     return true;
+                case Keys.Control | Keys.S:
+                    SaveVideoFrame();
+                    return true;
+                case Keys.OemPeriod:
+                    GoToMoment(forward: true);
+                    return true;
+                case Keys.Oemcomma:
+                    GoToMoment(forward: false);
+                    return true;
                 case Keys.Shift | Keys.Left when shown:
                     _player!.SeekBy(-ShortSeekMs);
                     return true;
@@ -154,6 +190,36 @@ namespace PhotoLikerUI
             return false;
         }
 
+        /// <summary>
+        /// Saves the picture the video shows now (the first one, if it is not playing) as a photo in the Liked folder: full size, named after the video and the place, with the
+        /// date it was recorded at that place as its date taken. It is a file like any other copy there; the photos of the folder are not changed.
+        /// </summary>
+        private async void SaveVideoFrame()
+        {
+            if (pictureBox1.Tag is not string file || !MediaKinds.IsVideo(file))
+                return;
+
+            var folder = _currentConfig.LikedFolder;
+            if (string.IsNullOrWhiteSpace(folder))
+            {
+                SetStatus(VideoPlayerStrings.StatusFrameNoFolder);
+                return;
+            }
+
+            var timeMs = PlayerShown ? _player!.TimeMs : _lastMomentMs;
+            try
+            {
+                var catalog = VideoLibrary.Current;
+                var recorded = catalog is null ? null : await Task.Run(async () => (await catalog.GetAsync(file)).Date.Taken);
+                var saved = await VideoFrameSaver.SaveAsync(file, timeMs, folder, recorded);
+                SetStatus(string.Format(VideoPlayerStrings.StatusFrameSavedFormat, Path.GetFileName(file), VideoTime.Format(timeMs), Path.GetFileName(saved)));
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+            {
+                SetStatus(string.Format(VideoPlayerStrings.StatusFrameErrorFormat, ex.Message));
+            }
+        }
+
         /// <summary>Puts the video file on the clipboard as a file (there is no picture to give), so that it can be pasted into a folder or a message.</summary>
         private void CopyVideoToClipboard(string file)
         {
@@ -169,6 +235,169 @@ namespace PhotoLikerUI
             {
                 SetStatus(string.Format(MainFormStrings.StatusCopyError, ex.Message));
             }
+        }
+
+        // ── the moments of a video ─────────────────────────────────────────
+
+        private MomentStrip EnsureStrip()
+        {
+            if (_strip is { } existing)
+                return existing;
+
+            var strip = new MomentStrip { Dock = DockStyle.Bottom, Visible = false };
+            strip.MomentClicked += OnMomentClicked;
+            strip.Used += FocusViewer;
+            scrollPanel.Controls.Add(strip);
+            // Docked above the status bar and below the picture: the status bar (the last control) is laid out first, then this, then what fills the rest
+            scrollPanel.Controls.SetChildIndex(strip, scrollPanel.Controls.GetChildIndex(statusStrip1));
+            _strip = strip;
+            ThemeManager.Apply(this, _currentConfig.IsDarkTheme);
+            return strip;
+        }
+
+        /// <summary>
+        /// Shows the moments of the video that is shown, as small pictures under the viewer, with the places a search found marked; hides the strip for a photo and for a
+        /// video that has no moments (it has not been analyzed). The pictures are read from the catalog and decoded in the background.
+        /// </summary>
+        private async void UpdateMomentStrip(string? file)
+        {
+            var generation = ++_stripGeneration;
+            var catalog = VideoLibrary.Current;
+            _speech = [];
+            _player?.SetCaption(null);
+            if (file is null || !MediaKinds.IsVideo(file) || !_currentConfig.SupportVideo || catalog is null)
+            {
+                if (_strip is { } hidden)
+                {
+                    hidden.Clear();
+                    hidden.Visible = false;
+                }
+                return;
+            }
+
+            _ = LoadSpeechAsync(file, catalog, generation);
+
+            var preferred = SearchModel.Id;
+            List<(long TimeMs, Bitmap Picture)> moments;
+            try
+            {
+                moments = await Task.Run(() => ReadMomentPictures(catalog, file, preferred));
+            }
+            catch (Exception)
+            {
+                return; // the catalog was closed (another folder), or the file is gone: no strip
+            }
+
+            if (generation != _stripGeneration || IsDisposed)
+            {
+                foreach (var (_, picture) in moments)
+                    picture.Dispose();
+                return;
+            }
+
+            var strip = EnsureStrip();
+            if (moments.Count == 0)
+            {
+                strip.Clear();
+                strip.Visible = false;
+                return;
+            }
+
+            var hit = HitOfShownVideo();
+            strip.SetMoments(moments, hit?.Moments);
+            strip.Visible = true;
+            strip.ScrollToFirstHit();
+            if (_player is { Visible: true } player)
+                strip.SetCurrent(player.TimeMs);
+        }
+
+        /// <summary>Reads what is said in the video that is shown (if the speech of the folder was read), for the line under the player.</summary>
+        private async Task LoadSpeechAsync(string file, VideoCatalog catalog, int generation)
+        {
+            IReadOnlyList<SpeechSegment> speech;
+            try
+            {
+                speech = await Task.Run(() => catalog.SpeechOf(file));
+            }
+            catch (Exception)
+            {
+                return; // the catalog was closed (another folder)
+            }
+
+            if (generation == _stripGeneration && !IsDisposed)
+                _speech = speech;
+        }
+
+        // The words that are said at this place in the video, a little before and after their segment: the model puts a segment where the voice starts and stops
+        private void ShowCaption(long timeMs)
+        {
+            if (_player is not { } player)
+                return;
+
+            var line = _speech.Count == 0 ? null : _speech.FirstOrDefault(s => timeMs >= s.StartMs - 300 && timeMs <= s.EndMs + 1200);
+            player.SetCaption(line?.Text);
+        }
+
+        // The thumbnails of the model that is chosen; a video that was analyzed with another model only still shows its moments
+        private static List<(long TimeMs, Bitmap Picture)> ReadMomentPictures(PhotoLiker.Video.VideoCatalog catalog, string file, string preferredModelId)
+        {
+            var thumbnails = catalog.Thumbnails(file, preferredModelId);
+            for (var i = 0; thumbnails.Count == 0 && i < PhotoLiker.Search.ClipModels.All.Count; i++)
+                thumbnails = catalog.Thumbnails(file, PhotoLiker.Search.ClipModels.All[i].Id);
+
+            var pictures = new List<(long, Bitmap)>(thumbnails.Count);
+            try
+            {
+                foreach (var thumbnail in thumbnails)
+                {
+                    using var stream = new MemoryStream(thumbnail.Jpeg, writable: false);
+                    using var decoded = Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: true);
+                    pictures.Add((thumbnail.TimeMs, new Bitmap(decoded)));
+                }
+                return pictures;
+            }
+            catch
+            {
+                foreach (var (_, picture) in pictures)
+                    picture.Dispose();
+                throw;
+            }
+        }
+
+        private void OnMomentClicked(long timeMs)
+        {
+            if (_player is { Visible: true } player && string.Equals(player.CurrentFile, pictureBox1.Tag as string, StringComparison.Ordinal))
+            {
+                player.SeekTo(timeMs);
+                FocusViewer();
+            }
+            else
+            {
+                PlayCurrentVideo(timeMs);
+            }
+        }
+
+        /// <summary>
+        /// Goes to the next (or previous) moment of the shown video: of those a search found if it found some, else of all the moments the video has. Plays the video from there
+        /// if it is not playing.
+        /// </summary>
+        private void GoToMoment(bool forward)
+        {
+            if (!ShowingVideo)
+                return;
+
+            IReadOnlyList<long> places = HitOfShownVideo()?.Moments is { Count: > 0 } found ? found : _strip?.Times ?? [];
+            if (places.Count == 0)
+                return;
+
+            var now = _player is { Visible: true } player ? player.TimeMs : _lastMomentMs;
+            long? target = forward
+                ? places.Where(p => p > now + 500).Cast<long?>().FirstOrDefault()
+                : places.Where(p => p < now - 1500).Cast<long?>().LastOrDefault();
+            if (target is not { } at)
+                return;
+
+            OnMomentClicked(at);
         }
 
         // ── the play mark on the poster, and on the thumbnails ─────────────

@@ -23,6 +23,9 @@ namespace PhotoLikerUI
         public static string Extensions => T();
         public static string SupportVideo => T();
         public static string VideoExtensions => T();
+        public static string VideoSpeech => T();
+        public static string SpeechModel => T();
+        public static string SpeechLanguage => T();
         public static string SortOrder => T();
         public static string CacheSize => T();
         public static string ThumbnailSize => T();

@@ -209,7 +209,7 @@ public class AppLanguageTests
     {
         // It is one for the whole program: a folder shared between computers must not carry the language of one of them
         var json = System.Text.Json.JsonSerializer.Serialize(new Settings());
-        Assert.DoesNotContain("Language", json);
+        Assert.DoesNotContain("\"Language\"", json); // the row of the grid called Language, not SpeechLanguage
     }
 }
 

@@ -327,6 +327,8 @@ What is kept where:
 | <kbd>Shift</kbd>+<kbd>Right</kbd> / <kbd>Left</kbd>, <kbd>Ctrl</kbd>+<kbd>Right</kbd> / <kbd>Left</kbd> | While a video plays: 5 seconds / 30 seconds ahead or back. |
 | <kbd>Ctrl</kbd>+<kbd>Up</kbd> / <kbd>Down</kbd> | While a video plays: the volume up / down. |
 | <kbd>Esc</kbd> | While a video plays: back to its poster picture (the next <kbd>Esc</kbd> closes search results). |
+| <kbd>.</kbd> / <kbd>,</kbd> | On a video: go to the next / the previous place a search found in it (without a search, the next / previous moment), and play from there. |
+| <kbd>Ctrl</kbd>+<kbd>S</kbd> | On a video: save the picture it shows as a photo in the Liked folder, with the date it was recorded there. |
 
 Keys are ignored while you type into a text box: the value you are editing in a grid, the search box. A click on the
 photo (or on a thumbnail, or on the empty space around the photo) takes the keyboard focus out of the text box, so the keys
@@ -486,6 +488,9 @@ the top whenever another photo is shown:
 | **Extensions** | The file extensions that count as photos, separated by `;` or `,`, each with its dot: `.jpg; .png`. Case does not matter. |
 | **SupportVideo** | List the videos of the folder with its photos (off by default). See [Videos](#videos). |
 | **VideoExtensions** | The file extensions that count as videos when **SupportVideo** is on: `.mp4; .mov; .avi; .mkv ...` (the default list has the usual ones). |
+| **VideoSpeech** | Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See [Videos](#videos). |
+| **SpeechModel** | `tiny`, `base` or `small` (the one to use). |
+| **SpeechLanguage** | The language that is spoken: `ru`, `uk`, `en` ..., or `auto` (the model hears it for each video). |
 | **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, `Random` in a random order, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
 | **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
 | **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
@@ -717,11 +722,34 @@ picture pauses and plays. The keys are in the [table above](#keyboard-and-mouse)
 another item of the list stops the video. The first start of the player after an installation can take ten seconds or more while the virus scanner looks at its files; it starts in the background as soon as a video is shown,
 and the bar says **Starting the video player...** until it is ready. If it cannot start at all, the video is opened in the program Windows plays such files with.
 
-**What works on a video, and what does not.** <kbd>Space</kbd> likes it, a group key sorts it, <kbd>Delete</kbd> moves it to the `Deleted` folder (a video that is playing is let go of first),
-<kbd>Ctrl</kbd>+<kbd>C</kbd> copies the file: all as for a photo. The [search](#photo-search) and its index, the [slideshow](#slideshow), rotating, [Align dates](#aligning-file-dates),
-duplicates and Generate Video work on photos only for now: the videos are left out of them.
+**Searching the videos.** With **SupportVideo** on, **Update index** goes through the videos after the photos, with the same model and the same Stop button. ffmpeg takes a picture out of each
+video every two seconds (the key frames only, where a video has them: 60 times faster than playing it) and the model looks at it; a picture that is no longer like the last one kept becomes a
+**moment** of the video (about one in three, with a small picture of it and the faces in it, found with the same models as in photos), and the rest are dropped. The search box then searches
+photos and videos together: words ("a cat"), a person ("Mom", or "Mom and Dad"), a date ("September 2009"), or any mix, and the result is one list, the better fits first. A video is in it
+once, and the viewer shows where it fits: under the picture is a strip of the moments of the video, the ones the search found marked in orange, and the slider has orange ticks at the same
+places. <kbd>Enter</kbd> (or a click) plays from the best fitting place, a click on a picture of the strip goes there, and <kbd>.</kbd> / <kbd>,</kbd> go to the next / the previous place that
+was found (without a search, the next moment of all). The precision slider works on videos too; a picture out of a video has to fit a little better than a photo to count, because motion blur and
+compression make words match by chance more often (on clips with no cat in them, "a cat" scored as high as a photo needs to). A person is found by the faces in the moments, with the examples from
+the photos: a video is searched for people from the photos you named. On the real clips this was made with (a Canon camera, 640 x 480): 144 seconds of video took 19 seconds with faces.
+Switching the search model makes the moments again with the new model, like the photos.
 
-**Where it keeps what it knows.** What ffmpeg reads from a video (its size, length, codec and dates) and its poster picture are kept in a catalog of their own, `video-<folder>-<hash>.db`
+**What is said.** Turn **VideoSpeech** on (it is off by default) and **Update index** also turns what is said in the videos into text, on this computer: Whisper (whisper.cpp), the **small** model
+(465 MB, downloaded the first time after asking), reads the sound of each video, a video with no sound worth reading (digital silence) is skipped, and what is heard is kept with the time of each
+sentence. It takes about a third of the length of the speech: 3 hours of video in about an hour; it continues where it stopped. A word that you type is then looked for in what is said, in whatever
+form it was said (<q>лошадка</q> finds <q>лошадку</q>), also when the sentence was cut in two by the model, and a video where it is said comes before the ones that only look right. The words are
+shown in a line under the player while the video plays. The text is the model's guess: it is good with adult speech and poor with children's and with noise (a song is written as its words), and the
+**SpeechLanguage** row (`ru`, `uk`, `en`, or `auto`) helps it when the family speaks one language. **SpeechModel** chooses `tiny`, `base` or `small`. Nothing leaves the computer.
+(The words are searched in the text whichever search model is chosen; for a query in Russian or Ukrainian the pictures are best searched with the XLM-R model of the [photo search](#photo-search).)
+
+**Saving a picture of a video.** <kbd>Ctrl</kbd>+<kbd>S</kbd> saves the picture the video shows now (the first one, if it is not playing) as a photo in the Liked folder: full size, named after the
+video and the place (`MVI_4069 1m23s.jpg`), with the date it was recorded at that place as its date taken, so it is a photo like any other.
+
+**What works on a video, and what does not.** <kbd>Space</kbd> likes it, a group key sorts it, <kbd>Delete</kbd> moves it to the `Deleted` folder (a video that is playing is let go of first),
+<kbd>Ctrl</kbd>+<kbd>C</kbd> copies the file: all as for a photo. The [slideshow](#slideshow), rotating, [Align dates](#aligning-file-dates), duplicates, "More like this" and Generate Video
+work on photos only for now: the videos are left out of them.
+
+**Where it keeps what it knows.** What ffmpeg reads from a video (its size, length, codec and dates), its poster picture, its moments (with their pictures, vectors and faces) and what is said in it
+are kept in a catalog of their own, `video-<folder>-<hash>.db`
 next to the photo index in `%LocalAppData%\PhotoLiker\index`: a separate file, so the photos and the videos never get in each other's way. A video is read when it is first shown and not again
 until the file changes: on a router, 24 videos of a Canon camera took 9 seconds the first time and 17 milliseconds the second. The catalog is a cache: deleting it costs nothing but that time.
 
@@ -1058,11 +1086,11 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown. Shared by all front ends. |
 | `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run, the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
-| `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, and the catalog of the videos of a folder in an SQLite file of its own. Uses Core and Search (the rules of the dates). Windows only. |
+| `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form) and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
 | `PhotoLiker.GenerateVideo.Tests` | xUnit tests of the video library: the order and the times of the photos, the sequence of a video (cover, repeats, audio), the ffmpeg arguments, the cuts on the beat, the rhythm analysis (on synthetic songs), the settings file. They need no ffmpeg. |
-| `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg). The tests that make a short video do so with the ffmpeg of the repository and do nothing without it. |
+| `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg), the pictures taken out of a real video and their times, the choice of moments, the faces, the search (words, people, dates, speech) and its merge with the photos, the word forms of the speech and the speech job with a stand-in for the model, saving a picture. The tests that make a short video do so with the ffmpeg of the repository and do nothing without it; the one that runs the real CLIP model does nothing without it. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |

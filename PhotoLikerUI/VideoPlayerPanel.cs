@@ -22,6 +22,7 @@ namespace PhotoLikerUI
 
         private readonly VideoView _view = new() { Dock = DockStyle.Fill, BackColor = Color.Black };
         private readonly Panel _bar = new() { Dock = DockStyle.Bottom, Height = BarHeight };
+        private readonly Label _caption = new() { Dock = DockStyle.Bottom, Height = 26, TextAlign = ContentAlignment.MiddleCenter, AutoEllipsis = true, Visible = false };
         private readonly Button _play = new() { Text = "▶", FlatStyle = FlatStyle.Flat, TabStop = false, Size = new Size(34, 28) };
         private readonly Label _time = new() { Text = "0:00 / 0:00", AutoSize = false, TextAlign = ContentAlignment.MiddleCenter, Width = 124 }; // room for 1:02:03 / 1:30:00
         private readonly SeekBar _seek = new();
@@ -44,7 +45,9 @@ namespace PhotoLikerUI
             _play.Font = _mute.Font = new Font("Segoe UI Symbol", 11f);
 
             _bar.Controls.AddRange([_play, _time, _seek, _goLabel, _go, _mute, _volumeBar]);
+            _caption.Font = new Font(Font.FontFamily, 11f);
             Controls.Add(_view);
+            Controls.Add(_caption); // above the bar: what is said just now
             Controls.Add(_bar);
 
             _volumeBar.Value = _volume;
@@ -78,6 +81,22 @@ namespace PhotoLikerUI
 
         /// <summary>The text typed into the go-to box is not a time.</summary>
         public event Action<string>? NotATime;
+
+        /// <summary>The video is at this place (milliseconds); raised a few times a second while it plays or is paused.</summary>
+        public event Action<long>? TimeChanged;
+
+        /// <summary>What is said in the video just now, in a line under the picture; none hides the line.</summary>
+        public void SetCaption(string? text)
+        {
+            text ??= string.Empty;
+            if (_caption.Text != text)
+                _caption.Text = text;
+            if (_caption.Visible != (text.Length > 0))
+                _caption.Visible = text.Length > 0;
+        }
+
+        /// <summary>Marks places on the slider (the moments a search found), or none.</summary>
+        public void SetMarks(IReadOnlyList<long>? places) => _seek.Marks = places ?? [];
 
         /// <summary>The video that is shown (or being started); null when none.</summary>
         [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
@@ -281,6 +300,7 @@ namespace PhotoLikerUI
             {
                 _seek.Value = time;
                 UpdateTime(time, length);
+                TimeChanged?.Invoke(time);
             }
 
             // Volume set before the sound output exists is lost: say it again until it is there

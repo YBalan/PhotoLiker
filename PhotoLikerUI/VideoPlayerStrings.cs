@@ -20,5 +20,8 @@ namespace PhotoLikerUI
         public static string StatusVideoCopiedFormat => T();
         public static string StatusVideoOpenedElsewhereFormat => T();
         public static string StatusVideoFileMissingFormat => T();
+        public static string StatusFrameSavedFormat => T();
+        public static string StatusFrameNoFolder => T();
+        public static string StatusFrameErrorFormat => T();
     }
 }

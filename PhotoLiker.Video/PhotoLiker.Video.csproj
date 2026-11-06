@@ -2,12 +2,13 @@
 
   <!--
     Videos in the photo archive: reading what is in a video (ffmpeg), a picture to show for it, and the catalog of videos that is kept apart from the
-    photo index (its own SQLite file per folder). Later: searching what happens in a video. No user interface. It uses Search for the rules
+    photo index (its own SQLite file per folder), and searching what happens in a video: what its pictures show, who is in them, and what is said in it (speech recognition\r\n    with Whisper). No user interface. It uses Search for the rules
     that tell when something was taken (and, later, for the models that tell what a picture shows), which is why it has the Windows target.
     Making a video of photos is another project (GenerateVideo).
   -->
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>PhotoLiker.Video</RootNamespace>
@@ -17,10 +18,13 @@
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
     <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="PhotoLiker.Core" />
+    <Using Include="System.IO" />
   </ItemGroup>
 
   <ItemGroup>

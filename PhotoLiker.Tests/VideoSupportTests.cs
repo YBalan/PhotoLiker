@@ -140,6 +140,33 @@ public class VideoSupportTests : IDisposable
     }
 
     [Fact]
+    public void SpeechIsOffUntilAskedFor_WithTheModelThatWorks_AndTheLanguageHeardByTheModel()
+    {
+        var settings = new Settings();
+
+        Assert.False(settings.VideoSpeech);
+        Assert.Equal("small", settings.SpeechModel);
+        Assert.Equal(Settings.DefaultSpeechModel, settings.SpeechModel);
+        Assert.Equal("auto", settings.SpeechLanguage);
+    }
+
+    [Fact]
+    public void TheSpeechSettings_AreKeptWithTheFolder_AndAnOldFileHasTheDefaults()
+    {
+        new Settings { CurrentFolder = _root, VideoSpeech = true, SpeechModel = "base", SpeechLanguage = "uk" }.Save(_root);
+        var loaded = Settings.Load(_root);
+
+        Assert.True(loaded.VideoSpeech);
+        Assert.Equal(("base", "uk"), (loaded.SpeechModel, loaded.SpeechLanguage));
+
+        File.WriteAllText(Settings.GetFilePath(_root), """{ "SupportVideo": true }""");
+        var old = Settings.Load(_root);
+        Assert.True(old.SupportVideo);
+        Assert.False(old.VideoSpeech);
+        Assert.Equal("small", old.SpeechModel);
+    }
+
+    [Fact]
     public void TheListedExtensions_AreNotWrittenToTheFile()
     {
         new Settings { CurrentFolder = _root, SupportVideo = true }.Save(_root);

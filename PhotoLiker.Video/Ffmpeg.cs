@@ -76,6 +76,40 @@ namespace PhotoLiker.Video
             }
         }
 
+        /// <summary>
+        /// Starts ffmpeg and hands the process over, for a run whose output is read as it comes (the pictures of a video, one after the other):
+        /// the caller reads <c>StandardOutput</c>, handles the messages and disposes the process. It runs at a low priority, like all the analysis, and
+        /// nothing it reads is typed in. Throws <see cref="FileNotFoundException"/> when there is no ffmpeg to run.
+        /// </summary>
+        internal static Process Start(IEnumerable<string> arguments)
+        {
+            var start = new ProcessStartInfo(Executable)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardErrorEncoding = Encoding.UTF8,
+            };
+            foreach (var argument in arguments)
+                start.ArgumentList.Add(argument);
+
+            try
+            {
+                var process = Process.Start(start) ?? throw new FileNotFoundException(VideoLibStrings.FfmpegNotFound, start.FileName);
+                process.StandardInput.Close();
+                try { process.PriorityClass = ProcessPriorityClass.BelowNormal; } catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { /* it ended already */ }
+                return process;
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                throw new FileNotFoundException(VideoLibStrings.FfmpegNotFound, start.FileName, ex);
+            }
+        }
+
+        internal static void Kill(Process process) => Stop(process);
+
         private static void Stop(Process process)
         {
             try

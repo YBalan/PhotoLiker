@@ -223,6 +223,8 @@ photo again.</p></div>
     <tr><td><kbd>Enter</kbd></td><td>On a video: play it, or pause / resume it (see <a href="#videos">Videos in the folder</a>). A click on the poster plays it, a click on the playing picture pauses it.</td></tr>
     <tr><td><kbd>Shift</kbd>+<kbd>→</kbd> / <kbd>←</kbd>, <kbd>Ctrl</kbd>+<kbd>→</kbd> / <kbd>←</kbd></td><td>While a video plays: 5 seconds / 30 seconds ahead or back.</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd></td><td>While a video plays: the volume up / down.</td></tr>
+    <tr><td><kbd>.</kbd> / <kbd>,</kbd></td><td>On a video: the next / the previous place a search found in it (without a search, the next / previous moment), and play from there.</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>On a video: save the picture it shows as a photo in the Liked folder, with the date it was recorded there.</td></tr>
     <tr><td><kbd>Esc</kbd></td><td>Close the search results; in the slideshow, go back.</td></tr>
     <tr><td><kbd>Enter</kbd> in the search box</td><td>Search.</td></tr>
     <tr><td><kbd>Shift</kbd>+drag over the photo</td><td>Mark a face the program missed (with the face icon switched on).</td></tr>
@@ -356,6 +358,9 @@ description: select it and the pane under the table says what it is for.</p>
     <tr><td><strong>Extensions</strong></td><td>The kinds of file that count as photos, separated by <code>;</code> or <code>,</code>, each with its dot: <code>.jpg; .png</code>.</td></tr>
     <tr><td><strong>SupportVideo</strong></td><td>List the videos of the folder with its photos (off by default). See <a href="#videos">Videos in the folder</a>.</td></tr>
     <tr><td><strong>VideoExtensions</strong></td><td>The kinds of file that count as videos when <strong>SupportVideo</strong> is on: <code>.mp4; .mov; .avi; .mkv</code> ... (the usual ones are listed already).</td></tr>
+    <tr><td><strong>VideoSpeech</strong></td><td>Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See <a href="#videos">Videos in the folder</a>.</td></tr>
+    <tr><td><strong>SpeechModel</strong></td><td><code>tiny</code>, <code>base</code> or <code>small</code> (the one to use).</td></tr>
+    <tr><td><strong>SpeechLanguage</strong></td><td>The language that is spoken: <code>ru</code>, <code>uk</code>, <code>en</code> ..., or <code>auto</code> (the model hears it for each video).</td></tr>
     <tr><td><strong>SortOrder</strong></td><td>The order of the photos, see <a href="#order">Order of the photos</a>.</td></tr>
     <tr><td><strong>CacheSize</strong></td><td>How many photos on each side of the shown one are kept ready in memory, so that the arrow keys feel instant.</td></tr>
     <tr><td><strong>ThumbnailSize</strong></td><td>Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the thumbnails changes it.</td></tr>
@@ -623,9 +628,29 @@ A click on the picture pauses and plays. <kbd>Shift</kbd>+<kbd>←</kbd> / <kbd>
 <p>The first start of the player after an installation can take ten seconds or more while the virus scanner looks at its files; it starts in the background as soon as a video is shown, and the bar
 says <strong>Starting the video player...</strong> until it is ready. If it cannot start at all, the video is opened in the program Windows plays such files with.</p>
 
+<h3>Searching the videos</h3>
+<p>With <strong>SupportVideo</strong> on, <strong>Update index</strong> goes through the videos after the photos, with the same model and the same Stop button. A picture is taken out of each video every
+two seconds and the model looks at it; a picture that is no longer like the last one kept becomes a <strong>moment</strong> of the video (about one in three, kept with a small picture and the faces
+in it). The search box then searches photos and videos together: words (<q>a cat</q>), a person (<q>Mom</q>), a date (<q>September 2009</q>), or any mix of them, and the result is one list, the better
+fits first. A video is in it once, and the viewer shows where it fits: under the picture is a strip of the moments of the video, the ones the search found marked in orange, and the slider has orange ticks
+at the same places. <kbd>Enter</kbd> (or a click) plays from the best fitting place, a click on a picture of the strip goes there, and <kbd>.</kbd> / <kbd>,</kbd> go to the next / the previous place
+that was found. The precision slider works on videos too. A person is found by the faces in the moments, with the examples from the photos you named.</p>
+<p>On a Canon camera's 640 &times; 480 clips, 144 seconds of video took 19 seconds to index, faces included; a library of 3 hours takes about 20 minutes, plus the time to read it from a network share.</p>
+
+<h3>What is said</h3>
+<p>Turn <strong>VideoSpeech</strong> on (it is off by default) and <strong>Update index</strong> also turns what is said in the videos into text, on your computer, with the Whisper model <strong>small</strong>
+(465 MB, downloaded once, after asking). It takes about a third of the length of the speech (3 hours of video in about an hour) and continues where it stopped. A word that you type is then looked for in
+what is said, in whatever form it was said (<q>лошадка</q> finds <q>лошадку</q>), and a video where it is said comes before the ones that only look right. The words are shown in a line under the player
+while the video plays. The text is the model's guess: good with adult speech, poor with children and noise; set <strong>SpeechLanguage</strong> (<code>ru</code>, <code>uk</code>, <code>en</code>) when the family
+speaks one language. Nothing leaves the computer.</p>
+
+<h3>Saving a picture of a video</h3>
+<p><kbd>Ctrl</kbd>+<kbd>S</kbd> saves the picture the video shows now (the first one, if it is not playing) as a photo in the Liked folder, full size, named after the video and the place
+(<code>MVI_4069 1m23s.jpg</code>), with the date it was recorded at that place as its date taken.</p>
+
 <h3>What works on a video, and what does not</h3>
 <p><kbd>Space</kbd> likes it, a group key sorts it, <kbd>Delete</kbd> moves it to the <code>Deleted</code> folder (a video that is playing is let go of first), <kbd>Ctrl</kbd>+<kbd>C</kbd> copies the file: all as for a photo.
-The search and its index, the slideshow, rotating, the date tools, duplicates and Generate Video work on photos only for now: the videos are left out of them.</p>
+The slideshow, rotating, the date tools, duplicates, <q>More like this</q> and Generate Video work on photos only for now: the videos are left out of them.</p>
 
 <p>What PhotoLiker has read from a video (its size, length, codec and dates) and its poster picture are kept on this computer in a catalog of their own, next to the photo index, so that a folder of videos on a network
 share is not read again on every visit. It can be deleted at any time; it only costs the time to read the videos again. The player is VLC's engine (the <code>libvlc</code> folder next to the program,
