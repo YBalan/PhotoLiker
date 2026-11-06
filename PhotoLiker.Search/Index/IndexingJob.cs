@@ -43,7 +43,9 @@ namespace PhotoLiker.Search
             string? excludedFolder,
             IReadOnlyCollection<string> extensions,
             IProgress<IndexProgress>? progress,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            Func<ModelDownload, bool>? confirmDownload = null,
+            bool downloadForSearch = false)
         {
             var clock = Stopwatch.StartNew();
 
@@ -58,13 +60,28 @@ namespace PhotoLiker.Search
             if (dateWork.Count > 0)
                 datesRead = await Task.Run(() => ReadDates(index, dateWork, progress, cancellationToken), CancellationToken.None);
 
-            if (work.Count == 0 || cancellationToken.IsCancellationRequested)
-                return new IndexSummary(0, 0, 0, removed, clock.Elapsed, cancellationToken.IsCancellationRequested, DatesRead: datesRead);
+            if (cancellationToken.IsCancellationRequested)
+                return new IndexSummary(0, 0, 0, removed, clock.Elapsed, Cancelled: true, DatesRead: datesRead);
 
             // Only the models this work takes: another model for the photos' vectors does not need the face models, and the other way round
             var needClip = work.Any(w => w.NeedClip);
             var needFaces = work.Any(w => w.NeedFaces);
-            await models.EnsureDownloadedAsync(needClip ? clipModel : null, needFaces, new DownloadReporter(progress), cancellationToken);
+
+            // Searching by words needs the model's text half as well, also when nothing is left to index: an index brought from another
+            // computer is complete, but the model files are not here. Only when asked for, so a job that reads dates stays offline.
+            var wantClip = needClip || (downloadForSearch && index.CountWithModel(clipModel.Id) > 0);
+            var missing = ModelFiles.MissingMegabytes(models.ModelsFolder, wantClip ? clipModel : null, needFaces);
+            if (missing > 0)
+            {
+                var download = new ModelDownload(wantClip && !models.ClipDownloaded(clipModel) ? clipModel : null, needFaces && !models.FacesDownloaded, missing, work.Count > 0);
+                if (confirmDownload is not null && !confirmDownload(download))
+                    return new IndexSummary(0, 0, 0, removed, clock.Elapsed, Cancelled: false, DatesRead: datesRead, DownloadDeclined: true);
+
+                await models.EnsureDownloadedAsync(wantClip ? clipModel : null, needFaces, new DownloadReporter(progress), cancellationToken);
+            }
+
+            if (work.Count == 0)
+                return new IndexSummary(0, 0, 0, removed, clock.Elapsed, Cancelled: false, DatesRead: datesRead, ModelsDownloaded: missing > 0);
 
             progress?.Report(new IndexProgress(IndexPhase.LoadingModels, "Loading the models...", 0, work.Count, 0, 0, 0, null));
             ClipImageEncoder? imageEncoder = null;

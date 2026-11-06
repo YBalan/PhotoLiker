@@ -416,12 +416,8 @@ namespace PhotoLikerUI
                 return;
             }
 
+            // What has to be downloaded is only known once the folder is scanned: the job asks (ConfirmDownload) just before it downloads
             var model = SearchModel;
-            if (_models.MissingMegabytes(model) is > 0 and var missing &&
-                MessageBox.Show(this, SearchStrings.DownloadQuestionFor(model, !_models.ClipDownloaded(model), !_models.FacesDownloaded, missing),
-                    SearchStrings.DownloadTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
-                return;
-
             var cancellation = _indexCts = new CancellationTokenSource();
             _indexLabel.Text = SearchStrings.IndexScanning;
             UpdateSearchControls();
@@ -437,9 +433,11 @@ namespace PhotoLikerUI
                 if (!ReferenceEquals(_folderSearch, index) && SameFolder(_currentConfig.CurrentFolder, folder))
                     ShowIndex(index);
 
-                var task = index.IndexAsync(_models, _currentConfig.LikedFolder, _currentConfig.Extensions, new Progress<IndexProgress>(OnIndexProgress), cancellation.Token);
+                // downloadForSearch: an index brought from another computer needs nothing indexed, but searching by words needs the model's files
+                var task = index.IndexAsync(_models, _currentConfig.LikedFolder, _currentConfig.Extensions, new Progress<IndexProgress>(OnIndexProgress), cancellation.Token,
+                    ConfirmDownload, downloadForSearch: true);
                 _indexTask = task;
-                SetStatus(DescribeIndexSummary(await task));
+                SetStatus(DescribeIndexSummary(await task, model));
             }
             catch (OperationCanceledException)
             {
@@ -466,13 +464,28 @@ namespace PhotoLikerUI
             }
         }
 
-        private static string DescribeIndexSummary(IndexSummary summary)
+        /// <summary>Asks whether the models the job is about to download may be downloaded. The job runs on the thread that started it, but be safe.</summary>
+        private bool ConfirmDownload(ModelDownload download)
+        {
+            if (InvokeRequired)
+                return Invoke(() => ConfirmDownload(download));
+
+            return MessageBox.Show(this, SearchStrings.DownloadQuestionFor(download), SearchStrings.DownloadTitle,
+                MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK;
+        }
+
+        private static string DescribeIndexSummary(IndexSummary summary, ClipModelInfo model)
         {
             var removed = summary.Removed > 0 ? string.Format(SearchStrings.StatusIndexRemovedPart, summary.Removed) : string.Empty;
+            if (summary.DownloadDeclined)
+                return SearchStrings.StatusDownloadDeclined;
             if (summary.Cancelled)
                 return string.Format(SearchStrings.StatusIndexStopped, summary.Indexed + summary.Failed);
             if (summary.Indexed + summary.Failed == 0)
             {
+                if (summary.ModelsDownloaded)
+                    return string.Format(SearchStrings.StatusModelDownloadedFormat, model.Title);
+
                 return summary.DatesRead > 0
                     ? string.Format(SearchStrings.StatusDatesRead, summary.DatesRead, FormatDuration(summary.Elapsed), removed)
                     : string.Format(SearchStrings.StatusIndexUpToDate, removed);
