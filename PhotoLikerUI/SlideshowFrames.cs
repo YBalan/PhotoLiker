@@ -1,3 +1,4 @@
+using PhotoLiker.Search;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -60,13 +61,32 @@ namespace PhotoLikerUI
     {
         private readonly PixelCanvas _canvas;
 
+        private readonly Lazy<IReadOnlyList<FaceLabel>> _faces;
+        private readonly Lazy<string?> _names;
+
         /// <summary>Takes <paramref name="image"/>: its pixels are copied and it is disposed.</summary>
-        public SlideshowFrame(Bitmap image, DateTime? taken, string path)
+        /// <param name="facesOf">Says who is in the photo (by its file); asked once, the first time <see cref="Faces"/> or <see cref="Names"/> is wanted. Null: nobody is.</param>
+        public SlideshowFrame(Bitmap image, DateTime? taken, string path, Func<string, IReadOnlyList<FaceLabel>>? facesOf = null)
         {
             _canvas = PixelCanvas.Take(image);
             Taken = taken;
             Path = path;
             Bytes = (long)_canvas.Width * _canvas.Height * 4;
+
+            // Working out who is who takes a few milliseconds (more with many named faces): whoever wants it first pays, a thread of the pool that warms it ahead or, if it is wanted before,
+            // the window. A failure is no reason to lose the photo: it is shown with nobody in it.
+            _faces = new Lazy<IReadOnlyList<FaceLabel>>(() =>
+            {
+                try
+                {
+                    return facesOf?.Invoke(path) ?? [];
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    return [];
+                }
+            }, LazyThreadSafetyMode.ExecutionAndPublication);
+            _names = new Lazy<string?>(() => FaceNames.Caption(_faces.Value), LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
         public Bitmap Image => _canvas.Image;
@@ -77,6 +97,15 @@ namespace PhotoLikerUI
         public int Width => _canvas.Width;
         public int Height => _canvas.Height;
         public DateTime? Taken { get; }
+
+        /// <summary>The faces of the photo, each with the name it is known by, if any; none when the folder has no index or the photo is not in it. Works them out at the first call (see the constructor).</summary>
+        public IReadOnlyList<FaceLabel> Faces => _faces.Value;
+
+        /// <summary>The names of the people in the photo as one line for the corner (see <see cref="FaceNames.Caption"/>); null when there is nobody to write.</summary>
+        public string? Names => _names.Value;
+
+        /// <summary>Works out who is in the photo now, if that has not been done: for a thread of the pool, ahead of the first time the window asks.</summary>
+        public void WarmPeople() => _ = _names.Value;
 
         /// <summary>The file the photo is from.</summary>
         public string Path { get; }
@@ -102,6 +131,8 @@ namespace PhotoLikerUI
         private readonly long _maxBytes;
         private readonly int _minFrames; // always kept, whatever they weigh: the shown photo and the ones next to it
         private readonly int _maxParallelLoads; // the decoder keeps up when several photos are made at once (GDI+ does not), and over a network their reads overlap
+        private readonly Func<string, IReadOnlyList<FaceLabel>>? _facesOf; // who is in a photo (the frames ask it when they are shown); null when there is no index to ask
+        private volatile bool _warmPeople;   // the people are shown (the boxes or the names are on): they are worked out along with a frame, not when it is first painted
         private readonly Dictionary<string, SlideshowFrame> _frames = new(StringComparer.Ordinal);
         private readonly HashSet<string> _loading = new(StringComparer.Ordinal);
         private readonly HashSet<string> _failed = new(StringComparer.Ordinal);
@@ -114,12 +145,28 @@ namespace PhotoLikerUI
         private long _bytes;
         private int _activePumps;
 
-        public SlideshowFrames(Size screen, long maxBytes, int minFrames, int maxParallelLoads)
+        /// <param name="facesOf">Says who is in a photo; called on the threads that make the frames and, when a frame has not been asked yet, on the window's thread, so it must be safe to call from any thread. Null: nobody is.</param>
+        public SlideshowFrames(Size screen, long maxBytes, int minFrames, int maxParallelLoads, Func<string, IReadOnlyList<FaceLabel>>? facesOf = null)
         {
             _screen = screen;
             _maxBytes = maxBytes;
             _minFrames = minFrames;
             _maxParallelLoads = maxParallelLoads;
+            _facesOf = facesOf;
+        }
+
+        /// <summary>
+        /// Says whether the people are shown. When they are, every frame that is made has them worked out right away (on its thread of the pool), and turning them on works out those of the frames
+        /// that are here already (in the background, two at a time), so that showing a photo with its people takes no more time than showing it without.
+        /// </summary>
+        public void SetPeopleShown(bool shown)
+        {
+            _warmPeople = shown;
+            if (!shown || _facesOf is null || _frames.Count == 0)
+                return;
+
+            var here = _frames.Values.ToList();
+            _ = Task.Run(() => Parallel.ForEach(here, new ParallelOptions { MaxDegreeOfParallelism = 2 }, frame => frame.WarmPeople()));
         }
 
         /// <summary>A frame finished loading and is now here.</summary>
@@ -195,7 +242,13 @@ namespace PhotoLikerUI
                     try
                     {
                         // Only the file/GDI+ work runs on the pool; the result is private until it is published below.
-                        frame = await Task.Run(() => ImageHelper.LoadSlide(photo, _screen));
+                        frame = await Task.Run(() =>
+                        {
+                            var made = ImageHelper.LoadSlide(photo, _screen, _facesOf);
+                            if (_warmPeople)
+                                made.WarmPeople();
+                            return made;
+                        });
                     }
                     catch (Exception ex)
                     {

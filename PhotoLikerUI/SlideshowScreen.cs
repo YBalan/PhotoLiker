@@ -1,3 +1,4 @@
+using PhotoLiker.Search;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
@@ -38,9 +39,13 @@ namespace PhotoLikerUI
         private readonly SlideshowSession _session;
         private readonly SlideshowWatermark _watermark;
         private readonly Font _watermarkFont;
+        private readonly Font _faceFont;                   // the names on the boxes round the faces
         private readonly System.Windows.Forms.Timer _animation = new() { Interval = AnimationIntervalMs };
         private readonly System.Windows.Forms.Timer _noticeTimer = new() { Interval = NoticeMs };
         private readonly CompositeLayer[] _layers = new CompositeLayer[2];
+        private readonly SlideshowFrame?[] _layerFrames = new SlideshowFrame?[2]; // the frames of _layers while an effect is put together, for the boxes round the faces
+        private bool _showFaces;                           // the boxes with the names on the faces are on (the F key)
+        private bool _showNames;                           // the line of names in the bottom left corner is on (the N key)
         private string? _notice;                           // a few words in the top left corner (the effect that was just chosen), for a moment
         private PhotoOnScreen? _current;                           // what is on the screen; its frame belongs to Frames
         private PhotoOnScreen? _outgoing;                          // while one photo takes the place of another: the one that goes; also belongs to Frames
@@ -56,10 +61,15 @@ namespace PhotoLikerUI
         private MediaPlayer? _videoPlayer;
         private LibVLC? _videoEngine;                      // the one the player was made with (it belongs to VideoPlayerPanel and is not disposed here)
         private Label? _videoMark;                         // the date of the video, in the corner, as a photo has it
+        private Label? _pausedMark;                        // "Paused" over the video (the window can not draw over a player, which is a window of its own)
+        private bool _paused;                              // the show is paused: this screen says so, and holds its video
         private VideoRun? _video;                          // what is playing; null when nothing is
         private int _videoGeneration;                      // changes with every video and when one is stopped, so that what a video that has been replaced does is ignored
 
-        public SlideshowScreen(SlideshowSession session, Rectangle bounds, SlideshowWatermark watermark, long frameBytes, int minFrames, int parallelLoads)
+        /// <param name="facesOf">Says who is in a photo, for the boxes and the names (see <see cref="SetPeopleShown"/>); null when there is no one to ask. Asked on the threads that make the frames, and on this window's thread for a frame that was not asked yet.</param>
+        public SlideshowScreen(
+            SlideshowSession session, Rectangle bounds, SlideshowWatermark watermark, long frameBytes, int minFrames, int parallelLoads,
+            Func<string, IReadOnlyList<FaceLabel>>? facesOf = null)
         {
             _session = session;
             _watermark = watermark;
@@ -74,10 +84,23 @@ namespace PhotoLikerUI
             DoubleBuffered = true;
 
             _watermarkFont = new Font(Font.FontFamily, Math.Max(MinWatermarkFontPixels, bounds.Height / WatermarkHeightDivisor), FontStyle.Bold, GraphicsUnit.Pixel);
+            _faceFont = new Font(Font.FontFamily, SlideFaceMarks.FontPixels(bounds.Height), FontStyle.Bold, GraphicsUnit.Pixel);
             _animation.Tick += (_, _) => OnAnimationTick();
             _noticeTimer.Tick += (_, _) => HideNotice();
             _videoWatch.Tick += (_, _) => OnVideoWatch();
-            Frames = new SlideshowFrames(bounds.Size, frameBytes, minFrames, parallelLoads);
+            Frames = new SlideshowFrames(bounds.Size, frameBytes, minFrames, parallelLoads, facesOf);
+        }
+
+        /// <summary>
+        /// Turns the boxes with the names on the faces, and the line of names in the corner, on or off (the F and N keys). With either on the people of every photo are worked out
+        /// along with its frame, so a photo is shown with them as quickly as without; the photo that is shown is painted again at once.
+        /// </summary>
+        internal void SetPeopleShown(bool faces, bool names)
+        {
+            _showFaces = faces;
+            _showNames = names;
+            Frames.SetPeopleShown(faces || names);
+            Invalidate();
         }
 
         /// <summary>The photos made ready for this screen.</summary>
@@ -152,6 +175,37 @@ namespace PhotoLikerUI
             Invalidate();
         }
 
+        /// <summary>
+        /// The show was paused, or goes on: "Paused" is written in the top right corner as long as it stands, and a video that plays is held (and plays on from the place it was held at).
+        /// A photo is not touched: it stays as it is, and a change that is under way finishes.
+        /// </summary>
+        internal void SetPaused(bool paused)
+        {
+            if (_paused == paused)
+                return;
+
+            _paused = paused;
+            if (_video is { } run && _videoPlayer is { } player)
+            {
+                if (!paused)
+                    run.StartedAt = Stopwatch.GetTimestamp(); // the time it stood is not time of a start that takes too long
+                try
+                {
+                    player.SetPause(paused);
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    // the player is going away
+                }
+            }
+
+            UpdatePausedMark();
+            Invalidate();
+        }
+
+        /// <summary>Whether the show is paused as far as this screen knows.</summary>
+        internal bool IsPaused => _paused;
+
         /// <summary>Says something in the middle of an empty screen.</summary>
         public void ShowMessage(string text)
         {
@@ -184,6 +238,7 @@ namespace PhotoLikerUI
             EnsureVideoView();
             _videoView!.Visible = true;
             ShowVideoMark(taken);
+            UpdatePausedMark();
             Invalidate();
 
             try
@@ -214,6 +269,7 @@ namespace PhotoLikerUI
                 view.Visible = false;
             if (_videoMark is { } mark)
                 mark.Visible = false;
+            UpdatePausedMark();
         }
 
         private void EnsureVideoView()
@@ -225,10 +281,36 @@ namespace PhotoLikerUI
             {
                 AutoSize = true, BackColor = Color.Black, ForeColor = Color.White, Font = _watermarkFont, Visible = false, UseMnemonic = false,
             };
+            _pausedMark = new Label
+            {
+                AutoSize = true, BackColor = Color.Black, ForeColor = Color.White, Font = _watermarkFont, Visible = false, UseMnemonic = false,
+            };
             _videoView = new VideoView { Dock = DockStyle.Fill, BackColor = Color.Black, TabStop = false, Visible = false };
             Controls.Add(_videoMark);
+            Controls.Add(_pausedMark);
             Controls.Add(_videoView);
             Controls.SetChildIndex(_videoMark, 0); // over the video, which is a window of its own
+            Controls.SetChildIndex(_pausedMark, 0);
+        }
+
+        /// <summary>"Paused" over a video, in the top right corner, while the show is paused (a photo has it drawn on the window, see <see cref="OnPaint"/>).</summary>
+        private void UpdatePausedMark()
+        {
+            if (_pausedMark is not { } mark)
+                return;
+
+            if (!_paused || _videoView is not { Visible: true })
+            {
+                mark.Visible = false;
+                return;
+            }
+
+            mark.Text = SlideshowStrings.Paused;
+            var size = mark.PreferredSize;
+            var margin = ClientSize.Height / 40;
+            mark.Location = new Point(ClientSize.Width - margin - size.Width, margin);
+            mark.Visible = true;
+            mark.BringToFront();
         }
 
         private void ShowVideoMark(DateTime? taken)
@@ -290,6 +372,17 @@ namespace PhotoLikerUI
             }
 
             var state = player.State;
+
+            // A paused show waits: the video is held (one that began while it is paused is held as soon as it plays), and nothing is judged over
+            if (_paused)
+            {
+                if (state is VLCState.Playing or VLCState.Paused)
+                    run.SawPlaying = true;
+                if (state == VLCState.Playing)
+                    player.SetPause(true);
+                return;
+            }
+
             if (state == VLCState.Playing)
                 run.SawPlaying = true;
 
@@ -368,8 +461,10 @@ namespace PhotoLikerUI
 
         // ── keys ───────────────────────────────────────────────────────────
 
+        private const long KeyWasDownBit = 0x40000000; // bit 30 of the LParam of a key message: the key was already down, so this is a repeat of a held key
+
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData) =>
-            _session.HandleKey(keyData) || base.ProcessCmdKey(ref msg, keyData);
+            _session.HandleKey(keyData, repeat: (msg.LParam.ToInt64() & KeyWasDownBit) != 0) || base.ProcessCmdKey(ref msg, keyData);
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
@@ -397,6 +492,8 @@ namespace PhotoLikerUI
                 {
                     DrawPlain(g, current.Frame);
                     DrawWatermark(g, current.Frame.Taken, 1);
+                    DrawPeople(g, current.Frame, 1);
+                    DrawFaces(g, current.Frame, PlainPlace(current.Frame), 1);
                 }
                 else
                 {
@@ -410,7 +507,24 @@ namespace PhotoLikerUI
             }
 
             if (_notice is not null)
-                DrawLabel(g, _notice, atRight: false, 1);
+                DrawLabel(g, _notice, LabelPlace.TopLeft, 1);
+
+            if (_paused)
+                DrawLabel(g, SlideshowStrings.Paused, LabelPlace.TopRight, 1);
+        }
+
+        /// <summary>Where <see cref="DrawPlain"/> puts a frame: its middle, and no magnification.</summary>
+        private SlidePlace PlainPlace(SlideshowFrame frame) =>
+            new((ClientSize.Width - frame.Width) / 2 + frame.Width / 2f, (ClientSize.Height - frame.Height) / 2 + frame.Height / 2f, 1f);
+
+        /// <summary>
+        /// The boxes with the names on the faces of a photo, if they are turned on (the F key), at the place the photo has on the screen now. <paramref name="opacity"/> is how much
+        /// of it shows while it dissolves into another.
+        /// </summary>
+        private void DrawFaces(Graphics g, SlideshowFrame frame, SlidePlace place, double opacity)
+        {
+            if (_showFaces)
+                SlideFaces.Draw(g, frame.Faces, place, frame.Width, frame.Height, ClientRectangle, _faceFont, opacity);
         }
 
         /// <summary>A photo standing still: the pixels of the frame, copied, with no smoothing: the frame was made for this screen.</summary>
@@ -446,11 +560,14 @@ namespace PhotoLikerUI
 
                 // What dissolves is the whole screen, the black around a photo too: the shares of the two add up to all. What slides is not over one another
                 var leavingWeight = _transition == SlideshowTransition.Slide ? WeightOf(leaving.Alpha) : FrameCompositor.FullWeight - comingWeight;
+                _layerFrames[count] = outgoing.Frame;
                 _layers[count++] = LayerOf(outgoing.Frame, outgoing.MotionAt(now), leaving, leavingWeight, width, height);
+                _layerFrames[count] = current.Frame;
                 _layers[count++] = LayerOf(current.Frame, currentMotion, coming, comingWeight, width, height);
             }
             else
             {
+                _layerFrames[count] = current.Frame;
                 _layers[count++] = LayerOf(current.Frame, currentMotion, SlideshowLayer.Plain, FrameCompositor.FullWeight, width, height);
             }
 
@@ -461,6 +578,14 @@ namespace PhotoLikerUI
             g.PixelOffsetMode = PixelOffsetMode.Half;
             g.DrawImage(_canvas.Image, new Rectangle(0, 0, width, height));
             g.CompositingMode = CompositingMode.SourceOver;
+
+            // The boxes go with their photos: each at the place its layer has, as faint as the photo is
+            for (var layer = 0; layer < count; layer++)
+            {
+                var placed = _layers[layer];
+                DrawFaces(g, _layerFrames[layer]!, new SlidePlace((float)placed.CenterX, (float)placed.CenterY, (float)placed.Scale), placed.Weight / (double)FrameCompositor.FullWeight);
+                _layerFrames[layer] = null; // a frame that is let go of meanwhile is not held on to here
+            }
 
             DrawWatermarks(g, progress);
         }
@@ -487,6 +612,7 @@ namespace PhotoLikerUI
             if (_outgoing is not { } outgoing)
             {
                 DrawWatermark(g, current.Frame.Taken, 1);
+                DrawPeople(g, current.Frame, 1);
                 return;
             }
 
@@ -495,40 +621,85 @@ namespace PhotoLikerUI
             if (string.Equals(before, after, StringComparison.Ordinal))
             {
                 DrawWatermark(g, current.Frame.Taken, 1);
-                return;
+            }
+            else
+            {
+                DrawWatermark(g, outgoing.Frame.Taken, Math.Max(0, 1 - 2 * progress));
+                DrawWatermark(g, current.Frame.Taken, Math.Max(0, 2 * progress - 1));
             }
 
-            DrawWatermark(g, outgoing.Frame.Taken, Math.Max(0, 1 - 2 * progress));
-            DrawWatermark(g, current.Frame.Taken, Math.Max(0, 2 * progress - 1));
+            // The names the same way: the same people on both photos stay as they are
+            if (!_showNames || string.Equals(outgoing.Frame.Names, current.Frame.Names, StringComparison.Ordinal))
+            {
+                DrawPeople(g, current.Frame, 1);
+            }
+            else
+            {
+                DrawPeople(g, outgoing.Frame, Math.Max(0, 1 - 2 * progress));
+                DrawPeople(g, current.Frame, Math.Max(0, 2 * progress - 1));
+            }
         }
 
         /// <summary>Writes the year or the date and time in the bottom right corner of the screen, white on a dark band so that it reads on any photo; <paramref name="opacity"/> 1 is as it is, less lets the photo through.</summary>
         private void DrawWatermark(Graphics g, DateTime? taken, double opacity)
         {
             if (Slideshow.WatermarkText(_watermark, taken) is { } text)
-                DrawLabel(g, text, atRight: true, opacity);
+                DrawLabel(g, text, LabelPlace.BottomRight, opacity);
         }
 
-        /// <summary>Text, white on a dark band: in the bottom right corner (the watermark) or the top left one (the notice); <paramref name="opacity"/> 1 is as it is, less lets what is behind through.</summary>
-        private void DrawLabel(Graphics g, string text, bool atRight, double opacity)
+        /// <summary>
+        /// Writes the names of the people in the photo in the bottom left corner, in the same band as the date has on the other side. They take the width the date leaves
+        /// (a long list goes on to another line, and the band grows upwards), so the two never run into each other, even on a screen that is taller than wide.
+        /// </summary>
+        private void DrawPeople(Graphics g, SlideshowFrame frame, double opacity)
+        {
+            if (!_showNames || frame.Names is not { } people)
+                return;
+
+            var format = StringFormat.GenericTypographic;
+            var pad = _watermarkFont.Size / 3f;
+            var margin = ClientSize.Height / 40f;
+            var reserved = 0f;
+            if (Slideshow.WatermarkText(_watermark, frame.Taken) is { } date)
+                reserved = g.MeasureString(date, _watermarkFont, PointF.Empty, format).Width + pad * 2 + margin;
+
+            var width = Math.Max(ClientSize.Width * 0.3f, ClientSize.Width - margin * 3 - reserved) - pad * 2;
+            DrawLabel(g, people, LabelPlace.BottomLeft, opacity, width);
+        }
+
+        private enum LabelPlace { BottomRight, BottomLeft, TopLeft, TopRight }
+
+        /// <summary>
+        /// Text, white on a dark band: in the bottom right corner (the watermark), the bottom left one (the names), the top left one (the notice) or the top right one (paused); <paramref name="opacity"/> 1 is as it is, less
+        /// lets what is behind through. Text wider than <paramref name="maxWidth"/> (when given) is wrapped.
+        /// </summary>
+        private void DrawLabel(Graphics g, string text, LabelPlace place, double opacity, float maxWidth = 0)
         {
             if (opacity <= 0)
                 return;
 
             var format = StringFormat.GenericTypographic; // shared instance, must not be disposed
             g.TextRenderingHint = TextRenderingHint.AntiAlias;
-            var size = g.MeasureString(text, _watermarkFont, PointF.Empty, format);
+            var size = maxWidth > 0 ? g.MeasureString(text, _watermarkFont, new SizeF(maxWidth, ClientSize.Height), format) : g.MeasureString(text, _watermarkFont, PointF.Empty, format);
             var pad = _watermarkFont.Size / 3f;
             var margin = ClientSize.Height / 40f;
 
-            var box = atRight
-                ? new RectangleF(ClientSize.Width - margin - size.Width - pad * 2, ClientSize.Height - margin - size.Height - pad * 2, size.Width + pad * 2, size.Height + pad * 2)
-                : new RectangleF(margin, margin, size.Width + pad * 2, size.Height + pad * 2);
+            var box = place switch
+            {
+                LabelPlace.BottomRight => new RectangleF(ClientSize.Width - margin - size.Width - pad * 2, ClientSize.Height - margin - size.Height - pad * 2, size.Width + pad * 2, size.Height + pad * 2),
+                LabelPlace.BottomLeft => new RectangleF(margin, ClientSize.Height - margin - size.Height - pad * 2, size.Width + pad * 2, size.Height + pad * 2),
+                LabelPlace.TopRight => new RectangleF(ClientSize.Width - margin - size.Width - pad * 2, margin, size.Width + pad * 2, size.Height + pad * 2),
+                _ => new RectangleF(margin, margin, size.Width + pad * 2, size.Height + pad * 2),
+            };
 
             using var background = new SolidBrush(Color.FromArgb((int)Math.Round(WatermarkBackgroundAlpha * Math.Min(1, opacity)), Color.Black));
             using var ink = new SolidBrush(Color.FromArgb((int)Math.Round(255 * Math.Min(1, opacity)), Color.White));
             g.FillRectangle(background, box);
-            g.DrawString(text, _watermarkFont, ink, box.Left + pad, box.Top + pad, format);
+
+            if (maxWidth > 0)
+                g.DrawString(text, _watermarkFont, ink, new RectangleF(box.Left + pad, box.Top + pad, maxWidth, size.Height + pad), format); // wrapped where it was measured
+            else
+                g.DrawString(text, _watermarkFont, ink, box.Left + pad, box.Top + pad, format);
         }
 
         protected override void Dispose(bool disposing)
@@ -552,6 +723,7 @@ namespace PhotoLikerUI
                 _canvas?.Dispose();
                 _canvas = null;
                 _watermarkFont.Dispose();
+                _faceFont.Dispose();
             }
             base.Dispose(disposing);
         }

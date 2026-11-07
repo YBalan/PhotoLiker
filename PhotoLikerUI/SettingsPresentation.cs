@@ -54,6 +54,8 @@ namespace PhotoLikerUI
             [nameof(Settings.SlideshowMonitors)] = [Category(SlideshowCategory), new DisplayNameAttribute("Monitors"), Describe(() => SettingsStrings.SlideshowMonitors)],
             [nameof(Settings.SlideshowTimeout)] = [Category(SlideshowCategory), new DisplayNameAttribute("Timeout"), Describe(() => SettingsStrings.SlideshowTimeout)],
             [nameof(Settings.SlideshowWatermark)] = [Category(SlideshowCategory), new DisplayNameAttribute("Watermark"), Describe(() => SettingsStrings.SlideshowWatermark)],
+            [nameof(Settings.SlideshowPeopleFaces)] = [Category(SlideshowCategory), new DisplayNameAttribute("PeopleFaces"), Describe(() => SettingsStrings.SlideshowPeopleFaces)],
+            [nameof(Settings.SlideshowPeopleNames)] = [Category(SlideshowCategory), new DisplayNameAttribute("PeopleNames"), Describe(() => SettingsStrings.SlideshowPeopleNames)],
             [nameof(Settings.SlideshowEffect)] = [Category(SlideshowCategory), new DisplayNameAttribute("Effect"), Describe(() => SettingsStrings.SlideshowEffect)],
             [nameof(Settings.SlideshowUseVideo)] = [Category(SlideshowCategory), new DisplayNameAttribute("UseVideo"), Describe(() => SettingsStrings.SlideshowUseVideo)],
             [nameof(Settings.SlideshowMuteVideo)] = [Category(SlideshowCategory), new DisplayNameAttribute("MuteVideo"), Describe(() => SettingsStrings.SlideshowMuteVideo)],

@@ -75,6 +75,47 @@ public class SlideshowTests : IDisposable
         Assert.Equal(SlideshowEffect.Fade, loaded.SlideshowEffect);
     }
 
+    [Fact]
+    public void ThePeople_AreNotShownByDefault_NeitherTheBoxesNorTheNames()
+    {
+        var settings = new Settings();
+
+        Assert.False(settings.SlideshowPeopleFaces);
+        Assert.False(settings.SlideshowPeopleNames);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void TheTwoChoices_AreKeptInTheFileOfTheFolder_EachOnItsOwn(bool faces, bool names)
+    {
+        new Settings { CurrentFolder = _tempDir, SlideshowPeopleFaces = faces, SlideshowPeopleNames = names }.Save(_tempDir);
+
+        var json = File.ReadAllText(Settings.GetFilePath(_tempDir));
+        Assert.Contains($"\"SlideshowPeopleFaces\": {faces.ToString().ToLowerInvariant()}", json);
+        Assert.Contains($"\"SlideshowPeopleNames\": {names.ToString().ToLowerInvariant()}", json);
+
+        var loaded = Settings.Load(_tempDir);
+        Assert.Equal(faces, loaded.SlideshowPeopleFaces);
+        Assert.Equal(names, loaded.SlideshowPeopleNames);
+    }
+
+    [Theory]
+    [InlineData("""{ "CacheSize": 7 }""")]                                          // a file from before
+    [InlineData("""{ "SlideshowPeople": "Faces", "CacheSize": 7 }""")]              // the name it had for a short while: not read, not in the way
+    [InlineData("""{ "SlideshowShowPeople": true, "CacheSize": 7 }""")]             // and the one before it
+    public void AFileWithoutTheTwoChoices_ShowsNothing_AndKeepsTheRestOfTheFile(string json)
+    {
+        File.WriteAllText(Settings.GetFilePath(_tempDir), json);
+
+        var loaded = Settings.Load(_tempDir);
+
+        Assert.False(loaded.SlideshowPeopleFaces);
+        Assert.False(loaded.SlideshowPeopleNames);
+        Assert.Equal(7, loaded.CacheSize);
+    }
+
     [Theory]
     [InlineData("oneByOne", SlideshowMode.OneByOne)]
     [InlineData("RANDOM", SlideshowMode.Random)]

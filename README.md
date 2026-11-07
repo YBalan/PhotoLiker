@@ -318,7 +318,7 @@ What is kept where:
 | <kbd>1</kbd>-<kbd>9</kbd>, <kbd>A</kbd>-<kbd>Z</kbd> | Save the photo in a group, or take it out again (see [Groups](#groups)). |
 | <kbd>Alt</kbd>+<kbd>1</kbd>-<kbd>9</kbd> (also on the numpad), <kbd>Alt</kbd>+<kbd>A</kbd>-<kbd>Z</kbd> | While search results are shown: save *all* of them in the group, after telling how many photos and MB that is and asking. A group without a folder gets one named after the search (see [Groups](#groups)). |
 | <kbd>0</kbd> | Fit the image to the viewer (after zooming in). |
-| <kbd>Alt</kbd>+<kbd>Enter</kbd> | Show the photos of the list as a [slideshow](#slideshow) on the whole screen, beginning with the shown photo. In it <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one, <kbd>Down</kbd> / <kbd>Up</kbd> choose the next / previous effect, and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back. Like F1-F3 it also works while you type into a text box. |
+| <kbd>Alt</kbd>+<kbd>Enter</kbd> | Show the photos of the list as a [slideshow](#slideshow) on the whole screen, beginning with the shown photo. In it any key but <kbd>Esc</kbd> pauses the show and <kbd>Space</kbd> continues it, <kbd>F</kbd> / <kbd>N</kbd> turn the faces / the names of the people on and off, <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one, <kbd>Down</kbd> / <kbd>Up</kbd> choose the next / previous effect, and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back. Like F1-F3 it also works while you type into a text box. |
 | <kbd>F1</kbd> | Open the [About box](#about-box). |
 | <kbd>F2</kbd> / <kbd>F3</kbd> | Open the [user manual](#user-manual) in Ukrainian / in English, in the browser. F1-F3 also work while you type into a text box. |
 | <kbd>F5</kbd> | List the folder again from scratch instead of from the saved list (see [Big folders open at once](#big-folders-open-at-once)). |
@@ -512,7 +512,7 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 | **SpeechModel** | `tiny`, `base` or `small` (the one to use). |
 | **SpeechLanguage** | The language that is spoken: `ru`, `uk`, `en` ..., or `auto` (the model hears it for each video). |
 
-The group **6. Slideshow** has its own nine rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **Effect**, **UseVideo**, **MuteVideo**, **VideoPart** and **LowerOtherAudio**; see [Slideshow](#slideshow).
+The group **6. Slideshow** has its own eleven rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **UseVideo**, **MuteVideo**, **VideoPart** and **LowerOtherAudio**; see [Slideshow](#slideshow).
 
 The rows of **Current File** and **TotalFiles** are read-only. **CurrentIndex** is the number of the shown photo, counted
 from 0: type another number into it to jump to that photo (a number outside the list goes to the nearest end).
@@ -673,14 +673,30 @@ bytes instead of a new file.
 below), beginning with the photo that is shown (while search results are shown, the results). Each photo is as large as the screen lets it be, with
 black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back, and the window shows the photo the slideshow ended on.
 
+![The slideshow on a monitor: the photo as large as the screen lets it be with black around it, the date taken in the bottom right corner, and in the top left corner the name of the effect that the Down key has just chosen](docs/images/39-slideshow.png)
+
+- **Any key but <kbd>Esc</kbd> pauses the show**, and <kbd>Space</kbd> continues it (<kbd>Space</kbd> is a key like the others, so it pauses a show that runs; a
+  held <kbd>Space</kbd> does not flicker between the two). While it is paused nothing changes by itself: the timer is off, a video that plays is held (and plays on
+  from the same place), and **Paused (Space to continue)** is written in the top right corner of every monitor. The keys still work, and the show stays paused after them:
+  <kbd>Right</kbd> / <kbd>Left</kbd> browse, <kbd>Down</kbd> / <kbd>Up</kbd> choose the effect. <kbd>Space</kbd> gives the shown photo its full time again from that
+  moment. A change of photo that is under way when the key is pressed finishes, and a change the timer has just asked for, whose photo is not ready yet, is called off
+  (the photo you were looking at stays). A modifier key alone (<kbd>Shift</kbd>, <kbd>Ctrl</kbd>, <kbd>Alt</kbd>, <kbd>Win</kbd>, <kbd>Caps Lock</kbd>) and <kbd>Alt</kbd>+<kbd>F4</kbd> do not
+  pause; <kbd>Esc</kbd> and <kbd>Alt</kbd>+<kbd>Enter</kbd> go back, paused or not.
+- <kbd>F</kbd> turns **the faces of the people** on and off, and <kbd>N</kbd> **their names**: <kbd>F</kbd> puts a box round the face of every known person with the name above it (green
+  and solid for a face you named, gold and dashed with a `?` for a look-alike, as the main window shows the faces), <kbd>N</kbd> writes the names in one line in the bottom left corner
+  (`Anna, Oleh?, Mom`). They are two switches that do not depend on each other, on every monitor, and the photo that is shown gets (or loses) them at once and so do the photos after it.
+  Like every key they also pause the show (<kbd>Space</kbd> continues; the people stay on). Each press writes `Faces: on` / `Faces: off` / `Names: on` / `Names: off` in the top left corner for
+  a moment; a held key counts once. They show the people the search found, so the folder has to be indexed and the people named: without an index the corner says
+  `No people to show: index the folder and name the people first`. The rows **PeopleFaces** and **PeopleNames** of the grid are how the show begins, and how the keys left them when it ended
+  is the setting from then on (as with the effect). The boxes follow the photo through every effect.
 - <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one **in the list, also in the random mode** (where only the timer picks
-  at random), and give that photo its full time again. After the last photo comes the first, and before the first the last. A key that is held
+  at random), and give that photo its full time again (when the show is not paused). After the last photo comes the first, and before the first the last. A key that is held
   down keeps scrolling.
 - <kbd>Down</kbd> / <kbd>Up</kbd> choose **the next / previous effect** (in the order of the drop-down of the **Effect** row, round at the ends: `None`,
   `Fade`, `Slide`, `Zoom`, `KenBurns`, `Random`) while the show runs. The name is written in the top left corner of every monitor for about two seconds
   (`Effect: Slide`), the next change of photo is made by that effect, and with `KenBurns` the photo that is on the screen begins to move at once. The effect
   the show ended with becomes the setting: the **Effect** row shows it afterwards, and it is saved with the other settings of the folder.
-- The settings are the nine rows of the **6. Slideshow** group of the settings grid (the last four are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
+- The settings are the eleven rows of the **6. Slideshow** group of the settings grid (the last four are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
   folder can have its own.
 
 | Setting | Meaning |
@@ -689,6 +705,8 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 | **Monitors** | `Current` (the default): the screen PhotoLiker is on. `All`: every connected monitor, each with a photo of its own: **never the same photo on two monitors**, and all of them change together (a new set is shown once the photos of all are ready). In `Random` every monitor takes the next photo of the random order. In `OneByOne` the monitors, from left to right as Windows places them, show photos that follow each other (the shown photo stays on the monitor the window is on, the one before it is on the monitor to its left) and the next set begins where this one ends. <kbd>Right</kbd> / <kbd>Left</kbd> move every monitor to its neighbouring photo, so the row of photos moves a place. With more monitors than photos the ones farthest from the window are left out. |
 | **Timeout** | How many seconds a photo stays on the screen: 2 by default, not less than 0.2. The time counts from the moment the photo is on the screen, so a photo that is slow to come (a network share) is not shortened. |
 | **Watermark** | What is written in the bottom right corner, white on a dark band: `DateTime` (the default), the day and the time the photo was taken (`14 Aug 2025 09:12:07`, as everywhere in the program), `Year`, or `None`. The date is the one the search and <kbd>PageUp</kbd> / <kbd>PageDown</kbd> use: the date the camera wrote into the photo if it can be believed, else the date of the file (see [Aligning file dates](#aligning-file-dates)). A photo with no date at all gets no text. |
+| **PeopleFaces** | `False` (the default): no boxes. `True`: **a box round the face of every known person with the name above it**, as the main window shows the faces: green and solid for a face you named yourself, gold and dashed with a `?` after the name for a face that only looks like that person; a face nobody is known by gets no box. The faces are the ones the [search](#photo-search) found, so the folder has to be indexed and the people named (the **Faces** button); a photo that is not in the index yet, or has no known person, is shown as it is, and videos have no boxes. The <kbd>F</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. The boxes are drawn on the window after the photo, at the place the photo has at that moment, so they go with it through every effect (Ken Burns, Slide, Zoom) and fade with it while it dissolves into the next; the lines and the letters keep their size on the screen, so they stay sharp when the photo is magnified. The name goes under the box, or inside it, or to the left, where there is no room above it or at the right. **What it costs.** Drawing the boxes takes about a millisecond for each picture put on the screen (0.6 ms for 3 faces at 720p, about 1 ms for 6 faces at full HD) and nothing while they are off. Working out who is who takes about 0.6 microseconds for every face and every named example (7 ms for a photo with 6 faces against 2,000 named faces, 38 ms against 10,000): it is done once for a photo, in the background, along with the making of its frame, and only while the boxes or the names are on (with both off the index is not asked at all; turning one on during the show works out the photos that are ready already, two at a time, and a photo that is painted before its turn comes is worked out at once). A frame of a 12 MP JPEG at full HD took about 65 ms on this PC, so the lookup adds 5 to 11 ms with 2,000 named faces and 37 ms with 10,000: the show goes on as fast as it did, only the photos that are made ahead come a little later. |
+| **PeopleNames** | `False` (the default): no names. `True`: the names of the people in the photo in one line in the bottom left corner, in the same band as the date has on the other side, left to right as the people stand (`Anna, Oleh?, Mom`; the `?` is a face that only looks like that person). They come from the same faces as **PeopleFaces**, and a person with several faces is written once (without the `?` if any of the faces is named). A long list is wrapped over more lines upwards and leaves room for the date, and while a change is under way the names fade like the date. The <kbd>N</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. It does not depend on **PeopleFaces** (with both on the names are written twice). |
 | **Effect** | How one photo takes the place of the last. `Fade` (the default): the old photo dissolves into the new one. `Slide`: the new photo pushes the old one out to the left (the date in the corner stays where it is). `Zoom`: the new photo grows from 80% of its size while it fades in over the old one. `KenBurns`: every photo drifts and zooms slowly all the time it is on the screen (in or out, by 8 to 16%, around a point of the picture chosen at random, and never so that part of the screen it covered at the start is left bare), and dissolves into the next. `Random`: one of those four for every change, never the same twice in a row. `None`: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the **Timeout** (so a short timeout still leaves the photo on the screen for most of it); it begins when the timer ends, and the time of the new photo counts from then. While a change is under way the date fades out in the first half and the new one fades in in the second, so two dates are never written over each other. <kbd>Right</kbd> / <kbd>Left</kbd> put the next photo there at once, with no change (whoever holds a key wants to get on), but with `KenBurns` it still moves. <kbd>Down</kbd> / <kbd>Up</kbd> change the effect while the show runs (see above). With **Monitors** `All` all the monitors change at the same moment, each by the same effect. |
 | **UseVideo** | `False` (the default): the slideshow shows photos only. `True`: it plays the videos of the list as well, between the photos (there are videos in the list while **SupportVideo** is on). See [below](#videos-in-the-slideshow). |
 | **MuteVideo** | `True`: the videos of the slideshow play without their sound. `False` (the default). |
@@ -727,13 +745,15 @@ A photo that cannot be read is passed over (a list of only such photos says so o
 With **UseVideo** on, the videos of the list are part of the show: the shown folder, or the results of a search (the **Photos** and **Videos** buttons of the search strip make them videos only, for
 a slideshow of what a search found in them). The photos go on exactly as they did; a video is played **in between**, and when it is over the show goes on.
 
+![A video in the slideshow: it plays over the whole screen, with the date it was recorded in the bottom right corner as a photo's date is](docs/images/40-slideshow-video.png)
+
 - **Where it plays.** On the screen PhotoLiker is on, and only there: with **Monitors** set to `All` the other monitors keep their photos while the video plays (the photos change together again when
   it is over). A video that was shown in the window when <kbd>Alt</kbd>+<kbd>Enter</kbd> was pressed plays first.
 - **Where in the show.** `OneByOne`: a video plays where it lies in the list, after the photo it follows, when the screen goes past that photo. `Random`: videos are drawn in as often as they are
   among the items, each once before any comes again. A list of videos only plays them one after the other (also in this order, or at random), on that screen.
 - **What is played.** With `OnlyFoundTimeFrames` and the results of a search shown, the places the search found (the orange places of the viewer's strip), 2 seconds before to 4 after each; a search by
   date alone finds nothing in a video, so such a video is played whole. The date the video was recorded is written in the corner, as a photo's is.
-- **Keys.** <kbd>Right</kbd> / <kbd>Left</kbd> skip a video that plays (and in a list of videos only go to the next / the previous one); <kbd>Esc</kbd> and <kbd>Alt</kbd>+<kbd>Enter</kbd> go back.
+- **Keys.** <kbd>Right</kbd> / <kbd>Left</kbd> skip a video that plays (and in a list of videos only go to the next / the previous one); any other key but <kbd>Esc</kbd> pauses the video (and the show), <kbd>Space</kbd> plays it on; <kbd>Esc</kbd> and <kbd>Alt</kbd>+<kbd>Enter</kbd> go back.
 - **Sound.** The other programs' sound is turned down by **LowerOtherAudio** percent through the Windows mixer (every program has a volume of its own there) and put back when the videos are over
   or the show ends; a volume you changed meanwhile is left as you set it. With **MuteVideo** nothing is touched.
 - **The player.** Videos are played by the same engine as in the viewer; if it has to be [downloaded](#videos), you are asked before the show starts. It is started before the first video so that
@@ -753,12 +773,16 @@ video held upright is stored sideways, and the row says so), **Frame rate**, **V
 (see [Photo search](#photo-search)); a Canon camera writes its own clock, a phone writes UTC, which is shown as local time. **File dates** shows the dates of the file next to it:
 a copied file is created when it is copied, so it is often days younger than the recording (`≠ Recorded`).
 
+![A video in the viewer: its poster picture with the round play mark and the length in the corner, the video's thumbnail with a small play mark in the strip, and the 0. Video category in the grid](docs/images/34-video-poster.png)
+
 **Playing.** <kbd>Enter</kbd>, or a click on the poster, puts the player over the picture; under it are the play / pause button, where you are (`0:12 / 1:17`), a slider to go
 anywhere (click or drag), a **Go to** box where you type a time and press <kbd>Enter</kbd> (`83`, `1:23`, `1:02:03` or `1m23s`), a mute button and the volume. A click on the
 picture pauses and plays. The keys are in the [table above](#keyboard-and-mouse): <kbd>Enter</kbd> pauses, <kbd>Shift</kbd>+<kbd>Left</kbd> / <kbd>Right</kbd> go 5 seconds and
 <kbd>Ctrl</kbd>+<kbd>Left</kbd> / <kbd>Right</kbd> 30 seconds, <kbd>Ctrl</kbd>+<kbd>Up</kbd> / <kbd>Down</kbd> change the volume, <kbd>Esc</kbd> goes back to the poster. Going to
 another item of the list stops the video. The first start of the player after an installation can take ten seconds or more while the virus scanner looks at its files; it starts in the background as soon as a video is shown,
 and the bar says **Starting the video player...** until it is ready. If it cannot start at all, the video is opened in the program Windows plays such files with.
+
+![The player over the picture: play / pause, 0:08 / 0:12, the slider, the Go to box, the mute button and the volume, and the keys in the status bar](docs/images/35-video-playing.png)
 
 **Searching the videos.** With **SupportVideo** on, **Update index** goes through the videos after the photos, with the same model and the same Stop button. ffmpeg takes a picture out of each
 video every two seconds (the key frames only, where a video has them: 60 times faster than playing it) and the model looks at it; a picture that is no longer like the last one kept becomes a
@@ -772,6 +796,12 @@ compression make words match by chance more often (on clips with no cat in them,
 the photos: a video is searched for people from the photos you named. On the real clips this was made with (a Canon camera, 640 x 480): 144 seconds of video took 19 seconds with faces.
 Switching the search model makes the moments again with the new model, like the photos.
 
+![The search strip with SupportVideo on: the status says 8 photos and 2 videos with 6 moments, and the Photos and Videos buttons stand next to the faces and people icons](docs/images/38-search-strip-video.png)
+
+![The results of the search "birthday cake": one video, with the strip of its moments under the picture and the moment that fits best marked in orange](docs/images/36-video-search.png)
+
+![The same video playing from the best fitting place, 0:04 / 0:12: the slider has an orange tick there](docs/images/37-video-search-playing.png)
+
 **What is said.** Turn **VideoSpeech** on (it is off by default) and **Update index** also turns what is said in the videos into text, on this computer: Whisper (whisper.cpp), the **small** model
 (465 MB, downloaded the first time after asking), reads the sound of each video, a video with no sound worth reading (digital silence) is skipped, and what is heard is kept with the time of each
 sentence. It takes about a third of the length of the speech: 3 hours of video in about an hour; it continues where it stopped. A word that you type is then looked for in what is said, in whatever
@@ -784,8 +814,8 @@ shown in a line under the player while the video plays. The text is the model's 
 video and the place (`MVI_4069 1m23s.jpg`), with the date it was recorded at that place as its date taken, so it is a photo like any other.
 
 **What works on a video, and what does not.** <kbd>Space</kbd> likes it, a group key sorts it, <kbd>Delete</kbd> moves it to the `Deleted` folder (a video that is playing is let go of first),
-<kbd>Ctrl</kbd>+<kbd>C</kbd> copies the file: all as for a photo. The [slideshow](#slideshow), rotating, [Align dates](#aligning-file-dates), duplicates, "More like this" and Generate Video
-work on photos only for now: the videos are left out of them.
+<kbd>Ctrl</kbd>+<kbd>C</kbd> copies the file: all as for a photo. The [slideshow](#videos-in-the-slideshow) (with **UseVideo** on) and [Align dates](#aligning-file-dates) take the videos along;
+rotating, duplicates, "More like this" and Generate Video work on photos only for now: the videos are left out of them.
 
 **Where it keeps what it knows.** What ffmpeg reads from a video (its size, length, codec and dates), its poster picture, its moments (with their pictures, vectors and faces) and what is said in it
 are kept in a catalog of their own, `video-<folder>-<hash>.db`
@@ -866,6 +896,8 @@ A file that was copied from a card, a phone or an old disk has the day of the co
 photo only sits inside it (EXIF). The **Align dates** button of the toolbar sets the dates of the files to the date taken, so
 that Explorer, other programs and the order of the list (**SortOrder** goes by the created date) agree with the camera.
 
+![The Align dates dialog: 7 photos will change, each with its date taken, the created and modified dates now, and what would be set; the ticks, the filters and the buttons are under and over the list](docs/images/30-align-dates.png)
+
 The dialog looks at the folder first (it reads only the start of each file, so it takes minutes for tens of thousands of photos
 even on a network drive, and can be stopped) and shows, before anything is touched, how many photos will change and which:
 
@@ -898,6 +930,8 @@ from there, and what it would be:
   the dialog says;
 - *This date*: one you type.
 
+![The question of Use a date: the selected photo, the date in the name of its folder chosen with the example it would get, and the tick that writes the date into the photo](docs/images/31-use-a-date.png)
+
 The photos then count as having that date taken: they move to **Will change** (marked "(given)") and are changed like the others,
 with the file dates set to it, and, if *Write it into the photo as its Date Taken (Original)* is ticked in the question (it is by
 default), the date written into the photo as its Date Taken (Original): replacing the date that was not believed, or added to a
@@ -926,6 +960,8 @@ Moving and deleting photos leaves folders behind, and Windows leaves a thumbnail
 **Remove empty folders** button of the toolbar lists the folders of the photo folder, at any depth, that hold nothing of use:
 nothing at all, or only thumbnail files (`Thumbs.db`, `ehthumbs.db`, `desktop.ini`, `.DS_Store`, `._*` stubs of macOS), or only
 other folders like that. Every folder is ticked and nothing is deleted until you press **Remove N folders**.
+
+![The Remove empty folders dialog: four folders ticked, each with what is in it (nothing, an empty folder, Thumbs.db), and the Unreadable photos list as the second choice](docs/images/32-empty-folders.png)
 
 - The rule is strict: any other file, whatever it is, keeps its folder and every folder above it. A folder that can not be read
   is not guessed at. A link to another folder, the `Deleted` folder, the Liked folder with its group folders, and NAS or system
@@ -979,6 +1015,8 @@ what picks the photos to look at, the picture decides.
 - between copies in equally good folders, the one whose file name is not that of a copy stays: `IMG_5407 - копия.JPG`,
   `IMG_5407 - Copy.JPG`, `IMG_5407 (2).JPG` and `Copy of IMG_5407.JPG` move, `IMG_5407.JPG` stays (the folder still counts first);
 - the copies that still tie (two date-named folders, two card folders) are left to you, and are never moved until you choose.
+
+![The Find duplicates dialog: three groups of identical photos, the copy that stays in green and the ones that move below it, each row with the reason, and the two boxes that override the rules](docs/images/33-find-duplicates.png)
 
 Every row says why. You can fill in the two boxes to override the rules: *Always keep copies in folders with* and *Always move
 copies out of folders with* take parts of a path, separated by `;`, with `*` and `?` as wildcards (`107_*; Fotik1`). Select a
@@ -1099,7 +1137,7 @@ as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized
 (`OldestFirst`, `NewestFirst`, `ByName`, `Random` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
 as `OldestFirst` and does not spoil the rest of the file. `SlideshowMode` (`Random`, `OneByOne`), `SlideshowMonitors` (`Current`, `All`), `SlideshowWatermark` (`None`, `Year`, `DateTime`) and
 `SlideshowEffect` (`None`, `Fade`, `Slide`, `Zoom`, `KenBurns`, `Random`) are
-written by name and read the same way (an unknown name gives `Random` / `Current` / `DateTime` / `Fade`); `SlideshowTimeout` is in seconds. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
+written by name and read the same way (an unknown name gives `Random` / `Current` / `DateTime` / `Fade`); `SlideshowPeopleFaces` and `SlideshowPeopleNames` are `true` or `false`; `SlideshowTimeout` is in seconds. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
 settings of the [photo search](#photo-search).
 
 Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that

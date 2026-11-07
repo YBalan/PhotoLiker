@@ -725,7 +725,7 @@
 
         private void ShowAbout()
         {
-            using var dialog = new AboutDialog(_currentConfig.IsDarkTheme);
+            using var dialog = new AboutDialog(_currentConfig.IsDarkTheme, Screen.FromControl(this).WorkingArea);
             dialog.ShowDialog(this);
 
             if (dialog.SetupToRun is { } setup)
