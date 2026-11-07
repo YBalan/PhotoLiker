@@ -26,6 +26,8 @@
   <ItemGroup>
     <Compile Include="..\PhotoLikerUI\StringListConverter.cs" Link="PhotoLikerUI\StringListConverter.cs" />
     <Compile Include="..\PhotoLikerUI\FrameCompositor.cs" Link="PhotoLikerUI\FrameCompositor.cs" />
+    <Compile Include="..\PhotoLikerUI\SlideFaceMarks.cs" Link="PhotoLikerUI\SlideFaceMarks.cs" />
+    <Compile Include="..\PhotoLikerUI\ShortcutLines.cs" Link="PhotoLikerUI\ShortcutLines.cs" />
   </ItemGroup>
 
 </Project>

@@ -40,7 +40,8 @@ namespace PhotoLikerUI
         public static string SlideshowMonitors => T();
         public static string SlideshowTimeout => T();
         public static string SlideshowWatermark => T();
-        public static string SlideshowShowPeople => T();
+        public static string SlideshowPeopleFaces => T();
+        public static string SlideshowPeopleNames => T();
         public static string SlideshowEffect => T();
         public static string SlideshowUseVideo => T();
         public static string SlideshowMuteVideo => T();

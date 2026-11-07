@@ -124,10 +124,10 @@ namespace PhotoLikerUI
         /// <summary>
         /// Reads a photo for the slideshow: decoded, turned upright and scaled to fill as much of a screen of <paramref name="screen"/> pixels as it
         /// can with its proportions (a small photo is enlarged), so that showing it is only a copy of its pixels. The date it was taken is read as well,
-        /// for the watermark, and, if <paramref name="peopleOf"/> is given, the line of names that goes with the photo. Safe to call from any thread
-        /// (<paramref name="peopleOf"/> must be too).
+        /// for the watermark. <paramref name="facesOf"/> is what the frame asks, when the people of the photo are wanted, who is in it (see <see cref="SlideshowFrame.Faces"/>):
+        /// it is not called here. Safe to call from any thread.
         /// </summary>
-        internal static SlideshowFrame LoadSlide(PhotoFile photo, Size screen, Func<string, string?>? peopleOf = null)
+        internal static SlideshowFrame LoadSlide(PhotoFile photo, Size screen, Func<string, IReadOnlyList<FaceLabel>>? facesOf = null)
         {
             var bytes = FileReading.ReadAllBytesShared(photo.OriginalFilePath);
             var taken = TakenOf(photo, bytes);
@@ -142,17 +142,7 @@ namespace PhotoLikerUI
                 // A file the Windows imaging component will not take, which GDI+ (what the window reads with) may
                 frame = SlideWithGdi(bytes, screen);
             }
-            string? people = null;
-            try
-            {
-                people = peopleOf?.Invoke(photo.OriginalFilePath);
-            }
-            catch (Exception ex) when (ex is not OutOfMemoryException)
-            {
-                // The names are a trimming: a photo is shown without them rather than not at all
-            }
-
-            return new SlideshowFrame(frame, taken, photo.OriginalFilePath, people); // takes the bitmap: its pixels are copied into the frame's own canvas
+            return new SlideshowFrame(frame, taken, photo.OriginalFilePath, facesOf); // takes the bitmap: its pixels are copied into the frame's own canvas
         }
 
         /// <summary>

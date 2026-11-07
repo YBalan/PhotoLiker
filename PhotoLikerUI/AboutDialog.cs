@@ -7,8 +7,11 @@ namespace PhotoLikerUI
     /// </summary>
     internal sealed class AboutDialog : Form
     {
-        private const int KeyColumnGap = 2; // spaces after the longest input
         private const int BytesInMegabyte = 1024 * 1024;
+        private const int MaxReadableChars = 110;  // a row of keys is not made longer than this, however wide the monitor is
+        private const int MinChars = 40;           // nor shorter, however narrow it is
+        private const int ScreenMargin = 24;       // the box keeps this much of the working area free, for the shadow and the look of it
+        private const int MinVisibleRows = 6;      // a box that has to scroll still shows at least this many rows of keys
 
         private readonly CancellationTokenSource _closed = new(); // cancelled when the box closes, which stops a check or a download in progress
         private readonly Button _check;
@@ -16,13 +19,16 @@ namespace PhotoLikerUI
         private readonly Button _releasePage;
         private readonly Label _status;
         private readonly ProgressBar _progress;
+        private readonly Rectangle _workingArea;   // the part of the monitor the box has to fit in
         private ReleaseInfo? _release;
 
         /// <summary>The setup of a new version that was downloaded and is to be run, with the program closed (the window does it once the box has closed).</summary>
         public string? SetupToRun { get; private set; }
 
-        public AboutDialog(bool dark)
+        /// <param name="workingArea">The working area (the monitor without the taskbar) of the monitor the box opens on; the box is made to fit in it: its rows of keys are wrapped to its width, and if it is still too tall the list scrolls. Null: the monitor the pointer is on.</param>
+        public AboutDialog(bool dark, Rectangle? workingArea = null)
         {
+            _workingArea = workingArea ?? Screen.FromPoint(Cursor.Position).WorkingArea;
             Text = MainFormStrings.AboutTitle;
             FormBorderStyle = FormBorderStyle.FixedSingle; // not FixedDialog: Windows shows no icon in the caption of that frame
             Icon = DialogIcons.Help;
@@ -52,9 +58,13 @@ namespace PhotoLikerUI
             };
             var shortcutsHeading = new Label { Text = AboutStrings.ShortcutsHeading, Font = sectionFont, AutoSize = true };
 
+            // How many letters of the list fit across the monitor (the font has letters of one width), less what is around it: the frame, the padding, the edge of the box, the scroll bar
+            var letterWidth = TextRenderer.MeasureText(new string('0', 50), shortcutsFont, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.NoPadding).Width / 50.0;
+            var around = 2 * SystemInformation.FrameBorderSize.Width + 2 * 12 + 12 + SystemInformation.VerticalScrollBarWidth + ScreenMargin;
+            var maxChars = Math.Clamp((int)Math.Floor((_workingArea.Width - around) / letterWidth), MinChars, MaxReadableChars);
+
             var shortcutList = AboutStrings.Shortcuts;
-            var keyColumnWidth = shortcutList.Max(shortcut => shortcut.Input.Length) + KeyColumnGap;
-            var lines = shortcutList.Select(shortcut => shortcut.Input.PadRight(keyColumnWidth) + shortcut.Action).ToArray();
+            var lines = ShortcutLines.Layout(shortcutList, maxChars);
             var shortcuts = new TextBox
             {
                 Multiline = true,
@@ -109,6 +119,22 @@ namespace PhotoLikerUI
             layout.Controls.AddRange([heading, version, shortcutsHeading, shortcuts, updateButtons, _status, _progress, buttons]);
             Controls.Add(layout);
 
+            // Taller than the monitor lets it be (a small laptop screen, or a big text size of Windows): the list is made lower and scrolls, and the rest of the box stays as it is
+            var chrome = SystemInformation.CaptionHeight + 2 * SystemInformation.FrameBorderSize.Height;
+            var excess = layout.GetPreferredSize(Size.Empty).Height + chrome - (_workingArea.Height - ScreenMargin);
+            if (excess > 0)
+            {
+                var rowHeight = Math.Max(1, textSize.Height / Math.Max(1, lines.Length));
+                var height = Math.Max(rowHeight * MinVisibleRows + 8, shortcuts.ClientSize.Height - excess);
+                shortcuts.ScrollBars = ScrollBars.Vertical;
+                shortcuts.ClientSize = new Size(shortcuts.ClientSize.Width, height);
+                shortcuts.Width += SystemInformation.VerticalScrollBarWidth; // the bar is beside the text, not over it
+
+                _status.MaximumSize = new Size(shortcuts.Width, 0);
+                _status.MinimumSize = new Size(shortcuts.Width, _status.MinimumSize.Height);
+                _progress.Width = shortcuts.Width;
+            }
+
             AcceptButton = ok;
             CancelButton = ok;
 
@@ -120,6 +146,16 @@ namespace PhotoLikerUI
 
             // The box shows the colour of an input (white in the light theme), as the boxes of the other dialogs do
             shortcuts.BackColor = dark ? ThemeManager.DarkBackAlt : ThemeManager.LightBackAlt;
+        }
+
+        /// <summary>Centred on the window but never off the working area: a box as tall as the monitor lets it be must not sit half under the taskbar or above the top of the screen.</summary>
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            var left = Math.Clamp(Left, _workingArea.Left, Math.Max(_workingArea.Left, _workingArea.Right - Width));
+            var top = Math.Clamp(Top, _workingArea.Top, Math.Max(_workingArea.Top, _workingArea.Bottom - Height));
+            if (left != Left || top != Top)
+                Location = new Point(left, top);
         }
 
         private void OpenManual(string language) => UserManualLauncher.Open(this, language);

@@ -22,6 +22,9 @@ namespace PhotoLikerUI
     /// the photo moves if the effect is Ken Burns. A random effect is drawn anew for every change. Down and Up choose the next and the previous effect while the
     /// show runs: the name is written in a corner of every screen for a moment, and the next change is made by it (a Ken Burns photo starts to move at once).
     ///
+    /// F turns the boxes with the names on the faces of the people on and off, and N the line of their names in the corner (see <see cref="SlideshowPeopleOptions"/>): each on its own,
+    /// on every screen, for the photo that is shown and the ones after it, and what the show ends with is what <see cref="ShowFaces"/> and <see cref="ShowNames"/> say.
+    ///
     /// Any key but Esc (and Alt+Enter, which go back) pauses the show, and Space, which pauses a running one too, continues it. While it is paused nothing changes by
     /// itself: the timer is off, a video is held, and "Paused" is written in the top right corner of every screen; the keys still work (Right and Left browse, Down and Up choose
     /// the effect), the show stays paused after them, and Space gives the shown photo its full time again. A modifier alone (Shift, Ctrl, Alt) and Alt+F4 are no keys to pause by.
@@ -60,6 +63,9 @@ namespace PhotoLikerUI
         private bool _scrolling;                               // a key was used since the timer last picked random photos
         private bool _closing;
         private bool _paused;                                  // a key was pressed: nothing changes by itself until Space
+        private readonly bool _hasPeople;                      // there is something to ask who is in a photo (the folder has an index)
+        private bool _showFaces;                               // the boxes with the names on the faces are on (F)
+        private bool _showNames;                               // the line of names in the corner is on (N)
         private bool _cursorHidden;
 
         // Videos
@@ -84,11 +90,11 @@ namespace PhotoLikerUI
         /// <param name="screens">The bounds of the screens, left to right.</param>
         /// <param name="primary">Which of them the main window is on. With more screens than photos, those farthest from it are left out. The videos play on this one only.</param>
         /// <param name="video">How the videos are played; null leaves them out of the show.</param>
-        /// <param name="peopleOf">Says who is in a photo (by its file) as a line of names to write in the bottom left corner; null writes no names. It is called on the threads that make the frames.</param>
+        /// <param name="people">Who is in a photo, and whether the boxes with the names on the faces (F) and the line of names (N) are on when the show begins; null when there is nobody to ask (the folder has no index), and then the two keys say so.</param>
         public SlideshowSession(
             IReadOnlyList<PhotoFile> items, int start, SlideshowMode mode, double timeoutSeconds, SlideshowWatermark watermark,
             IReadOnlyList<Rectangle> screens, int primary, SlideshowEffect effect = SlideshowEffect.None, SlideshowVideoOptions? video = null,
-            Func<string, string?>? peopleOf = null)
+            SlideshowPeopleOptions? people = null)
         {
             ArgumentOutOfRangeException.ThrowIfZero(items.Count);
             ArgumentOutOfRangeException.ThrowIfZero(screens.Count);
@@ -155,12 +161,16 @@ namespace PhotoLikerUI
 
             var frameBytes = MaxFrameBytes / chosen.Length;
             var parallelLoads = Math.Max(2, MaxParallelLoads / chosen.Length);
-            _screens = [.. chosen.Select(i => new SlideshowScreen(this, screens[i], watermark, frameBytes, MinFrames, parallelLoads, peopleOf))];
+            _screens = [.. chosen.Select(i => new SlideshowScreen(this, screens[i], watermark, frameBytes, MinFrames, parallelLoads, people?.FacesOf))];
+            _hasPeople = people is not null;
+            _showFaces = people?.ShowFaces ?? false;
+            _showNames = people?.ShowNames ?? false;
             foreach (var screen in _screens)
             {
                 screen.Frames.Loaded += (_, _) => Advance();
                 screen.Frames.LoadFailed += (_, _) => Advance();
                 screen.VideoFinished += OnVideoFinished;
+                screen.SetPeopleShown(_showFaces, _showNames);
             }
 
             _effect = effect;
@@ -173,6 +183,12 @@ namespace PhotoLikerUI
 
         /// <summary>The effect the show has now: the one it began with, or the one Down and Up chose last.</summary>
         public SlideshowEffect Effect => _effect;
+
+        /// <summary>Whether the boxes with the names on the faces are on now: as the show began, or as the F key left them.</summary>
+        public bool ShowFaces => _showFaces;
+
+        /// <summary>Whether the line of names in the corner is on now: as the show began, or as the N key left it.</summary>
+        public bool ShowNames => _showNames;
 
         /// <summary>The file of the photo (or video) that was on the screen of the main window last; null if none was shown.</summary>
         public string? LastShownPath =>
@@ -303,8 +319,47 @@ namespace PhotoLikerUI
                 case Keys.Up:
                     ChangeEffect(-1);
                     return true;
+                case Keys.F:
+                case Keys.F | Keys.Shift: // Caps Lock, or a finger that slipped
+                    if (!repeat)
+                        TogglePeople(faces: true);
+                    return true;
+                case Keys.N:
+                case Keys.N | Keys.Shift:
+                    if (!repeat)
+                        TogglePeople(faces: false);
+                    return true;
                 default:
                     return false;
+            }
+        }
+
+        /// <summary>
+        /// F / N: the boxes with the names on the faces, or the line of names in the corner, are turned on if they were off and off if they were on, on every screen, and the person is told
+        /// which and how they are now. The photo that is shown gets them (or loses them) at once. Without anything to ask who is in a photo (the folder has no index) there is nothing to turn
+        /// on, and the person is told so.
+        /// </summary>
+        private void TogglePeople(bool faces)
+        {
+            if (!_hasPeople)
+            {
+                foreach (var screen in _screens)
+                    screen.ShowNotice(SlideshowStrings.NoPeopleToShow);
+                return;
+            }
+
+            if (faces)
+                _showFaces = !_showFaces;
+            else
+                _showNames = !_showNames;
+
+            var text = faces
+                ? _showFaces ? SlideshowStrings.FacesOn : SlideshowStrings.FacesOff
+                : _showNames ? SlideshowStrings.NamesOn : SlideshowStrings.NamesOff;
+            foreach (var screen in _screens)
+            {
+                screen.SetPeopleShown(_showFaces, _showNames);
+                screen.ShowNotice(text);
             }
         }
 

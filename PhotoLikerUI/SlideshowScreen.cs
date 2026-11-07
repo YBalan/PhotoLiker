@@ -1,3 +1,4 @@
+using PhotoLiker.Search;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
@@ -38,9 +39,13 @@ namespace PhotoLikerUI
         private readonly SlideshowSession _session;
         private readonly SlideshowWatermark _watermark;
         private readonly Font _watermarkFont;
+        private readonly Font _faceFont;                   // the names on the boxes round the faces
         private readonly System.Windows.Forms.Timer _animation = new() { Interval = AnimationIntervalMs };
         private readonly System.Windows.Forms.Timer _noticeTimer = new() { Interval = NoticeMs };
         private readonly CompositeLayer[] _layers = new CompositeLayer[2];
+        private readonly SlideshowFrame?[] _layerFrames = new SlideshowFrame?[2]; // the frames of _layers while an effect is put together, for the boxes round the faces
+        private bool _showFaces;                           // the boxes with the names on the faces are on (the F key)
+        private bool _showNames;                           // the line of names in the bottom left corner is on (the N key)
         private string? _notice;                           // a few words in the top left corner (the effect that was just chosen), for a moment
         private PhotoOnScreen? _current;                           // what is on the screen; its frame belongs to Frames
         private PhotoOnScreen? _outgoing;                          // while one photo takes the place of another: the one that goes; also belongs to Frames
@@ -61,10 +66,10 @@ namespace PhotoLikerUI
         private VideoRun? _video;                          // what is playing; null when nothing is
         private int _videoGeneration;                      // changes with every video and when one is stopped, so that what a video that has been replaced does is ignored
 
-        /// <param name="peopleOf">Says who is in a photo as a line of names for the bottom left corner; null writes no names. Called on the threads that make the frames.</param>
+        /// <param name="facesOf">Says who is in a photo, for the boxes and the names (see <see cref="SetPeopleShown"/>); null when there is no one to ask. Asked on the threads that make the frames, and on this window's thread for a frame that was not asked yet.</param>
         public SlideshowScreen(
             SlideshowSession session, Rectangle bounds, SlideshowWatermark watermark, long frameBytes, int minFrames, int parallelLoads,
-            Func<string, string?>? peopleOf = null)
+            Func<string, IReadOnlyList<FaceLabel>>? facesOf = null)
         {
             _session = session;
             _watermark = watermark;
@@ -79,10 +84,23 @@ namespace PhotoLikerUI
             DoubleBuffered = true;
 
             _watermarkFont = new Font(Font.FontFamily, Math.Max(MinWatermarkFontPixels, bounds.Height / WatermarkHeightDivisor), FontStyle.Bold, GraphicsUnit.Pixel);
+            _faceFont = new Font(Font.FontFamily, SlideFaceMarks.FontPixels(bounds.Height), FontStyle.Bold, GraphicsUnit.Pixel);
             _animation.Tick += (_, _) => OnAnimationTick();
             _noticeTimer.Tick += (_, _) => HideNotice();
             _videoWatch.Tick += (_, _) => OnVideoWatch();
-            Frames = new SlideshowFrames(bounds.Size, frameBytes, minFrames, parallelLoads, peopleOf);
+            Frames = new SlideshowFrames(bounds.Size, frameBytes, minFrames, parallelLoads, facesOf);
+        }
+
+        /// <summary>
+        /// Turns the boxes with the names on the faces, and the line of names in the corner, on or off (the F and N keys). With either on the people of every photo are worked out
+        /// along with its frame, so a photo is shown with them as quickly as without; the photo that is shown is painted again at once.
+        /// </summary>
+        internal void SetPeopleShown(bool faces, bool names)
+        {
+            _showFaces = faces;
+            _showNames = names;
+            Frames.SetPeopleShown(faces || names);
+            Invalidate();
         }
 
         /// <summary>The photos made ready for this screen.</summary>
@@ -475,6 +493,7 @@ namespace PhotoLikerUI
                     DrawPlain(g, current.Frame);
                     DrawWatermark(g, current.Frame.Taken, 1);
                     DrawPeople(g, current.Frame, 1);
+                    DrawFaces(g, current.Frame, PlainPlace(current.Frame), 1);
                 }
                 else
                 {
@@ -492,6 +511,20 @@ namespace PhotoLikerUI
 
             if (_paused)
                 DrawLabel(g, SlideshowStrings.Paused, LabelPlace.TopRight, 1);
+        }
+
+        /// <summary>Where <see cref="DrawPlain"/> puts a frame: its middle, and no magnification.</summary>
+        private SlidePlace PlainPlace(SlideshowFrame frame) =>
+            new((ClientSize.Width - frame.Width) / 2 + frame.Width / 2f, (ClientSize.Height - frame.Height) / 2 + frame.Height / 2f, 1f);
+
+        /// <summary>
+        /// The boxes with the names on the faces of a photo, if they are turned on (the F key), at the place the photo has on the screen now. <paramref name="opacity"/> is how much
+        /// of it shows while it dissolves into another.
+        /// </summary>
+        private void DrawFaces(Graphics g, SlideshowFrame frame, SlidePlace place, double opacity)
+        {
+            if (_showFaces)
+                SlideFaces.Draw(g, frame.Faces, place, frame.Width, frame.Height, ClientRectangle, _faceFont, opacity);
         }
 
         /// <summary>A photo standing still: the pixels of the frame, copied, with no smoothing: the frame was made for this screen.</summary>
@@ -527,11 +560,14 @@ namespace PhotoLikerUI
 
                 // What dissolves is the whole screen, the black around a photo too: the shares of the two add up to all. What slides is not over one another
                 var leavingWeight = _transition == SlideshowTransition.Slide ? WeightOf(leaving.Alpha) : FrameCompositor.FullWeight - comingWeight;
+                _layerFrames[count] = outgoing.Frame;
                 _layers[count++] = LayerOf(outgoing.Frame, outgoing.MotionAt(now), leaving, leavingWeight, width, height);
+                _layerFrames[count] = current.Frame;
                 _layers[count++] = LayerOf(current.Frame, currentMotion, coming, comingWeight, width, height);
             }
             else
             {
+                _layerFrames[count] = current.Frame;
                 _layers[count++] = LayerOf(current.Frame, currentMotion, SlideshowLayer.Plain, FrameCompositor.FullWeight, width, height);
             }
 
@@ -542,6 +578,14 @@ namespace PhotoLikerUI
             g.PixelOffsetMode = PixelOffsetMode.Half;
             g.DrawImage(_canvas.Image, new Rectangle(0, 0, width, height));
             g.CompositingMode = CompositingMode.SourceOver;
+
+            // The boxes go with their photos: each at the place its layer has, as faint as the photo is
+            for (var layer = 0; layer < count; layer++)
+            {
+                var placed = _layers[layer];
+                DrawFaces(g, _layerFrames[layer]!, new SlidePlace((float)placed.CenterX, (float)placed.CenterY, (float)placed.Scale), placed.Weight / (double)FrameCompositor.FullWeight);
+                _layerFrames[layer] = null; // a frame that is let go of meanwhile is not held on to here
+            }
 
             DrawWatermarks(g, progress);
         }
@@ -585,7 +629,7 @@ namespace PhotoLikerUI
             }
 
             // The names the same way: the same people on both photos stay as they are
-            if (string.Equals(outgoing.Frame.People, current.Frame.People, StringComparison.Ordinal))
+            if (!_showNames || string.Equals(outgoing.Frame.Names, current.Frame.Names, StringComparison.Ordinal))
             {
                 DrawPeople(g, current.Frame, 1);
             }
@@ -609,7 +653,7 @@ namespace PhotoLikerUI
         /// </summary>
         private void DrawPeople(Graphics g, SlideshowFrame frame, double opacity)
         {
-            if (frame.People is not { } people)
+            if (!_showNames || frame.Names is not { } people)
                 return;
 
             var format = StringFormat.GenericTypographic;
@@ -679,6 +723,7 @@ namespace PhotoLikerUI
                 _canvas?.Dispose();
                 _canvas = null;
                 _watermarkFont.Dispose();
+                _faceFont.Dispose();
             }
             base.Dispose(disposing);
         }

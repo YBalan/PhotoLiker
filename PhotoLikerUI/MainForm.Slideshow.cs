@@ -49,6 +49,7 @@ namespace PhotoLikerUI
             {
                 slideshow.Run(this);
                 KeepTheEffectThatWasChosen(slideshow.Effect);
+                KeepThePeopleThatWereChosen(slideshow.ShowFaces, slideshow.ShowNames);
                 ShowWhereSlideshowEnded(slideshow.LastShownPath);
             }
         }
@@ -77,17 +78,29 @@ namespace PhotoLikerUI
             var (screens, primary) = SlideshowScreens();
             return new SlideshowSession(
                 files, start, _currentConfig.SlideshowMode, _currentConfig.SlideshowTimeout, _currentConfig.SlideshowWatermark, screens, primary,
-                _currentConfig.SlideshowEffect, useVideo ? SlideshowVideoSettings() : null, SlideshowPeopleLookup());
+                _currentConfig.SlideshowEffect, useVideo ? SlideshowVideoSettings() : null, SlideshowPeopleOptionsOfTheFolder());
         }
 
         /// <summary>
-        /// Who is in a photo of the show, for the names in the corner: the people of the faces the search found in it (the folder's index is in memory, so asking is quick), as the
-        /// main window names them. Null when the names are not asked for, or there is no index to ask; a photo that is not in the index has no names.
+        /// The people of the photos of the show: the faces the search found in a photo, each with the name it is known by, as the main window names them (the folder's index is in memory,
+        /// so asking is quick, and it is done along with the making of the frame, not when the photo is painted), and the two rows <b>PeopleFaces</b> and <b>PeopleNames</b> as the
+        /// starting state of the F and N keys. Null when there is no index to ask (a photo that is not in the index has no faces).
         /// </summary>
-        private Func<string, string?>? SlideshowPeopleLookup() =>
-            _currentConfig.SlideshowShowPeople && _folderSearch is { } search
-                ? path => FaceNames.Caption(search.DescribeFaces(path))
+        private SlideshowPeopleOptions? SlideshowPeopleOptionsOfTheFolder() =>
+            _folderSearch is { } search
+                ? new SlideshowPeopleOptions(search.DescribeFaces, _currentConfig.SlideshowPeopleFaces, _currentConfig.SlideshowPeopleNames)
                 : null;
+
+        /// <summary>F and N turn the boxes and the names on and off while the slideshow runs; how they were left when it ended is the setting from then on (like the effect).</summary>
+        private void KeepThePeopleThatWereChosen(bool faces, bool names)
+        {
+            if (_currentConfig.SlideshowPeopleFaces == faces && _currentConfig.SlideshowPeopleNames == names)
+                return;
+
+            _currentConfig.SlideshowPeopleFaces = faces;
+            _currentConfig.SlideshowPeopleNames = names;
+            settingsPropertyGrid.Refresh();
+        }
 
         /// <summary>
         /// How the videos of the show are played: the settings, and for each video what is known of it: the places the search that is shown found in it (none when the list is a
