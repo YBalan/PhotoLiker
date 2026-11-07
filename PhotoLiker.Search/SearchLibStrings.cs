@@ -22,6 +22,9 @@ namespace PhotoLiker.Search
         public static string PersonIsGroupFormat => T();
         public static string PersonNeedsName => T();
         public static string NoSuchPersonFormat => T();
+        public static string NotPeopleFile => T();
+        public static string PeopleFileNewerFormat => T();
+        public static string PeopleFileUnreadableFormat => T();
         public static string DownloadingFormat => T();
         public static string DownloadingNoTotalFormat => T();
     }

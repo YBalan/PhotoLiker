@@ -197,6 +197,9 @@ SearchLibStrings.GroupIsPersonFormat = {0} is the name of a person. A group need
 SearchLibStrings.PersonIsGroupFormat = {0} is the name of a group. A person needs a name of their own.
 SearchLibStrings.PersonNeedsName = A person needs a name.
 SearchLibStrings.NoSuchPersonFormat = There is nobody called {0}.
+SearchLibStrings.NotPeopleFile = This is not a PhotoLiker people file.
+SearchLibStrings.PeopleFileNewerFormat = This people file was made by a newer version of PhotoLiker (file version {0}). Update the program to use it.
+SearchLibStrings.PeopleFileUnreadableFormat = The people file of this folder could not be read ({0}), so the people from the file are not added: they would be written over the ones that are there. Fix or move that file first.
 SearchLibStrings.DownloadingFormat = Downloading {0}: {1} of {2} MB
 SearchLibStrings.DownloadingNoTotalFormat = Downloading {0}: {1} MB
 
@@ -672,6 +675,25 @@ PeopleStrings.NoPeopleYet = Nobody is named yet. Show the faces of a photo (the 
 PeopleStrings.SaveErrorFormat = The groups could not be saved: {0}
 PeopleStrings.FolderCopyErrorFormat = The groups are saved on this computer, but not in the photo folder: {0}
 PeopleStrings.NameProblemTitle = This name can not be used
+PeopleStrings.ExportButton = Export...
+PeopleStrings.ExportTooltip = Save all the people (with the faces you named) and all the groups to a file, to move them to another computer or to keep a copy.
+PeopleStrings.ImportButton = Import...
+PeopleStrings.ImportTooltip = Add the people and the groups from such a file. Nothing here is replaced or removed.
+PeopleStrings.ExportTitle = Export people and groups
+PeopleStrings.ImportTitle = Import people and groups
+PeopleStrings.PeopleFileFilter = PhotoLiker people (*.plpeople)|*.plpeople|All files (*.*)|*.*
+PeopleStrings.ExportDefaultNameFormat = people {0:yyyy-MM-dd}
+PeopleStrings.NothingToExport = Nobody is named yet and there are no groups: there is nothing to export.
+PeopleStrings.ExportedFormat = Exported to {0} (people: {1:N0}, faces: {2:N0}, groups: {3:N0}).
+PeopleStrings.ExportErrorFormat = The people and groups could not be exported: {0}
+PeopleStrings.ImportErrorFormat = The people and groups could not be imported: {0}
+PeopleStrings.ImportQuestionFormat = Add the people and groups from this file?\n\nPeople: {0:N0}\nNamed faces: {1:N0}\nPhoto folders they were named in: {2:N0}\nGroups: {3:N0}{4}\n\nNothing here is replaced or removed. A face that is named here already stays as it is, a group gets the people it did not have, and a group that is not here is made.
+PeopleStrings.ImportMadeFromFormat = \n\nMade from {0} on {1:g}.
+PeopleStrings.ImportOtherModelsNote = \n\nThe faces in this file were found by other face models than this version of PhotoLiker uses, so they can not be used. Only the groups will be added.
+PeopleStrings.ImportDoneFormat = Done.\n\nNew people: {0:N0}\nFaces added: {1:N0}\nNew groups: {2:N0}\nPeople put into groups: {3:N0}
+PeopleStrings.ImportKnownFormat = \nFaces left out because they are named here already: {0:N0}
+PeopleStrings.ImportUnusableFormat = \nFaces that could not be used: {0:N0}
+PeopleStrings.ImportNothingNew = There was nothing new in the file: everything in it is here already.
 
 # ──────────── SearchStrings ────────────
 SearchStrings.ModelLabel = Model:

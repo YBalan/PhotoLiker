@@ -178,6 +178,17 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
    first): all their faces are the faces of the one who was there, with that spelling, and in the groups they are there once. That is
    also how to fix a name that was typed two ways. A name that differs only in case is another spelling of the same name.
 
+   **Export...** and **Import...** (at the bottom of the window) take the people and the groups to another computer, or into a backup,
+   through one `.plpeople` file. **Export...** writes every person with the faces you named (this folder's and, from the shared file,
+   the other folders') and every group. **Import...** first tells what the file holds, and after you agree it **adds** it: a face that
+   is named here already keeps its name, a group you have gets the people it did not have, a group that is not here is made, and
+   nothing is removed, so importing the same file twice changes nothing and a computer that went its own way can be taken in without
+   losing what was done here. The part of the file that comes from this very folder (the same path) becomes the names of this folder,
+   kept in its `photo-liker-people.json`; the parts of other folders go into the shared `people.json` as examples of how those people
+   look (a folder you open later that has a people file of its own puts its own people in place of its part, as it always does). A group
+   with the name of a person here, or a person with the name of a group here, is left out, and the message says so. A file made with
+   other face models than this version uses brings only its groups.
+
    ![People and groups: two people selected, one group ticked, one half filled](docs/images/28-people-groups.png)
 
    Groups are used in three places. The menu of a face shows each group by name with its people in a sub-menu, then the people who
@@ -285,7 +296,8 @@ What is kept where:
   deleted stays deleted in every folder you open afterwards. Two computers that both changed the groups since they last met are
   not merged: the later change wins as a whole. A folder that can not be written (read-only, a drive that is off) only misses its
   copy, the status bar says so and the groups on this computer are saved all the same. Delete a copy and it is written again
-  the next time the folder is opened.
+  the next time the folder is opened. To move the people of *all* folders and the groups in one go, use **Export...** / **Import...**
+  in the People window (see Groups of people above): a `.plpeople` file is plain JSON too, with the vectors as base64.
 - **The models** are in `%LocalAppData%\PhotoLiker\models`, a folder for each, downloaded when they are first needed: to match
   words with photos CLIP ViT-B/32 (OpenAI, MIT licence, the standard), SigLIP 2 Base/16 (Google, Apache 2.0) and XLM-RoBERTa with ViT-B/32 (LAION,
   MIT licence) (see **Model** above; the last two are ONNX exports of the Immich project, fixed to one revision), and

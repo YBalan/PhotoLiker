@@ -50,5 +50,26 @@ namespace PhotoLikerUI
         public static string SaveErrorFormat => T();
         public static string FolderCopyErrorFormat => T();
         public static string NameProblemTitle => T();
+
+        // Export and import of the people and the groups
+        public static string ExportButton => T();
+        public static string ExportTooltip => T();
+        public static string ImportButton => T();
+        public static string ImportTooltip => T();
+        public static string ExportTitle => T();
+        public static string ImportTitle => T();
+        public static string PeopleFileFilter => T();
+        public static string ExportDefaultNameFormat => T();
+        public static string NothingToExport => T();
+        public static string ExportedFormat => T();
+        public static string ExportErrorFormat => T();
+        public static string ImportErrorFormat => T();
+        public static string ImportQuestionFormat => T();
+        public static string ImportMadeFromFormat => T();
+        public static string ImportOtherModelsNote => T();
+        public static string ImportDoneFormat => T();
+        public static string ImportKnownFormat => T();
+        public static string ImportUnusableFormat => T();
+        public static string ImportNothingNew => T();
     }
 }

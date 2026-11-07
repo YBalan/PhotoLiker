@@ -183,6 +183,9 @@ SearchLibStrings.GroupIsPersonFormat = «{0}» — це ім’я людини. 
 SearchLibStrings.PersonIsGroupFormat = «{0}» — це назва групи. Людині потрібне власне ім’я.
 SearchLibStrings.PersonNeedsName = Людині потрібне ім’я.
 SearchLibStrings.NoSuchPersonFormat = Немає людини з іменем «{0}».
+SearchLibStrings.NotPeopleFile = Це не файл людей PhotoLiker.
+SearchLibStrings.PeopleFileNewerFormat = Цей файл людей створила новіша версія PhotoLiker (версія файлу {0}). Оновіть програму, щоб його використати.
+SearchLibStrings.PeopleFileUnreadableFormat = Файл людей цієї папки не вдалося прочитати ({0}), тому людей із файлу не додано: вони б перезаписали наявних. Спершу виправте або перемістіть цей файл.
 SearchLibStrings.DownloadingFormat = Завантаження {0}: {1} з {2} МБ
 SearchLibStrings.DownloadingNoTotalFormat = Завантаження {0}: {1} МБ
 
@@ -658,6 +661,25 @@ PeopleStrings.NoPeopleYet = Ще нікого не названо. Покажі�
 PeopleStrings.SaveErrorFormat = Не вдалося зберегти групи: {0}
 PeopleStrings.FolderCopyErrorFormat = Групи збережено на цьому комп’ютері, але не в папці з фото: {0}
 PeopleStrings.NameProblemTitle = Цю назву не можна використати
+PeopleStrings.ExportButton = Експорт...
+PeopleStrings.ExportTooltip = Зберегти в файл усіх людей (з обличчями, які ви назвали) і всі групи, щоб перенести їх на інший комп’ютер або мати копію.
+PeopleStrings.ImportButton = Імпорт...
+PeopleStrings.ImportTooltip = Додати людей і групи з такого файлу. Нічого з наявного не замінюється й не видаляється.
+PeopleStrings.ExportTitle = Експорт людей і груп
+PeopleStrings.ImportTitle = Імпорт людей і груп
+PeopleStrings.PeopleFileFilter = Люди PhotoLiker (*.plpeople)|*.plpeople|Усі файли (*.*)|*.*
+PeopleStrings.ExportDefaultNameFormat = люди {0:yyyy-MM-dd}
+PeopleStrings.NothingToExport = Ще нікого не названо й груп немає: експортувати нічого.
+PeopleStrings.ExportedFormat = Експортовано в {0} (людей: {1:N0}, облич: {2:N0}, груп: {3:N0}).
+PeopleStrings.ExportErrorFormat = Не вдалося експортувати людей і групи: {0}
+PeopleStrings.ImportErrorFormat = Не вдалося імпортувати людей і групи: {0}
+PeopleStrings.ImportQuestionFormat = Додати людей і групи з цього файлу?\n\nЛюдей: {0:N0}\nНазваних облич: {1:N0}\nПапок із фото, де їх назвали: {2:N0}\nГруп: {3:N0}{4}\n\nНічого з наявного не замінюється й не видаляється. Обличчя, яке тут уже назване, залишається як є, група отримує людей, яких у ній не було, а групу, якої тут немає, буде створено.
+PeopleStrings.ImportMadeFromFormat = \n\nСтворено з {0}, {1:g}.
+PeopleStrings.ImportOtherModelsNote = \n\nОбличчя з цього файлу знайдено іншими моделями облич, ніж у цій версії PhotoLiker, тому використати їх не можна. Буде додано лише групи.
+PeopleStrings.ImportDoneFormat = Готово.\n\nНових людей: {0:N0}\nДодано облич: {1:N0}\nНових груп: {2:N0}\nЛюдей розкладено по групах: {3:N0}
+PeopleStrings.ImportKnownFormat = \nОблич пропущено, бо вони тут уже названі: {0:N0}
+PeopleStrings.ImportUnusableFormat = \nОблич, які не вдалося використати: {0:N0}
+PeopleStrings.ImportNothingNew = У файлі не було нічого нового: усе, що в ньому є, тут уже є.
 
 # ──────────── SearchStrings ────────────
 SearchStrings.ModelLabel = Модель:
