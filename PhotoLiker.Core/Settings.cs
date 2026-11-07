@@ -105,6 +105,9 @@ namespace PhotoLiker.Core
         [JsonConverter(typeof(SlideshowWatermarkConverter))]
         public SlideshowWatermark SlideshowWatermark { get; set; } = SlideshowWatermark.DateTime;
 
+        /// <summary>Whether the slideshow writes the names of the people in the photo in the bottom left corner (the faces the search found and the people known by them). Off by default.</summary>
+        public bool SlideshowShowPeople { get; set; } = false;
+
         /// <summary>How the slideshow changes from one photo to the next, and whether a photo moves while it is shown, see <see cref="SlideshowEffects"/>.</summary>
         [JsonConverter(typeof(SlideshowEffectConverter))]
         public SlideshowEffect SlideshowEffect { get; set; } = SlideshowEffect.Fade;

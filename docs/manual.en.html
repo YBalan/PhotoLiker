@@ -214,7 +214,7 @@ photo again.</p></div>
     <tr><td><kbd>1</kbd>–<kbd>9</kbd>, <kbd>A</kbd>–<kbd>Z</kbd></td><td>Save the photo in a group, or take it out again (see <a href="#groups">Likes and groups</a>).</td></tr>
     <tr><td><kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>9</kbd>, <kbd>Alt</kbd>+<kbd>A</kbd>–<kbd>Z</kbd></td><td>While search results are shown: save <em>all</em> of them in the group, after telling you how many photos that is and asking.</td></tr>
     <tr><td><kbd>0</kbd></td><td>Fit the photo to the viewer (after zooming in).</td></tr>
-    <tr><td><kbd>Alt</kbd>+<kbd>Enter</kbd></td><td>Show the photos of the list as a <a href="#slideshow">slideshow</a> on the whole screen, beginning with the shown photo. In it <kbd>→</kbd> / <kbd>←</kbd> show the photo next to the shown one, <kbd>↓</kbd> / <kbd>↑</kbd> choose the next / previous effect, and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back.</td></tr>
+    <tr><td><kbd>Alt</kbd>+<kbd>Enter</kbd></td><td>Show the photos of the list as a <a href="#slideshow">slideshow</a> on the whole screen, beginning with the shown photo. In it any key but <kbd>Esc</kbd> pauses the show and <kbd>Space</kbd> continues it, <kbd>→</kbd> / <kbd>←</kbd> show the photo next to the shown one, <kbd>↓</kbd> / <kbd>↑</kbd> choose the next / previous effect, and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back.</td></tr>
     <tr><td><kbd>F1</kbd></td><td>Open the About box (see <a href="#about">About box and this manual</a>).</td></tr>
     <tr><td><kbd>F2</kbd> / <kbd>F3</kbd></td><td>Open this manual in Ukrainian / in English.</td></tr>
     <tr><td><kbd>F5</kbd></td><td>List the folder again from scratch (see <a href="#big-folders">Big folders</a>).</td></tr>
@@ -314,6 +314,12 @@ file the status bar says so and nothing is written.</p>
 <strong>Monitors</strong> below), beginning with the photo you are looking at (while search results are shown, the results are the list). Each photo is as large as the screen lets it be, with black around it.
 <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) takes you back to the window, to the photo the slideshow stopped at.</p>
 
+<figure><img src="images/39-slideshow.png" alt="The slideshow on a monitor: the photo with black around it, the date in the bottom right corner and the name of the effect in the top left corner" width="1280" height="720"><figcaption>The slideshow: the photo as large as the screen lets it be, the date it was taken in the bottom right corner, and, for a moment, the name of the effect that <kbd>↓</kbd> has just chosen in the top left corner.</figcaption></figure>
+
+<p><strong>Any other key pauses the show</strong>, and <kbd>Space</kbd> continues it. While it is paused nothing changes by itself (a video that plays is held), and
+<em>Paused (Space to continue)</em> is written in the top right corner. <kbd>→</kbd> / <kbd>←</kbd> still show the next / previous photo, and the show stays paused.
+<kbd>Shift</kbd>, <kbd>Ctrl</kbd> and <kbd>Alt</kbd> alone do not pause.</p>
+
 <ul>
   <li><kbd>→</kbd> / <kbd>←</kbd> show the photo next to the one on the screen, <strong>also in the random mode</strong> (there only the timer
   picks at random), and that photo gets its full time again. After the last photo comes the first, and before the first the last.</li>
@@ -324,7 +330,7 @@ file the status bar says so and nothing is written.</p>
   <li>A photo that cannot be read is passed over.</li>
 </ul>
 
-<p>The nine settings are in the group <strong>6. Slideshow</strong> of the settings table, and are kept for the folder:</p>
+<p>The ten settings are in the group <strong>6. Slideshow</strong> of the settings table, and are kept for the folder:</p>
 
 <div class="table-scroll">
 <table class="wide-first">
@@ -334,6 +340,7 @@ file the status bar says so and nothing is written.</p>
     <tr><td><strong>Monitors</strong></td><td><code>Current</code> (the default): the screen PhotoLiker is on. <code>All</code>: every connected monitor, each with a photo of its own, never the same photo on two monitors, and they all change together. With <code>Random</code> every monitor takes the next photo of the random order; with <code>OneByOne</code> the monitors, from left to right, show photos that follow each other (the photo you were looking at stays on the monitor of the window), and the next set begins where this one ends. <kbd>→</kbd> / <kbd>←</kbd> move every monitor to its neighbouring photo. With more monitors than photos the farthest from the window are left out.</td></tr>
     <tr><td><strong>Timeout</strong></td><td>How many seconds a photo stays: 2 by default, not less than 0.2. It counts from the moment the photo is on the screen.</td></tr>
     <tr><td><strong>Watermark</strong></td><td>What is written in the bottom right corner: <code>DateTime</code> (the default), the day and the time the photo was taken, <code>Year</code>, or <code>None</code>. It is the date the camera wrote in the photo, when that can be believed, else the date of the file. A photo with no date gets no text.</td></tr>
+    <tr><td><strong>ShowPeople</strong></td><td><code>False</code> (the default): no names. <code>True</code>: the names of the people in the photo are written in the bottom left corner, from left to right as they stand (<code>Anna, Oleh?, Mom</code>). They come from the faces the search found: a face you named yourself is written as it is, a face that only looks like somebody has a <code>?</code> after the name. Faces nobody is known by are not written, and a photo with none gets no text, so the folder has to be indexed and the people named (the <strong>Faces</strong> button). A long list goes on to more lines and leaves room for the date.</td></tr>
     <tr><td><strong>Effect</strong></td><td>How one photo takes the place of the last. <code>Fade</code> (the default): the old photo dissolves into the new one. <code>Slide</code>: the new photo pushes the old one out to the left. <code>Zoom</code>: the new photo grows from a smaller size as it fades in. <code>KenBurns</code>: every photo drifts and zooms slowly all the time it is on the screen, and dissolves into the next. <code>Random</code>: one of those four for every change, never the same twice in a row. <code>None</code>: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the <strong>Timeout</strong>. <kbd>→</kbd> / <kbd>←</kbd> put the next photo there at once, with no change (with <code>KenBurns</code> it still moves).</td></tr>
     <tr><td><strong>UseVideo</strong></td><td><code>False</code> (the default): photos only. <code>True</code>: the videos of the list are played too, between the photos (there are videos in the list while <strong>SupportVideo</strong> is on).</td></tr>
     <tr><td><strong>MuteVideo</strong></td><td><code>True</code>: the videos play without their sound.</td></tr>
@@ -348,6 +355,8 @@ file the status bar says so and nothing is written.</p>
 on the screen PhotoLiker is on <strong>only</strong>: with several monitors the others keep their photos while it plays. One by one, a video plays where it lies in the list; at random, videos come as
 often as they are among the items. With <strong>OnlyFoundTimeFrames</strong> and search results shown, only the places the search found are played (2 seconds before to 4 after each). <kbd>Right</kbd> and
 <kbd>Left</kbd> skip a video. While a video plays with its sound the other programs' sound is turned down by <strong>LowerOtherAudio</strong> percent and put back after.</p>
+
+<figure><img src="images/40-slideshow-video.png" alt="A video playing over the whole screen in the slideshow, with the date it was recorded in the bottom right corner" width="1280" height="720"><figcaption>A video in the slideshow: it plays over the whole screen, and the date it was recorded is in the corner, as a photo's date is.</figcaption></figure>
 
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="settings">11. Settings</h2>
@@ -406,7 +415,7 @@ description: select it and the pane under the table says what it is for.</p>
 
 <p><strong>CurrentIndex</strong> is the number of the shown photo, counted from 0: type another number into it to jump to that
 photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong> and the other rows
-that show information cannot be changed. The group <strong>6. Slideshow</strong> has nine rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
+that show information cannot be changed. The group <strong>6. Slideshow</strong> has ten rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
 
 <h3 id="language">Language</h3>
 <p>The <strong>Language</strong> row of the settings table chooses the language of the program: pick <strong>English</strong> or <strong>Українська</strong> (Ukrainian) in the list. The
@@ -524,6 +533,8 @@ nothing is changed until you press the button that does it, and what they move i
 inside it (EXIF). <strong>Align dates</strong> sets the dates of the files to the date taken, so that Explorer, other programs and the
 order of the list (<strong>SortOrder</strong> goes by the created date) agree with the camera.</p>
 
+<figure><img src="images/30-align-dates.png" alt="The Align dates dialog: 7 photos will change, each with its date taken, the dates of the file now and what would be set" width="1022" height="672"><figcaption>The <strong>Align dates</strong> dialog: 7 photos will change. Each row has the date taken, the created and modified dates now, and what would be set. Nothing is changed until you press <strong>Change 7 photos</strong>.</figcaption></figure>
+
 <ul>
   <li>The dialog reads the start of each file and shows <strong>Will change</strong> (with the date taken and the dates now), and the lists of
   photos that <strong>Already match</strong>, have <strong>No usable EXIF date</strong> or are <strong>Unreadable</strong>. For tens of thousands of photos
@@ -540,10 +551,14 @@ order of the list (<strong>SortOrder</strong> goes by the created date) agree wi
   folder, and <strong>Undo last run…</strong> puts the dates back.</li>
 </ul>
 
+<figure><img src="images/31-use-a-date.png" alt="The question of Use a date: where the date taken of the photos without a usable date comes from" width="612" height="552"><figcaption><strong>Use a date…</strong> asks where the date of the photos without a usable one comes from, and shows for each answer how many photos have one from there and what it would be. The tick at the bottom writes the date into the photo.</figcaption></figure>
+
 <h3>Remove empty folders</h3>
 <p>Moving and deleting photos leaves empty folders behind, and Windows leaves thumbnail caches (<code>Thumbs.db</code>) in the ones it showed.
 The button lists the folders that hold nothing of use: nothing at all, or only thumbnail files, or only other folders like that.
 Everything is ticked; press <strong>Remove N folders</strong> to delete them.</p>
+
+<figure><img src="images/32-empty-folders.png" alt="The Remove empty folders dialog: four folders ticked, each with what is in it" width="902" height="592"><figcaption>The <strong>Remove empty folders</strong> dialog: four folders, each with what is in it (nothing, an empty folder, <code>Thumbs.db</code>). The second choice at the top is the list of photos that cannot be read.</figcaption></figure>
 
 <ul>
   <li>The rule is strict: any other file keeps its folder and every folder above it. The <code>Deleted</code> folder, the Liked folder and
@@ -557,6 +572,8 @@ Everything is ticked; press <strong>Remove N folders</strong> to delete them.</p
 <p>Photos get copied: a card into a folder named for the day, the same card again, a folder of discards. <strong>Find duplicates</strong> finds
 photos that show <em>exactly the same picture</em> in different folders, keeps one of each, and moves the other copies to
 <code>Deleted\Duplicated</code> inside the photo folder, with the path they had.</p>
+
+<figure><img src="images/33-find-duplicates.png" alt="The Find duplicates dialog: three groups of identical photos, the copy that stays in green and the copies that move below it, each row with the reason" width="1102" height="752"><figcaption>The <strong>Find duplicates</strong> dialog: three groups of identical photos. In each group the copy that stays is green and the ones that move are below it, and every row says why. The two boxes above the list override the rules.</figcaption></figure>
 
 <ul>
   <li>The file name does not matter, and neither does a rating or a keyword added to the photo later: the picture decides.
@@ -656,11 +673,15 @@ Instead of EXIF the grid under the settings has a category <strong>0. Video</str
 phone wrote into the video (else the date of the file); <strong>File dates</strong> shows the dates of the file next to it, and says <code>≠ Recorded</code> when they differ: a copied file is created when it is
 copied, so it is often days younger than the recording.</p>
 
+<figure><img src="images/34-video-poster.png" alt="A video in the window: its poster picture with the play mark, its thumbnail in the strip and the 0. Video category of the grid" width="1846" height="893"><figcaption>A video: the poster picture with the round play mark and the length in the corner, the thumbnail with a small play mark in the strip at the right, and the <strong>0. Video</strong> category in the grid at the left.</figcaption></figure>
+
 <h3>Playing</h3>
 <p><kbd>Enter</kbd>, or a click on the poster, puts the player over the picture. Under it: play / pause, where you are (<code>0:12 / 1:17</code>), a slider to go anywhere (click or drag),
 a <strong>Go to</strong> box where you type a time and press <kbd>Enter</kbd> (<code>83</code>, <code>1:23</code>, <code>1:02:03</code> or <code>1m23s</code>), a mute button and the volume.
 A click on the picture pauses and plays. <kbd>Shift</kbd>+<kbd>←</kbd> / <kbd>→</kbd> go 5 seconds and <kbd>Ctrl</kbd>+<kbd>←</kbd> / <kbd>→</kbd> 30 seconds,
 <kbd>Ctrl</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd> change the volume, <kbd>Esc</kbd> goes back to the poster. Going to another item stops the video.</p>
+
+<figure><img src="images/35-video-playing.png" alt="The player over the picture: play / pause, the time, the slider, the Go to box, the mute button and the volume" width="1846" height="893"><figcaption>The player: play / pause, where you are (<code>0:08 / 0:12</code>), the slider, the <strong>Go to</strong> box, the mute button and the volume. The status bar reminds you of the keys.</figcaption></figure>
 <p>The first start of the player after an installation can take ten seconds or more while the virus scanner looks at its files; it starts in the background as soon as a video is shown, and the bar
 says <strong>Starting the video player...</strong> until it is ready. If it cannot start at all, the video is opened in the program Windows plays such files with.</p>
 
@@ -673,6 +694,12 @@ at the same places. <kbd>Enter</kbd> (or a click) plays from the best fitting pl
 that was found. Two buttons in the search strip, a picture (<strong>Photos</strong>) and a video camera (<strong>Videos</strong>) (there while <strong>SupportVideo</strong> is on; hold the pointer over one for its name), choose what a search looks through: both on is the default,
 <strong>Photos</strong> off searches the videos only (<q>a cat</q> among the videos), <strong>Videos</strong> off the photos only. The last one on cannot be switched off, the choice is kept with the folder, and a
 search that is shown is run again when it changes. The precision slider works on videos too. A person is found by the faces in the moments, with the examples from the photos you named.</p>
+
+<figure><img src="images/38-search-strip-video.png" alt="The search strip with SupportVideo on: 8 photos, 2 videos and 6 moments, and the Photos and Videos buttons" width="999" height="27"><figcaption>The search strip with <strong>SupportVideo</strong> on: the index has 8 photos and 2 videos with 6 moments, and the <strong>Photos</strong> and <strong>Videos</strong> buttons are next to the faces and people icons.</figcaption></figure>
+
+<figure><img src="images/36-video-search.png" alt="The results of the search birthday cake: one video, with the strip of its moments under the picture" width="1846" height="893"><figcaption>The result of <q>birthday cake</q>: one video. Under the picture is the strip of its moments, and the one that fits best is marked in orange.</figcaption></figure>
+
+<figure><img src="images/37-video-search-playing.png" alt="The same video playing from the best fitting place, with an orange tick on the slider" width="1846" height="893"><figcaption><kbd>Enter</kbd> plays the video from that place (<code>0:04 / 0:12</code>); the slider has an orange tick there.</figcaption></figure>
 <p>On a Canon camera's 640 &times; 480 clips, 144 seconds of video took 19 seconds to index, faces included; a library of 3 hours takes about 20 minutes, plus the time to read it from a network share.</p>
 
 <h3>What is said</h3>
@@ -688,7 +715,7 @@ speaks one language. Nothing leaves the computer.</p>
 
 <h3>What works on a video, and what does not</h3>
 <p><kbd>Space</kbd> likes it, a group key sorts it, <kbd>Delete</kbd> moves it to the <code>Deleted</code> folder (a video that is playing is let go of first), <kbd>Ctrl</kbd>+<kbd>C</kbd> copies the file: all as for a photo.
-The slideshow, rotating, the date tools, duplicates, <q>More like this</q> and Generate Video work on photos only for now: the videos are left out of them.</p>
+The slideshow (with <strong>UseVideo</strong> on) and <strong>Align dates</strong> take the videos along; rotating, duplicates, <q>More like this</q> and Generate Video work on photos only for now: the videos are left out of them.</p>
 
 <p>What PhotoLiker has read from a video (its size, length, codec and dates) and its poster picture are kept on this computer in a catalog of their own, next to the photo index, so that a folder of videos on a network
 share is not read again on every visit. It can be deleted at any time; it only costs the time to read the videos again. The player is VLC's engine. It is not in the installer (that keeps the installer at 32 MB instead of 55 MB):

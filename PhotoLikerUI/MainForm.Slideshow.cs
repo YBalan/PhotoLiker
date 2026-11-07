@@ -77,8 +77,17 @@ namespace PhotoLikerUI
             var (screens, primary) = SlideshowScreens();
             return new SlideshowSession(
                 files, start, _currentConfig.SlideshowMode, _currentConfig.SlideshowTimeout, _currentConfig.SlideshowWatermark, screens, primary,
-                _currentConfig.SlideshowEffect, useVideo ? SlideshowVideoSettings() : null);
+                _currentConfig.SlideshowEffect, useVideo ? SlideshowVideoSettings() : null, SlideshowPeopleLookup());
         }
+
+        /// <summary>
+        /// Who is in a photo of the show, for the names in the corner: the people of the faces the search found in it (the folder's index is in memory, so asking is quick), as the
+        /// main window names them. Null when the names are not asked for, or there is no index to ask; a photo that is not in the index has no names.
+        /// </summary>
+        private Func<string, string?>? SlideshowPeopleLookup() =>
+            _currentConfig.SlideshowShowPeople && _folderSearch is { } search
+                ? path => FaceNames.Caption(search.DescribeFaces(path))
+                : null;
 
         /// <summary>
         /// How the videos of the show are played: the settings, and for each video what is known of it: the places the search that is shown found in it (none when the list is a

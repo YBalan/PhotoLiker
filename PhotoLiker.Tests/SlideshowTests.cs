@@ -75,6 +75,25 @@ public class SlideshowTests : IDisposable
         Assert.Equal(SlideshowEffect.Fade, loaded.SlideshowEffect);
     }
 
+    [Fact]
+    public void TheNamesOfThePeople_AreOffByDefault_AndKeptInTheFile()
+    {
+        Assert.False(new Settings().SlideshowShowPeople);
+
+        new Settings { CurrentFolder = _tempDir, SlideshowShowPeople = true }.Save(_tempDir);
+
+        Assert.Contains("\"SlideshowShowPeople\": true", File.ReadAllText(Settings.GetFilePath(_tempDir)));
+        Assert.True(Settings.Load(_tempDir).SlideshowShowPeople);
+    }
+
+    [Fact]
+    public void AFileWithoutTheNamesOfThePeople_ShowsNone()
+    {
+        File.WriteAllText(Settings.GetFilePath(_tempDir), """{ "CacheSize": 7 }""");
+
+        Assert.False(Settings.Load(_tempDir).SlideshowShowPeople);
+    }
+
     [Theory]
     [InlineData("oneByOne", SlideshowMode.OneByOne)]
     [InlineData("RANDOM", SlideshowMode.Random)]

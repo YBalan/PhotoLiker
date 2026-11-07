@@ -61,11 +61,12 @@ namespace PhotoLikerUI
         private readonly PixelCanvas _canvas;
 
         /// <summary>Takes <paramref name="image"/>: its pixels are copied and it is disposed.</summary>
-        public SlideshowFrame(Bitmap image, DateTime? taken, string path)
+        public SlideshowFrame(Bitmap image, DateTime? taken, string path, string? people = null)
         {
             _canvas = PixelCanvas.Take(image);
             Taken = taken;
             Path = path;
+            People = string.IsNullOrWhiteSpace(people) ? null : people;
             Bytes = (long)_canvas.Width * _canvas.Height * 4;
         }
 
@@ -77,6 +78,9 @@ namespace PhotoLikerUI
         public int Width => _canvas.Width;
         public int Height => _canvas.Height;
         public DateTime? Taken { get; }
+
+        /// <summary>The names of the people in the photo, as one line, for the corner; null when they are not asked for or there are none to write.</summary>
+        public string? People { get; }
 
         /// <summary>The file the photo is from.</summary>
         public string Path { get; }
@@ -102,6 +106,7 @@ namespace PhotoLikerUI
         private readonly long _maxBytes;
         private readonly int _minFrames; // always kept, whatever they weigh: the shown photo and the ones next to it
         private readonly int _maxParallelLoads; // the decoder keeps up when several photos are made at once (GDI+ does not), and over a network their reads overlap
+        private readonly Func<string, string?>? _peopleOf; // the line of names for a photo, worked out along with its frame; null when the names are not shown
         private readonly Dictionary<string, SlideshowFrame> _frames = new(StringComparer.Ordinal);
         private readonly HashSet<string> _loading = new(StringComparer.Ordinal);
         private readonly HashSet<string> _failed = new(StringComparer.Ordinal);
@@ -114,12 +119,14 @@ namespace PhotoLikerUI
         private long _bytes;
         private int _activePumps;
 
-        public SlideshowFrames(Size screen, long maxBytes, int minFrames, int maxParallelLoads)
+        /// <param name="peopleOf">Says who is in a photo (by its file), as a line of names; called on the thread that makes the frame, so it must be safe to call from any thread.</param>
+        public SlideshowFrames(Size screen, long maxBytes, int minFrames, int maxParallelLoads, Func<string, string?>? peopleOf = null)
         {
             _screen = screen;
             _maxBytes = maxBytes;
             _minFrames = minFrames;
             _maxParallelLoads = maxParallelLoads;
+            _peopleOf = peopleOf;
         }
 
         /// <summary>A frame finished loading and is now here.</summary>
@@ -195,7 +202,7 @@ namespace PhotoLikerUI
                     try
                     {
                         // Only the file/GDI+ work runs on the pool; the result is private until it is published below.
-                        frame = await Task.Run(() => ImageHelper.LoadSlide(photo, _screen));
+                        frame = await Task.Run(() => ImageHelper.LoadSlide(photo, _screen, _peopleOf));
                     }
                     catch (Exception ex)
                     {

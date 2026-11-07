@@ -9,6 +9,7 @@ namespace PhotoLikerUI
         public static string Loading => T();
         public static string NothingToShow => T();
         public static string EffectFormat => T();
+        public static string Paused => T();
 
         // Status bar of the main window
         public static string StatusNoPhotos => T();

@@ -22,6 +22,10 @@ namespace PhotoLikerUI
     /// the photo moves if the effect is Ken Burns. A random effect is drawn anew for every change. Down and Up choose the next and the previous effect while the
     /// show runs: the name is written in a corner of every screen for a moment, and the next change is made by it (a Ken Burns photo starts to move at once).
     ///
+    /// Any key but Esc (and Alt+Enter, which go back) pauses the show, and Space, which pauses a running one too, continues it. While it is paused nothing changes by
+    /// itself: the timer is off, a video is held, and "Paused" is written in the top right corner of every screen; the keys still work (Right and Left browse, Down and Up choose
+    /// the effect), the show stays paused after them, and Space gives the shown photo its full time again. A modifier alone (Shift, Ctrl, Alt) and Alt+F4 are no keys to pause by.
+    ///
     /// Videos (when <see cref="SlideshowVideoOptions"/> are given) are not part of the photos: the photos go on exactly as above, and a video is played in between, on
     /// the screen of the main window only (<see cref="_primary"/>); the other screens keep their photos until it is over, and the show goes on with the next set. In the
     /// one-by-one mode a video is played where it lies among the photos (after the photo it follows in the list, when the screen of the window passes it); in the random mode
@@ -55,6 +59,7 @@ namespace PhotoLikerUI
         private SlideshowEffect _lastEffect;                   // the effect of the last change, so a random one is not the same twice
         private bool _scrolling;                               // a key was used since the timer last picked random photos
         private bool _closing;
+        private bool _paused;                                  // a key was pressed: nothing changes by itself until Space
         private bool _cursorHidden;
 
         // Videos
@@ -79,9 +84,11 @@ namespace PhotoLikerUI
         /// <param name="screens">The bounds of the screens, left to right.</param>
         /// <param name="primary">Which of them the main window is on. With more screens than photos, those farthest from it are left out. The videos play on this one only.</param>
         /// <param name="video">How the videos are played; null leaves them out of the show.</param>
+        /// <param name="peopleOf">Says who is in a photo (by its file) as a line of names to write in the bottom left corner; null writes no names. It is called on the threads that make the frames.</param>
         public SlideshowSession(
             IReadOnlyList<PhotoFile> items, int start, SlideshowMode mode, double timeoutSeconds, SlideshowWatermark watermark,
-            IReadOnlyList<Rectangle> screens, int primary, SlideshowEffect effect = SlideshowEffect.None, SlideshowVideoOptions? video = null)
+            IReadOnlyList<Rectangle> screens, int primary, SlideshowEffect effect = SlideshowEffect.None, SlideshowVideoOptions? video = null,
+            Func<string, string?>? peopleOf = null)
         {
             ArgumentOutOfRangeException.ThrowIfZero(items.Count);
             ArgumentOutOfRangeException.ThrowIfZero(screens.Count);
@@ -148,7 +155,7 @@ namespace PhotoLikerUI
 
             var frameBytes = MaxFrameBytes / chosen.Length;
             var parallelLoads = Math.Max(2, MaxParallelLoads / chosen.Length);
-            _screens = [.. chosen.Select(i => new SlideshowScreen(this, screens[i], watermark, frameBytes, MinFrames, parallelLoads))];
+            _screens = [.. chosen.Select(i => new SlideshowScreen(this, screens[i], watermark, frameBytes, MinFrames, parallelLoads, peopleOf))];
             foreach (var screen in _screens)
             {
                 screen.Frames.Loaded += (_, _) => Advance();
@@ -251,7 +258,8 @@ namespace PhotoLikerUI
 
         // ── keys ───────────────────────────────────────────────────────────
 
-        internal bool HandleKey(Keys keyData)
+        /// <param name="repeat">The key is held down and this is one more of its repeats (the space key then is not pressed again).</param>
+        internal bool HandleKey(Keys keyData, bool repeat = false)
         {
             switch (keyData)
             {
@@ -259,6 +267,30 @@ namespace PhotoLikerUI
                 case Keys.Alt | Keys.Enter: // the key that started it: the same key goes back, as full screen does everywhere
                     Close();
                     return true;
+            }
+
+            // A modifier alone is only the beginning of a key (Alt of Alt+Enter), and Alt+F4 closes the window as Windows does it: none of them is a key to pause by
+            var code = keyData & Keys.KeyCode;
+            if (IsModifier(code) || keyData == (Keys.Alt | Keys.F4))
+                return false;
+
+            // Space continues a show that was paused, and (being a key) pauses one that runs; a held key does not flicker between the two
+            if (code == Keys.Space && (keyData & Keys.Alt) == 0)
+            {
+                if (!repeat)
+                {
+                    if (_paused)
+                        Resume();
+                    else
+                        Pause();
+                }
+                return true;
+            }
+
+            Pause(); // any other key: the show stands still, and then does what the key says (Right and Left browse, with the show paused)
+
+            switch (keyData)
+            {
                 case Keys.Right:
                     Step(1);
                     return true;
@@ -274,6 +306,49 @@ namespace PhotoLikerUI
                 default:
                     return false;
             }
+        }
+
+        private static bool IsModifier(Keys code) => code is Keys.None or Keys.ShiftKey or Keys.LShiftKey or Keys.RShiftKey or Keys.ControlKey or Keys.LControlKey
+            or Keys.RControlKey or Keys.Menu or Keys.LMenu or Keys.RMenu or Keys.LWin or Keys.RWin or Keys.CapsLock or Keys.NumLock or Keys.Scroll;
+
+        /// <summary>Whether the show is paused: nothing changes by itself (the timer is off, a video is held), and the keys still work.</summary>
+        internal bool IsPaused => _paused;
+
+        /// <summary>
+        /// Stops the show where it is: the timer is off, so no photo takes the place of the shown one, and a video that plays is held. A change that the timer had asked for and that is
+        /// still waiting for its photos is called off, so the person is not given a photo they did not look at; one that waits for a video is not (the photos come after the
+        /// video, and with them the timer, so that is not stuck).
+        /// </summary>
+        private void Pause()
+        {
+            if (_paused || _closing)
+                return;
+
+            _paused = true;
+            _timer.Stop();
+            if (_jumpByTimer && !_interlude)
+            {
+                _jump = null;
+                _jumpByTimer = false;
+            }
+
+            foreach (var screen in _screens)
+                screen.SetPaused(true);
+        }
+
+        /// <summary>Goes on: the shown photo has its full time again from now, and a video that was held plays on.</summary>
+        private void Resume()
+        {
+            if (!_paused)
+                return;
+
+            _paused = false;
+            foreach (var screen in _screens)
+                screen.SetPaused(false);
+
+            // A video goes on and the photos that wait for it come after it; photos that are being made start the timer when they are shown
+            if (!_interlude && _jump is null && _steps == 0)
+                RestartTimer();
         }
 
         /// <summary>Goes back to the main window: every window of the slideshow is closed.</summary>
@@ -553,8 +628,8 @@ namespace PhotoLikerUI
 
         private void RestartTimer()
         {
-            if (_photos.Length < 2)
-                return; // one photo stays
+            if (_photos.Length < 2 || _paused)
+                return; // one photo stays; and so does every photo while the show is paused (Resume starts the timer)
 
             _timer.Stop();
             _timer.Start();
