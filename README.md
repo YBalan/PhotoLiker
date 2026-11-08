@@ -694,6 +694,16 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   moment. A change of photo that is under way when the key is pressed finishes, and a change the timer has just asked for, whose photo is not ready yet, is called off
   (the photo you were looking at stays). A modifier key alone (<kbd>Shift</kbd>, <kbd>Ctrl</kbd>, <kbd>Alt</kbd>, <kbd>Win</kbd>, <kbd>Caps Lock</kbd>) and <kbd>Alt</kbd>+<kbd>F4</kbd> do not
   pause; <kbd>Esc</kbd> and <kbd>Alt</kbd>+<kbd>Enter</kbd> go back, paused or not.
+- **Media keys and remote controls** (a keyboard with media keys, or a remote such as that of Windows Media Center): **Play** continues a paused show (and does nothing
+  to one that runs), **Pause** pauses it, and a single **Play/Pause** button does what <kbd>Space</kbd> does. **Volume up, volume down and mute do not pause**: they are left to
+  Windows, so the sound changes and the show goes on. The buttons are understood both as keys (Play/Pause, Play, and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>, which is how
+  Media Center remotes send Play) and as Windows application commands.
+- **The computer stays awake while the show runs** (paused or not): the screen saver does not start, the display does not go off and the computer does not go to sleep because of
+  idleness, even if nobody touches the keyboard for hours. Windows gets all of this back as soon as the show ends (or the program does).
+- **An indexing that runs behind the show is shown**: a small bar at the top, in the middle of every monitor, says `Indexing: 1,234 / 16,000 (7%), 5 min left`, with a green line that
+  fills as it goes (for videos only the percent, while the folder is looked through or the models are loaded `Indexing: getting ready...`, while the models are downloaded
+  `Indexing: downloading the models, 50%`). It is updated four times a second at most, so it costs the photos nothing, and it lies over a video as well. When the indexing ends the bar goes
+  and `Indexing is over` is written in the top left corner for a moment. (The show is of the photos that were listed when it began; it does not take the photos that are indexed meanwhile.)
 - <kbd>F</kbd> turns **the faces of the people** on and off, and <kbd>N</kbd> **their names**: <kbd>F</kbd> puts a box round the face of every known person with the name above it (green
   and solid for a face you named, gold and dashed with a `?` for a look-alike, as the main window shows the faces), <kbd>N</kbd> writes the names in one line in the bottom left corner
   (`Anna, Oleh?, Mom`). They are two switches that do not depend on each other, on every monitor, and the photo that is shown gets (or loses) them at once and so do the photos after it.

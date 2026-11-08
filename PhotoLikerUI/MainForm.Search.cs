@@ -535,6 +535,7 @@ namespace PhotoLikerUI
                 _indexCts = null;
                 _indexTask = null;
                 _indexingSearch = null;
+                TellSlideshowIndexingIsOver();
                 if (index is not null && !ReferenceEquals(_folderSearch, index))
                     index.Dispose();
 
@@ -658,6 +659,8 @@ namespace PhotoLikerUI
         {
             if (_indexCts is null)
                 return; // the last report of a run that is over
+
+            TellSlideshowAboutIndexing(progress);
 
             switch (progress.Phase)
             {
