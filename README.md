@@ -178,6 +178,17 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
    first): all their faces are the faces of the one who was there, with that spelling, and in the groups they are there once. That is
    also how to fix a name that was typed two ways. A name that differs only in case is another spelling of the same name.
 
+   **Export...** and **Import...** (at the bottom of the window) take the people and the groups to another computer, or into a backup,
+   through one `.plpeople` file. **Export...** writes every person with the faces you named (this folder's and, from the shared file,
+   the other folders') and every group. **Import...** first tells what the file holds, and after you agree it **adds** it: a face that
+   is named here already keeps its name, a group you have gets the people it did not have, a group that is not here is made, and
+   nothing is removed, so importing the same file twice changes nothing and a computer that went its own way can be taken in without
+   losing what was done here. The part of the file that comes from this very folder (the same path) becomes the names of this folder,
+   kept in its `photo-liker-people.json`; the parts of other folders go into the shared `people.json` as examples of how those people
+   look (a folder you open later that has a people file of its own puts its own people in place of its part, as it always does). A group
+   with the name of a person here, or a person with the name of a group here, is left out, and the message says so. A file made with
+   other face models than this version uses brings only its groups.
+
    ![People and groups: two people selected, one group ticked, one half filled](docs/images/28-people-groups.png)
 
    Groups are used in three places. The menu of a face shows each group by name with its people in a sub-menu, then the people who
@@ -285,7 +296,8 @@ What is kept where:
   deleted stays deleted in every folder you open afterwards. Two computers that both changed the groups since they last met are
   not merged: the later change wins as a whole. A folder that can not be written (read-only, a drive that is off) only misses its
   copy, the status bar says so and the groups on this computer are saved all the same. Delete a copy and it is written again
-  the next time the folder is opened.
+  the next time the folder is opened. To move the people of *all* folders and the groups in one go, use **Export...** / **Import...**
+  in the People window (see Groups of people above): a `.plpeople` file is plain JSON too, with the vectors as base64.
 - **The models** are in `%LocalAppData%\PhotoLiker\models`, a folder for each, downloaded when they are first needed: to match
   words with photos CLIP ViT-B/32 (OpenAI, MIT licence, the standard), SigLIP 2 Base/16 (Google, Apache 2.0) and XLM-RoBERTa with ViT-B/32 (LAION,
   MIT licence) (see **Model** above; the last two are ONNX exports of the Immich project, fixed to one revision), and
@@ -485,12 +497,17 @@ the top whenever another photo is shown:
 
 The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Settings**, **4. Photo Settings**, **5. Video Settings** and **6. Slideshow**.
 
+**2. Current File** (the shown photo; all rows are read-only but one):
+
+| Setting | Meaning |
+|---|---|
+| **LikedFolder** | Where liked photos are copied. By default the folder `Liked` inside the photo folder. Click the **...** button for a folder picker. A folder with any other name than `Liked` is kept as it is, wherever it is. |
+
 **3. Common Settings** (the whole program, photos and videos alike):
 
 | Setting | Meaning |
 |---|---|
 | **Language** | The language of the program, `English` or `Українська`. It changes at once and is kept for all folders. See [Language](#language). |
-| **LikedFolder** | Where liked photos are copied. By default the folder `Liked` inside the photo folder. Click the **...** button for a folder picker. A folder with any other name than `Liked` is kept as it is, wherever it is. |
 | **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
 | **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
 
@@ -511,10 +528,12 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 | **VideoSpeech** | Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See [Videos](#videos). |
 | **SpeechModel** | `tiny`, `base` or `small` (the one to use). |
 | **SpeechLanguage** | The language that is spoken: `ru`, `uk`, `en` ..., or `auto` (the model hears it for each video). |
+| **CpuCores** | How many cores of this computer the speech recognition may use, from 1 to all the cores it has (the default). With more cores several videos are heard at the same time. It can be changed while **Update index** runs: the next video that is started follows it. |
 
 The group **6. Slideshow** has its own eleven rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **UseVideo**, **MuteVideo**, **VideoPart** and **LowerOtherAudio**; see [Slideshow](#slideshow).
 
-The rows of **Current File** and **TotalFiles** are read-only. **CurrentIndex** is the number of the shown photo, counted
+The rows of **Current File** (except **LikedFolder**) and **TotalFiles** are read-only, and so are **PhotoCount** and **VideoCount**, which say how many of the files in the list now are photos and how many are
+videos (together they are **TotalFiles**; there are no videos unless **SupportVideo** is on). **CurrentIndex** is the number of the shown photo, counted
 from 0: type another number into it to jump to that photo (a number outside the list goes to the nearest end).
 
 Every row has a description: select it and the pane under the grid says what it is for (drag the divider above the pane to
@@ -682,6 +701,16 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   moment. A change of photo that is under way when the key is pressed finishes, and a change the timer has just asked for, whose photo is not ready yet, is called off
   (the photo you were looking at stays). A modifier key alone (<kbd>Shift</kbd>, <kbd>Ctrl</kbd>, <kbd>Alt</kbd>, <kbd>Win</kbd>, <kbd>Caps Lock</kbd>) and <kbd>Alt</kbd>+<kbd>F4</kbd> do not
   pause; <kbd>Esc</kbd> and <kbd>Alt</kbd>+<kbd>Enter</kbd> go back, paused or not.
+- **Media keys and remote controls** (a keyboard with media keys, or a remote such as that of Windows Media Center): **Play** continues a paused show (and does nothing
+  to one that runs), **Pause** pauses it, and a single **Play/Pause** button does what <kbd>Space</kbd> does. **Volume up, volume down and mute do not pause**: they are left to
+  Windows, so the sound changes and the show goes on. The buttons are understood both as keys (Play/Pause, Play, and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>, which is how
+  Media Center remotes send Play) and as Windows application commands.
+- **The computer stays awake while the show runs** (paused or not): the screen saver does not start, the display does not go off and the computer does not go to sleep because of
+  idleness, even if nobody touches the keyboard for hours. Windows gets all of this back as soon as the show ends (or the program does).
+- **An indexing that runs behind the show is shown**: a small bar at the top, in the middle of every monitor, says `Indexing: 1,234 / 16,000 (7%), 5 min left`, with a green line that
+  fills as it goes (for videos only the percent, while the folder is looked through or the models are loaded `Indexing: getting ready...`, while the models are downloaded
+  `Indexing: downloading the models, 50%`). It is updated four times a second at most, so it costs the photos nothing, and it lies over a video as well. When the indexing ends the bar goes
+  and `Indexing is over` is written in the top left corner for a moment. (The show is of the photos that were listed when it began; it does not take the photos that are indexed meanwhile.)
 - <kbd>F</kbd> turns **the faces of the people** on and off, and <kbd>N</kbd> **their names**: <kbd>F</kbd> puts a box round the face of every known person with the name above it (green
   and solid for a face you named, gold and dashed with a `?` for a look-alike, as the main window shows the faces), <kbd>N</kbd> writes the names in one line in the bottom left corner
   (`Anna, Oleh?, Mom`). They are two switches that do not depend on each other, on every monitor, and the photo that is shown gets (or loses) them at once and so do the photos after it.

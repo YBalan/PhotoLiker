@@ -63,6 +63,8 @@ namespace PhotoLikerUI
         private Label? _videoMark;                         // the date of the video, in the corner, as a photo has it
         private Label? _pausedMark;                        // "Paused" over the video (the window can not draw over a player, which is a window of its own)
         private bool _paused;                              // the show is paused: this screen says so, and holds its video
+        private IndexingMark? _indexingMark;               // what the indexing that runs behind the show says, at the top, over a photo and over a video alike; null until there is something to say
+        private Font? _indexingFont;
         private VideoRun? _video;                          // what is playing; null when nothing is
         private int _videoGeneration;                      // changes with every video and when one is stopped, so that what a video that has been replaced does is ignored
 
@@ -206,6 +208,100 @@ namespace PhotoLikerUI
         /// <summary>Whether the show is paused as far as this screen knows.</summary>
         internal bool IsPaused => _paused;
 
+        /// <summary>
+        /// Writes how far the indexing that runs behind the show is, in a bar of its own at the top, in the middle (the corners have the date, the names, the notice and "Paused"); null takes
+        /// it away. It is a window of its own, a child of this one, so that a photo that is painted again fifty times a second by an effect does not have to paint it too, and so that it is
+        /// over a video as well.
+        /// </summary>
+        internal void SetIndexing(SlideshowIndexing? state)
+        {
+            if (state is null)
+            {
+                _indexingMark?.Clear();
+                return;
+            }
+
+            if (_indexingMark is null)
+            {
+                _indexingFont = new Font(_watermarkFont.FontFamily, _watermarkFont.Size * 0.75f, FontStyle.Bold, GraphicsUnit.Pixel); // smaller than the date: it is news, not the picture's
+                _indexingMark = new IndexingMark(_indexingFont);
+                _indexingMark.SizeChanged += (_, _) => PlaceIndexingMark();
+                Controls.Add(_indexingMark);
+            }
+
+            _indexingMark.SetState(state);
+            PlaceIndexingMark();
+            _indexingMark.Visible = true;
+            _indexingMark.BringToFront();
+        }
+
+        /// <summary>Whether the indexing bar is on this screen now.</summary>
+        internal bool IndexingShown => _indexingMark is { Visible: true };
+
+        private void PlaceIndexingMark()
+        {
+            if (_indexingMark is { } mark)
+                mark.Location = new Point((ClientSize.Width - mark.Width) / 2, ClientSize.Height / 40);
+        }
+
+        /// <summary>A line of text with a thin bar under it that says how far something is, as a control, so that it can lie over a video (a window of its own that a painting of this window can not cover).</summary>
+        private sealed class IndexingMark : Control
+        {
+            private static readonly Color Back = Color.FromArgb(24, 24, 24);
+            private static readonly Color Track = Color.FromArgb(80, 80, 80);
+            private string _text = string.Empty;
+            private double? _fraction;
+            private int _widest;
+
+            public IndexingMark(Font font)
+            {
+                Font = font;
+                ForeColor = Color.White;
+                BackColor = Back;
+                TabStop = false;
+                Visible = false;
+                SetStyle(ControlStyles.Selectable, false); // it never takes the keys
+                SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+            }
+
+            private int Pad => Font.Height / 3;
+            private int BarHeight => Math.Max(4, Font.Height / 4);
+
+            public void SetState(SlideshowIndexing state)
+            {
+                _text = state.Text;
+                _fraction = state.Fraction;
+                var text = TextRenderer.MeasureText(_text, Font, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+                _widest = Math.Max(_widest, text.Width + Pad * 2); // never narrower than it has been, so the bar does not tremble as the digits change
+                Size = new Size(_widest, text.Height + Pad * 2 + BarHeight);
+                Invalidate();
+            }
+
+            /// <summary>Takes it away, and forgets how wide it was.</summary>
+            public void Clear()
+            {
+                Visible = false;
+                _widest = 0;
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                var g = e.Graphics;
+                g.Clear(Back);
+                var textArea = new Rectangle(0, 0, Width, Height - BarHeight);
+                TextRenderer.DrawText(g, _text, Font, textArea, ForeColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+
+                var bar = new Rectangle(0, Height - BarHeight, Width, BarHeight);
+                using (var track = new SolidBrush(Track))
+                    g.FillRectangle(track, bar);
+                if (_fraction is { } done)
+                {
+                    using var fill = new SolidBrush(Color.LimeGreen); // the colour of a named face's box
+                    g.FillRectangle(fill, bar.X, bar.Y, (int)Math.Round(bar.Width * Math.Clamp(done, 0, 1)), bar.Height);
+                }
+            }
+        }
+
         /// <summary>Says something in the middle of an empty screen.</summary>
         public void ShowMessage(string text)
         {
@@ -291,6 +387,7 @@ namespace PhotoLikerUI
             Controls.Add(_videoView);
             Controls.SetChildIndex(_videoMark, 0); // over the video, which is a window of its own
             Controls.SetChildIndex(_pausedMark, 0);
+            _indexingMark?.BringToFront();
         }
 
         /// <summary>"Paused" over a video, in the top right corner, while the show is paused (a photo has it drawn on the window, see <see cref="OnPaint"/>).</summary>
@@ -465,6 +562,31 @@ namespace PhotoLikerUI
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData) =>
             _session.HandleKey(keyData, repeat: (msg.LParam.ToInt64() & KeyWasDownBit) != 0) || base.ProcessCmdKey(ref msg, keyData);
+
+        private const int WmSysCommand = 0x0112;
+        /// <summary>The system command that starts the screen saver; the low four bits of the wParam are the system's own.</summary>
+        private const int ScScreenSave = 0xF140;
+
+        /// <summary>
+        /// The buttons of a remote control (Play, Pause) mostly come as application commands, not as keys; the volume ones are left to the system on purpose.
+        /// The screen saver is refused: <see cref="KeepAwake"/> holds the display and the computer, but the screen saver is a request of its own.
+        /// </summary>
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WmSysCommand && (m.WParam.ToInt64() & 0xFFF0) == ScScreenSave)
+            {
+                m.Result = 0; // taken: the slideshow is being looked at
+                return;
+            }
+
+            if (m.Msg == MediaKeys.WmAppCommand && _session.HandleAppCommand(MediaKeys.AppCommandOf(m.LParam.ToInt64())))
+            {
+                m.Result = 1; // taken
+                return;
+            }
+
+            base.WndProc(ref m);
+        }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
@@ -709,6 +831,7 @@ namespace PhotoLikerUI
                 _animation.Dispose();
                 _noticeTimer.Dispose();
                 _videoWatch.Dispose();
+                _indexingFont?.Dispose();
                 if (_videoView is not null)
                     _videoView.MediaPlayer = null;
                 if (_videoPlayer is { } player)

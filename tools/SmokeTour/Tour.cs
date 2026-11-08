@@ -194,7 +194,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         checks.Step("4. The settings grid: what it lists, and the folder picker on LikedFolder");
 
         var rows = form.VisibleSettingsRows().ToList();
-        string[] expected = ["TotalFiles", "CurrentIndex", "CurrentFolder", "CurrentFilePath", "CurrentFileName", "LikedFile", "SavedInFolders",
+        string[] expected = ["TotalFiles", "PhotoCount", "VideoCount", "CurrentIndex", "CpuCores", "CurrentFolder", "CurrentFilePath", "CurrentFileName", "LikedFile", "SavedInFolders",
             "LikedFolder", "GoThroughSubFolders", "Extensions", "SortOrder", "CacheSize", "ThumbnailSize", "Language"];
         checks.That(expected.All(rows.Contains), "all settings are listed");
         checks.That(!rows.Contains("WindowLeft") && !rows.Contains("IsDarkTheme") && !rows.Contains("Files"), "window state, theme and file list stay hidden");

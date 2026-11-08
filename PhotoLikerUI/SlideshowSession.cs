@@ -63,6 +63,8 @@ namespace PhotoLikerUI
         private bool _scrolling;                               // a key was used since the timer last picked random photos
         private bool _closing;
         private bool _paused;                                  // a key was pressed: nothing changes by itself until Space
+        private SlideshowIndexing? _indexing;                  // what the indexing behind the show says now; null when none runs
+        private long _playPauseAt;                            // when the last Play/Pause button was taken (0: none yet), so that one press that arrives twice is not taken twice
         private readonly bool _hasPeople;                      // there is something to ask who is in a photo (the folder has an index)
         private bool _showFaces;                               // the boxes with the names on the faces are on (F)
         private bool _showNames;                               // the line of names in the corner is on (N)
@@ -211,6 +213,10 @@ namespace PhotoLikerUI
 
             Cursor.Hide(); // nothing to point at; Esc goes back
             _cursorHidden = true;
+
+            // A show that is left to run is looked at without a hand on the keyboard or the mouse: the screen saver, the display going off and the sleep of the computer would all come
+            // while it runs (a paused show is looked at as well). Asked for as long as the windows are there, on this thread, which is the one that gives it back
+            using var awake = KeepAwake.Begin();
             try
             {
                 foreach (var screen in _screens.Where(screen => screen != primary))
@@ -221,6 +227,25 @@ namespace PhotoLikerUI
             finally
             {
                 ShowCursor();
+            }
+        }
+
+        /// <summary>
+        /// What the indexing that runs behind the show says, or null when none runs (any more): it is written at the top of every screen, so that it is known that it runs and how far it
+        /// is. When it ends while the show runs, the screens say so for a moment.
+        /// </summary>
+        internal void ShowIndexing(SlideshowIndexing? state)
+        {
+            var wasRunning = _indexing is not null;
+            _indexing = state;
+            if (_closing)
+                return;
+
+            foreach (var screen in _screens)
+            {
+                screen.SetIndexing(state);
+                if (state is null && wasRunning)
+                    screen.ShowNotice(SlideshowStrings.IndexingOver);
             }
         }
 
@@ -290,6 +315,11 @@ namespace PhotoLikerUI
             if (IsModifier(code) || keyData == (Keys.Alt | Keys.F4))
                 return false;
 
+            // Volume keys are the sound's, Play goes on, Pause stops (a keyboard, or a remote control that sends keys)
+            var media = MediaKeys.FromKey((int)keyData);
+            if (media != MediaCommand.None)
+                return HandleMedia(media, repeat);
+
             // Space continues a show that was paused, and (being a key) pauses one that runs; a held key does not flicker between the two
             if (code == Keys.Space && (keyData & Keys.Alt) == 0)
             {
@@ -333,6 +363,52 @@ namespace PhotoLikerUI
                     return false;
             }
         }
+
+        /// <summary>
+        /// An application command of the system (WM_APPCOMMAND), which is how a remote control such as that of Windows Media Center usually asks for Play, Pause and the volume.
+        /// True if the show took it (then nobody else gets it); false if it is none of the show's business, or the system's, like the volume, and goes on its way.
+        /// </summary>
+        internal bool HandleAppCommand(int appCommand)
+        {
+            var media = MediaKeys.FromAppCommand(appCommand);
+            return media != MediaCommand.None && HandleMedia(media, repeat: false);
+        }
+
+        /// <summary>
+        /// Play goes on with a paused show (and leaves a running one as it is), Pause stops it, and the one button for both does what Space does. The volume is the system's: the show does
+        /// not pause by it and does not take it, so the sound still changes. One press of the one button can come to the window twice (as a key and as an application command), so a second
+        /// one within a fraction of a second is the same press.
+        /// </summary>
+        private bool HandleMedia(MediaCommand media, bool repeat)
+        {
+            switch (media)
+            {
+                case MediaCommand.Volume:
+                    return false;
+                case MediaCommand.Play:
+                    Resume();
+                    return true;
+                case MediaCommand.Pause:
+                    Pause();
+                    return true;
+                case MediaCommand.PlayPause:
+                    var now = Stopwatch.GetTimestamp();
+                    var same = _playPauseAt != 0 && Stopwatch.GetElapsedTime(_playPauseAt, now) < SamePress;
+                    _playPauseAt = now;
+                    if (!repeat && !same)
+                    {
+                        if (_paused)
+                            Resume();
+                        else
+                            Pause();
+                    }
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static readonly TimeSpan SamePress = TimeSpan.FromMilliseconds(300);
 
         /// <summary>
         /// F / N: the boxes with the names on the faces, or the line of names in the corner, are turned on if they were off and off if they were on, on every screen, and the person is told

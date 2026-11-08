@@ -10,6 +10,40 @@ namespace PhotoLikerUI
     /// </summary>
     public partial class MainForm
     {
+        private const int SlideshowIndexingMs = 250;  // how often the show is told how far the indexing is (it reports for every photo)
+
+        private SlideshowSession? _slideshow;         // the show that is on the screen, if one is; what happens behind it (the indexing) is told to it
+        private SlideshowIndexing? _indexingForSlideshow; // what the indexing that runs says, as the show writes it; null when none runs
+        private long _slideshowToldAt;                // when the show was told last
+        private IndexPhase? _slideshowToldPhase;      // the phase it was told of
+
+        /// <summary>
+        /// The indexing has a new report: it is kept for a show that begins later and told to the one that runs (at most four times a second, or at once when the phase changes,
+        /// since what the line says changes with it).
+        /// </summary>
+        private void TellSlideshowAboutIndexing(IndexProgress progress)
+        {
+            _indexingForSlideshow = SlideshowIndexing.Of(progress);
+            if (_slideshow is not { } show)
+                return;
+
+            var now = Environment.TickCount64;
+            if (_slideshowToldPhase == progress.Phase && now - _slideshowToldAt < SlideshowIndexingMs)
+                return;
+
+            _slideshowToldAt = now;
+            _slideshowToldPhase = progress.Phase;
+            show.ShowIndexing(_indexingForSlideshow);
+        }
+
+        /// <summary>The indexing is over (done, stopped or failed): the show that runs takes the bar away and says so for a moment.</summary>
+        private void TellSlideshowIndexingIsOver()
+        {
+            _indexingForSlideshow = null;
+            _slideshowToldPhase = null;
+            _slideshow?.ShowIndexing(null);
+        }
+
         private async void StartSlideshow()
         {
             // The video that plays in the window lets go of its file, and of the engine's picture, before the show has its own
@@ -47,7 +81,17 @@ namespace PhotoLikerUI
 
             using (slideshow)
             {
-                slideshow.Run(this);
+                _slideshow = slideshow;
+                slideshow.ShowIndexing(_indexingForSlideshow); // an indexing that was running when the show began is on the screen from the start
+                try
+                {
+                    slideshow.Run(this);
+                }
+                finally
+                {
+                    _slideshow = null;
+                }
+
                 KeepTheEffectThatWasChosen(slideshow.Effect);
                 KeepThePeopleThatWereChosen(slideshow.ShowFaces, slideshow.ShowNames);
                 ShowWhereSlideshowEnded(slideshow.LastShownPath);

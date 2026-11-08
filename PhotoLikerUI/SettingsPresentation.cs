@@ -26,7 +26,6 @@ namespace PhotoLikerUI
             [nameof(Settings.CurrentFolder)]  = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.CurrentFolder)],
             // 3. Common Settings: what holds for the whole program, photos and videos alike
             [nameof(Settings.Language)]       = [Category(CommonCategory), new TypeConverterAttribute(typeof(LanguageConverter)), Describe(() => SettingsStrings.LanguageDescription)],
-            [nameof(Settings.LikedFolder)]    = [Category(CommonCategory), Editor<FolderPickerEditor>(), Describe(() => SettingsStrings.LikedFolder)],
             [nameof(Settings.CacheSize)]      = [Category(CommonCategory), Describe(() => SettingsStrings.CacheSize)],
             [nameof(Settings.ThumbnailSize)]  = [Category(CommonCategory), Describe(() => SettingsStrings.ThumbnailSize)],
             [nameof(Settings.IsDarkTheme)]    = [Category(CommonCategory), Hidden],
@@ -47,6 +46,7 @@ namespace PhotoLikerUI
             [nameof(Settings.VideoSpeech)]    = [Category(VideoCategory), Describe(() => SettingsStrings.VideoSpeech)],
             [nameof(Settings.SpeechModel)]    = [Category(VideoCategory), new TypeConverterAttribute(typeof(SpeechModelConverter)), Describe(() => SettingsStrings.SpeechModel)],
             [nameof(Settings.SpeechLanguage)] = [Category(VideoCategory), Describe(() => SettingsStrings.SpeechLanguage)],
+            [nameof(Settings.CpuCores)]       = [Category(VideoCategory), new TypeConverterAttribute(typeof(CpuCoresConverter)), Describe(() => SettingsStrings.CpuCores)],
             [nameof(Settings.ListedExtensions)] = [Hidden],
 
             // The rows say what they are for under the heading of their category: Mode, Monitors, Timeout, Watermark, Effect
@@ -71,11 +71,14 @@ namespace PhotoLikerUI
 
             [nameof(Settings.Files)]          = [Category(InfoCategory), Hidden],
             [nameof(Settings.TotalFiles)]     = [Category(InfoCategory), Describe(() => SettingsStrings.TotalFiles)],
+            [nameof(Settings.PhotoCount)]     = [Category(InfoCategory), Describe(() => SettingsStrings.PhotoCount)],
+            [nameof(Settings.VideoCount)]     = [Category(InfoCategory), Describe(() => SettingsStrings.VideoCount)],
             [nameof(Settings.CurrentIndex)]   = [Category(InfoCategory), Describe(() => SettingsStrings.CurrentIndex)], // editable: typing a number jumps to that photo
 
             [nameof(Settings.CurrentFileName)] = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.CurrentFileName)],
             [nameof(Settings.CurrentFilePath)] = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.CurrentFilePath)],
             [nameof(Settings.LikedFile)]       = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.LikedFile)],
+            [nameof(Settings.LikedFolder)]     = [Category(CurrentFileCategory), Editor<FolderPickerEditor>(), Describe(() => SettingsStrings.LikedFolder)], // the one row of the group that can be changed
             [nameof(Settings.SavedInFolders)]  = [Category(CurrentFileCategory), ReadOnly, new TypeConverterAttribute(typeof(StringListConverter)), Describe(() => SettingsStrings.SavedInFolders)],
         };
 
@@ -115,6 +118,20 @@ namespace PhotoLikerUI
                 Decorate(base.GetProperties(), attributes);
         }
 
+        // The rows that have a place of their own in their group; the grid shows its groups in the order the rows are handed over (PropertySort.Categorized, see MainForm), so
+        // the rows named here come first, in this order, and the others follow alphabetically as the grid sorted them before
+        private static readonly string[] RowOrder =
+        [
+            nameof(Settings.CurrentIndex), nameof(Settings.TotalFiles), nameof(Settings.PhotoCount), nameof(Settings.VideoCount), // 1. Progress
+            nameof(Settings.Language), nameof(Settings.CacheSize), nameof(Settings.ThumbnailSize),                                  // 3. Common Settings
+        ];
+
+        private static int PlaceOf(PropertyDescriptor property)
+        {
+            var place = Array.IndexOf(RowOrder, property.Name);
+            return place < 0 ? RowOrder.Length : place;
+        }
+
         private static PropertyDescriptorCollection Decorate(PropertyDescriptorCollection properties, Attribute[]? attributes)
         {
             var decorated = new List<PropertyDescriptor>(properties.Count);
@@ -128,7 +145,8 @@ namespace PhotoLikerUI
                     decorated.Add(result);
             }
 
-            return new PropertyDescriptorCollection([.. decorated], readOnly: true);
+            return new PropertyDescriptorCollection(
+                [.. decorated.OrderBy(PlaceOf).ThenBy(property => property.DisplayName, StringComparer.InvariantCulture)], readOnly: true);
         }
 
         /// <summary>

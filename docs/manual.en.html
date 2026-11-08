@@ -111,6 +111,12 @@ them. Nothing is uploaded: the analysis runs on this computer, and your photos a
   <strong>Rename person…</strong> (also <kbd>F2</kbd> in the list, and <strong>Rename …</strong> in the menu of a face) gives the selected person another name everywhere: in this folder, in the other folders
   (each one follows when you open it) and in the groups. A name that another person has already makes the two <strong>one person</strong>: you are asked first, all their faces then belong to the one who was there,
   with that spelling, and in the groups they are there once. That is also how to fix a name that was typed two ways.
+  <strong>Export…</strong> and <strong>Import…</strong> (at the bottom of the window) take the people and the groups to another computer, or into a backup, through one <code>.plpeople</code> file.
+  <strong>Export…</strong> writes every person with the faces you named (this folder's and the other folders') and every group. <strong>Import…</strong> first tells what the file holds, and after you agree it
+  <strong>adds</strong> it: a face that is named here already keeps its name, a group you have gets the people it did not have, a group that is not here is made, and nothing is removed — so importing the same file twice
+  changes nothing. The part of the file that comes from this very folder (the same path) becomes the names of this folder; the parts of other folders are kept as examples of how those people look, and a folder you open later
+  that has a people file of its own puts its own people in place of its part, as it always does. A group with the name of a person here, or a person with the name of a group here, is left out, and the message says so.
+  A file made with other face models than this version uses brings only its groups.
     <figure><img src="images/28-people-groups.png" alt="People and groups: two people selected, one group ticked, one half filled" width="902" height="612"><figcaption>Two people are selected: <strong>Friends</strong> has both, <strong>Family</strong> only one of them (half filled).</figcaption></figure>
   Groups help in three places. The menu of a face shows each group by name with its people in a sub-menu, then the people who are in no group, and the person the face looks like at the top.
   <strong>New person…</strong> asks for a group too: it starts with the one you used last, and a name that is new makes a new group. And the name of a group typed into the search box finds the photos of anybody in it:
@@ -319,6 +325,13 @@ file the status bar says so and nothing is written.</p>
 <p><strong>Any other key pauses the show</strong>, and <kbd>Space</kbd> continues it. While it is paused nothing changes by itself (a video that plays is held), and
 <em>Paused (Space to continue)</em> is written in the top right corner. <kbd>→</kbd> / <kbd>←</kbd> still show the next / previous photo, and the show stays paused.
 <kbd>Shift</kbd>, <kbd>Ctrl</kbd> and <kbd>Alt</kbd> alone do not pause.</p>
+<p><strong>Media keys and remote controls.</strong> On a keyboard with media keys, or a remote such as that of Windows Media Center, <em>Play</em> continues a paused show (a show that runs is left as it is),
+<em>Pause</em> pauses it, and a single <em>Play/Pause</em> button does what <kbd>Space</kbd> does. <em>Volume up</em>, <em>Volume down</em> and <em>Mute</em> do not pause the show:
+they are left to Windows, so the sound changes and the photos go on.</p>
+<p><strong>The computer stays awake.</strong> While the show runs, paused or not, the screen saver does not start, the display does not go off and the computer does not go to sleep
+because nobody touched the keyboard. Windows gets this back when the show ends.</p>
+<p><strong>Indexing behind the show.</strong> If the folder is being indexed while the show runs, a small bar at the top, in the middle of every monitor, says how far it is
+(<em>Indexing: 1,234 / 16,000 (7%), 5 min left</em>, with a green line that fills). When the indexing ends, the bar goes and <em>Indexing is over</em> is written in the top left corner for a moment.</p>
 
 <p><kbd>F</kbd> turns the <strong>faces of the people</strong> on and off (a box with the name on every known face), and <kbd>N</kbd> turns their <strong>names</strong> on and off (one line in the bottom left corner).
 They are two separate switches. Each press says <em>Faces: on</em>, <em>Names: off</em> and so on in the top left corner, and the show is paused, as with any other key. They need a folder that is indexed
@@ -376,6 +389,17 @@ description: select it and the pane under the table says what it is for.</p>
 
 <p>The rows are in six groups: <strong>1. Progress</strong>, <strong>2. Current File</strong>, <strong>3. Common Settings</strong>, <strong>4. Photo Settings</strong>, <strong>5. Video Settings</strong> and <strong>6. Slideshow</strong>.</p>
 
+<p><strong>2. Current File</strong> (the shown photo; all rows are read-only but one):</p>
+
+<div class="table-scroll">
+<table class="wide-first">
+  <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td><strong>LikedFolder</strong></td><td>Where liked photos are copied. By default the folder <code>Liked</code> inside the photo folder. Click the <strong>…</strong> button for a folder picker.</td></tr>
+  </tbody>
+</table>
+</div>
+
 <p><strong>3. Common Settings</strong> (the whole program, photos and videos alike):</p>
 
 <div class="table-scroll">
@@ -383,7 +407,6 @@ description: select it and the pane under the table says what it is for.</p>
   <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
   <tbody>
     <tr><td><strong>Language</strong></td><td>The language of the program, <strong>English</strong> or <strong>Українська</strong>. See <a href="#language">Language</a>.</td></tr>
-    <tr><td><strong>LikedFolder</strong></td><td>Where liked photos are copied. By default the folder <code>Liked</code> inside the photo folder. Click the <strong>…</strong> button for a folder picker.</td></tr>
     <tr><td><strong>CacheSize</strong></td><td>How many photos on each side of the shown one are kept ready in memory, so that the arrow keys feel instant.</td></tr>
     <tr><td><strong>ThumbnailSize</strong></td><td>Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the thumbnails changes it.</td></tr>
   </tbody>
@@ -414,12 +437,13 @@ description: select it and the pane under the table says what it is for.</p>
     <tr><td><strong>VideoSpeech</strong></td><td>Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See <a href="#videos">Videos in the folder</a>.</td></tr>
     <tr><td><strong>SpeechModel</strong></td><td><code>tiny</code>, <code>base</code> or <code>small</code> (the one to use).</td></tr>
     <tr><td><strong>SpeechLanguage</strong></td><td>The language that is spoken: <code>ru</code>, <code>uk</code>, <code>en</code> ..., or <code>auto</code> (the model hears it for each video).</td></tr>
+    <tr><td><strong>CpuCores</strong></td><td>How many cores of this computer the speech recognition may use, from 1 to all the cores it has (the default). With more cores several videos are heard at the same time. It can be changed while <strong>Update index</strong> runs: the next video that is started follows it.</td></tr>
   </tbody>
 </table>
 </div>
 
 <p><strong>CurrentIndex</strong> is the number of the shown photo, counted from 0: type another number into it to jump to that
-photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong> and the other rows
+photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong>, <strong>PhotoCount</strong> (how many of the files in the list are photos), <strong>VideoCount</strong> (how many are videos) and the other rows
 that show information cannot be changed. The group <strong>6. Slideshow</strong> has eleven rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
 
 <h3 id="language">Language</h3>

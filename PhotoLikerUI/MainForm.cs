@@ -64,6 +64,8 @@
             _photoCache.Evicting += PhotoCache_Evicting;
 
             settingsPropertyGrid.PropertyValueChanged += SettingsPropertyGrid_PropertyValueChanged;
+            // Not sorted by the grid: SettingsPresentation hands the rows over in the order they are meant to be shown in (the Progress rows have one of their own)
+            settingsPropertyGrid.PropertySort = PropertySort.Categorized;
 
             LoadSettingsFromJson();
 

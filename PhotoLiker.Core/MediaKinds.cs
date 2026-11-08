@@ -15,10 +15,17 @@ namespace PhotoLiker.Core
             [".mp4", ".mov", ".avi", ".mkv", ".m4v", ".3gp", ".mts", ".m2ts", ".mpg", ".mpeg", ".wmv", ".webm", ".flv"];
 
         private static volatile HashSet<string> _video = new(DefaultVideoExtensions, StringComparer.OrdinalIgnoreCase);
+        private static int _classification;
+
+        /// <summary>Grows by one every time <see cref="UseVideoExtensions"/> changes what counts as a video: a cached count of videos is stale when this has moved.</summary>
+        public static int Classification => Volatile.Read(ref _classification);
 
         /// <summary>Sets which extensions (with their dot, any case) count as videos; an empty list means none do.</summary>
-        public static void UseVideoExtensions(IEnumerable<string>? extensions) =>
+        public static void UseVideoExtensions(IEnumerable<string>? extensions)
+        {
             _video = new HashSet<string>((extensions ?? DefaultVideoExtensions).Select(Normalize).Where(e => e.Length > 1), StringComparer.OrdinalIgnoreCase);
+            Interlocked.Increment(ref _classification);
+        }
 
         public static bool IsVideo(string? path) => !string.IsNullOrEmpty(path) && IsVideo(path.AsSpan());
 

@@ -20,7 +20,7 @@ namespace PhotoLiker.Search
     /// The people can be sorted into groups (<see cref="Groups"/>). A group is searched like a person, but it means any one of its people:
     /// its examples are the examples of all its members. A name is a person or a group, never both.
     /// </remarks>
-    public sealed class PeopleLibrary
+    public sealed partial class PeopleLibrary
     {
         /// <summary>How alike (cosine of the face vectors) two faces have to be to count as the same person.</summary>
         public const float DefaultMatchThreshold = 0.40f;
@@ -522,18 +522,22 @@ namespace PhotoLiker.Search
             return removed;
         }
 
-        private static bool IsSameFace(Example example, IndexedFace face)
+        private static bool IsSameFace(Example example, IndexedFace face) =>
+            IsSamePlace(example.Photo, example.X, example.Y, example.Width, example.Height, face.Photo.RelativePath, face.X, face.Y, face.Width, face.Height);
+
+        /// <summary>Whether two boxes in photos of the same name are the same face (they overlap enough).</summary>
+        private static bool IsSamePlace(string photoA, float xA, float yA, float widthA, float heightA, string photoB, float xB, float yB, float widthB, float heightB)
         {
-            if (!string.Equals(example.Photo, face.Photo.RelativePath, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(photoA, photoB, StringComparison.OrdinalIgnoreCase))
                 return false;
 
-            var width = Math.Min(example.X + example.Width, face.X + face.Width) - Math.Max(example.X, face.X);
-            var height = Math.Min(example.Y + example.Height, face.Y + face.Height) - Math.Max(example.Y, face.Y);
+            var width = Math.Min(xA + widthA, xB + widthB) - Math.Max(xA, xB);
+            var height = Math.Min(yA + heightA, yB + heightB) - Math.Max(yA, yB);
             if (width <= 0 || height <= 0)
                 return false;
 
             var intersection = width * height;
-            var union = example.Width * example.Height + face.Width * face.Height - intersection;
+            var union = widthA * heightA + widthB * heightB - intersection;
             return intersection / union >= SameFaceOverlap;
         }
 

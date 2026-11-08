@@ -61,6 +61,8 @@ namespace PhotoLikerUI
         private readonly Label _groupsHint = new() { AutoSize = true, Margin = new Padding(0, 4, 0, 4) };
         private readonly Button _newGroup = new() { Text = PeopleStrings.NewGroupButton, AutoSize = true, MinimumSize = new Size(110, 28) };
         private readonly Label _status = new() { AutoSize = true, Margin = new Padding(0, 6, 0, 0) };
+        private readonly Button _export = new() { Text = PeopleStrings.ExportButton, AutoSize = true, MinimumSize = new Size(100, 28) };
+        private readonly Button _import = new() { Text = PeopleStrings.ImportButton, AutoSize = true, MinimumSize = new Size(100, 28) };
         private readonly Button _close = new() { Text = PeopleStrings.CloseButton, AutoSize = true, MinimumSize = new Size(80, 28), DialogResult = DialogResult.Cancel };
         private readonly ToolTip _tips = new();
 
@@ -155,11 +157,15 @@ namespace PhotoLikerUI
             content.Controls.Add(left, 0, 0);
             content.Controls.Add(right, 1, 0);
 
-            var bottom = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 2, RowCount = 1 };
+            var bottom = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 4, RowCount = 1 };
             bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             bottom.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            bottom.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            bottom.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             bottom.Controls.Add(_status, 0, 0);
-            bottom.Controls.Add(_close, 1, 0);
+            bottom.Controls.Add(_export, 1, 0);
+            bottom.Controls.Add(_import, 2, 0);
+            bottom.Controls.Add(_close, 3, 0);
 
             var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, Padding = new Padding(12, 10, 12, 8) };
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -175,6 +181,8 @@ namespace PhotoLikerUI
             _tips.SetToolTip(_groups, PeopleStrings.GroupsTooltip);
             _tips.SetToolTip(_renamePerson, PeopleStrings.RenamePersonTooltip);
             _tips.SetToolTip(_newGroup, PeopleStrings.NewGroupTooltip);
+            _tips.SetToolTip(_export, PeopleStrings.ExportTooltip);
+            _tips.SetToolTip(_import, PeopleStrings.ImportTooltip);
         }
 
         private void Wire()
@@ -221,6 +229,8 @@ namespace PhotoLikerUI
             _renamePerson.Click += (_, _) => RenamePerson();
             _rename.Click += (_, _) => RenameGroup();
             _delete.Click += (_, _) => DeleteGroup();
+            _export.Click += (_, _) => ExportPeople();
+            _import.Click += (_, _) => ImportPeople();
         }
 
         /// <summary>The last column takes what the others leave.</summary>
@@ -445,6 +455,124 @@ namespace PhotoLikerUI
 
             FillShow(null); // the group is gone: everybody is shown
             Fill();
+        }
+
+        // ── export and import ──────────────────────────────────────────────
+
+        /// <summary>All the people (with the faces named) and all the groups go into one file, to take to another computer or to keep.</summary>
+        private void ExportPeople()
+        {
+            _status.Text = string.Empty;
+            if (_names.Length == 0 && _people.Groups.Count == 0)
+            {
+                _status.Text = PeopleStrings.NothingToExport;
+                return;
+            }
+
+            using var dialog = new SaveFileDialog
+            {
+                Title = PeopleStrings.ExportTitle,
+                Filter = PeopleStrings.PeopleFileFilter,
+                DefaultExt = PeopleLibrary.PeopleFileExtension,
+                AddExtension = true,
+                OverwritePrompt = true,
+                FileName = string.Format(PeopleStrings.ExportDefaultNameFormat, DateTime.Today) + "." + PeopleLibrary.PeopleFileExtension,
+            };
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            UseWaitCursor = true;
+            try
+            {
+                var info = _people.Export(dialog.FileName);
+                _status.Text = string.Format(PeopleStrings.ExportedFormat, Path.GetFileName(dialog.FileName), info.People, info.Faces, info.Groups);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Problem(PeopleStrings.ExportTitle, string.Format(PeopleStrings.ExportErrorFormat, ex.Message));
+            }
+            finally
+            {
+                UseWaitCursor = false;
+            }
+        }
+
+        /// <summary>The people and groups of such a file are added to the ones here (after asking what the file holds); nothing here is replaced or removed.</summary>
+        private void ImportPeople()
+        {
+            using var dialog = new OpenFileDialog { Title = PeopleStrings.ImportTitle, Filter = PeopleStrings.PeopleFileFilter, CheckFileExists = true };
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            _status.Text = string.Empty;
+            var tried = false;
+            try
+            {
+                var info = PeopleLibrary.Inspect(dialog.FileName);
+                var notes = info is { Folder: { } folder, ExportedAt: { } at } ? string.Format(PeopleStrings.ImportMadeFromFormat, folder, at.ToLocalTime()) : string.Empty;
+                if (!info.FacesUsable)
+                    notes += PeopleStrings.ImportOtherModelsNote;
+
+                var question = string.Format(PeopleStrings.ImportQuestionFormat, info.People, info.Faces, info.Folders, info.Groups, notes);
+                if (MessageBox.Show(this, question, PeopleStrings.ImportTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+
+                tried = true;
+                UseWaitCursor = true;
+                var result = _people.Import(dialog.FileName);
+                UseWaitCursor = false;
+                ShowAgain();
+
+                MessageBox.Show(this, ImportReport(result), PeopleStrings.ImportTitle, MessageBoxButtons.OK,
+                    result.FacesUnusable > 0 || result.Refused.Count > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            }
+            catch (Exception ex) when (ex is InvalidDataException or ArgumentException or IOException or UnauthorizedAccessException)
+            {
+                UseWaitCursor = false;
+                if (tried)
+                    ShowAgain(); // part of it may have been added before the failure
+                Problem(PeopleStrings.ImportTitle, string.Format(PeopleStrings.ImportErrorFormat, ex.Message));
+            }
+            finally
+            {
+                UseWaitCursor = false;
+            }
+
+            if (_people.SharedError is { } shared)
+                _status.Text = string.Format(SearchStrings.StatusSharedPeopleError, shared);
+            else
+                ReportFolderCopy();
+        }
+
+        /// <summary>Reads the people and the groups again, with the same people selected and the same group shown.</summary>
+        private void ShowAgain()
+        {
+            LoadPeople();
+            FillShow(null);
+            Fill();
+        }
+
+        private static string ImportReport(PeopleImportResult result)
+        {
+            var nothingNew = result is { NewPeople: 0, FacesAdded: 0, NewGroups: 0, GroupMembersAdded: 0 };
+            var text = nothingNew
+                ? PeopleStrings.ImportNothingNew
+                : string.Format(PeopleStrings.ImportDoneFormat, result.NewPeople, result.FacesAdded, result.NewGroups, result.GroupMembersAdded);
+
+            if (result.FacesKnown > 0 && !nothingNew)
+                text += string.Format(PeopleStrings.ImportKnownFormat, result.FacesKnown);
+            if (result.FacesUnusable > 0)
+                text += string.Format(PeopleStrings.ImportUnusableFormat, result.FacesUnusable);
+            if (result.Refused.Count > 0)
+                text += "\n\n" + string.Join("\n", result.Refused);
+            return text;
+        }
+
+        /// <summary>A failure the person must not miss: in the line at the bottom and in a message.</summary>
+        private void Problem(string title, string message)
+        {
+            _status.Text = message;
+            MessageBox.Show(this, message, title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         /// <summary>After a change: says so when the copy of the groups could not be kept in the photo folder (they are saved on this computer all the same).</summary>

@@ -8,6 +8,8 @@ namespace PhotoLikerUI
 
         // 1. Progress
         public static string TotalFiles => T();
+        public static string PhotoCount => T();
+        public static string VideoCount => T();
         public static string CurrentIndex => T();
 
         // 2. Current File
@@ -16,10 +18,10 @@ namespace PhotoLikerUI
         public static string CurrentFileName => T();
         public static string LikedFile => T();
         public static string SavedInFolders => T();
+        public static string LikedFolder => T();
 
         // 3. Common Settings
         public static string LanguageDescription => T();
-        public static string LikedFolder => T();
         public static string CacheSize => T();
         public static string ThumbnailSize => T();
 
@@ -34,6 +36,7 @@ namespace PhotoLikerUI
         public static string VideoSpeech => T();
         public static string SpeechModel => T();
         public static string SpeechLanguage => T();
+        public static string CpuCores => T();
 
         // 6. Slideshow
         public static string SlideshowMode => T();

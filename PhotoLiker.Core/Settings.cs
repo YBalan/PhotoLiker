@@ -43,6 +43,22 @@ namespace PhotoLiker.Core
         /// <summary>The language that is spoken in the videos ("ru", "uk", "en" ...), or "auto" to let the model hear it for each video.</summary>
         public string SpeechLanguage { get; set; } = "auto";
 
+        /// <summary>The number of cores this computer has (logical processors, as Task Manager counts them): the most <see cref="CpuCores"/> can be.</summary>
+        public static readonly int MaxCpuCores = Math.Max(1, Environment.ProcessorCount);
+
+        private int _cpuCores = MaxCpuCores;
+
+        /// <summary>
+        /// How many cores of this computer the speech recognition of "Update index" may use, 1 to <see cref="MaxCpuCores"/> (all of them by default). It is read again
+        /// whenever a video is started, so changing it while the index is being updated takes effect from the next video on. A value outside the range, or a file written on a
+        /// computer with more cores, counts as the nearest value this computer can have.
+        /// </summary>
+        public int CpuCores
+        {
+            get => _cpuCores;
+            set => _cpuCores = Math.Clamp(value, 1, MaxCpuCores);
+        }
+
         /// <summary>What the folder listing takes for files of the folder: the photos, and the videos too if <see cref="SupportVideo"/> is on. Indexing and the tools work on <see cref="Extensions"/>, photos only.</summary>
         [JsonIgnore]
         public string[] ListedExtensions => SupportVideo ? [.. Extensions, .. VideoExtensions] : Extensions;
@@ -156,9 +172,41 @@ namespace PhotoLiker.Core
         public string[] SavedInFolders { get; set; } = [];
 
         [JsonIgnore]
-        public List<PhotoFile> Files  { get; set; } = [];
+        public List<PhotoFile> Files
+        {
+            get => _files;
+            set { _files = value; _countedVideos = -1; }
+        }
+        private List<PhotoFile> _files = [];
+
         [JsonIgnore]
         public int TotalFiles => Files.Count;
+
+        /// <summary>How many of the <see cref="TotalFiles"/> are photos; for the progress rows of the settings grid.</summary>
+        [JsonIgnore]
+        public int PhotoCount => Files.Count - VideoCount;
+
+        /// <summary>
+        /// How many of the <see cref="TotalFiles"/> are videos (there are some only while <see cref="SupportVideo"/> is on); for the progress rows of the settings grid.
+        /// The count is remembered (the grid reads it again at every navigation) and made anew when the list or what counts as a video changes.
+        /// </summary>
+        [JsonIgnore]
+        public int VideoCount
+        {
+            get
+            {
+                if (_countedVideos < 0 || _countedOf != _files.Count || _countedKinds != MediaKinds.Classification)
+                {
+                    _countedVideos = _files.Count(file => file.IsVideo);
+                    _countedOf = _files.Count;
+                    _countedKinds = MediaKinds.Classification;
+                }
+                return _countedVideos;
+            }
+        }
+        private int _countedVideos = -1;
+        private int _countedOf;
+        private int _countedKinds;
 
         // ── liked folder ───────────────────────────────────────────────────
 
