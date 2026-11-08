@@ -9,12 +9,16 @@ namespace PhotoLiker.Video
     /// <summary>What was heard in a video: the language (as the recognizer says it, "ru"), and the segments in order of time.</summary>
     public sealed record SpeechTranscript(string Language, IReadOnlyList<SpeechSegment> Segments);
 
-    /// <summary>Something that turns the sound of a file into text. Whisper is the one there is; a test gives its own.</summary>
+    /// <summary>
+    /// Something that turns the sound of a file into text. Whisper is the one there is; a test gives its own. Several files can be given to it at once
+    /// (from different threads): that is how all the cores of a computer are kept busy, see <see cref="SpeechCores"/>.
+    /// </summary>
     public interface ISpeechRecognizer : IDisposable
     {
         /// <param name="wavPath">A 16 kHz mono WAV file.</param>
         /// <param name="language">"auto" to let the model hear which language it is, else its code ("ru", "uk", "en").</param>
-        Task<SpeechTranscript> TranscribeAsync(string wavPath, string language, CancellationToken cancellationToken);
+        /// <param name="threads">How many threads this one file may use.</param>
+        Task<SpeechTranscript> TranscribeAsync(string wavPath, string language, int threads, CancellationToken cancellationToken);
     }
 
     /// <summary>Whisper (whisper.cpp through Whisper.net) on the processor, with the segments that are no speech taken out.</summary>
@@ -23,19 +27,14 @@ namespace PhotoLiker.Video
         /// <summary>A segment the model itself thinks is likely no speech (music, noise, silence) is dropped above this.</summary>
         public const float NoSpeechCutoff = 0.6f;
 
+        // One model in memory; every file gets a processor (the working state) of its own, so any number of files can be heard at once
         private readonly WhisperFactory _factory;
-        private readonly int _threads;
 
-        /// <param name="threads">How many threads the model uses; it takes them all and the rest of the computer has what is left, so the default is half of them.</param>
-        public WhisperRecognizer(string modelPath, int threads = 0)
-        {
-            _factory = WhisperFactory.FromPath(modelPath);
-            _threads = threads > 0 ? threads : Math.Max(2, Environment.ProcessorCount / 2);
-        }
+        public WhisperRecognizer(string modelPath) => _factory = WhisperFactory.FromPath(modelPath);
 
-        public async Task<SpeechTranscript> TranscribeAsync(string wavPath, string language, CancellationToken cancellationToken)
+        public async Task<SpeechTranscript> TranscribeAsync(string wavPath, string language, int threads, CancellationToken cancellationToken)
         {
-            var builder = _factory.CreateBuilder().WithThreads(_threads).WithNoSpeechThreshold(NoSpeechCutoff);
+            var builder = _factory.CreateBuilder().WithThreads(Math.Max(1, threads)).WithNoSpeechThreshold(NoSpeechCutoff);
             builder = string.Equals(language, "auto", StringComparison.OrdinalIgnoreCase) ? builder.WithLanguageDetection() : builder.WithLanguage(language);
             // Not "using": Stop cancels while the model is still working, and the processor refuses to be disposed then (it throws "Cannot dispose while processing"
             // and that was what the user saw instead of "stopped"); DisposeAsync waits until the model has let go

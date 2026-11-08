@@ -171,6 +171,43 @@ public class SpeechSearchTests
     }
 }
 
+public class SpeechCoresTests
+{
+    [Theory]
+    [InlineData(1, 1, 1)]
+    [InlineData(2, 1, 2)]
+    [InlineData(4, 1, 4)]
+    [InlineData(6, 1, 6)]   // up to seven cores are one video with all of them
+    [InlineData(7, 1, 7)]
+    [InlineData(8, 2, 4)]
+    [InlineData(11, 2, 5)]  // the remainder is not used
+    [InlineData(12, 3, 4)]
+    [InlineData(16, 4, 4)]
+    [InlineData(32, 8, 4)]
+    public void TheCores_AreSharedOutBetweenTheVideosThatAreHeardAtOnce(int cores, int workers, int threadsEach) =>
+        Assert.Equal(new SpeechLayout(workers, threadsEach), SpeechCores.LayoutFor(cores));
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-3)]
+    public void NoCoresAtAll_CountAsOne(int cores) => Assert.Equal(new SpeechLayout(1, 1), SpeechCores.LayoutFor(cores));
+
+    [Fact]
+    public void ALayout_NeverUsesMoreCoresThanItWasGiven_AndMoreCoresNeverMeanLessWork()
+    {
+        var before = 0;
+        for (var cores = 1; cores <= 64; cores++)
+        {
+            var layout = SpeechCores.LayoutFor(cores);
+
+            Assert.InRange(layout.Cores, 1, cores);
+            Assert.True(layout.Cores >= cores - layout.Workers + 1, $"{cores} cores: {layout.Cores} used"); // only the remainder of the division is left over
+            Assert.True(layout.Cores >= before, $"{cores} cores use fewer than {cores - 1}");
+            before = layout.Cores;
+        }
+    }
+}
+
 public class SpeechModelsTests : IDisposable
 {
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "PLSpeechModels_" + Guid.NewGuid().ToString("N"));
@@ -276,11 +313,20 @@ public sealed class SpeechJobTests : IDisposable
     /// <summary>A recognizer that says what it is told and remembers which sounds it was given.</summary>
     private sealed class FakeRecognizer(Func<string, SpeechTranscript> hear) : ISpeechRecognizer
     {
+        private readonly object _gate = new();
+
         public List<string> Heard { get; } = [];
 
-        public Task<SpeechTranscript> TranscribeAsync(string wavPath, string language, CancellationToken cancellationToken)
+        /// <summary>The threads each file was given.</summary>
+        public List<int> Threads { get; } = [];
+
+        public Task<SpeechTranscript> TranscribeAsync(string wavPath, string language, int threads, CancellationToken cancellationToken)
         {
-            Heard.Add(language);
+            lock (_gate)
+            {
+                Heard.Add(language);
+                Threads.Add(threads);
+            }
             return Task.FromResult(hear(wavPath));
         }
 
@@ -290,8 +336,8 @@ public sealed class SpeechJobTests : IDisposable
     private static SpeechTranscript Says(params string[] lines) =>
         new("ru", [.. lines.Select((text, i) => new SpeechSegment(i * 4000L, i * 4000L + 3000, text))]);
 
-    private Task<SpeechIndexSummary> Run(VideoCatalog catalog, FakeRecognizer recognizer, string language = "auto", Func<SpeechDownload, bool>? confirm = null) =>
-        SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, language, _root, null, [".mp4"], null, CancellationToken.None, confirm, _ => recognizer);
+    private Task<SpeechIndexSummary> Run(VideoCatalog catalog, FakeRecognizer recognizer, string language = "auto", Func<SpeechDownload, bool>? confirm = null, Func<int>? cores = null) =>
+        SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, language, _root, null, [".mp4"], null, CancellationToken.None, confirm, _ => recognizer, cores);
 
     [Fact]
     public async Task TheSpeechOfEveryVideoWithSound_IsKept_AndNotReadAgain()
@@ -378,6 +424,172 @@ public sealed class SpeechJobTests : IDisposable
         Assert.Equal(0, catalog.CountTranscribed(Model).Videos);
     }
 
+    /// <summary>A recognizer that takes its time, and notes how many files it is hearing at once and how many threads each was given.</summary>
+    private sealed class SlowRecognizer(TimeSpan time, Action<int>? onCall = null, Func<int, Exception?>? failWith = null) : ISpeechRecognizer
+    {
+        private readonly object _gate = new();
+        private int _now;
+        private int _calls;
+
+        public int MostAtOnce { get; private set; }
+
+        public List<int> Threads { get; } = [];
+
+        public async Task<SpeechTranscript> TranscribeAsync(string wavPath, string language, int threads, CancellationToken cancellationToken)
+        {
+            int call;
+            lock (_gate)
+            {
+                call = _calls++;
+                Threads.Add(threads);
+                MostAtOnce = Math.Max(MostAtOnce, ++_now);
+            }
+
+            try
+            {
+                onCall?.Invoke(call);
+                if (failWith?.Invoke(call) is { } error)
+                    throw error;
+
+                await Task.Delay(time, cancellationToken);
+            }
+            finally
+            {
+                lock (_gate) _now--;
+            }
+            return Says("раз");
+        }
+
+        public void Dispose() { }
+    }
+
+    private void MakeVideos(int count)
+    {
+        for (var i = 0; i < count; i++)
+            RealFfmpeg.MakeVideo(_root, $"v{i:00}.mp4", seconds: 2);
+    }
+
+    [Fact]
+    public async Task OneCore_HearsOneVideoAtATime_WithOneThread()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        MakeVideos(4);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var recognizer = new SlowRecognizer(TimeSpan.FromMilliseconds(150));
+
+        var summary = await SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, "auto", _root, null, [".mp4"], null, CancellationToken.None, null, _ => recognizer, () => 1);
+
+        Assert.Equal(4, summary.Transcribed);
+        Assert.Equal(1, recognizer.MostAtOnce);
+        Assert.All(recognizer.Threads, threads => Assert.Equal(SpeechCores.LayoutFor(1).ThreadsEach, threads));
+    }
+
+    [Fact]
+    public async Task ManyCores_HearSeveralVideosAtOnce_EachWithItsShareOfTheThreads()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        const int cores = 12;
+        var layout = SpeechCores.LayoutFor(cores);
+        Assert.True(layout.Workers >= 2); // else there is nothing to see
+        MakeVideos(layout.Workers + 2);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var recognizer = new SlowRecognizer(TimeSpan.FromMilliseconds(400));
+
+        var summary = await SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, "auto", _root, null, [".mp4"], null, CancellationToken.None, null, _ => recognizer, () => cores);
+
+        Assert.Equal(layout.Workers + 2, summary.Transcribed);
+        Assert.Equal(layout.Workers, recognizer.MostAtOnce);
+        Assert.All(recognizer.Threads, threads => Assert.Equal(layout.ThreadsEach, threads));
+        Assert.Equal(layout.Workers + 2, catalog.CountTranscribed(Model).Videos);
+    }
+
+    [Fact]
+    public async Task MoreCores_ChangedWhileItRuns_StartMoreVideosAtOnce()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        var big = SpeechCores.LayoutFor(12);
+        MakeVideos(big.Workers + 2);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var cores = 1;
+        // the first video is under way with one core, and now the person raises the number
+        var recognizer = new SlowRecognizer(TimeSpan.FromMilliseconds(1500), onCall: call => { if (call == 0) Volatile.Write(ref cores, 12); });
+
+        var summary = await SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, "auto", _root, null, [".mp4"], null, CancellationToken.None, null, _ => recognizer, () => Volatile.Read(ref cores));
+
+        Assert.Equal(big.Workers + 2, summary.Transcribed);
+        Assert.Equal(SpeechCores.LayoutFor(1).ThreadsEach, recognizer.Threads[0]);   // it began with one core and was let finish with it
+        Assert.True(recognizer.MostAtOnce >= 2, $"at most {recognizer.MostAtOnce} at once");
+        Assert.Contains(big.ThreadsEach, recognizer.Threads.Skip(1));                 // the ones started after the change have their share of the bigger number
+    }
+
+    [Fact]
+    public async Task FewerCores_ChangedWhileItRuns_LetTheBusyOnesFinish_AndStartTheNextOnesSmaller()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        var big = SpeechCores.LayoutFor(12);
+        Assert.True(big.Workers >= 2);
+        MakeVideos(big.Workers + 3);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var cores = 12;
+        // the first batch is started with all the cores; when the last of it has begun, the person lowers the number
+        var recognizer = new SlowRecognizer(TimeSpan.FromMilliseconds(1200), onCall: call => { if (call == big.Workers - 1) Volatile.Write(ref cores, 1); });
+
+        var summary = await SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, "auto", _root, null, [".mp4"], null, CancellationToken.None, null, _ => recognizer, () => Volatile.Read(ref cores));
+
+        Assert.Equal(big.Workers + 3, summary.Transcribed);
+        Assert.Equal(big.Workers, recognizer.MostAtOnce);                            // never more than the first batch: the rest came one at a time
+        Assert.Equal(SpeechCores.LayoutFor(1).ThreadsEach, recognizer.Threads[^1]);   // the last was started after the change
+        Assert.Equal(3, recognizer.Threads.Count(threads => threads == SpeechCores.LayoutFor(1).ThreadsEach));
+    }
+
+    [Fact]
+    public async Task TheProgress_CountsTheVideosThatAreHeard_AndEndsWithAllOfThem()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        MakeVideos(5);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var seen = new List<IndexProgress>();
+        var recognizer = new SlowRecognizer(TimeSpan.FromMilliseconds(100));
+
+        await SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, "auto", _root, null, [".mp4"], new Immediate(seen), CancellationToken.None, null, _ => recognizer, () => 12);
+
+        var speech = seen.Where(p => p.Phase == IndexPhase.Speech).ToList();
+        Assert.All(speech, p => Assert.Equal(5, p.Total));
+        Assert.Equal(speech.Select(p => p.Done).Order(), speech.Select(p => p.Done)); // never goes back...
+        Assert.Equal(5, speech[^1].Done);                                              // ...and ends with all
+        Assert.Equal(string.Empty, speech[^1].Message);
+    }
+
+    private sealed class Immediate(List<IndexProgress> into) : IProgress<IndexProgress>
+    {
+        public void Report(IndexProgress value)
+        {
+            lock (into) into.Add(value);
+        }
+    }
+
+    [Fact]
+    public async Task ARecognizerThatFails_FailsTheJob_AndTheOtherVideosStop()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        MakeVideos(6);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var recognizer = new SlowRecognizer(TimeSpan.FromSeconds(30), failWith: call => call == 0 ? new InvalidOperationException("the model broke") : null);
+
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, "auto", _root, null, [".mp4"], null, CancellationToken.None, null, _ => recognizer, () => 12));
+
+        Assert.Equal("the model broke", error.Message);
+        Assert.True(started.Elapsed < TimeSpan.FromSeconds(15), "the videos that were being heard did not stop"); // else they would have run their 30 s
+    }
+
     [Fact]
     public async Task Stopping_KeepsWhatIsDone()
     {
@@ -394,7 +606,8 @@ public sealed class SpeechJobTests : IDisposable
             return Says("раз");
         });
 
-        var summary = await SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, "auto", _root, null, [".mp4"], null, stop.Token, null, _ => recognizer);
+        // one core: one video at a time, so the Stop pressed while the first is heard keeps the others from being started
+        var summary = await SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, "auto", _root, null, [".mp4"], null, stop.Token, null, _ => recognizer, () => 1);
 
         Assert.True(summary.Cancelled);
         Assert.Equal(1, summary.Transcribed);

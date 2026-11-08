@@ -47,6 +47,7 @@ namespace PhotoLikerUI
             [nameof(Settings.VideoSpeech)]    = [Category(VideoCategory), Describe(() => SettingsStrings.VideoSpeech)],
             [nameof(Settings.SpeechModel)]    = [Category(VideoCategory), new TypeConverterAttribute(typeof(SpeechModelConverter)), Describe(() => SettingsStrings.SpeechModel)],
             [nameof(Settings.SpeechLanguage)] = [Category(VideoCategory), Describe(() => SettingsStrings.SpeechLanguage)],
+            [nameof(Settings.CpuCores)]       = [Category(VideoCategory), new TypeConverterAttribute(typeof(CpuCoresConverter)), Describe(() => SettingsStrings.CpuCores)],
             [nameof(Settings.ListedExtensions)] = [Hidden],
 
             // The rows say what they are for under the heading of their category: Mode, Monitors, Timeout, Watermark, Effect
@@ -71,6 +72,8 @@ namespace PhotoLikerUI
 
             [nameof(Settings.Files)]          = [Category(InfoCategory), Hidden],
             [nameof(Settings.TotalFiles)]     = [Category(InfoCategory), Describe(() => SettingsStrings.TotalFiles)],
+            [nameof(Settings.PhotoCount)]     = [Category(InfoCategory), Describe(() => SettingsStrings.PhotoCount)],
+            [nameof(Settings.VideoCount)]     = [Category(InfoCategory), Describe(() => SettingsStrings.VideoCount)],
             [nameof(Settings.CurrentIndex)]   = [Category(InfoCategory), Describe(() => SettingsStrings.CurrentIndex)], // editable: typing a number jumps to that photo
 
             [nameof(Settings.CurrentFileName)] = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.CurrentFileName)],

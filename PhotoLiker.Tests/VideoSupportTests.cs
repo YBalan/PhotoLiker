@@ -166,6 +166,82 @@ public class VideoSupportTests : IDisposable
         Assert.Equal("small", old.SpeechModel);
     }
 
+    // ── the cores of the speech recognition ────────────────────────────
+
+    [Fact]
+    public void TheCores_AreAllOfThisComputers_ByDefault_AndAnOldFileHasThat()
+    {
+        Assert.Equal(Settings.MaxCpuCores, new Settings().CpuCores);
+        Assert.True(Settings.MaxCpuCores >= 1);
+
+        File.WriteAllText(Settings.GetFilePath(_root), """{ "SupportVideo": true }""");
+        Assert.Equal(Settings.MaxCpuCores, Settings.Load(_root).CpuCores);
+    }
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(-5, 1)]
+    [InlineData(1, 1)]
+    [InlineData(100_000, -1)] // a file from a computer with more cores: the most this one has (-1 stands for it)
+    public void TheCores_StayBetweenOneAndWhatTheComputerHas(int set, int expected)
+    {
+        var settings = new Settings { CpuCores = set };
+
+        Assert.Equal(expected == -1 ? Settings.MaxCpuCores : expected, settings.CpuCores);
+    }
+
+    [Fact]
+    public void TheCores_AreKeptWithTheFolder()
+    {
+        new Settings { CurrentFolder = _root, CpuCores = 1 }.Save(_root);
+
+        Assert.Equal(1, Settings.Load(_root).CpuCores);
+    }
+
+    // ── the progress rows of the settings grid ─────────────────────────
+
+    [Fact]
+    public void ThePhotosAndTheVideosOfTheList_AreCountedApart_AndMakeUpTheTotal()
+    {
+        var settings = new Settings
+        {
+            Files =
+            [
+                new PhotoFile(@"C:\a\1.jpg", string.Empty), new PhotoFile(@"C:\a\2.PNG", string.Empty), new PhotoFile(@"C:\a\3.jpg", string.Empty),
+                new PhotoFile(@"C:\a\clip.mp4", string.Empty), new PhotoFile(@"C:\a\MVI_1.AVI", string.Empty),
+            ],
+        };
+
+        Assert.Equal(3, settings.PhotoCount);
+        Assert.Equal(2, settings.VideoCount);
+        Assert.Equal(settings.TotalFiles, settings.PhotoCount + settings.VideoCount);
+    }
+
+    [Fact]
+    public void AnEmptyList_HasNoPhotosAndNoVideos() =>
+        Assert.Equal((0, 0), (new Settings().PhotoCount, new Settings().VideoCount));
+
+    [Fact]
+    public void TheCounts_FollowTheVideoExtensionsOfTheFolder()
+    {
+        var settings = new Settings { Files = [new PhotoFile(@"C:\a\1.jpg", string.Empty), new PhotoFile(@"C:\a\x.xyz", string.Empty)] };
+        Assert.Equal(0, settings.VideoCount);
+
+        MediaKinds.UseVideoExtensions([".xyz"]);
+
+        Assert.Equal((1, 1), (settings.PhotoCount, settings.VideoCount));
+    }
+
+    [Fact]
+    public void TheCounts_AreNotWrittenToTheSettingsFile()
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(new Settings { Files = [new PhotoFile(@"C:\a\1.jpg", string.Empty)] });
+
+        Assert.DoesNotContain("PhotoCount", json);
+        Assert.DoesNotContain("VideoCount", json);
+        Assert.Contains("CpuCores", json);
+    }
+
     [Fact]
     public void ASearch_LooksAtBothKinds_UnlessOneIsSwitchedOff()
     {

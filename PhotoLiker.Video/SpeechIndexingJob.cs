@@ -25,21 +25,28 @@ namespace PhotoLiker.Video
 
         private static readonly TimeSpan ReportInterval = TimeSpan.FromMilliseconds(500);
 
+        /// <summary>How often (milliseconds) the cores setting is looked at while the videos are being heard: more cores start more videos at once at the next look.</summary>
+        private const int CoresPollInterval = 500;
+
         /// <param name="modelsFolder">Where the models are (the speech model is in its whisper folder).</param>
         /// <param name="language">"auto", or the code of the language that is spoken ("ru", "uk", "en").</param>
         /// <param name="confirmDownload">Asked before the model is downloaded; null means yes.</param>
         /// <param name="recognizerFactory">Makes the recognizer from the path of the model file (a test gives its own); null is Whisper.</param>
+        /// <param name="cores">
+        /// How many cores of the computer the job may use, asked again before each video is started (so it can be changed while the job runs); how they are shared between
+        /// videos heard at the same time and the threads of each is <see cref="SpeechCores.LayoutFor"/>. Null means all the cores the computer has.
+        /// </param>
         public static Task<SpeechIndexSummary> RunAsync(
             VideoCatalog catalog, string modelsFolder, SpeechModelInfo model, string language, string root, string? excludedFolder, IReadOnlyCollection<string> extensions,
             IProgress<IndexProgress>? progress, CancellationToken cancellationToken, Func<SpeechDownload, bool>? confirmDownload = null,
-            Func<string, ISpeechRecognizer>? recognizerFactory = null)
+            Func<string, ISpeechRecognizer>? recognizerFactory = null, Func<int>? cores = null)
         {
             var done = new TaskCompletionSource<SpeechIndexSummary>(TaskCreationOptions.RunContinuationsAsynchronously);
             var thread = new Thread(() =>
             {
                 try
                 {
-                    done.SetResult(Run(catalog, modelsFolder, model, language, root, excludedFolder, extensions, progress, cancellationToken, confirmDownload, recognizerFactory));
+                    done.SetResult(Run(catalog, modelsFolder, model, language, root, excludedFolder, extensions, progress, cancellationToken, confirmDownload, recognizerFactory, cores ?? (() => Environment.ProcessorCount)));
                 }
                 catch (OperationCanceledException)
                 {
@@ -57,7 +64,7 @@ namespace PhotoLiker.Video
 
         private static SpeechIndexSummary Run(
             VideoCatalog catalog, string modelsFolder, SpeechModelInfo model, string language, string root, string? excludedFolder, IReadOnlyCollection<string> extensions,
-            IProgress<IndexProgress>? progress, CancellationToken token, Func<SpeechDownload, bool>? confirmDownload, Func<string, ISpeechRecognizer>? recognizerFactory)
+            IProgress<IndexProgress>? progress, CancellationToken token, Func<SpeechDownload, bool>? confirmDownload, Func<string, ISpeechRecognizer>? recognizerFactory, Func<int> cores)
         {
             var clock = Stopwatch.StartNew();
 
@@ -93,78 +100,164 @@ namespace PhotoLiker.Video
             progress?.Report(new IndexProgress(IndexPhase.LoadingModels, string.Empty, 0, work.Count, 0, 0, 0, null));
             using var recognizer = recognizerFactory?.Invoke(modelPath) ?? new WhisperRecognizer(modelPath);
 
+            // The workers (videos heard at the same time) report and count under this lock
+            var gate = new object();
             var totalSeconds = work.Sum(r => r.Info!.DurationSeconds);
             var finishedSeconds = 0.0;
+            var finishedVideos = 0;
             var transcribed = 0;
             var segmentCount = 0;
             var silent = 0;
             var failed = 0;
+            var latestName = string.Empty;
             var lastReport = Stopwatch.StartNew();
 
-            void Report(string name, int videosDone)
+            // The speed is the one since the cores were last changed, or the start: after a change the old average says nothing about the new speed
+            var sinceAt = TimeSpan.Zero;
+            var sinceSeconds = 0.0;
+
+            void Report(bool force) // under the lock
             {
-                var seconds = clock.Elapsed.TotalSeconds;
-                var speed = seconds > 0 ? finishedSeconds / seconds : 0;
-                TimeSpan? remaining = speed > 0 && finishedSeconds > 30 ? TimeSpan.FromSeconds(Math.Max(0, totalSeconds - finishedSeconds) / speed) : null;
-                progress?.Report(new IndexProgress(IndexPhase.Speech, name, videosDone, work.Count, failed, segmentCount, speed, remaining));
+                if (!force && lastReport.Elapsed < ReportInterval)
+                    return;
+
+                var seconds = (clock.Elapsed - sinceAt).TotalSeconds;
+                var heardSeconds = finishedSeconds - sinceSeconds;
+                var speed = seconds > 0 ? heardSeconds / seconds : 0;
+                TimeSpan? remaining = speed > 0 && heardSeconds > 30 ? TimeSpan.FromSeconds(Math.Max(0, totalSeconds - finishedSeconds) / speed) : null;
+                progress?.Report(new IndexProgress(IndexPhase.Speech, latestName, finishedVideos, work.Count, failed, segmentCount, speed, remaining));
                 lastReport.Restart();
             }
 
-            try
+            async Task HearAsync(VideoRecord video, int threads, CancellationToken stop)
             {
-                for (var i = 0; i < work.Count; i++)
+                var wav = Path.Combine(Path.GetTempPath(), $"photoliker_speech_{Guid.NewGuid():N}.wav");
+                try
                 {
-                    token.ThrowIfCancellationRequested();
-                    var video = work[i];
-                    var path = catalog.FullPathOf(video);
-                    Report(Path.GetFileName(path), i);
-
-                    var wav = Path.Combine(Path.GetTempPath(), $"photoliker_speech_{Guid.NewGuid():N}.wav");
-                    try
+                    if (!await SpeechAudio.ExtractAsync(catalog.FullPathOf(video), wav, stop).ConfigureAwait(false))
                     {
-                        if (!SpeechAudio.ExtractAsync(path, wav, token).GetAwaiter().GetResult())
+                        catalog.SaveTranscript(video.Id, model.Id, string.Empty, [], "no sound could be taken from this video");
+                        lock (gate) failed++;
+                    }
+                    else if (SpeechAudio.LoudnessDb(wav) < SilenceDb)
+                    {
+                        catalog.SaveTranscript(video.Id, model.Id, string.Empty, []);
+                        lock (gate) silent++;
+                    }
+                    else
+                    {
+                        var heard = await recognizer.TranscribeAsync(wav, language, threads, stop).ConfigureAwait(false);
+                        catalog.SaveTranscript(video.Id, model.Id, heard.Language, heard.Segments);
+                        lock (gate)
                         {
-                            catalog.SaveTranscript(video.Id, model.Id, string.Empty, [], "no sound could be taken from this video");
-                            failed++;
-                        }
-                        else if (SpeechAudio.LoudnessDb(wav) < SilenceDb)
-                        {
-                            catalog.SaveTranscript(video.Id, model.Id, string.Empty, []);
-                            silent++;
-                        }
-                        else
-                        {
-                            var heard = recognizer.TranscribeAsync(wav, language, token).GetAwaiter().GetResult();
-                            catalog.SaveTranscript(video.Id, model.Id, heard.Language, heard.Segments);
                             transcribed++;
                             segmentCount += heard.Segments.Count;
                         }
                     }
-                    catch (InvalidDataException ex)
+                }
+                catch (InvalidDataException ex)
+                {
+                    catalog.SaveTranscript(video.Id, model.Id, string.Empty, [], ex.Message); // not tried again until the file changes
+                    lock (gate) failed++;
+                }
+                catch (IOException)
+                {
+                    lock (gate) failed++; // could not be read just now: tried again next time
+                }
+                finally
+                {
+                    try { File.Delete(wav); } catch (IOException) { /* in the temp folder: it goes with the next clean-up */ }
+                }
+
+                lock (gate)
+                {
+                    finishedSeconds += video.Info!.DurationSeconds;
+                    finishedVideos++;
+                    Report(force: false);
+                }
+            }
+
+            // The videos are heard by as many workers at a time as the cores allow, and the cores are asked again before each video is started:
+            // more cores starts more workers at once, fewer cores lets the ones that are busy finish and starts the next ones smaller
+            var pending = new Queue<VideoRecord>(work);
+            var running = new List<Task>();
+            using var stopAll = CancellationTokenSource.CreateLinkedTokenSource(token);
+            Exception? fault = null;
+            var layout = default(SpeechLayout);
+            var cancelled = false;
+
+            void Collect(Task finished)
+            {
+                if (finished.Exception is { } error && error.InnerExceptions.FirstOrDefault(e => e is not OperationCanceledException) is { } real && fault is null)
+                {
+                    fault = real;
+                    stopAll.Cancel(); // the others stop, and the job fails with this
+                }
+            }
+
+            try
+            {
+                while (pending.Count > 0 || running.Count > 0)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    var wanted = SpeechCores.LayoutFor(cores());
+                    if (wanted != layout)
                     {
-                        catalog.SaveTranscript(video.Id, model.Id, string.Empty, [], ex.Message); // not tried again until the file changes
-                        failed++;
-                    }
-                    catch (IOException)
-                    {
-                        failed++; // could not be read just now: tried again next time
-                    }
-                    finally
-                    {
-                        try { File.Delete(wav); } catch (IOException) { /* in the temp folder: it goes with the next clean-up */ }
+                        layout = wanted;
+                        lock (gate)
+                        {
+                            sinceAt = clock.Elapsed;
+                            sinceSeconds = finishedSeconds;
+                        }
                     }
 
-                    finishedSeconds += video.Info!.DurationSeconds;
-                    if (lastReport.Elapsed >= ReportInterval)
-                        Report(Path.GetFileName(path), i + 1);
+                    while (fault is null && pending.Count > 0 && running.Count < layout.Workers)
+                    {
+                        var video = pending.Dequeue();
+                        var threads = layout.ThreadsEach;
+                        lock (gate)
+                        {
+                            latestName = Path.GetFileName(catalog.FullPathOf(video));
+                            Report(force: true);
+                        }
+                        running.Add(Task.Run(() => HearAsync(video, threads, stopAll.Token)));
+                    }
+
+                    if (running.Count == 0)
+                        break;
+
+                    var index = Task.WaitAny([.. running], CoresPollInterval);
+                    if (index >= 0)
+                    {
+                        Collect(running[index]);
+                        running.RemoveAt(index);
+                    }
                 }
             }
             catch (OperationCanceledException)
             {
-                return new SpeechIndexSummary(transcribed, segmentCount, silent, failed, clock.Elapsed, Cancelled: true, Known: withSound.Count);
+                cancelled = true;
+            }
+            finally
+            {
+                // The model is let go of (below) only when no video is being heard any more
+                try { Task.WaitAll([.. running]); } catch (AggregateException) { /* looked at one by one next */ }
+                foreach (var task in running)
+                    Collect(task);
             }
 
-            Report(string.Empty, work.Count);
+            if (fault is not null)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(fault).Throw();
+
+            if (cancelled || token.IsCancellationRequested)
+                return new SpeechIndexSummary(transcribed, segmentCount, silent, failed, clock.Elapsed, Cancelled: true, Known: withSound.Count);
+
+            lock (gate)
+            {
+                latestName = string.Empty;
+                Report(force: true);
+            }
             return new SpeechIndexSummary(transcribed, segmentCount, silent, failed, clock.Elapsed, Cancelled: false, Known: withSound.Count);
         }
 

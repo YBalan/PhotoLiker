@@ -420,12 +420,13 @@
     <tr><td><strong>VideoSpeech</strong></td><td>Перетворювати на текст ще й те, що кажуть у відео, коли оновлюється індекс, щоб сказане слово знаходило відео (за замовчуванням вимкнено; близько третини тривалості мовлення і модель на 465 МБ). Див. <a href="#videos">Відео в теці</a>.</td></tr>
     <tr><td><strong>SpeechModel</strong></td><td><code>tiny</code>, <code>base</code> або <code>small</code> (її й варто брати).</td></tr>
     <tr><td><strong>SpeechLanguage</strong></td><td>Мова, якою розмовляють: <code>ru</code>, <code>uk</code>, <code>en</code> ..., або <code>auto</code> (модель визначає її для кожного відео).</td></tr>
+    <tr><td><strong>CpuCores</strong></td><td>Скільки ядер цього комп’ютера може використовувати розпізнавання мовлення: від 1 до всіх ядер (за замовчуванням). Що більше ядер, то більше відео слухається одночасно. Це можна змінювати, поки йде <strong>Оновити індекс</strong>: наступне відео, яке починається, вже візьме нове число.</td></tr>
   </tbody>
 </table>
 </div>
 
 <p><strong>CurrentIndex</strong> — номер показаного фото, починаючи з 0: впишіть інше число, щоб перейти до того фото (число поза списком веде до найближчого краю).
-<strong>CurrentFile</strong>, <strong>TotalFiles</strong> та інші рядки з відомостями змінити не можна. Група <strong>6. Slideshow</strong> має одинадцять власних рядків, див. <a href="#slideshow">Показ слайдів</a>.</p>
+<strong>CurrentFile</strong>, <strong>TotalFiles</strong>, <strong>PhotoCount</strong> (скільки з файлів списку — фото), <strong>VideoCount</strong> (скільки — відео) та інші рядки з відомостями змінити не можна. Група <strong>6. Slideshow</strong> має одинадцять власних рядків, див. <a href="#slideshow">Показ слайдів</a>.</p>
 
 <h3 id="language">Мова програми</h3>
 <p>Рядок <strong>Language</strong> таблиці налаштувань вибирає мову програми: оберіть у списку <strong>English</strong> або <strong>Українська</strong>. Зміна діє одразу, нічого

@@ -427,12 +427,13 @@ description: select it and the pane under the table says what it is for.</p>
     <tr><td><strong>VideoSpeech</strong></td><td>Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See <a href="#videos">Videos in the folder</a>.</td></tr>
     <tr><td><strong>SpeechModel</strong></td><td><code>tiny</code>, <code>base</code> or <code>small</code> (the one to use).</td></tr>
     <tr><td><strong>SpeechLanguage</strong></td><td>The language that is spoken: <code>ru</code>, <code>uk</code>, <code>en</code> ..., or <code>auto</code> (the model hears it for each video).</td></tr>
+    <tr><td><strong>CpuCores</strong></td><td>How many cores of this computer the speech recognition may use, from 1 to all the cores it has (the default). With more cores several videos are heard at the same time. It can be changed while <strong>Update index</strong> runs: the next video that is started follows it.</td></tr>
   </tbody>
 </table>
 </div>
 
 <p><strong>CurrentIndex</strong> is the number of the shown photo, counted from 0: type another number into it to jump to that
-photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong> and the other rows
+photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong>, <strong>PhotoCount</strong> (how many of the files in the list are photos), <strong>VideoCount</strong> (how many are videos) and the other rows
 that show information cannot be changed. The group <strong>6. Slideshow</strong> has eleven rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
 
 <h3 id="language">Language</h3>

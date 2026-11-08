@@ -572,9 +572,11 @@ namespace PhotoLikerUI
             try
             {
                 using var catalog = await Task.Run(() => VideoCatalog.Open(folder));
+                // The cores are read from the settings of the folder again before each video, so the CpuCores row can be changed while this runs
+                var settings = _currentConfig;
                 return await SpeechIndexingJob.RunAsync(
-                    catalog, _models.ModelsFolder, SpeechModel, string.IsNullOrWhiteSpace(_currentConfig.SpeechLanguage) ? "auto" : _currentConfig.SpeechLanguage.Trim(),
-                    folder, _currentConfig.LikedFolder, _currentConfig.VideoExtensions, new Progress<IndexProgress>(OnIndexProgress), token, ConfirmSpeechDownload);
+                    catalog, _models.ModelsFolder, SpeechModel, string.IsNullOrWhiteSpace(settings.SpeechLanguage) ? "auto" : settings.SpeechLanguage.Trim(),
+                    folder, settings.LikedFolder, settings.VideoExtensions, new Progress<IndexProgress>(OnIndexProgress), token, ConfirmSpeechDownload, cores: () => settings.CpuCores);
             }
             catch (OperationCanceledException)
             {
