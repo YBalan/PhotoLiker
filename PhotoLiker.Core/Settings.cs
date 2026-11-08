@@ -172,7 +172,13 @@ namespace PhotoLiker.Core
         public string[] SavedInFolders { get; set; } = [];
 
         [JsonIgnore]
-        public List<PhotoFile> Files  { get; set; } = [];
+        public List<PhotoFile> Files
+        {
+            get => _files;
+            set { _files = value; _countedVideos = -1; }
+        }
+        private List<PhotoFile> _files = [];
+
         [JsonIgnore]
         public int TotalFiles => Files.Count;
 
@@ -180,9 +186,27 @@ namespace PhotoLiker.Core
         [JsonIgnore]
         public int PhotoCount => Files.Count - VideoCount;
 
-        /// <summary>How many of the <see cref="TotalFiles"/> are videos (there are some only while <see cref="SupportVideo"/> is on); for the progress rows of the settings grid.</summary>
+        /// <summary>
+        /// How many of the <see cref="TotalFiles"/> are videos (there are some only while <see cref="SupportVideo"/> is on); for the progress rows of the settings grid.
+        /// The count is remembered (the grid reads it again at every navigation) and made anew when the list or what counts as a video changes.
+        /// </summary>
         [JsonIgnore]
-        public int VideoCount => Files.Count(file => file.IsVideo);
+        public int VideoCount
+        {
+            get
+            {
+                if (_countedVideos < 0 || _countedOf != _files.Count || _countedKinds != MediaKinds.Classification)
+                {
+                    _countedVideos = _files.Count(file => file.IsVideo);
+                    _countedOf = _files.Count;
+                    _countedKinds = MediaKinds.Classification;
+                }
+                return _countedVideos;
+            }
+        }
+        private int _countedVideos = -1;
+        private int _countedOf;
+        private int _countedKinds;
 
         // ── liked folder ───────────────────────────────────────────────────
 

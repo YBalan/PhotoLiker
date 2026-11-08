@@ -429,9 +429,13 @@ public sealed class SpeechJobTests : IDisposable
     {
         private readonly object _gate = new();
         private int _now;
+        private int _threadsNow;
         private int _calls;
 
         public int MostAtOnce { get; private set; }
+
+        /// <summary>The most threads the files that were heard at the same time held together.</summary>
+        public int MostThreadsAtOnce { get; private set; }
 
         public List<int> Threads { get; } = [];
 
@@ -443,6 +447,8 @@ public sealed class SpeechJobTests : IDisposable
                 call = _calls++;
                 Threads.Add(threads);
                 MostAtOnce = Math.Max(MostAtOnce, ++_now);
+                _threadsNow += threads;
+                MostThreadsAtOnce = Math.Max(MostThreadsAtOnce, _threadsNow);
             }
 
             try
@@ -455,7 +461,11 @@ public sealed class SpeechJobTests : IDisposable
             }
             finally
             {
-                lock (_gate) _now--;
+                lock (_gate)
+                {
+                    _now--;
+                    _threadsNow -= threads;
+                }
             }
             return Says("раз");
         }
@@ -544,6 +554,24 @@ public sealed class SpeechJobTests : IDisposable
         Assert.Equal(big.Workers, recognizer.MostAtOnce);                            // never more than the first batch: the rest came one at a time
         Assert.Equal(SpeechCores.LayoutFor(1).ThreadsEach, recognizer.Threads[^1]);   // the last was started after the change
         Assert.Equal(3, recognizer.Threads.Count(threads => threads == SpeechCores.LayoutFor(1).ThreadsEach));
+    }
+
+    [Fact]
+    public async Task ABusyVideo_KeepsItsThreads_SoTheNextOneWaits_UntilItsShareFitsBesideThem()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        MakeVideos(3);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var cores = 7;
+        // the first video holds all seven threads; with eight cores a four-thread video beside it would make eleven
+        var recognizer = new SlowRecognizer(TimeSpan.FromMilliseconds(1500), onCall: call => { if (call == 0) Volatile.Write(ref cores, 8); });
+
+        var summary = await SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, "auto", _root, null, [".mp4"], null, CancellationToken.None, null, _ => recognizer, () => Volatile.Read(ref cores));
+
+        Assert.Equal(3, summary.Transcribed);
+        Assert.Equal(SpeechCores.LayoutFor(7).ThreadsEach, recognizer.Threads[0]);
+        Assert.True(recognizer.MostThreadsAtOnce <= 8, $"{recognizer.MostThreadsAtOnce} threads were held at once");
     }
 
     [Fact]

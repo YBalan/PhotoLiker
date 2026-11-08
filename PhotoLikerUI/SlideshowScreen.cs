@@ -563,9 +563,22 @@ namespace PhotoLikerUI
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData) =>
             _session.HandleKey(keyData, repeat: (msg.LParam.ToInt64() & KeyWasDownBit) != 0) || base.ProcessCmdKey(ref msg, keyData);
 
-        /// <summary>The buttons of a remote control (Play, Pause) mostly come as application commands, not as keys; the volume ones are left to the system on purpose.</summary>
+        private const int WmSysCommand = 0x0112;
+        /// <summary>The system command that starts the screen saver; the low four bits of the wParam are the system's own.</summary>
+        private const int ScScreenSave = 0xF140;
+
+        /// <summary>
+        /// The buttons of a remote control (Play, Pause) mostly come as application commands, not as keys; the volume ones are left to the system on purpose.
+        /// The screen saver is refused: <see cref="KeepAwake"/> holds the display and the computer, but the screen saver is a request of its own.
+        /// </summary>
         protected override void WndProc(ref Message m)
         {
+            if (m.Msg == WmSysCommand && (m.WParam.ToInt64() & 0xFFF0) == ScScreenSave)
+            {
+                m.Result = 0; // taken: the slideshow is being looked at
+                return;
+            }
+
             if (m.Msg == MediaKeys.WmAppCommand && _session.HandleAppCommand(MediaKeys.AppCommandOf(m.LParam.ToInt64())))
             {
                 m.Result = 1; // taken

@@ -90,8 +90,15 @@ namespace PhotoLiker.Search
                 throw new InvalidDataException(SearchLibStrings.NotPeopleFile);
             if (bundle.Version > BundleVersion)
                 throw new InvalidDataException(string.Format(SearchLibStrings.PeopleFileNewerFormat, bundle.Version));
+            if (HasNullRecords(bundle))
+                throw new InvalidDataException(SearchLibStrings.NotPeopleFile);
             return bundle;
         }
+
+        // JSON can hold null where a folder, a person, a face or a group belongs; such a file is refused whole, like any other that is not a people file
+        private static bool HasNullRecords(BundleModel bundle) =>
+            (bundle.Folders ?? []).Any(folder => folder is null || (folder.People ?? []).Any(person => person is null || (person.Faces ?? []).Any(face => face is null))) ||
+            (bundle.Groups ?? []).Any(group => group is null);
 
         private static PeopleFileInfo Describe(BundleModel bundle)
         {
@@ -118,11 +125,12 @@ namespace PhotoLiker.Search
             return new PeopleFileInfo(people.Count, faces, folders, groups, bundle.ExportedAt, bundle.Folder, bundle.FaceVersion == IndexingJob.FaceVersion);
         }
 
-        // A face the file describes completely: where it is and its vector
+        // A face the file describes completely: where it is (a box with a real place and a size, else IsSamePlace could never find it again) and its vector
         private static bool TryReadFace(ExampleModel face, out float[] embedding)
         {
             embedding = [];
-            if (face.Box is not { Length: 4 } || string.IsNullOrEmpty(face.Embedding) || string.IsNullOrEmpty(face.Photo))
+            if (face.Box is not { Length: 4 } box || box.Any(v => !float.IsFinite(v)) || box[2] <= 0 || box[3] <= 0 ||
+                string.IsNullOrEmpty(face.Embedding) || string.IsNullOrEmpty(face.Photo))
                 return false;
 
             try
@@ -243,10 +251,23 @@ namespace PhotoLiker.Search
             if (slices.Count > 0 && LoadError is not null)
                 throw new IOException(string.Format(SearchLibStrings.PeopleFileUnreadableFormat, LoadError)); // writing now would put the few over the many
 
-            // What the other folders have now, so that a person keeps the spelling they were given anywhere
-            var shared = _sharedFile is null ? null : ReadShared();
-            if (shared is not null)
-                TakeOthersFrom(shared);
+            // What the other folders have now, so that a person keeps the spelling they were given anywhere. The shared file failing to be
+            // read is only reported (see the remarks of Import): the faces of this folder and the groups still come in, the names of the
+            // other folders stay as they were cached, and the faces of the other folders are counted as unusable below.
+            SharedFileModel? shared = null;
+            if (_sharedFile is not null)
+            {
+                try
+                {
+                    shared = ReadShared();
+                    TakeOthersFrom(shared);
+                }
+                catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException or FormatException)
+                {
+                    shared = null;
+                    SharedError = ex.Message;
+                }
+            }
             foreach (var known in KnownNames())
                 tally.Spellings[known] = known;
 

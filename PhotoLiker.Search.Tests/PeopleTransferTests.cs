@@ -251,6 +251,62 @@ public class PeopleTransferTests : IDisposable
     }
 
     [Fact]
+    public void AFaceWithNoSize_IsLeftOut_SoItNeverComesInTwice()
+    {
+        OldComputer().Export(TheFile);
+        ChangeTheFile(file => file["Folders"]![0]!["People"]![0]!["Faces"]![0]!["Box"]![2] = 0f);
+
+        Assert.Equal(1, PeopleLibrary.Inspect(TheFile).Faces);
+
+        var people = Open(_newPhotos, _newData);
+        var first = people.Import(TheFile);
+        var again = people.Import(TheFile);
+
+        Assert.Equal((1, 1), (first.FacesAdded, first.FacesUnusable));
+        Assert.Equal((0, 1, 1), (again.FacesAdded, again.FacesKnown, again.FacesUnusable));
+    }
+
+    [Fact]
+    public void AFileWithNullRecords_IsRefused_LikeAnyThatIsNotAPeopleFile()
+    {
+        var old = OldComputer();
+        foreach (Action<JsonNode> hole in new Action<JsonNode>[]
+        {
+            file => file["Folders"]![0] = null,
+            file => file["Folders"]![0]!["People"]![0] = null,
+            file => file["Folders"]![0]!["People"]![0]!["Faces"]![0] = null,
+            file => file["Groups"]![0] = null,
+        })
+        {
+            old.Export(TheFile);
+            ChangeTheFile(hole);
+
+            Assert.Throws<InvalidDataException>(() => PeopleLibrary.Inspect(TheFile));
+            Assert.Throws<InvalidDataException>(() => Open(_newPhotos, _newData).Import(TheFile));
+        }
+        Assert.Empty(Open(_newPhotos, _newData).Names);
+    }
+
+    [Fact]
+    public void WhileTheSharedFileCanNotBeRead_TheFacesOfThisFolder_AndTheGroups_ComeInAllTheSame()
+    {
+        OldComputer().Export(TheFile);
+        PhotosWithoutNames(_photosA);
+        var people = Open(_photosA, _newData);
+
+        PeopleImportResult result;
+        using (File.Open(Path.Combine(_newData.Path, "people.json"), FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+            result = people.Import(TheFile);
+
+        Assert.NotNull(people.SharedError);
+        Assert.Equal(1, result.FacesAdded);    // Mom: the part of this very folder goes into its own file
+        Assert.Equal(1, result.FacesUnusable); // Dad: his folder lives in the shared file, which could not be read
+        Assert.Equal(1, result.NewGroups);
+        Assert.Equal(["Mom"], people.Names);
+        Assert.Equal(["Dad", "Mom"], people.Groups.MembersOf("Family"));
+    }
+
+    [Fact]
     public void WhileTheFileOfTheFolderCanNotBeRead_NothingIsImportedOverIt()
     {
         OldComputer().Export(TheFile);

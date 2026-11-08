@@ -178,9 +178,10 @@ namespace PhotoLiker.Video
             }
 
             // The videos are heard by as many workers at a time as the cores allow, and the cores are asked again before each video is started:
-            // more cores starts more workers at once, fewer cores lets the ones that are busy finish and starts the next ones smaller
+            // more cores starts more workers at once, fewer cores lets the ones that are busy finish and starts the next ones smaller.
+            // A video that is under way keeps the threads it was started with, so the next one waits until its own share fits beside them.
             var pending = new Queue<VideoRecord>(work);
-            var running = new List<Task>();
+            var running = new List<(Task Task, int Threads)>();
             using var stopAll = CancellationTokenSource.CreateLinkedTokenSource(token);
             Exception? fault = null;
             var layout = default(SpeechLayout);
@@ -212,7 +213,7 @@ namespace PhotoLiker.Video
                         }
                     }
 
-                    while (fault is null && pending.Count > 0 && running.Count < layout.Workers)
+                    while (fault is null && pending.Count > 0 && running.Sum(r => r.Threads) + layout.ThreadsEach <= layout.Cores)
                     {
                         var video = pending.Dequeue();
                         var threads = layout.ThreadsEach;
@@ -221,16 +222,16 @@ namespace PhotoLiker.Video
                             latestName = Path.GetFileName(catalog.FullPathOf(video));
                             Report(force: true);
                         }
-                        running.Add(Task.Run(() => HearAsync(video, threads, stopAll.Token)));
+                        running.Add((Task.Run(() => HearAsync(video, threads, stopAll.Token)), threads));
                     }
 
                     if (running.Count == 0)
                         break;
 
-                    var index = Task.WaitAny([.. running], CoresPollInterval);
+                    var index = Task.WaitAny([.. running.Select(r => r.Task)], CoresPollInterval);
                     if (index >= 0)
                     {
-                        Collect(running[index]);
+                        Collect(running[index].Task);
                         running.RemoveAt(index);
                     }
                 }
@@ -242,8 +243,8 @@ namespace PhotoLiker.Video
             finally
             {
                 // The model is let go of (below) only when no video is being heard any more
-                try { Task.WaitAll([.. running]); } catch (AggregateException) { /* looked at one by one next */ }
-                foreach (var task in running)
+                try { Task.WaitAll([.. running.Select(r => r.Task)]); } catch (AggregateException) { /* looked at one by one next */ }
+                foreach (var (task, _) in running)
                     Collect(task);
             }
 
