@@ -497,12 +497,17 @@ the top whenever another photo is shown:
 
 The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Settings**, **4. Photo Settings**, **5. Video Settings** and **6. Slideshow**.
 
+**2. Current File** (the shown photo; all rows are read-only but one):
+
+| Setting | Meaning |
+|---|---|
+| **LikedFolder** | Where liked photos are copied. By default the folder `Liked` inside the photo folder. Click the **...** button for a folder picker. A folder with any other name than `Liked` is kept as it is, wherever it is. |
+
 **3. Common Settings** (the whole program, photos and videos alike):
 
 | Setting | Meaning |
 |---|---|
 | **Language** | The language of the program, `English` or `Українська`. It changes at once and is kept for all folders. See [Language](#language). |
-| **LikedFolder** | Where liked photos are copied. By default the folder `Liked` inside the photo folder. Click the **...** button for a folder picker. A folder with any other name than `Liked` is kept as it is, wherever it is. |
 | **CacheSize** | How many photos on each side of the current one are kept decoded in memory. |
 | **ThumbnailSize** | Size of the thumbnails in pixels. <kbd>Ctrl</kbd>+mouse wheel over the strip changes it. |
 
@@ -527,7 +532,7 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 
 The group **6. Slideshow** has its own eleven rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **UseVideo**, **MuteVideo**, **VideoPart** and **LowerOtherAudio**; see [Slideshow](#slideshow).
 
-The rows of **Current File** and **TotalFiles** are read-only, and so are **PhotoCount** and **VideoCount**, which say how many of the files in the list now are photos and how many are
+The rows of **Current File** (except **LikedFolder**) and **TotalFiles** are read-only, and so are **PhotoCount** and **VideoCount**, which say how many of the files in the list now are photos and how many are
 videos (together they are **TotalFiles**; there are no videos unless **SupportVideo** is on). **CurrentIndex** is the number of the shown photo, counted
 from 0: type another number into it to jump to that photo (a number outside the list goes to the nearest end).
 

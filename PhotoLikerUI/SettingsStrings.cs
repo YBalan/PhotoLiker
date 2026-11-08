@@ -18,10 +18,10 @@ namespace PhotoLikerUI
         public static string CurrentFileName => T();
         public static string LikedFile => T();
         public static string SavedInFolders => T();
+        public static string LikedFolder => T();
 
         // 3. Common Settings
         public static string LanguageDescription => T();
-        public static string LikedFolder => T();
         public static string CacheSize => T();
         public static string ThumbnailSize => T();
 
