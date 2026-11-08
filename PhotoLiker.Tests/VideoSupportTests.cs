@@ -233,6 +233,30 @@ public class VideoSupportTests : IDisposable
     }
 
     [Fact]
+    public void TheCounts_AreMadeAnew_WhenTheListIsReplaced_EvenByOneOfTheSameLength()
+    {
+        var settings = new Settings { Files = [new PhotoFile(@"C:\a\1.jpg", string.Empty), new PhotoFile(@"C:\a\clip.mp4", string.Empty)] };
+        Assert.Equal((1, 1), (settings.PhotoCount, settings.VideoCount)); // read once, so that the count is remembered
+
+        settings.Files = [new PhotoFile(@"C:\b\1.jpg", string.Empty), new PhotoFile(@"C:\b\2.jpg", string.Empty)];
+
+        Assert.Equal((2, 0), (settings.PhotoCount, settings.VideoCount));
+    }
+
+    [Fact]
+    public void TheCounts_AreMadeAnew_WhenAFileIsTakenOutOfTheListItself()
+    {
+        var video = new PhotoFile(@"C:\a\clip.mp4", string.Empty);
+        var settings = new Settings { Files = [new PhotoFile(@"C:\a\1.jpg", string.Empty), video, new PhotoFile(@"C:\a\2.jpg", string.Empty)] };
+        Assert.Equal((2, 1), (settings.PhotoCount, settings.VideoCount));
+
+        settings.Files.Remove(video); // as deleting the current file does
+
+        Assert.Equal((2, 0), (settings.PhotoCount, settings.VideoCount));
+        Assert.Equal(settings.TotalFiles, settings.PhotoCount + settings.VideoCount);
+    }
+
+    [Fact]
     public void TheCounts_AreNotWrittenToTheSettingsFile()
     {
         var json = System.Text.Json.JsonSerializer.Serialize(new Settings { Files = [new PhotoFile(@"C:\a\1.jpg", string.Empty)] });
