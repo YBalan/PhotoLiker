@@ -8,6 +8,36 @@ namespace PhotoLiker.Video
     /// <summary>What was done for a video's speech with one model: the version of the way it is done, the language that was heard, how many segments, and why not if none.</summary>
     public sealed record TranscriptState(int Version, string Language, int Segments, string? Failure);
 
+    /// <summary>Where a video stands as far as its speech goes.</summary>
+    public enum SpeechStatus
+    {
+        /// <summary>Not listened to yet (or listened to with a way that has been replaced since).</summary>
+        NotRead,
+        /// <summary>The video has no sound track: nothing to listen to.</summary>
+        NoSound,
+        /// <summary>The file cannot be read at all (it is damaged, or not a video).</summary>
+        Unreadable,
+        /// <summary>The sound could not be taken out, or the model failed on it.</summary>
+        Failed,
+        /// <summary>Listened to, and there is nothing said that the model could hear (silence, music, noise).</summary>
+        NothingHeard,
+        /// <summary>Listened to, and there is speech.</summary>
+        Heard,
+    }
+
+    /// <summary>
+    /// A video of the catalog as the table of the speech window and the export show it: what is said in it, in which language it was heard, and where its moments are.
+    /// </summary>
+    /// <param name="Language">The language the transcript was made for (what was asked, or what the model heard when it was left to hear it); empty if none.</param>
+    /// <param name="Failure">Why the sound could not be heard, or the video read; null if nothing went wrong.</param>
+    /// <param name="MomentTimesMs">The places (milliseconds) the pictures of the video were taken at: where its picture changes. Empty if it was not analyzed.</param>
+    public sealed record VideoSpeechRow(
+        VideoRecord Video, string FullPath, SpeechStatus Status, string Language, string? Failure, IReadOnlyList<SpeechSegment> Segments, IReadOnlyList<long> MomentTimesMs)
+    {
+        /// <summary>What is said, as one line.</summary>
+        public string Text => string.Join(' ', Segments.Select(s => s.Text.Trim()));
+    }
+
     public sealed partial class VideoCatalog
     {
         /// <summary>Raised when the way speech is read changes so that old transcripts are useless: each video is listened to again when it is next indexed.</summary>
@@ -155,6 +185,80 @@ namespace PhotoLiker.Video
                     segments.Add(new SpeechSegment(reader.GetInt64(0), reader.GetInt64(1), reader.GetString(2)));
                 return segments;
             }
+        }
+
+        /// <summary>
+        /// Every video the catalog knows (by path) with what is said in it for this model, and where its moments are (those of the model that took most). Not kept in memory:
+        /// it is for a window or an export that asks now and then, and it reads the catalog as it is.
+        /// </summary>
+        public IReadOnlyList<VideoSpeechRow> SpeechTable(string modelId)
+        {
+            lock (_gate)
+            {
+                var records = Records();
+                var states = TranscriptStates(modelId);
+                var segments = new Dictionary<long, List<SpeechSegment>>();
+                var moments = new Dictionary<long, List<long>>();
+
+                using (var command = _db.CreateCommand())
+                {
+                    command.CommandText = "SELECT video_id, start_ms, end_ms, text FROM speech WHERE model = $m ORDER BY video_id, start_ms";
+                    command.Parameters.AddWithValue("$m", modelId);
+                    using var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        var id = reader.GetInt64(0);
+                        if (!segments.TryGetValue(id, out var list))
+                            segments[id] = list = [];
+                        list.Add(new SpeechSegment(reader.GetInt64(1), reader.GetInt64(2), reader.GetString(3)));
+                    }
+                }
+
+                // The moments of the model that found most in the video: a video may have been through more than one
+                using (var command = _db.CreateCommand())
+                {
+                    command.CommandText = """
+                        SELECT m.video_id, m.t_ms FROM moments m
+                        WHERE m.model = (SELECT a.model FROM analyses a WHERE a.video_id = m.video_id AND a.failure IS NULL ORDER BY a.moments DESC, a.model LIMIT 1)
+                        ORDER BY m.video_id, m.t_ms
+                        """;
+                    using var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        var id = reader.GetInt64(0);
+                        if (!moments.TryGetValue(id, out var list))
+                            moments[id] = list = [];
+                        list.Add(reader.GetInt64(1));
+                    }
+                }
+
+                var rows = new List<VideoSpeechRow>(records.Count);
+                foreach (var record in records)
+                {
+                    states.TryGetValue(record.Id, out var state);
+                    var status = StatusOf(record, state);
+                    var language = status is SpeechStatus.Heard or SpeechStatus.NothingHeard ? state!.Language : string.Empty;
+                    var failure = record.Failure ?? (status == SpeechStatus.Failed ? state!.Failure : null);
+                    rows.Add(new VideoSpeechRow(
+                        record, FullPathOf(record), status, language, failure,
+                        status == SpeechStatus.Heard && segments.TryGetValue(record.Id, out var said) ? said : [],
+                        moments.TryGetValue(record.Id, out var times) ? times : []));
+                }
+                return rows;
+            }
+        }
+
+        private static SpeechStatus StatusOf(VideoRecord record, TranscriptState? state)
+        {
+            if (record.Failure is not null || record.Info is null)
+                return SpeechStatus.Unreadable;
+            if (record.Info.Audio is null)
+                return SpeechStatus.NoSound;
+            if (state is null || state.Version < TranscriptVersion)
+                return SpeechStatus.NotRead;
+            if (state.Failure is not null)
+                return SpeechStatus.Failed;
+            return state.Segments > 0 ? SpeechStatus.Heard : SpeechStatus.NothingHeard;
         }
 
         private long SpeechVersion()

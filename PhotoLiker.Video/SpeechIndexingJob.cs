@@ -68,14 +68,33 @@ namespace PhotoLiker.Video
         public static Task<SpeechIndexSummary> RunAsync(
             VideoCatalog catalog, string modelsFolder, SpeechModelInfo model, string language, string root, string? excludedFolder, IReadOnlyCollection<string> extensions,
             IProgress<IndexProgress>? progress, CancellationToken cancellationToken, Func<SpeechDownload, bool>? confirmDownload = null,
-            Func<string, ISpeechRecognizer>? recognizerFactory = null, Func<int>? cores = null, Func<SpeechReread, bool>? confirmReread = null)
+            Func<string, ISpeechRecognizer>? recognizerFactory = null, Func<int>? cores = null, Func<SpeechReread, bool>? confirmReread = null) =>
+            Launch(cancellationToken, () => Run(
+                catalog, modelsFolder, model, language, root, excludedFolder, extensions, redo: null,
+                progress, cancellationToken, confirmDownload, recognizerFactory, cores ?? (() => Environment.ProcessorCount), confirmReread));
+
+        /// <summary>
+        /// Hears the given videos of the catalog (full paths) again, in this language, whatever was heard in them before and whatever language it was: the person asked for exactly
+        /// these, so nothing is asked and the text of the others is not touched. Videos without sound, and ones the catalog does not know, are left out. The text of a video is replaced when
+        /// its new text is ready, so a run that is stopped leaves the rest as they were. <see cref="SpeechIndexSummary.Reread"/> counts the videos that had been heard before.
+        /// </summary>
+        /// <param name="language">"auto", or the code of the language that is spoken.</param>
+        public static Task<SpeechIndexSummary> RedoAsync(
+            VideoCatalog catalog, string modelsFolder, SpeechModelInfo model, string language, IReadOnlyCollection<string> videos,
+            IProgress<IndexProgress>? progress, CancellationToken cancellationToken, Func<SpeechDownload, bool>? confirmDownload = null,
+            Func<string, ISpeechRecognizer>? recognizerFactory = null, Func<int>? cores = null) =>
+            Launch(cancellationToken, () => Run(
+                catalog, modelsFolder, model, language, root: string.Empty, excludedFolder: null, extensions: [], redo: videos,
+                progress, cancellationToken, confirmDownload, recognizerFactory, cores ?? (() => Environment.ProcessorCount), confirmReread: null));
+
+        private static Task<SpeechIndexSummary> Launch(CancellationToken cancellationToken, Func<SpeechIndexSummary> run)
         {
             var done = new TaskCompletionSource<SpeechIndexSummary>(TaskCreationOptions.RunContinuationsAsynchronously);
             var thread = new Thread(() =>
             {
                 try
                 {
-                    done.SetResult(Run(catalog, modelsFolder, model, language, root, excludedFolder, extensions, progress, cancellationToken, confirmDownload, recognizerFactory, cores ?? (() => Environment.ProcessorCount), confirmReread));
+                    done.SetResult(run());
                 }
                 catch (OperationCanceledException)
                 {
@@ -93,36 +112,58 @@ namespace PhotoLiker.Video
 
         private static SpeechIndexSummary Run(
             VideoCatalog catalog, string modelsFolder, SpeechModelInfo model, string language, string root, string? excludedFolder, IReadOnlyCollection<string> extensions,
+            IReadOnlyCollection<string>? redo,
             IProgress<IndexProgress>? progress, CancellationToken token, Func<SpeechDownload, bool>? confirmDownload, Func<string, ISpeechRecognizer>? recognizerFactory, Func<int> cores,
             Func<SpeechReread, bool>? confirmReread)
         {
             var clock = Stopwatch.StartNew();
 
-            progress?.Report(new IndexProgress(IndexPhase.Scanning, string.Empty, 0, 0, 0, 0, 0, null));
-            var onDisk = PhotoScanner.Scan(root, recursive: true, extensions, excludedFolder).Select(f => f.OriginalFilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            // The videos are known to the catalog already (the picture analysis reads them first); the ones it has not seen yet are read here
-            foreach (var path in onDisk)
+            List<VideoRecord> withSound;
+            if (redo is null)
             {
-                token.ThrowIfCancellationRequested();
-                try { catalog.GetAsync(path, token).GetAwaiter().GetResult(); }
-                catch (Exception ex) when (ex is IOException or TimeoutException) { /* tried again next time */ }
+                progress?.Report(new IndexProgress(IndexPhase.Scanning, string.Empty, 0, 0, 0, 0, 0, null));
+                var onDisk = PhotoScanner.Scan(root, recursive: true, extensions, excludedFolder).Select(f => f.OriginalFilePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                // The videos are known to the catalog already (the picture analysis reads them first); the ones it has not seen yet are read here
+                foreach (var path in onDisk)
+                {
+                    token.ThrowIfCancellationRequested();
+                    try { catalog.GetAsync(path, token).GetAwaiter().GetResult(); }
+                    catch (Exception ex) when (ex is IOException or TimeoutException) { /* tried again next time */ }
+                }
+
+                withSound = catalog.Records().Where(r => onDisk.Contains(catalog.FullPathOf(r)) && r.Info is { Audio: not null }).ToList();
+            }
+            else
+            {
+                var asked = redo.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                withSound = catalog.Records().Where(r => asked.Contains(catalog.FullPathOf(r)) && r.Info is { Audio: not null }).ToList();
             }
 
-            var withSound = catalog.Records().Where(r => onDisk.Contains(catalog.FullPathOf(r)) && r.Info is { Audio: not null }).ToList();
             var states = catalog.TranscriptStates(model.Id);
             bool Heard(VideoRecord r) => states.TryGetValue(r.Id, out var state) && state.Version >= VideoCatalog.TranscriptVersion;
 
-            // The videos heard as another language than the one that is set are heard again, but only after asking: that replaces their text, and takes a while
-            var again = withSound.Where(r => Heard(r) && HeardInAnotherLanguage(states[r.Id], language)).ToList();
-            if (again.Count > 0 && confirmReread is not null && !confirmReread(new SpeechReread(again.Count, TimeSpan.FromSeconds(again.Sum(r => r.Info!.DurationSeconds)), language.Trim())))
-                again = [];
-            var rereadIds = again.Select(r => r.Id).ToHashSet();
+            HashSet<long> rereadIds;
+            List<VideoRecord> work;
+            if (redo is null)
+            {
+                // The videos heard as another language than the one that is set are heard again, but only after asking: that replaces their text, and takes a while
+                var again = withSound.Where(r => Heard(r) && HeardInAnotherLanguage(states[r.Id], language)).ToList();
+                if (again.Count > 0 && confirmReread is not null && !confirmReread(new SpeechReread(again.Count, TimeSpan.FromSeconds(again.Sum(r => r.Info!.DurationSeconds)), language.Trim())))
+                    again = [];
+                rereadIds = again.Select(r => r.Id).ToHashSet();
 
-            var work = withSound
-                .Where(r => !Heard(r) || rereadIds.Contains(r.Id))
-                .OrderBy(r => r.RelativePath, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+                work = withSound
+                    .Where(r => !Heard(r) || rereadIds.Contains(r.Id))
+                    .OrderBy(r => r.RelativePath, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+            }
+            else
+            {
+                // Exactly the videos that were asked for, heard or not
+                rereadIds = withSound.Where(Heard).Select(r => r.Id).ToHashSet();
+                work = [.. withSound.OrderBy(r => r.RelativePath, StringComparer.OrdinalIgnoreCase)];
+            }
             if (work.Count == 0)
                 return new SpeechIndexSummary(0, 0, 0, 0, clock.Elapsed, Cancelled: false, Known: withSound.Count);
 

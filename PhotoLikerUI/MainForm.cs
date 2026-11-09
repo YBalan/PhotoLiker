@@ -35,6 +35,7 @@
             InitializeDateAlignment();
             InitializeEmptyFolders();
             InitializeDuplicates();
+            InitializeVideoSpeech();
             InitializeRotate();
             InitializeTaskbarProgress();
             InitializeLanguage();
@@ -1141,6 +1142,7 @@
             var folder = _currentConfig.CurrentFolder;
             var files = _currentConfig.Files;
             var searchIndex = _folderSearch?.Index;
+            var videoCatalog = MediaKinds.IsVideo(file) ? VideoLibrary.Current : null;
 
             try
             {
@@ -1153,6 +1155,10 @@
                     DeletedPhotos.Move(folder, file);
                     try { searchIndex?.RemoveFile(file); }
                     catch { /* the next "Update index" forgets it anyway */ }
+
+                    // A video is known to the catalog of the videos (its moments, faces and speech), not to the index of the photos
+                    try { videoCatalog?.Forget(file); }
+                    catch { /* the catalog was closed (another folder): the next "Update index" forgets it anyway */ }
                 });
             }
             catch (Exception ex)
@@ -1187,7 +1193,7 @@
                 LoadImage(next);
             }
 
-            UpdateSearchControls(); // the index has one photo less
+            UpdateSearchControls(); // the index has one photo (or video) less
             SetStatus(string.Format(MainFormStrings.StatusPhotoDeleted, Path.GetFileName(file), files.Count));
         }
 

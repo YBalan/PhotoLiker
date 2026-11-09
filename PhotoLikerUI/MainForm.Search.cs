@@ -337,6 +337,7 @@ namespace PhotoLikerUI
             _facesButton.Enabled = searchable;
             _peopleButton.Enabled = _folderSearch is not null; // the people and their groups are there as soon as the folder has an index
             ShowSearchKinds(searchable);
+            UpdateVideoSpeechButton();
             _precisionBar.Enabled = searchable;
             ShowSearchPrecision();
             ShowSearchModel();

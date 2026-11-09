@@ -500,7 +500,7 @@ namespace PhotoLikerUI
         }
 
         // The thumbnails of the model that is chosen; a video that was analyzed with another model only still shows its moments
-        private static List<(long TimeMs, Bitmap Picture)> ReadMomentPictures(PhotoLiker.Video.VideoCatalog catalog, string file, string preferredModelId)
+        internal static List<(long TimeMs, Bitmap Picture)> ReadMomentPictures(PhotoLiker.Video.VideoCatalog catalog, string file, string preferredModelId)
         {
             var thumbnails = catalog.Thumbnails(file, preferredModelId);
             for (var i = 0; thumbnails.Count == 0 && i < PhotoLiker.Search.ClipModels.All.Count; i++)
