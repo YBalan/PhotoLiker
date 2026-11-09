@@ -576,7 +576,8 @@ namespace PhotoLikerUI
                 var settings = _currentConfig;
                 return await SpeechIndexingJob.RunAsync(
                     catalog, _models.ModelsFolder, SpeechModel, string.IsNullOrWhiteSpace(settings.SpeechLanguage) ? "auto" : settings.SpeechLanguage.Trim(),
-                    folder, settings.LikedFolder, settings.VideoExtensions, new Progress<IndexProgress>(OnIndexProgress), token, ConfirmSpeechDownload, cores: () => settings.CpuCores);
+                    folder, settings.LikedFolder, settings.VideoExtensions, new Progress<IndexProgress>(OnIndexProgress), token, ConfirmSpeechDownload, cores: () => settings.CpuCores,
+                    confirmReread: ConfirmSpeechReread);
             }
             catch (OperationCanceledException)
             {
@@ -593,6 +594,19 @@ namespace PhotoLikerUI
                 VideoSearchStrings.SpeechDownloadTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK;
         }
 
+        /// <summary>
+        /// Videos whose text was written for another language than the one set in SpeechLanguage: asked before they are heard again, because that replaces their text (a language
+        /// changed for a try would otherwise replace the good text of a whole library). No leaves them as they are; the videos not read yet are read either way.
+        /// </summary>
+        private bool ConfirmSpeechReread(SpeechReread again)
+        {
+            if (InvokeRequired)
+                return Invoke(() => ConfirmSpeechReread(again));
+
+            return MessageBox.Show(this, string.Format(VideoSearchStrings.SpeechRereadQuestionFormat, again.Videos, FormatDuration(again.Length), again.Language),
+                VideoSearchStrings.SpeechRereadTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+        }
+
         private static string DescribeSpeechSummary(SpeechIndexSummary? summary)
         {
             if (summary is null)
@@ -605,7 +619,8 @@ namespace PhotoLikerUI
             if (summary.Transcribed + summary.Silent + summary.Failed == 0)
                 return summary.Known > 0 ? string.Format(VideoSearchStrings.StatusSpeechUpToDateFormat, summary.Known) : string.Empty;
 
-            var rest = (summary.Silent > 0 ? string.Format(VideoSearchStrings.StatusSpeechSilentPartFormat, summary.Silent) : string.Empty)
+            var rest = (summary.Reread > 0 ? string.Format(VideoSearchStrings.StatusSpeechRereadPartFormat, summary.Reread) : string.Empty)
+                + (summary.Silent > 0 ? string.Format(VideoSearchStrings.StatusSpeechSilentPartFormat, summary.Silent) : string.Empty)
                 + (summary.Failed > 0 ? string.Format(VideoSearchStrings.StatusVideosFailedPartFormat, summary.Failed) : string.Empty);
             return string.Format(VideoSearchStrings.StatusSpeechDoneFormat, summary.Transcribed, summary.Segments, FormatDuration(summary.Elapsed), rest);
         }

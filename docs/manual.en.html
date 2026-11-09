@@ -736,7 +736,9 @@ search that is shown is run again when it changes. The precision slider works on
 (465 MB, downloaded once, after asking). It takes about a third of the length of the speech (3 hours of video in about an hour) and continues where it stopped. A word that you type is then looked for in
 what is said, in whatever form it was said (<q>лошадка</q> finds <q>лошадку</q>), and a video where it is said comes before the ones that only look right. The words are shown in a line under the player
 while the video plays. The text is the model's guess: good with adult speech, poor with children and noise; set <strong>SpeechLanguage</strong> (<code>ru</code>, <code>uk</code>, <code>en</code>) when the family
-speaks one language. Nothing leaves the computer.</p>
+speaks one language: left to find the language itself (<code>auto</code>) the model sometimes takes a short or noisy video for Norwegian, Japanese or another language and writes nonsense. With a language set,
+<strong>Update index</strong> also hears again the videos that were heard as another language. It asks first, with how many videos that is and how long they are, because it replaces their text: <strong>No</strong>
+reads only the videos not read yet, and a run that is stopped continues where it stopped. Nothing leaves the computer.</p>
 <p><strong>Which videos were found by what is said.</strong> A video that was found in its speech carries a teal <strong>speech bubble</strong> on its thumbnail in the list at the side (hold the pointer
 over it to read the words), and the status line says how many of the videos were found that way. In the viewer the places that were found in the speech have a speech bubble on the strip and a teal tick on the
 slider, while what the pictures found stays orange; hold the pointer over a moment of the strip, or a place on the slider, to read what is said there. The line under the player shows only while somebody is

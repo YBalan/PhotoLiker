@@ -336,8 +336,159 @@ public sealed class SpeechJobTests : IDisposable
     private static SpeechTranscript Says(params string[] lines) =>
         new("ru", [.. lines.Select((text, i) => new SpeechSegment(i * 4000L, i * 4000L + 3000, text))]);
 
-    private Task<SpeechIndexSummary> Run(VideoCatalog catalog, FakeRecognizer recognizer, string language = "auto", Func<SpeechDownload, bool>? confirm = null, Func<int>? cores = null) =>
-        SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, language, _root, null, [".mp4"], null, CancellationToken.None, confirm, _ => recognizer, cores);
+    private Task<SpeechIndexSummary> Run(VideoCatalog catalog, ISpeechRecognizer recognizer, string language = "auto", Func<SpeechDownload, bool>? confirm = null, Func<int>? cores = null,
+        Func<SpeechReread, bool>? confirmReread = null) =>
+        SpeechIndexingJob.RunAsync(catalog, Path.Combine(_root, "models"), SpeechModels.Small, language, _root, null, [".mp4"], null, CancellationToken.None, confirm, _ => recognizer, cores, confirmReread);
+
+    /// <summary>A recognizer that, left to find the language itself, takes every video for Norwegian and writes nonsense (what Whisper small did to a fifth of a real library), and writes good text in the language it is told.</summary>
+    private sealed class LanguageRecognizer(string? tellsBack = null) : ISpeechRecognizer
+    {
+        public List<string> Asked { get; } = [];
+
+        public Task<SpeechTranscript> TranscribeAsync(string wavPath, string language, int threads, CancellationToken cancellationToken)
+        {
+            lock (Asked)
+                Asked.Add(language);
+
+            if (tellsBack is not null)
+                return Task.FromResult(new SpeechTranscript(tellsBack, []));
+
+            return Task.FromResult(language == "auto"
+                ? new SpeechTranscript("nn", [new SpeechSegment(0, 2000, "ḥḥḥ ḤḤḤ")])
+                : new SpeechTranscript(language, [new SpeechSegment(0, 2000, "Вот лошадка")]));
+        }
+
+        public void Dispose() { }
+    }
+
+    [Theory]
+    [InlineData("nn", "ru", true)]
+    [InlineData("ru", "ru", false)]
+    [InlineData("ru", " RU ", false)]
+    [InlineData("en", "uk", true)]
+    [InlineData("", "ru", false)]       // never given to the model (silent): nothing to hear again
+    [InlineData("nn", "auto", false)]   // left to the model: nothing is heard again
+    [InlineData("nn", "", false)]
+    [InlineData("nn", null, false)]
+    public void AVideoIsHeardAgain_OnlyWhenALanguageIsSet_AndItWasHeardAsAnotherOne(string heardAs, string? set, bool again)
+    {
+        Assert.Equal(again, SpeechIndexingJob.HeardInAnotherLanguage(new TranscriptState(VideoCatalog.TranscriptVersion, heardAs, 3, null), set));
+    }
+
+    [Fact]
+    public void AVideoThatFailed_IsNotHeardAgainForItsLanguage()
+    {
+        Assert.False(SpeechIndexingJob.HeardInAnotherLanguage(new TranscriptState(VideoCatalog.TranscriptVersion, "nn", 0, "no sound could be taken from this video"), "ru"));
+    }
+
+    [Fact]
+    public async Task VideosHeardAsAnotherLanguage_AreHeardAgainInTheOneThatIsSet_AfterAsking_AndNotAgainAfterThat()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        RealFfmpeg.MakeVideo(_root, "a.mp4", seconds: 3);
+        RealFfmpeg.MakeVideo(_root, "b.mp4", seconds: 3);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var recognizer = new LanguageRecognizer();
+        var asked = new List<SpeechReread>();
+
+        var first = await Run(catalog, recognizer, "auto", confirmReread: again => { asked.Add(again); return true; });
+        Assert.Equal(["nn", "nn"], catalog.TranscriptStates(Model).Values.Select(s => s.Language));
+        Assert.Equal("ḥḥḥ ḤḤḤ", catalog.SpeechSets(Model)[0].Segments[0].Text);
+        Assert.Empty(asked);                                  // auto: nothing to ask about
+
+        var second = await Run(catalog, recognizer, "ru", confirmReread: again => { asked.Add(again); return true; });
+        var third = await Run(catalog, recognizer, "ru", confirmReread: again => { asked.Add(again); return true; });
+
+        Assert.Equal(2, first.Transcribed);
+        Assert.Equal(0, first.Reread);
+        var question = Assert.Single(asked);                  // asked once, with what is about to be done
+        Assert.Equal(2, question.Videos);
+        Assert.Equal("ru", question.Language);
+        Assert.InRange(question.Length.TotalSeconds, 4, 8);   // two videos of 3 seconds
+        Assert.Equal(2, second.Transcribed);
+        Assert.Equal(2, second.Reread);
+        Assert.Equal(["ru", "ru"], catalog.TranscriptStates(Model).Values.Select(s => s.Language));
+        Assert.All(catalog.SpeechSets(Model), set => Assert.Equal("Вот лошадка", set.Segments.Single().Text)); // the nonsense is replaced
+        Assert.Equal(0, third.Transcribed);                   // now they are in the language that is set: not heard again, not asked
+        Assert.Equal(["auto", "auto", "ru", "ru"], recognizer.Asked);
+    }
+
+    [Fact]
+    public async Task WhenHearingAgainIsDeclined_TheOldTextStays_ButTheVideosNotReadYetAreRead()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        RealFfmpeg.MakeVideo(_root, "a.mp4", seconds: 3);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var recognizer = new LanguageRecognizer();
+        await Run(catalog, recognizer, "auto");
+        RealFfmpeg.MakeVideo(_root, "b.mp4", seconds: 3);
+
+        var summary = await Run(catalog, recognizer, "ru", confirmReread: _ => false);
+
+        Assert.Equal(1, summary.Transcribed);                 // b.mp4, which was not read yet
+        Assert.Equal(0, summary.Reread);
+        Assert.Equal(["auto", "ru"], recognizer.Asked);
+        var states = catalog.TranscriptStates(Model);
+        Assert.Equal(["nn", "ru"], states.Values.Select(s => s.Language).Order());
+        Assert.Equal("ḥḥḥ ḤḤḤ", catalog.SpeechSets(Model).Single(s => s.FullPath.EndsWith("a.mp4")).Segments[0].Text);
+    }
+
+    [Fact]
+    public async Task AVideoThatWasNeverGivenToTheModel_IsNotAskedAbout_WhateverTheLanguage()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        RealFfmpeg.MakeVideo(_root, "loud.mp4", seconds: 3, sound: "loud");
+        RealFfmpeg.MakeVideo(_root, "silent.mp4", seconds: 3, sound: "silent");
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var recognizer = new LanguageRecognizer();
+        await Run(catalog, recognizer, "auto");
+        SpeechReread? asked = null;
+
+        var summary = await Run(catalog, recognizer, "ru", confirmReread: again => { asked = again; return true; });
+
+        Assert.Equal(1, asked!.Videos);                       // the silent one has no language: it was never heard
+        Assert.Equal(1, summary.Reread);
+        Assert.Equal(0, summary.Silent);
+    }
+
+    [Fact]
+    public async Task ALanguageThatIsSet_IsKeptEvenWhenTheModelWritesNothing_SoItIsNotHeardAgainAndAgain()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        RealFfmpeg.MakeVideo(_root, "a.mp4", seconds: 3);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var recognizer = new LanguageRecognizer(tellsBack: string.Empty); // no segments and no language, as Whisper does for a video with nothing in it
+        var asked = 0;
+
+        await Run(catalog, recognizer, "ru");
+        var again = await Run(catalog, recognizer, "ru", confirmReread: _ => { asked++; return true; });
+
+        Assert.Equal("ru", catalog.TranscriptStates(Model).Values.Single().Language);
+        Assert.Equal(0, again.Transcribed);
+        Assert.Equal(0, asked);
+        Assert.Single(recognizer.Asked);
+    }
+
+    [Fact]
+    public async Task ChangingTheLanguageToAnotherOne_AsksBeforeReplacingWhatWasRead()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        RealFfmpeg.MakeVideo(_root, "a.mp4", seconds: 3);
+        RealFfmpeg.MakeVideo(_root, "b.mp4", seconds: 3);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var recognizer = new LanguageRecognizer();
+        await Run(catalog, recognizer, "ru");
+
+        var summary = await Run(catalog, recognizer, "uk", confirmReread: again => again.Videos == 2 && again.Language == "uk" ? false : throw new InvalidOperationException("unexpected question"));
+
+        Assert.Equal(0, summary.Transcribed);                 // no: what was read in Russian stays
+        Assert.Equal(["ru", "ru"], catalog.TranscriptStates(Model).Values.Select(s => s.Language));
+    }
 
     [Fact]
     public async Task TheSpeechOfEveryVideoWithSound_IsKept_AndNotReadAgain()
