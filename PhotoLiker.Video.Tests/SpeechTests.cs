@@ -692,8 +692,31 @@ public sealed class SpeechInTheSearchTests : IDisposable
         var said = result.Hits.Single(h => h.FullPath.EndsWith("speech.mp4"));
         Assert.Equal(1_500, said.TimeMs);
         Assert.Equal([1_500L, 30_000L], said.Moments);
+        Assert.Equal([1_500L, 30_000L], said.Spoken); // both places were found in what is said
+        Assert.Equal("Какая красивая лошадка", said.Said);
         Assert.Equal(SpeechSearch.ScoreBase + SpeechSearch.ScoreSpan, said.Score, 0.001f);
         Assert.Equal(3, result.SearchedVideos);
+    }
+
+    [Fact]
+    public async Task AHitThatOnlyThePicturesFound_IsNotMarkedAsSpoken_AndAHitThatWasSaid_Is()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        var (catalog, _, _, _) = await Catalog();
+        using var __ = catalog;
+
+        var result = VideoSearch.Search(catalog, Clip, Plan("лошадка"), _ => Words, SearchTuning.Default, speechModelId: "small");
+
+        var pictures = result.Hits.Single(h => h.FullPath.EndsWith("pictures.mp4"));
+        Assert.Null(pictures.Spoken);
+        Assert.Null(pictures.Said);
+        Assert.NotNull(pictures.Moments); // it is a video hit, found by what it shows
+        Assert.All(result.Hits.Where(h => !h.FullPath.EndsWith("pictures.mp4")), h => Assert.NotEmpty(h.Spoken!));
+
+        // without a speech model nothing is marked
+        var seen = VideoSearch.Search(catalog, Clip, Plan("лошадка"), _ => Words, SearchTuning.Default);
+        Assert.All(seen.Hits, h => Assert.Null(h.Spoken));
     }
 
     [Fact]
@@ -711,6 +734,8 @@ public sealed class SpeechInTheSearchTests : IDisposable
         var both = result.Hits.Single(h => h.FullPath.EndsWith("both.mp4"));
         Assert.Equal(8_000, both.TimeMs);
         Assert.Equal([0L, 8_000L], both.Moments); // the picture at 0 s and the speech at 8 s
+        Assert.Equal([8_000L], both.Spoken); // only the second of them was found in what is said: the first one is the picture's
+        Assert.Equal("Вот лошадка, смотри", both.Said);
         Assert.Equal(SpeechSearch.ScoreBase + SpeechSearch.ScoreSpan, both.Score, 0.001f);
         Assert.Equal("pictures.mp4", Path.GetFileName(result.Hits[^1].FullPath)); // what is only a picture that fits comes after what is said
     }

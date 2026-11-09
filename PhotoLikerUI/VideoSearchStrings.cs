@@ -42,5 +42,8 @@ namespace PhotoLikerUI
         public static string ImportVideosNoteFormat => T();
         public static string StatusImportedVideosFormat => T();
         public static string StatusImportedVideosOffNote => T();
+        public static string StatusResultsHeardNoteFormat => T();
+        public static string StatusVideoHeardFormat => T();
+        public static string ThumbHeardTooltipFormat => T();
     }
 }

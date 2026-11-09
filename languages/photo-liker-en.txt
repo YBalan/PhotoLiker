@@ -1069,6 +1069,9 @@ VideoSearchStrings.StatusExportedVideosFormat = \sThe videos are in it too: {0:N
 VideoSearchStrings.ImportVideosNoteFormat = \nIt holds the videos too: {0:N0} analyzed, {1:N0} moments, {2:N0} with speech. The videos of this folder that are analyzed now are replaced by them.
 VideoSearchStrings.StatusImportedVideosFormat = \sVideos: {0:N0} analyzed, {1:N0} moments, {2:N0} with speech.
 VideoSearchStrings.StatusImportedVideosOffNote = \sSupportVideo is off in this folder: turn it on to see them.
+VideoSearchStrings.StatusResultsHeardNoteFormat = \s{0:N0} of them found in what is said (marked with a speech bubble).
+VideoSearchStrings.StatusVideoHeardFormat = Found in what is said: "{0}".\s
+VideoSearchStrings.ThumbHeardTooltipFormat = Found in what is said: "{0}"
 
 # ──────────── DialogStrings ────────────
 DialogStrings.ContextMenuEntry = Open in Photo Liker

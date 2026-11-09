@@ -5,7 +5,7 @@ namespace PhotoLikerUI
 {
     /// <summary>
     /// The moments of a video as a row of small pictures with their times, under the viewer: where the picture changes, the places a search found
-    /// marked in orange, the moment that is being played marked in blue. A click goes to that place. It scrolls with the mouse wheel and its scroll bar, and never
+    /// marked in orange (with a teal speech bubble when it was found in what is said, and the words over it), the moment that is being played marked in blue. A click goes to that place. It scrolls with the mouse wheel and its scroll bar, and never
     /// takes the keyboard focus. It owns the pictures it is given.
     /// </summary>
     internal sealed class MomentStrip : Control
@@ -20,7 +20,10 @@ namespace PhotoLikerUI
         private readonly HScrollBar _scroll = new() { Dock = DockStyle.Bottom, TabStop = false };
         private List<(long TimeMs, Bitmap Picture)> _moments = [];
         private HashSet<int> _hits = []; // the moments that stand for a place a search found: the last moment at or before it
+        private HashSet<int> _spoken = []; // the ones among them that were found in what is said
+        private readonly ToolTip _tip = new() { InitialDelay = 300, ReshowDelay = 100, ShowAlways = true };
         private int _current = -1;
+        private int _tipIndex = -1;
 
         public MomentStrip()
         {
@@ -48,12 +51,23 @@ namespace PhotoLikerUI
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public IReadOnlyList<long> Times => [.. _moments.Select(m => m.TimeMs)];
 
-        /// <summary>Shows these moments (the strip takes the pictures over and disposes them); <paramref name="hits"/> are the times that are marked as found.</summary>
-        public void SetMoments(IEnumerable<(long TimeMs, Bitmap Picture)> moments, IEnumerable<long>? hits)
+        /// <summary>
+        /// The words that are said in a stretch of the video (from, to: milliseconds), for the text over a moment; none when nothing is said or known. Asked while the mouse
+        /// is over a moment, so it must be quick.
+        /// </summary>
+        [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public Func<long, long, string?>? SaidIn { get; set; }
+
+        /// <summary>
+        /// Shows these moments (the strip takes the pictures over and disposes them); <paramref name="hits"/> are the times that are marked as found, and <paramref name="spoken"/>
+        /// the ones among them that were found in what is said (they get a speech bubble).
+        /// </summary>
+        public void SetMoments(IEnumerable<(long TimeMs, Bitmap Picture)> moments, IEnumerable<long>? hits, IEnumerable<long>? spoken = null)
         {
             Clear();
             _moments = [.. moments];
             _hits = [.. (hits ?? []).Select(place => _moments.FindLastIndex(m => m.TimeMs <= place + 250)).Where(index => index >= 0)];
+            _spoken = [.. (spoken ?? []).Select(place => _moments.FindLastIndex(m => m.TimeMs <= place + 250)).Where(index => index >= 0)];
             _current = -1;
             UpdateScroll();
             Invalidate();
@@ -65,7 +79,9 @@ namespace PhotoLikerUI
                 picture.Dispose();
             _moments = [];
             _hits = [];
+            _spoken = [];
             _current = -1;
+            _tipIndex = -1;
             UpdateScroll();
             Invalidate();
         }
@@ -125,6 +141,14 @@ namespace PhotoLikerUI
             UpdateScroll();
         }
 
+        // The moment under a point of the strip, -1 between the pictures and outside them
+        private int MomentAt(Point point)
+        {
+            var index = (point.X + _scroll.Value - Gap) / (ThumbWidth + Gap);
+            var within = (point.X + _scroll.Value - Gap) % (ThumbWidth + Gap);
+            return point.X + _scroll.Value >= Gap && index >= 0 && index < _moments.Count && within <= ThumbWidth && point.Y >= Gap && point.Y <= Gap + ThumbHeight + LabelHeight ? index : -1;
+        }
+
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
@@ -132,10 +156,29 @@ namespace PhotoLikerUI
             if (e.Button != MouseButtons.Left)
                 return;
 
-            var index = (e.X + _scroll.Value - Gap) / (ThumbWidth + Gap);
-            var within = (e.X + _scroll.Value - Gap) % (ThumbWidth + Gap);
-            if (index >= 0 && index < _moments.Count && within <= ThumbWidth && e.Y >= Gap && e.Y <= Gap + ThumbHeight + LabelHeight)
+            if (MomentAt(e.Location) is var index and >= 0)
                 MomentClicked?.Invoke(_moments[index].TimeMs);
+        }
+
+        // What is said at the moment under the mouse, as the text over it
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            var index = MomentAt(e.Location);
+            if (index == _tipIndex)
+                return;
+
+            _tipIndex = index;
+            string? said = null;
+            if (index >= 0 && SaidIn is { } saidIn)
+                said = saidIn(_moments[index].TimeMs, index + 1 < _moments.Count ? _moments[index + 1].TimeMs : long.MaxValue);
+            _tip.SetToolTip(this, said is { Length: > 0 } ? VideoTime.Format(_moments[index].TimeMs) + " - " + said : string.Empty);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _tipIndex = -1;
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -169,6 +212,9 @@ namespace PhotoLikerUI
                     }
                 }
 
+                if (_spoken.Contains(i))
+                    SpeechMark.Draw(g, new Rectangle(box.Right - 32, box.Top + 6, 26, 23)); // found in what is said, not in the picture
+
                 TextRenderer.DrawText(g, VideoTime.Format(time), Font, new Rectangle(x, Gap + ThumbHeight, ThumbWidth, LabelHeight), ForeColor,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
             }
@@ -177,7 +223,10 @@ namespace PhotoLikerUI
         protected override void Dispose(bool disposing)
         {
             if (disposing)
+            {
                 Clear();
+                _tip.Dispose();
+            }
             base.Dispose(disposing);
         }
     }

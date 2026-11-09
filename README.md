@@ -837,6 +837,11 @@ sentence. It takes about a third of the length of the speech: 3 hours of video i
 form it was said (<q>лошадка</q> finds <q>лошадку</q>), also when the sentence was cut in two by the model, and a video where it is said comes before the ones that only look right. The words are
 shown in a line under the player while the video plays. The text is the model's guess: it is good with adult speech and poor with children's and with noise (a song is written as its words), and the
 **SpeechLanguage** row (`ru`, `uk`, `en`, or `auto`) helps it when the family speaks one language. **SpeechModel** chooses `tiny`, `base` or `small`. Nothing leaves the computer.
+
+**Which videos were found by what is said.** A video found in its speech carries a teal **speech bubble** on its thumbnail in the list at the side (hold the pointer over it to read the words), and the
+status line says how many of the videos were found that way. In the viewer the places found in the speech have a speech bubble on the strip and a teal tick on the slider, while what the pictures found stays
+orange; hold the pointer over a moment of the strip, or a place on the slider, to read what is said there. The line under the player shows only while somebody is speaking, and only for videos whose speech
+has been read: **Update index** reads the rest, a folder after a folder (it goes by path, so a library is read in that order, and a video not read yet is found by its pictures only).
 (The words are searched in the text whichever search model is chosen; for a query in Russian or Ukrainian the pictures are best searched with the XLM-R model of the [photo search](#photo-search).)
 
 **Saving a picture of a video.** <kbd>Ctrl</kbd>+<kbd>S</kbd> saves the picture the video shows now (the first one, if it is not playing) as a photo in the Liked folder: full size, named after the

@@ -1639,6 +1639,7 @@
                     existing.Thumb.BorderStyle = isCurrent ? BorderStyle.Fixed3D : BorderStyle.None;
                     existing.Label.ForeColor = isCurrent ? Color.White : (isLiked ? Color.LightGreen : Color.LightGray);
                     existing.Thumb.Invalidate(); // the liked badge may have changed
+                    _heardTip.SetToolTip(existing.Thumb, HeardTooltipOf(filePath) ?? string.Empty); // and what a new search found in what is said
                     continue;
                 }
 
@@ -1679,6 +1680,8 @@
 
                 thumb.Click += PreviewThumb_Click;
                 label.Click += PreviewThumb_Click;
+                if (HeardTooltipOf(filePath) is { } heardText)
+                    _heardTip.SetToolTip(thumb, heardText);
 
                 // Not cached yet: the cache assigns the thumbnail once it has been loaded
                 if (_photoCache.TryGet(filePath, out var cached) && cached.Thumb is not null)
@@ -1713,7 +1716,11 @@
         private void ThumbPaint_LikedBadge(object? sender, PaintEventArgs e)
         {
             if (sender is PictureBox { Tag: string videoPath } video && MediaKinds.IsVideo(videoPath))
+            {
                 DrawThumbVideoMark(e.Graphics, video.Size);
+                if (HeardHitOf(videoPath) is not null)
+                    DrawThumbSpeechMark(e.Graphics, video.Size);
+            }
 
             if (sender is not PictureBox { Tag: string filePath } pb || !IsSaved(filePath)) return;
 

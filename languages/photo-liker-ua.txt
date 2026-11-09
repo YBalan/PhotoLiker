@@ -1055,6 +1055,9 @@ VideoSearchStrings.StatusExportedVideosFormat = \sВідео теж у ньом�
 VideoSearchStrings.ImportVideosNoteFormat = \nУ ньому є й відео: проаналізовано {0:N0}, {1:N0} моментів, {2:N0} з мовленням. Відео цієї папки, проаналізовані зараз, буде замінено ними.
 VideoSearchStrings.StatusImportedVideosFormat = \sВідео: проаналізовано {0:N0}, {1:N0} моментів, {2:N0} з мовленням.
 VideoSearchStrings.StatusImportedVideosOffNote = \sSupportVideo у цій папці вимкнено: увімкніть його, щоб побачити їх.
+VideoSearchStrings.StatusResultsHeardNoteFormat = \s{0:N0} з них знайдено за мовленням (позначено бульбашкою мовлення).
+VideoSearchStrings.StatusVideoHeardFormat = Знайдено за мовленням: «{0}».\s
+VideoSearchStrings.ThumbHeardTooltipFormat = Знайдено за мовленням: «{0}»
 
 # ──────────── DialogStrings ────────────
 DialogStrings.ContextMenuEntry = Відкрити в Photo Liker

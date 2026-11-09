@@ -1022,7 +1022,7 @@ namespace PhotoLikerUI
                     : withVideos
                         ? string.Format(VideoSearchStrings.StatusResultsShownVideosFormat, result.Description, files.Count, result.SearchedPhotos, result.SearchedVideos)
                         : string.Format(SearchStrings.StatusResultsShown, result.Description, files.Count, result.SearchedPhotos))
-                + DateNotes(result) + ModelNotes(result));
+                + DateNotes(result) + ModelNotes(result) + HeardNote(result));
             LoadFirstPhoto(files[0].OriginalFilePath);
             settingsPropertyGrid.Refresh();
 
@@ -1043,6 +1043,13 @@ namespace PhotoLikerUI
             if (_folderSearch?.Index.DatesPending is > 0 and var pending)
                 notes += string.Format(SearchStrings.StatusDatesPendingNote, pending);
             return notes;
+        }
+
+        /// <summary>How many of the videos that were found were found in what is said (they carry a speech bubble in the list and in the strip); nothing when none were.</summary>
+        private static string HeardNote(SearchResult result)
+        {
+            var heard = result.Hits.Count(h => h.Spoken is { Count: > 0 });
+            return heard > 0 ? string.Format(VideoSearchStrings.StatusResultsHeardNoteFormat, heard) : string.Empty;
         }
 
         /// <summary>That a text search left out photos because they are analyzed for another search model than the one chosen now.</summary>
@@ -1572,6 +1579,7 @@ namespace PhotoLikerUI
             _searchGeneration++;
             _precisionTimer.Dispose();
             _precisionTip.Dispose();
+            _heardTip.Dispose();
             _folderSearch?.Dispose();
             if (!ReferenceEquals(_indexingSearch, _folderSearch))
                 _indexingSearch?.Dispose();

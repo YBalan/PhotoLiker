@@ -51,7 +51,7 @@ namespace PhotoLikerUI
             Controls.Add(_bar);
 
             _volumeBar.Value = _volume;
-            _seek.HoverText = at => VideoTime.Format(at);
+            _seek.HoverText = at => SaidAt?.Invoke(at) is { Length: > 0 } said ? VideoTime.Format(at) + " - " + said : VideoTime.Format(at);
             _volumeBar.HoverText = at => $"{at} %";
 
             _play.Click += (_, _) => { TogglePause(); Used?.Invoke(); };
@@ -95,8 +95,16 @@ namespace PhotoLikerUI
                 _caption.Visible = text.Length > 0;
         }
 
-        /// <summary>Marks places on the slider (the moments a search found), or none.</summary>
-        public void SetMarks(IReadOnlyList<long>? places) => _seek.Marks = places ?? [];
+        /// <summary>Marks places on the slider (the moments a search found), or none; <paramref name="spoken"/> are the places among them that were found in what is said (teal ticks).</summary>
+        public void SetMarks(IReadOnlyList<long>? places, IReadOnlyList<long>? spoken = null)
+        {
+            _seek.Marks = places ?? [];
+            _seek.SpokenMarks = spoken ?? []; // the ones among them that were found in what is said, in another colour
+        }
+
+        /// <summary>The words that are said around a place in the video (milliseconds), to show with its time over the slider; none when nothing is known.</summary>
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public Func<long, string?>? SaidAt { get; set; }
 
         /// <summary>The video that is shown (or being started); null when none.</summary>
         [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
