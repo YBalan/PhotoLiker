@@ -237,6 +237,41 @@ namespace PhotoLikerUI
             g.FillPolygon(hill, [new PointF(6.3f, 14.2f), new PointF(9.2f, 9.6f), new PointF(11.2f, 12.2f), new PointF(12.2f, 11f), new PointF(14.2f, 14.2f)]);
         });
 
+        // ── Colorize ──────────────────────────────────────────────────────
+        // A photo that is grey in its lower left half and in colour in its upper right half: a sky, a sun and a hill
+        public static Bitmap Colorize() => DrawOnBitmap(g =>
+        {
+            void Scene(Func<Color, Color> tone)
+            {
+                using var sky = new LinearGradientBrush(new RectangleF(1, 2, 14, 12), tone(Color.FromArgb(200, 230, 255)), tone(Color.FromArgb(140, 190, 245)), 90f);
+                g.FillRoundedRectangle(sky, 1, 2, 14, 12, 1.5f);
+                using var sun = new SolidBrush(tone(Color.FromArgb(250, 170, 40)));
+                g.FillEllipse(sun, 9.4f, 3.8f, 3.2f, 3.2f);
+                using var hill = new SolidBrush(tone(Color.FromArgb(45, 150, 80)));
+                g.FillPolygon(hill, [new PointF(2f, 13.2f), new PointF(6.2f, 7.4f), new PointF(9.2f, 11f), new PointF(10.8f, 9.2f), new PointF(14f, 13.2f)]);
+            }
+
+            Scene(colour => colour);
+
+            // The lower left half again in grey, over the colours: the line between them goes from the top left corner to the bottom right one
+            using (var lowerLeft = new GraphicsPath())
+            {
+                lowerLeft.AddPolygon([new PointF(0f, 2f), new PointF(0f, 16f), new PointF(16f, 16f)]);
+                g.SetClip(lowerLeft);
+                Scene(colour =>
+                {
+                    var grey = (int)(0.30 * colour.R + 0.59 * colour.G + 0.11 * colour.B);
+                    return Color.FromArgb(grey, grey, grey);
+                });
+                g.ResetClip();
+            }
+
+            using var seam = new Pen(Color.FromArgb(190, 255, 255, 255), 0.8f);
+            g.DrawLine(seam, 1.4f, 2.6f, 14.6f, 13.4f);
+            using var rim = new Pen(Color.FromArgb(25, 55, 130), 1.2f);
+            g.DrawRectangle(rim, 1.5f, 2.5f, 13f, 11f);
+        });
+
         // ── Photos (the search filter) ────────────────────────────────────
         // A picture: sky, sun and a green hill in a navy frame (readable on the blue of a checked button, and on the dark and the light strip)
         public static Bitmap Photo() => DrawOnBitmap(g =>
@@ -476,7 +511,7 @@ namespace PhotoLikerUI
     /// </summary>
     internal static class DialogIcons
     {
-        private static Icon? _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech;
+        private static Icon? _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize;
 
         public static Icon GenerateVideo => _generateVideo ??= AppIcons.WindowIcon(AppIcons.GenerateVideo);
 
@@ -493,6 +528,8 @@ namespace PhotoLikerUI
         public static Icon Help => _help ??= AppIcons.WindowIcon(AppIcons.Help);
 
         public static Icon VideoSpeech => _videoSpeech ??= AppIcons.WindowIcon(AppIcons.VideoSpeech);
+
+        public static Icon Colorize => _colorize ??= AppIcons.WindowIcon(AppIcons.Colorize);
     }
 
     internal static class GraphicsExtensions

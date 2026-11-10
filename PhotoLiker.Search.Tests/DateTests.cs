@@ -127,7 +127,9 @@ public class PhotoDatesTests
     [InlineData(2003, 1, 1, 12, 0, true)]   // New Year's Day, from noon: a real photo
     [InlineData(2003, 1, 2, 0, 0, true)]    // January 2 at midnight: a real photo
     [InlineData(2003, 12, 31, 0, 0, true)]
-    [InlineData(1994, 6, 1, 12, 0, false)]  // before there were such cameras
+    [InlineData(1987, 8, 23, 9, 18, true)]  // a scanned film: a real photo of 1987 (the date of a FILE of that year is not believed, see below)
+    [InlineData(1953, 6, 1, 12, 0, true)]
+    [InlineData(1899, 12, 31, 12, 0, false)] // nobody's clock; a junk date
     [InlineData(1995, 6, 1, 12, 0, true)]
     [InlineData(2024, 6, 2, 11, 0, true)]   // a day ahead is a clock in another time zone
     [InlineData(2024, 6, 3, 12, 0, false)]  // a camera of the future
@@ -209,6 +211,20 @@ public class PhotoDatesTests
     {
         Assert.Equal(FileModified, Resolve(null, null, FileModified).Taken);
         Assert.Equal(FileModified, Resolve(null, new DateTime(1980, 1, 1), FileModified).Taken);
+    }
+
+    [Fact]
+    public void ADateOf1987_IsBelievedInsideThePhoto_ButNotAsTheDateOfItsFile()
+    {
+        var reset = new DateTime(1987, 8, 23, 9, 18, 35);
+
+        var scanned = Resolve(reset, FileCreated);
+        Assert.Equal(reset, scanned.Taken);
+        Assert.Equal(DateSource.Exif, scanned.Source);
+
+        var copied = Resolve(null, reset, reset); // a card whose clock was reset: every file says 23 Aug 1987
+        Assert.Null(copied.Taken);
+        Assert.Equal(DateSource.None, copied.Source);
     }
 
     [Fact]

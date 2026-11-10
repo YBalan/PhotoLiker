@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
+    <ProjectReference Include="..\PhotoLiker.Effects\PhotoLiker.Effects.csproj" />
     <ProjectReference Include="..\PhotoLiker.GenerateVideo\PhotoLiker.GenerateVideo.csproj" />
     <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />
     <ProjectReference Include="..\PhotoLiker.Video\PhotoLiker.Video.csproj" />
@@ -32,6 +33,12 @@
   <ItemGroup>
     <Using Include="PhotoLiker.Core" />
     <Using Include="PhotoLiker.GenerateVideo" />
+    <Using Include="PhotoLiker.Effects.Transitions" />
+    <Using Include="PhotoLiker.Effects.Motion" />
+    <Using Include="PhotoLiker.Effects.Compositing" />
+    <Using Include="PhotoLiker.Effects.Depth" />
+    <Using Include="PhotoLiker.Effects.Colorize" />
+    <Using Include="PhotoLiker.Effects.Models" />
   </ItemGroup>
 
   <!-- The tests of the windows (PhotoLikerUI.Tests) open the real dialogs, which are internal -->

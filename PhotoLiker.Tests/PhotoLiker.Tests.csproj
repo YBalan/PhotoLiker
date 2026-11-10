@@ -22,10 +22,9 @@
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
   </ItemGroup>
 
-  <!-- A net10.0 project can't reference the net10.0-windows app, so the WinForms-free source under test is compiled in. -->
+  <!-- A net10.0 project can't reference the net10.0-windows app, so the WinForms-free source under test is compiled in (the effects have a test project of their own now: PhotoLiker.Effects.Tests). -->
   <ItemGroup>
     <Compile Include="..\PhotoLikerUI\StringListConverter.cs" Link="PhotoLikerUI\StringListConverter.cs" />
-    <Compile Include="..\PhotoLikerUI\FrameCompositor.cs" Link="PhotoLikerUI\FrameCompositor.cs" />
     <Compile Include="..\PhotoLikerUI\SlideFaceMarks.cs" Link="PhotoLikerUI\SlideFaceMarks.cs" />
     <Compile Include="..\PhotoLikerUI\MediaKeys.cs" Link="PhotoLikerUI\MediaKeys.cs" />
     <Compile Include="..\PhotoLikerUI\ShortcutLines.cs" Link="PhotoLikerUI\ShortcutLines.cs" />

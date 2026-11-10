@@ -27,6 +27,10 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>PhotoLiker.Video</_Parameter1>
     </AssemblyAttribute>
+    <!-- ... and so do the effects (the colours of a photo are made on the picture resized the same way) -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLiker.Effects</_Parameter1>
+    </AssemblyAttribute>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>PhotoLiker.Video.Tests</_Parameter1>
     </AssemblyAttribute>

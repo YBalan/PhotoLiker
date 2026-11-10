@@ -8,6 +8,7 @@ namespace PhotoLiker.Search
     /// <param name="Embedder">CPU threads of the face recognizer, shared by the face workers.</param>
     public sealed record ModelThreads(int Decoders, int FaceWorkers, int Clip, int Detector, int Embedder)
     {
+
         /// <summary>
         /// CPU threads of the photo model when it has the processor to itself (a run that only makes the vectors of
         /// another model; the faces are kept): the face threads are not busy then.

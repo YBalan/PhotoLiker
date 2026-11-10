@@ -1,4 +1,6 @@
-﻿namespace PhotoLikerUI
+﻿using PhotoLiker.Search;
+
+namespace PhotoLikerUI
 {
     public partial class MainForm : Form
     {
@@ -35,6 +37,7 @@
             InitializeDateAlignment();
             InitializeEmptyFolders();
             InitializeDuplicates();
+            InitializeColorize();
             InitializeVideoSpeech();
             InitializeRotate();
             InitializeTaskbarProgress();
@@ -217,12 +220,15 @@
             StopListingCheck();
             SaveListingOnClose();
             _engineStop?.Cancel();
+            _toolModelStop.Cancel();
             _photoCache.Dispose();
             _player?.Dispose();
             _strip?.Dispose();
             VideoLibrary.Close();
             DisposeTaskbarProgress();
             ShutDownSearch();
+            DisposeColorizeBar();
+            _effects.Dispose();
             SaveWindowPosition();
             SaveSettingsToJson();
             _globalConfig.LastFolder = _currentConfig.CurrentFolder;
@@ -240,6 +246,7 @@
         private void ApplyTheme(bool dark)
         {
             ThemeManager.Apply(this, dark);
+            _bar?.Restyle();
             themeToggleToolStripButton.Text = dark ? MainFormStrings.ThemeLightLabel : MainFormStrings.ThemeDarkLabel;
         }
 
@@ -512,16 +519,19 @@
                     _currentConfig.Extensions,
                     _currentConfig.SortOrder,
                     _currentConfig.IsDarkTheme,
-                    (options, sequence, appendOutput, reportProgress) => VideoGenerationService.GenerateAsync(
-                        sequence,
-                        options.OutputPath,
-                        options.WidthPixels,
-                        options.HeightPixels,
-                        options.VideoCodec,
-                        options.Crf,
-                        options.AudioPath,
-                        appendOutput,
-                        reportProgress));
+                    (options, sequence, appendOutput, reportProgress) => options.DepthParallax
+                        ? GenerateParallaxVideoAsync(options, sequence, appendOutput, reportProgress)
+                        : VideoGenerationService.GenerateAsync(
+                            sequence,
+                            options.OutputPath,
+                            options.WidthPixels,
+                            options.HeightPixels,
+                            options.VideoCodec,
+                            options.Crf,
+                            options.AudioPath,
+                            appendOutput,
+                            reportProgress),
+                    () => EnsureToolModelAsync(ToolModels.Depth, ToolModelStrings.ParallaxFeature, askAgain: true));
 
                 dialog.ShowDialog(this);
 
@@ -544,6 +554,7 @@
             // Abandon a folder scan that is still running
             _folderGeneration++;
 
+            ColorizeBarCleared();
             HidePlayer(); // a video that is playing belongs to the list that is being replaced
             UpdateMomentStrip(null);
 
@@ -1459,6 +1470,7 @@
                 // Navigation state is updated right away, so arrow keys keep working while the image is still loading
                 var index = _currentConfig.Files.IndexOf(file);
                 pictureBox1.Tag = file; // Store the file path in the Tag property
+                ColorizeBarPhotoChosen(file);
                 _currentConfig.CurrentFilePath = file;
                 _currentConfig.CurrentFileName = Path.GetFileName(file);
                 _currentConfig.CurrentIndex = index;
@@ -1488,6 +1500,7 @@
             _imageMessage = string.Empty;
             pictureBox1.Image = entry.Full;
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; // Set the size mode to zoom
+            ColorizeBarPhotoShown(); // the colours that were put on this photo stay over it
 
             // The dates of a JPEG can be edited in the grid: the photo is saved again with the new date
             var metadataWrapper = new MetadataWrapper(

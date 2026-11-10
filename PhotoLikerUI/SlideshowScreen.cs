@@ -11,10 +11,11 @@ namespace PhotoLikerUI
     /// <summary>
     /// How <see cref="SlideshowScreen.ShowFrame"/> puts a photo on a screen: with no effect at all (the default of the struct), or taking the place of the last
     /// photo by <see cref="Transition"/> for <see cref="TransitionSeconds"/>, and/or moving slowly for <see cref="MotionSeconds"/>. <see cref="StartedAt"/> is a
-    /// <see cref="Stopwatch"/> time, the same for all the screens of one change so that they move together.
+    /// <see cref="Stopwatch"/> time, the same for all the screens of one change so that they move together. With <see cref="Parallax"/> a photo that has its depth
+    /// moves by it (see <see cref="SlideshowEffect.Parallax"/>); one that has none drifts and zooms like a Ken Burns photo.
     /// </summary>
     internal readonly record struct SlideshowShowPlan(
-        SlideshowTransition Transition, double TransitionSeconds, bool Motion, double MotionSeconds, long StartedAt);
+        SlideshowTransition Transition, double TransitionSeconds, bool Motion, double MotionSeconds, long StartedAt, bool Parallax = false);
 
     /// <summary>
     /// The window of the slideshow on one screen: black, with the photo on it as large as the screen lets it be and the year or the date and time it was taken
@@ -71,7 +72,7 @@ namespace PhotoLikerUI
         /// <param name="facesOf">Says who is in a photo, for the boxes and the names (see <see cref="SetPeopleShown"/>); null when there is no one to ask. Asked on the threads that make the frames, and on this window's thread for a frame that was not asked yet.</param>
         public SlideshowScreen(
             SlideshowSession session, Rectangle bounds, SlideshowWatermark watermark, long frameBytes, int minFrames, int parallelLoads,
-            Func<string, IReadOnlyList<FaceLabel>>? facesOf = null)
+            Func<string, IReadOnlyList<FaceLabel>>? facesOf = null, Func<uint[], int, int, DepthMap?>? depthOf = null)
         {
             _session = session;
             _watermark = watermark;
@@ -90,7 +91,7 @@ namespace PhotoLikerUI
             _animation.Tick += (_, _) => OnAnimationTick();
             _noticeTimer.Tick += (_, _) => HideNotice();
             _videoWatch.Tick += (_, _) => OnVideoWatch();
-            Frames = new SlideshowFrames(bounds.Size, frameBytes, minFrames, parallelLoads, facesOf);
+            Frames = new SlideshowFrames(bounds.Size, frameBytes, minFrames, parallelLoads, facesOf, depthOf);
         }
 
         /// <summary>
@@ -136,15 +137,26 @@ namespace PhotoLikerUI
                 _transitionSeconds = plan.TransitionSeconds;
             }
 
-            var path = plan.Motion && plan.MotionSeconds > 0 ? KenBurnsPath.Random(Random.Shared.NextDouble) : (KenBurnsPath?)null;
-            _current = new PhotoOnScreen(frame, path, plan.StartedAt, plan.MotionSeconds);
+            var (path, parallax) = MotionFor(frame, plan);
+            _current = new PhotoOnScreen(frame, path, parallax, plan.StartedAt, plan.MotionSeconds);
 
-            if (_outgoing is not null || path is not null)
+            if (_outgoing is not null || path is not null || parallax is not null)
                 _animation.Start();
             else
                 _animation.Stop();
 
             Invalidate();
+        }
+
+        /// <summary>How a photo moves while it stays, if the plan says it does: by its depth (the Parallax effect, when the frame has it), else the drift and zoom of Ken Burns.</summary>
+        private static (KenBurnsPath? Path, ParallaxPath? Parallax) MotionFor(SlideshowFrame frame, SlideshowShowPlan plan)
+        {
+            if (!plan.Motion || plan.MotionSeconds <= 0)
+                return (null, null);
+
+            return plan.Parallax && frame.Depth is not null
+                ? (null, ParallaxPath.Random(Random.Shared.NextDouble))
+                : (KenBurnsPath.Random(Random.Shared.NextDouble), null);
         }
 
         /// <summary>
@@ -156,7 +168,8 @@ namespace PhotoLikerUI
             if (_current is not { HasMotion: false } current || !plan.Motion || plan.MotionSeconds <= 0)
                 return;
 
-            _current = new PhotoOnScreen(current.Frame, KenBurnsPath.Random(Random.Shared.NextDouble), plan.StartedAt, plan.MotionSeconds);
+            var (path, parallax) = MotionFor(current.Frame, plan);
+            _current = new PhotoOnScreen(current.Frame, path, parallax, plan.StartedAt, plan.MotionSeconds);
             _animation.Start();
             Invalidate();
         }
@@ -610,7 +623,7 @@ namespace PhotoLikerUI
                 var now = Stopwatch.GetTimestamp();
                 var motion = current.MotionAt(now);
 
-                if (_outgoing is null && motion.IsPlain)
+                if (_outgoing is null && motion.IsPlain && !current.HasParallax)
                 {
                     DrawPlain(g, current.Frame);
                     DrawWatermark(g, current.Frame.Taken, 1);
@@ -683,14 +696,14 @@ namespace PhotoLikerUI
                 // What dissolves is the whole screen, the black around a photo too: the shares of the two add up to all. What slides is not over one another
                 var leavingWeight = _transition == SlideshowTransition.Slide ? WeightOf(leaving.Alpha) : FrameCompositor.FullWeight - comingWeight;
                 _layerFrames[count] = outgoing.Frame;
-                _layers[count++] = LayerOf(outgoing.Frame, outgoing.MotionAt(now), leaving, leavingWeight, width, height);
+                _layers[count++] = LayerOf(outgoing, now, outgoing.MotionAt(now), leaving, leavingWeight, width, height);
                 _layerFrames[count] = current.Frame;
-                _layers[count++] = LayerOf(current.Frame, currentMotion, coming, comingWeight, width, height);
+                _layers[count++] = LayerOf(current, now, currentMotion, coming, comingWeight, width, height);
             }
             else
             {
                 _layerFrames[count] = current.Frame;
-                _layers[count++] = LayerOf(current.Frame, currentMotion, SlideshowLayer.Plain, FrameCompositor.FullWeight, width, height);
+                _layers[count++] = LayerOf(current, now, currentMotion, SlideshowLayer.Plain, FrameCompositor.FullWeight, width, height);
             }
 
             FrameCompositor.Compose(_canvas.Pixels, width, height, _layers.AsSpan(0, count));
@@ -713,6 +726,23 @@ namespace PhotoLikerUI
         }
 
         private static int WeightOf(double alpha) => Math.Clamp((int)Math.Round(alpha * FrameCompositor.FullWeight), 0, FrameCompositor.FullWeight);
+
+        /// <summary>
+        /// Where a photo goes at this moment (see the other <see cref="LayerOf(SlideshowFrame, SlideshowLayer, SlideshowLayer, int, int, int)"/>); a photo that moves by its depth stays in the middle of
+        /// the screen (moved by the change only), and what it shows is moved and magnified inside it.
+        /// </summary>
+        private static CompositeLayer LayerOf(PhotoOnScreen photo, long now, SlideshowLayer motion, SlideshowLayer change, int weight, int width, int height)
+        {
+            var frame = photo.Frame;
+            if (photo.ParallaxAt(now, frame.Width, frame.Height) is not { } view || frame.Depth is not { } depth)
+                return LayerOf(frame, motion, change, weight, width, height);
+
+            return new CompositeLayer(
+                frame.Pixels, frame.Width, frame.Height,
+                width / 2.0 + Math.Round(change.OffsetX * width), height / 2.0 + Math.Round(change.OffsetY * height),
+                view.Zoom * change.Scale, weight,
+                new DepthShift(depth.Values, depth.Width, depth.Height, view.ShiftX, view.ShiftY, ParallaxPath.Focus));
+        }
 
         /// <summary>Where a picture goes at this moment: the middle of the screen, moved by its own movement (a fraction of the picture) and by the change (a fraction of the screen, whole pixels).</summary>
         private static CompositeLayer LayerOf(SlideshowFrame frame, SlideshowLayer motion, SlideshowLayer change, int weight, int width, int height) =>
@@ -852,19 +882,25 @@ namespace PhotoLikerUI
         }
 
         /// <summary>A photo on the screen: its frame, and how it moves while it stays (if it does) from the time it came.</summary>
-        private sealed class PhotoOnScreen(SlideshowFrame frame, KenBurnsPath? path, long startedAt, double motionSeconds)
+        private sealed class PhotoOnScreen(SlideshowFrame frame, KenBurnsPath? path, ParallaxPath? parallax, long startedAt, double motionSeconds)
         {
             public SlideshowFrame Frame { get; } = frame;
 
             public static double SecondsBetween(long from, long to) => (to - from) / (double)Stopwatch.Frequency;
 
-            private double Progress(long now) => path is null || motionSeconds <= 0 ? 1 : Math.Clamp(SecondsBetween(startedAt, now) / motionSeconds, 0, 1);
+            private double Progress(long now) => (path is null && parallax is null) || motionSeconds <= 0 ? 1 : Math.Clamp(SecondsBetween(startedAt, now) / motionSeconds, 0, 1);
 
             /// <summary>Whether it moves at all (it may be done moving).</summary>
-            public bool HasMotion => path is not null;
+            public bool HasMotion => path is not null || parallax is not null;
+
+            /// <summary>Whether it moves by its depth: it is then never drawn as a plain copy of its pixels, not even when it is done moving (it stays as it ended).</summary>
+            public bool HasParallax => parallax is not null;
 
             /// <summary>Whether it is still moving; a photo that has reached the end of its movement stays as it is.</summary>
-            public bool IsMoving(long now) => path is not null && Progress(now) < 1;
+            public bool IsMoving(long now) => HasMotion && Progress(now) < 1;
+
+            /// <summary>Where the camera of a photo that moves by its depth is at this moment; null for a photo that does not.</summary>
+            public ParallaxView? ParallaxAt(long now, double width, double height) => parallax is { } p ? p.At(Progress(now), width, height) : null;
 
             /// <summary>How it is magnified and where it lies at this moment (offsets are fractions of the picture).</summary>
             public SlideshowLayer MotionAt(long now) => path is { } p ? p.At(Progress(now)) : SlideshowLayer.Plain;

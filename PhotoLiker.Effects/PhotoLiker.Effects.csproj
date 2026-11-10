@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    What is done to a photo, apart from looking at it and searching it: the effects of the slideshow (the transitions, the slow movements, the depth parallax), the compositor that puts the
+    pictures of an effect together on the pixels, the depth of a picture (Depth Anything V2 Small) and the colours of a black and white photo (DDColor). The folders are the namespaces:
+    Transitions, Motion, Compositing, Depth, Colorize, Models (PhotoLiker.Effects.<folder>). The models run on this computer with ONNX Runtime.
+
+    It uses Core for the settings (the name of the effect) and for the rules of the slideshow, and Search for what the two have in common: decoding a photo to pixels, the downloading of model files
+    and the check that ONNX Runtime can start. It knows nothing of windows: the UI and the video library draw with what is here.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PhotoLiker.Effects</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
+    <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLiker.Effects.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

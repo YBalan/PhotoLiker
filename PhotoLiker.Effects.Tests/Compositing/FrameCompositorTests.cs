@@ -1,6 +1,6 @@
-using PhotoLikerUI;
+using PhotoLiker.Effects.Compositing;
 
-namespace PhotoLiker.Tests;
+namespace PhotoLiker.Effects.Tests.Compositing;
 
 public class FrameCompositorTests
 {

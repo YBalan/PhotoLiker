@@ -48,6 +48,9 @@ jobs:
       - name: Test the search library
         run: dotnet test PhotoLiker.Search.Tests/PhotoLiker.Search.Tests.csproj --configuration Release
 
+      - name: Test the effects library
+        run: dotnet test PhotoLiker.Effects.Tests/PhotoLiker.Effects.Tests.csproj --configuration Release
+
       - name: Test the windows
         run: dotnet test PhotoLikerUI.Tests/PhotoLikerUI.Tests.csproj --configuration Release
 

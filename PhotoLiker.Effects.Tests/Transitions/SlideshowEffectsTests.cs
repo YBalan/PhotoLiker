@@ -1,6 +1,8 @@
 using PhotoLiker.Core;
+using PhotoLiker.Effects.Transitions;
+using PhotoLiker.Effects.Motion;
 
-namespace PhotoLiker.Tests;
+namespace PhotoLiker.Effects.Tests.Transitions;
 
 public class SlideshowEffectsTests
 {
@@ -15,11 +17,12 @@ public class SlideshowEffectsTests
     [InlineData(SlideshowEffect.Slide)]
     [InlineData(SlideshowEffect.Zoom)]
     [InlineData(SlideshowEffect.KenBurns)]
+    [InlineData(SlideshowEffect.Parallax)]
     public void AnEffectThatIsNotRandom_IsItself(SlideshowEffect effect) =>
         Assert.Equal(effect, SlideshowEffects.Resolve(effect, SlideshowEffect.Fade, _ => 0));
 
     [Fact]
-    public void Random_IsOneOfTheFour_NeverTheSameTwiceInARow()
+    public void Random_IsOneOfTheFour_NeverTheSameTwiceInARow_AndNeverParallax()
     {
         foreach (var previous in Enum.GetValues<SlideshowEffect>())
         {
@@ -30,8 +33,9 @@ public class SlideshowEffectsTests
             Assert.DoesNotContain(previous, seen);
             Assert.DoesNotContain(SlideshowEffect.None, seen);
             Assert.DoesNotContain(SlideshowEffect.Random, seen);
+            Assert.DoesNotContain(SlideshowEffect.Parallax, seen); // it costs half a second a photo: only when it is asked for
             Assert.All(seen, effect => Assert.Contains(effect, Concrete));
-            Assert.Equal(previous is SlideshowEffect.None or SlideshowEffect.Random ? 4 : 3, seen.Count); // every other one can come
+            Assert.Equal(previous is SlideshowEffect.None or SlideshowEffect.Random or SlideshowEffect.Parallax ? 4 : 3, seen.Count); // every other one can come
         }
     }
 
@@ -45,7 +49,7 @@ public class SlideshowEffectsTests
     [Fact]
     public void TheNextEffect_GoesDownTheDropDown_AndRoundAtTheEnd()
     {
-        var order = new[] { SlideshowEffect.None, SlideshowEffect.Fade, SlideshowEffect.Slide, SlideshowEffect.Zoom, SlideshowEffect.KenBurns, SlideshowEffect.Random };
+        var order = new[] { SlideshowEffect.None, SlideshowEffect.Fade, SlideshowEffect.Slide, SlideshowEffect.Zoom, SlideshowEffect.KenBurns, SlideshowEffect.Parallax, SlideshowEffect.Random };
 
         for (var i = 0; i < order.Length; i++)
         {
@@ -70,7 +74,9 @@ public class SlideshowEffectsTests
     [InlineData(SlideshowEffect.Slide, SlideshowTransition.Slide, false)]
     [InlineData(SlideshowEffect.Zoom, SlideshowTransition.Zoom, false)]
     [InlineData(SlideshowEffect.KenBurns, SlideshowTransition.Fade, true)]
-    public void EachEffect_HasItsTransition_AndOnlyKenBurnsMovesThePhoto(SlideshowEffect effect, SlideshowTransition transition, bool motion)
+    [InlineData(SlideshowEffect.Parallax, SlideshowTransition.Fade, true)]
+    [InlineData(SlideshowEffect.Random, SlideshowTransition.None, false)] // resolved to another before it is asked
+    public void EachEffect_HasItsTransition_AndOnlyKenBurnsAndParallaxMoveThePhoto(SlideshowEffect effect, SlideshowTransition transition, bool motion)
     {
         Assert.Equal(transition, SlideshowEffects.TransitionOf(effect));
         Assert.Equal(motion, SlideshowEffects.HasMotion(effect));
