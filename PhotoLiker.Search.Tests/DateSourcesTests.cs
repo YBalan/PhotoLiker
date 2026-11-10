@@ -71,6 +71,25 @@ public class DateSourcesTests
     }
 
     [Fact]
+    public void TheDateOfTheFileThePersonChose_IsTakenAsItIs_WhenNoneOfItsDatesIsBelievable()
+    {
+        // A card whose clock was reset: every file is of 23 Aug 1987. Nothing that goes by itself believes that, but the person who chose "the date of the file" for these files does.
+        var reset = new DateTime(1987, 8, 23, 9, 18, 35, DateTimeKind.Utc);
+        var believable = new DateTime(2009, 9, 1, 8, 0, 0, DateTimeKind.Utc);
+        PhotoDateFacts Facts(DateTime c, DateTime m) => new(Path.Combine(Root, "a.jpg"), ExifDateSlots.None, null, c, m);
+
+        var both = Facts(reset, reset);
+        Assert.Null(DateSources.FromFile(both, Now));                                                  // not believed...
+        Assert.Equal(reset.ToLocalTime(), DateSources.Resolve(DateChoice.FileDate, both, Root, null, Now)); // ...but chosen
+
+        Assert.Equal(believable.ToLocalTime(), DateSources.Resolve(DateChoice.FileDate, Facts(reset, believable), Root, null, Now)); // a believable one still comes first
+        Assert.Equal(reset.ToLocalTime(), DateSources.Resolve(DateChoice.FileDate, Facts(default, reset), Root, null, Now));        // no creation date: the change date
+        Assert.Equal(reset.ToLocalTime(), DateSources.Resolve(DateChoice.FileDate, Facts(reset, default), Root, null, Now));
+        Assert.Null(DateSources.Resolve(DateChoice.FileDate, Facts(default, default), Root, null, Now));                            // a file with no date has none
+        Assert.Null(DateSources.FromFileAsItIs(Facts(default, default)));
+    }
+
+    [Fact]
     public void TheDateTheCameraWrote_IsTakenWhetherItIsBelievedOrNot_FirstTheOriginalOne()
     {
         var original = new DateTime(2001, 1, 1, 0, 0, 5);
@@ -138,14 +157,46 @@ public class AssignedDateTests : IDisposable
     }
 
     [Fact]
-    public void AGivenDate_IsIgnored_ForAPhotoThatHasAUsableOne()
+    public void AGivenDate_ReplacesTheUsableOneOfAPhotoThePersonChose()
     {
         var path = Photo(@"a.jpg", ExifJpeg.Build(original: "2009:09:01 14:30:00"));
+        var facts = Look(path);
+        var given = new DateTime(2015, 5, 1, 12, 0, 0);
 
-        var entry = DateAlignment.Plan(Look(path), DateAlignmentOptions.Default, new DateTime(2015, 5, 1));
+        var plain = DateAlignment.Plan(facts, DateAlignmentOptions.Default);
+        var entry = DateAlignment.Plan(facts, DateAlignmentOptions.Default, given);
 
-        Assert.False(entry.Assigned);
-        Assert.Equal(new DateTime(2009, 9, 1, 14, 30, 0), entry.Facts.Taken);
+        Assert.False(plain.Assigned);
+        Assert.Equal(new DateTime(2009, 9, 1, 14, 30, 0), plain.Facts.Taken);
+        Assert.True(entry.Assigned);
+        Assert.Equal(given, entry.Facts.Taken);
+        Assert.Equal(DateAlignmentStatus.Change, entry.Status);
+        Assert.True(entry.SetCreated && entry.SetModified);
+    }
+
+    [Fact]
+    public void AGivenDate_IsWrittenInsideAPhotoThatAlreadyHadOne_WhenAsked()
+    {
+        var path = Photo(@"a.jpg", ExifJpeg.Build(original: "2009:09:01 14:30:00"));
+        var given = new DateTime(2015, 5, 1, 12, 0, 0);
+
+        var entry = DateAlignment.Plan(Look(path), DateAlignmentOptions.Default, given, writeTaken: true);
+        Run(entry);
+
+        var after = Look(path);
+        Assert.Equal(given, after.Taken);
+        Assert.Equal(given, after.Exif.Dates.Original);
+        Assert.Equal(DateAlignmentStatus.Aligned, DateAlignment.Plan(after, DateAlignmentOptions.Default).Status);
+    }
+
+    [Fact]
+    public void ADateThatIsAlreadyBelieved_IsTheAnswerOfTheFirstTwoChoices_ForAFileThePersonChose()
+    {
+        var taken = new DateTime(2016, 1, 1, 8, 15, 0);
+        var facts = new PhotoDateFacts(Path.Combine(@"C:\photos", "2015-05-01", "clip.mp4"), ExifDateSlots.None, taken, CopyDate, CopyDate); // a video: no EXIF, but a date it was recorded
+
+        Assert.Equal(taken, DateSources.Resolve(DateChoice.ExifAsItIs, facts, @"C:\photos", null, Now));
+        Assert.Equal(new DateTime(2015, 5, 1, 8, 15, 0), DateSources.Resolve(DateChoice.FolderName, facts, @"C:\photos", null, Now)); // the time of day stays
     }
 
     [Fact]

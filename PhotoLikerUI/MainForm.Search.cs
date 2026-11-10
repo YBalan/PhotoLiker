@@ -337,6 +337,7 @@ namespace PhotoLikerUI
             _facesButton.Enabled = searchable;
             _peopleButton.Enabled = _folderSearch is not null; // the people and their groups are there as soon as the folder has an index
             ShowSearchKinds(searchable);
+            UpdateVideoSpeechButton();
             _precisionBar.Enabled = searchable;
             ShowSearchPrecision();
             ShowSearchModel();
@@ -576,7 +577,8 @@ namespace PhotoLikerUI
                 var settings = _currentConfig;
                 return await SpeechIndexingJob.RunAsync(
                     catalog, _models.ModelsFolder, SpeechModel, string.IsNullOrWhiteSpace(settings.SpeechLanguage) ? "auto" : settings.SpeechLanguage.Trim(),
-                    folder, settings.LikedFolder, settings.VideoExtensions, new Progress<IndexProgress>(OnIndexProgress), token, ConfirmSpeechDownload, cores: () => settings.CpuCores);
+                    folder, settings.LikedFolder, settings.VideoExtensions, new Progress<IndexProgress>(OnIndexProgress), token, ConfirmSpeechDownload, cores: () => settings.CpuCores,
+                    confirmReread: ConfirmSpeechReread);
             }
             catch (OperationCanceledException)
             {
@@ -593,6 +595,19 @@ namespace PhotoLikerUI
                 VideoSearchStrings.SpeechDownloadTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK;
         }
 
+        /// <summary>
+        /// Videos whose text was written for another language than the one set in SpeechLanguage: asked before they are heard again, because that replaces their text (a language
+        /// changed for a try would otherwise replace the good text of a whole library). No leaves them as they are; the videos not read yet are read either way.
+        /// </summary>
+        private bool ConfirmSpeechReread(SpeechReread again)
+        {
+            if (InvokeRequired)
+                return Invoke(() => ConfirmSpeechReread(again));
+
+            return MessageBox.Show(this, string.Format(VideoSearchStrings.SpeechRereadQuestionFormat, again.Videos, FormatDuration(again.Length), again.Language),
+                VideoSearchStrings.SpeechRereadTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+        }
+
         private static string DescribeSpeechSummary(SpeechIndexSummary? summary)
         {
             if (summary is null)
@@ -605,7 +620,8 @@ namespace PhotoLikerUI
             if (summary.Transcribed + summary.Silent + summary.Failed == 0)
                 return summary.Known > 0 ? string.Format(VideoSearchStrings.StatusSpeechUpToDateFormat, summary.Known) : string.Empty;
 
-            var rest = (summary.Silent > 0 ? string.Format(VideoSearchStrings.StatusSpeechSilentPartFormat, summary.Silent) : string.Empty)
+            var rest = (summary.Reread > 0 ? string.Format(VideoSearchStrings.StatusSpeechRereadPartFormat, summary.Reread) : string.Empty)
+                + (summary.Silent > 0 ? string.Format(VideoSearchStrings.StatusSpeechSilentPartFormat, summary.Silent) : string.Empty)
                 + (summary.Failed > 0 ? string.Format(VideoSearchStrings.StatusVideosFailedPartFormat, summary.Failed) : string.Empty);
             return string.Format(VideoSearchStrings.StatusSpeechDoneFormat, summary.Transcribed, summary.Segments, FormatDuration(summary.Elapsed), rest);
         }
@@ -1022,7 +1038,7 @@ namespace PhotoLikerUI
                     : withVideos
                         ? string.Format(VideoSearchStrings.StatusResultsShownVideosFormat, result.Description, files.Count, result.SearchedPhotos, result.SearchedVideos)
                         : string.Format(SearchStrings.StatusResultsShown, result.Description, files.Count, result.SearchedPhotos))
-                + DateNotes(result) + ModelNotes(result));
+                + DateNotes(result) + ModelNotes(result) + HeardNote(result));
             LoadFirstPhoto(files[0].OriginalFilePath);
             settingsPropertyGrid.Refresh();
 
@@ -1043,6 +1059,13 @@ namespace PhotoLikerUI
             if (_folderSearch?.Index.DatesPending is > 0 and var pending)
                 notes += string.Format(SearchStrings.StatusDatesPendingNote, pending);
             return notes;
+        }
+
+        /// <summary>How many of the videos that were found were found in what is said (they carry a speech bubble in the list and in the strip); nothing when none were.</summary>
+        private static string HeardNote(SearchResult result)
+        {
+            var heard = result.Hits.Count(h => h.Spoken is { Count: > 0 });
+            return heard > 0 ? string.Format(VideoSearchStrings.StatusResultsHeardNoteFormat, heard) : string.Empty;
         }
 
         /// <summary>That a text search left out photos because they are analyzed for another search model than the one chosen now.</summary>
@@ -1572,6 +1595,7 @@ namespace PhotoLikerUI
             _searchGeneration++;
             _precisionTimer.Dispose();
             _precisionTip.Dispose();
+            _heardTip.Dispose();
             _folderSearch?.Dispose();
             if (!ReferenceEquals(_indexingSearch, _folderSearch))
                 _indexingSearch?.Dispose();

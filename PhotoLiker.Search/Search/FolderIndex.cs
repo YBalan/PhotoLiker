@@ -5,8 +5,10 @@ namespace PhotoLiker.Search
     /// <param name="Taken">When the photo was taken (see <see cref="PhotoDates"/>); null if the index has no date for it yet.</param>
     /// <param name="TimeMs">For a hit that is a video: the place in it that fits best (milliseconds), where playing starts; null for a photo.</param>
     /// <param name="Moments">For a hit that is a video: every place in it that fits, one for each stretch of the video that does (milliseconds, in order); null for a photo.</param>
+    /// <param name="Spoken">For a hit that is a video: the places among <paramref name="Moments"/> that were found in what is said (the speech), not in the pictures; null if nothing was found that way.</param>
+    /// <param name="Said">For a hit with <paramref name="Spoken"/> places: the words said at the best of them.</param>
     public sealed record SearchHit(string FullPath, long Length, DateTime ModifiedUtc, float Score, DateSource DateSource = DateSource.None, DateTime? Taken = null,
-        long? TimeMs = null, IReadOnlyList<long>? Moments = null);
+        long? TimeMs = null, IReadOnlyList<long>? Moments = null, IReadOnlyList<long>? Spoken = null, string? Said = null);
 
     /// <summary>
     /// The photos a search found, best first (a date alone: oldest first). <paramref name="Weak"/> means that nothing

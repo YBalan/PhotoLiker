@@ -191,6 +191,7 @@ namespace PhotoLikerUI
             player.Used += FocusViewer;
             player.Failed += OnPlayerFailed;
             player.NotATime += SetStatus;
+            player.SaidAt = SaidNear;
             player.TimeChanged += ms =>
             {
                 _lastMomentMs = ms;
@@ -203,6 +204,16 @@ namespace PhotoLikerUI
             ThemeManager.Apply(this, _currentConfig.IsDarkTheme);
             return player;
         }
+
+        private readonly ToolTip _heardTip = new() { ShowAlways = true };
+
+        /// <summary>The hit of a video of the shown results that was found in what is said (not only in the pictures); null for anything else.</summary>
+        private SearchHit? HeardHitOf(string path) =>
+            _resultsActive && _resultHits.TryGetValue(path, out var hit) && hit.Spoken is { Count: > 0 } ? hit : null;
+
+        /// <summary>The text over the thumbnail of a video that was found in what is said (what is said there), none for any other.</summary>
+        private string? HeardTooltipOf(string path) =>
+            HeardHitOf(path) is { } hit ? string.Format(VideoSearchStrings.ThumbHeardTooltipFormat, hit.Said is { } said ? OneLine(said) ?? string.Empty : string.Empty) : null;
 
         /// <summary>The place in the shown video that a search found, if search results are shown and found one in it.</summary>
         private SearchHit? HitOfShownVideo() =>
@@ -240,8 +251,10 @@ namespace PhotoLikerUI
             player.Visible = true;
             player.BringToFront();
             pictureBox1.Invalidate();
-            SetStatus(string.Format(VideoPlayerStrings.StatusVideoShownFormat, Path.GetFileName(file)));
-            player.SetMarks(hit?.Moments);
+            // What was found in what is said comes first: the rest of the line (the keys) is long and may be cut
+            SetStatus((hit is { Spoken.Count: > 0, Said: { Length: > 0 } said } ? string.Format(VideoSearchStrings.StatusVideoHeardFormat, OneLine(said)) : string.Empty)
+                + string.Format(VideoPlayerStrings.StatusVideoShownFormat, Path.GetFileName(file)));
+            player.SetMarks(hit?.Moments, hit?.Spoken);
             _lastMomentMs = from;
             await player.PlayAsync(file, from);
             FocusViewer();
@@ -380,6 +393,7 @@ namespace PhotoLikerUI
 
             var strip = new MomentStrip { Dock = DockStyle.Bottom, Visible = false };
             strip.MomentClicked += OnMomentClicked;
+            strip.SaidIn = SaidIn;
             strip.Used += FocusViewer;
             scrollPanel.Controls.Add(strip);
             // Docked above the status bar and below the picture: the status bar (the last control) is laid out first, then this, then what fills the rest
@@ -438,7 +452,7 @@ namespace PhotoLikerUI
             }
 
             var hit = HitOfShownVideo();
-            strip.SetMoments(moments, hit?.Moments);
+            strip.SetMoments(moments, hit?.Moments, hit?.Spoken);
             strip.Visible = true;
             strip.ScrollToFirstHit();
             if (_player is { Visible: true } player)
@@ -462,6 +476,19 @@ namespace PhotoLikerUI
                 _speech = speech;
         }
 
+        // The words said in a stretch of the shown video (milliseconds), as a line that fits over a picture; null when the speech was not read or nothing is said there
+        private string? SaidIn(long fromMs, long toMs) =>
+            _speech.Count == 0 ? null : OneLine(string.Join(' ', _speech.Where(s => s.EndMs > fromMs && s.StartMs < toMs).Select(s => s.Text.Trim())));
+
+        // The words said a little before and after a place (the slider's hover text)
+        private string? SaidNear(long ms) => SaidIn(ms - 1500, ms + 1500);
+
+        private static string? OneLine(string text)
+        {
+            text = string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+            return text.Length == 0 ? null : text.Length <= 140 ? text : text[..139] + "…";
+        }
+
         // The words that are said at this place in the video, a little before and after their segment: the model puts a segment where the voice starts and stops
         private void ShowCaption(long timeMs)
         {
@@ -473,7 +500,7 @@ namespace PhotoLikerUI
         }
 
         // The thumbnails of the model that is chosen; a video that was analyzed with another model only still shows its moments
-        private static List<(long TimeMs, Bitmap Picture)> ReadMomentPictures(PhotoLiker.Video.VideoCatalog catalog, string file, string preferredModelId)
+        internal static List<(long TimeMs, Bitmap Picture)> ReadMomentPictures(PhotoLiker.Video.VideoCatalog catalog, string file, string preferredModelId)
         {
             var thumbnails = catalog.Thumbnails(file, preferredModelId);
             for (var i = 0; thumbnails.Count == 0 && i < PhotoLiker.Search.ClipModels.All.Count; i++)
@@ -582,6 +609,13 @@ namespace PhotoLikerUI
         {
             var side = Math.Clamp(thumb.Width / 4, 18, 30);
             DrawPlayMark(g, new Rectangle(4, 4, side, side));
+        }
+
+        /// <summary>A small speech bubble in the other corner of the thumbnail of a video that a search found in what is said.</summary>
+        private static void DrawThumbSpeechMark(Graphics g, Size thumb)
+        {
+            var side = Math.Clamp(thumb.Width / 4, 18, 30);
+            SpeechMark.Draw(g, new Rectangle(thumb.Width - side - 4, 4, side, side));
         }
     }
 }

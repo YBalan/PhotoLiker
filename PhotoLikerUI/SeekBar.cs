@@ -21,6 +21,7 @@ namespace PhotoLikerUI
         private bool _dragging;
         private long _dragValue;
         private IReadOnlyList<long> _marks = [];
+        private IReadOnlyList<long> _spokenMarks = [];
 
         public SeekBar()
         {
@@ -66,6 +67,18 @@ namespace PhotoLikerUI
             set
             {
                 _marks = value;
+                Invalidate();
+            }
+        }
+
+        /// <summary>Places (in the unit of <see cref="Value"/>) that are marked in the colour of speech (<see cref="SpeechMark.Colour"/>) over <see cref="Marks"/>: what a search found in what is said.</summary>
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public IReadOnlyList<long> SpokenMarks
+        {
+            get => _spokenMarks;
+            set
+            {
+                _spokenMarks = value;
                 Invalidate();
             }
         }
@@ -170,6 +183,11 @@ namespace PhotoLikerUI
             {
                 foreach (var at in _marks)
                     g.FillRectangle(mark, XOf(at) - 1, middle - 7, 3, 14);
+            }
+            using (var spoken = new SolidBrush(Color.FromArgb(240, SpeechMark.Colour)))
+            {
+                foreach (var at in _spokenMarks)
+                    g.FillRectangle(spoken, XOf(at) - 1, middle - 7, 3, 14);
             }
 
             if (_maximum > 0)

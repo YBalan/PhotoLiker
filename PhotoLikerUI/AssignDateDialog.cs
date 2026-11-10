@@ -1,10 +1,11 @@
+using PhotoLiker.Core;
 using PhotoLiker.Search;
 
 namespace PhotoLikerUI
 {
     /// <summary>
-    /// Asks where the date taken of photos that have no usable EXIF date comes from, and shows for each answer how many of the photos have one
-    /// from there and what it would be, before anything is decided.
+    /// Asks where the date taken of the files the person selected (any readable ones, whether they have a usable date or not) or of the photos that have no usable EXIF date
+    /// comes from, and shows for each answer how many of them have one from there and what it would be, before anything is decided.
     /// </summary>
     internal sealed class AssignDateDialog : Form
     {
@@ -19,11 +20,12 @@ namespace PhotoLikerUI
         private readonly DateTimePicker _picker = new() { Format = DateTimePickerFormat.Custom, CustomFormat = DateAlignmentStrings.PickerFormat, Width = 210 };
         private readonly Label _fileWarning = new() { Text = DateAlignmentStrings.AssignFileWarning, AutoSize = true, MaximumSize = new Size(560, 0) };
         private readonly Label _noPlace = new() { AutoSize = true, MaximumSize = new Size(560, 0) };
-        private readonly CheckBox _writeTaken = new() { Text = DateAlignmentStrings.AssignWriteTaken, AutoSize = true, MaximumSize = new Size(570, 0), Checked = true };
+        // Not AutoSize: a tick box that sizes itself does not wrap its text, and the text of this one is long (its height is worked out once the font is known)
+        private readonly CheckBox _writeTaken = new() { Text = DateAlignmentStrings.AssignWriteTaken, AutoSize = false, Width = 570, Height = 24, Checked = true };
         private readonly Button _ok = new() { Text = DateAlignmentStrings.AssignOk, AutoSize = true, MinimumSize = new Size(110, 28), DialogResult = DialogResult.OK };
         private readonly Button _cancel = new() { Text = DateAlignmentStrings.AssignCancel, AutoSize = true, MinimumSize = new Size(80, 28), DialogResult = DialogResult.Cancel };
 
-        /// <param name="selected">The photos without a usable date that are selected in the list (may be none).</param>
+        /// <param name="selected">The readable files that are selected in the list (may be none).</param>
         /// <param name="all">All the photos without a usable date.</param>
         public AssignDateDialog(IReadOnlyList<PhotoDateFacts> selected, IReadOnlyList<PhotoDateFacts> all, string root, bool dark)
         {
@@ -38,7 +40,7 @@ namespace PhotoLikerUI
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            ClientSize = new Size(610, 520);
+            ClientSize = new Size(610, 560);
 
             _sources =
             [
@@ -54,6 +56,7 @@ namespace PhotoLikerUI
             _scopeAll.Text = string.Format(DateAlignmentStrings.AssignScopeAll, all.Count);
             _scopeSelected.Enabled = selected.Count > 0;
             _scopeSelected.Checked = selected.Count > 0;
+            _scopeAll.Enabled = all.Count > 0;
             _scopeAll.Checked = selected.Count == 0;
 
             // The date to start from: what the first photo gets from its folder, else from its file, else now
@@ -77,6 +80,10 @@ namespace PhotoLikerUI
             ThemeManager.Apply(this, dark);
             foreach (Control control in Controls.Cast<Control>().SelectMany(Flatten).Where(c => c is Label or RadioButton or CheckBox))
                 control.BackColor = Color.Transparent;
+
+            // The height of the tick's text at its width (the box at the left of it takes about 20 pixels)
+            var wanted = TextRenderer.MeasureText(_writeTaken.Text, _writeTaken.Font, new Size(_writeTaken.Width - 22, 0), TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
+            _writeTaken.Height = Math.Max(24, wanted.Height + 6);
             UpdatePreview();
         }
 
@@ -87,7 +94,7 @@ namespace PhotoLikerUI
         /// <summary>The date is also written into the photos as their Date Taken (Original), where they have no place for it too.</summary>
         public bool WriteTaken => _writeTaken.Checked;
 
-        /// <summary>The photos it is for: the ones that were selected, or all that have no usable date.</summary>
+        /// <summary>The files it is for: the ones that were selected, or all the photos that have no usable date.</summary>
         public IReadOnlyList<PhotoDateFacts> Scope() => _scopeSelected.Checked ? _selected : _all;
 
         private static IEnumerable<Control> Flatten(Control root) => new[] { root }.Concat(root.Controls.Cast<Control>().SelectMany(Flatten));
@@ -155,7 +162,7 @@ namespace PhotoLikerUI
                     : string.Format(DateAlignmentStrings.AssignCountFormat, found.Count, scope.Count, DateText.Display(found[0]));
             }
 
-            var noPlace = _writeTaken.Checked ? 0 : scope.Count(f => f.Exif.OriginalOffset is null && f.Exif.DigitizedOffset is null && f.Exif.ModifiedOffset is null);
+            var noPlace = GivenDates.WithoutPlace(scope, _writeTaken.Checked);
             _noPlace.Text = noPlace > 0 ? string.Format(DateAlignmentStrings.AssignNoPlaceFormat, noPlace) : string.Empty;
             _ok.Enabled = scope.Count > 0 && scope.Any(f => DateSources.Resolve(Choice, f, _root, _picker.Value, _now) is not null);
         }

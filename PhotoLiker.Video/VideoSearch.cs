@@ -6,7 +6,8 @@ namespace PhotoLiker.Video
     /// Searching what the videos of a folder show. A video is a list of moments (see <see cref="VideoCatalog"/>), and a search looks at the moments with the same
     /// vectors and the same model as the photos, so what is typed in the one search box finds both. The answer is the videos (each once), best first, each with
     /// the place in it that fits best, where playing starts, and every stretch of it that fits (<see cref="SearchHit.Moments"/>); <see cref="Merge"/> puts
-    /// them in one list with the photos. People are found by their faces in the moments, with the same examples and the same closeness as in photos.
+    /// them in one list with the photos. People are found by their faces in the moments, with the same examples and the same closeness as in photos. A place that was
+    /// found in what is said (not in the pictures) is also listed in <see cref="SearchHit.Spoken"/>, so that it can be told apart from the places the pictures found.
     /// </summary>
     public static class VideoSearch
     {
@@ -45,13 +46,13 @@ namespace PhotoLiker.Video
                 var existing = hits.FindIndex(h => string.Equals(h.FullPath, match.Set.FullPath, StringComparison.OrdinalIgnoreCase));
                 if (existing < 0)
                 {
-                    hits.Add(HitOf(match.Set.FullPath, match.Set.Video, score, match.BestMs, match.Places));
+                    hits.Add(HitOf(match.Set.FullPath, match.Set.Video, score, match.BestMs, match.Places) with { Spoken = match.Places, Said = match.Snippet });
                     continue;
                 }
 
                 var seen = hits[existing];
                 var places = (seen.Moments ?? []).Concat(match.Places).Order().ToList();
-                hits[existing] = seen with { Score = Math.Max(seen.Score, score), TimeMs = match.BestMs, Moments = places };
+                hits[existing] = seen with { Score = Math.Max(seen.Score, score), TimeMs = match.BestMs, Moments = places, Spoken = match.Places, Said = match.Snippet };
             }
 
             return pictures with

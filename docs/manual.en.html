@@ -252,6 +252,7 @@ photo again.</p></div>
   <li><strong>Load Liked Folder</strong>: open the Liked folder as a photo folder of its own, to look at what you picked.</li>
   <li><strong>Generate Video</strong>: make a video of your photos, see <a href="#video">Making a video</a>.</li>
   <li><strong>Align dates</strong>, <strong>Remove empty folders</strong>, <strong>Find duplicates</strong>: see <a href="#tools">Tidying up</a>.</li>
+  <li><strong>Video speech</strong> (a video frame with a speech bubble; it is there while <strong>SupportVideo</strong> is on): a table of what is said in the videos of the folder, see <a href="#speech-table">The table of what is said</a>.</li>
   <li><strong>Register Context Menu</strong> / <strong>Unregister Context Menu</strong>: add or remove <em>Open in Photo Liker</em> in the right-click menu of folders.</li>
   <li><strong>Help</strong> (the question mark): the About box, with the keys and this manual.</li>
 </ul>
@@ -294,7 +295,7 @@ liked and in any number of groups.</p>
 folder is listed it is there again. To look at what is in it, open the <code>Deleted</code> folder with the folder button.</p>
 
 <p>The <code>Deleted</code> folder is left out when the photos are listed, and the search index does not look at it. The copies
-of the photo in the Liked and group folders stay where they are.</p>
+of the photo in the Liked and group folders stay where they are. A video that is deleted also leaves the catalog of the videos, with its moments and its speech.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="rotate">9. Rotating photos</h2>
@@ -571,11 +572,12 @@ order of the list (<strong>SortOrder</strong> goes by the created date) agree wi
   <li>The ticks choose what is set: the <em>created</em> date and the <em>modified</em> date of the file (on), and, if you wish, the other dates
   inside the photo (off).</li>
   <li>Select a photo and press <kbd>Space</kbd> to leave it out of the run. Double-click a row to look at the photo.</li>
-  <li><strong>Videos.</strong> With <strong>SupportVideo</strong> on, the videos are in the list too: the date recorded in a video is its date taken, and only the dates of its file are set (the video itself is never written, and it is not analyzed again afterwards).</li>
+  <li><strong>Videos.</strong> With <strong>SupportVideo</strong> on, the videos are in the list too: the date recorded in a video is its date taken, and only the dates of its file are set (the video is not analyzed again afterwards). A video is written to only when you give it a date with <strong>Use a date…</strong> and leave the tick on: the date it says it was recorded is then overwritten in place (MP4, MOV, 3GP: the movie header; AVI: the camera's date chunk), its size stays the same, and <strong>Undo last run…</strong> puts the old bytes back.</li>
   <li><strong>Photos without a usable date.</strong> A camera that lost its clock writes <code>2001-01-01</code>; such dates are not believed. Select those
   photos and press <strong>Use a date…</strong> to give them one: the date the photo has, the date in the name of its folder
   (<code>2015-05-01</code>, <code>01.05.2015 Anna</code>), the date of the file, or one you type. The date is also written into the photo as its
-  <strong>Date Taken (Original)</strong> (a tick, on by default), also where the photo had no place for it: its file then grows a little, and Undo takes it out again.</li>
+  <strong>Date Taken (Original)</strong> (a tick, on by default), also where the photo had no place for it: its file then grows a little, and Undo takes it out again.
+  The same button works for any files you select, also ones that already have a usable date: the date you choose replaces it, so a few files can be dated by another rule than the rest.</li>
   <li><strong>Change N photos</strong> does it, and the copies in the Liked and group folders get the same dates. Every run writes a log in the photo
   folder, and <strong>Undo last run…</strong> puts the dates back.</li>
 </ul>
@@ -736,7 +738,29 @@ search that is shown is run again when it changes. The precision slider works on
 (465 MB, downloaded once, after asking). It takes about a third of the length of the speech (3 hours of video in about an hour) and continues where it stopped. A word that you type is then looked for in
 what is said, in whatever form it was said (<q>лошадка</q> finds <q>лошадку</q>), and a video where it is said comes before the ones that only look right. The words are shown in a line under the player
 while the video plays. The text is the model's guess: good with adult speech, poor with children and noise; set <strong>SpeechLanguage</strong> (<code>ru</code>, <code>uk</code>, <code>en</code>) when the family
-speaks one language. Nothing leaves the computer.</p>
+speaks one language: left to find the language itself (<code>auto</code>) the model sometimes takes a short or noisy video for Norwegian, Japanese or another language and writes nonsense. With a language set,
+<strong>Update index</strong> also hears again the videos that were heard as another language. It asks first, with how many videos that is and how long they are, because it replaces their text: <strong>No</strong>
+reads only the videos not read yet, and a run that is stopped continues where it stopped. Nothing leaves the computer.</p>
+<p><strong>Which videos were found by what is said.</strong> A video that was found in its speech carries a teal <strong>speech bubble</strong> on its thumbnail in the list at the side (hold the pointer
+over it to read the words), and the status line says how many of the videos were found that way. In the viewer the places that were found in the speech have a speech bubble on the strip and a teal tick on the
+slider, while what the pictures found stays orange; hold the pointer over a moment of the strip, or a place on the slider, to read what is said there. The line under the player shows only while somebody is
+speaking, and only for videos whose speech has been read: <strong>Update index</strong> reads the rest, a folder after a folder.</p>
+
+<h3 id="speech-table">The table of what is said</h3>
+<p>The <strong>Video speech</strong> button of the toolbar (a video frame with a speech bubble; it is there while <strong>SupportVideo</strong> is on) opens a table of every video the program knows in the folder
+(also those in subfolders that the list does not show): its path below the folder, its length, where it stands (<strong>With speech</strong>, <strong>Nothing heard</strong>, <strong>Not read yet</strong>,
+<strong>No sound</strong>, or a failure), the language it was read as, how many moments it has, and what is said in it. A click on a column title sorts by it; the <strong>Find</strong> box keeps the videos
+whose path or words contain what you type, and the box next to it keeps one status.</p>
+<p>Select a video and under the table are its moments (small pictures, with a speech bubble on the ones where something is said; hold the pointer over one to read the words) and the words with their times.
+A click on a moment selects the words said there. <strong>A double click</strong> (or <kbd>Enter</kbd>) plays the video in the program Windows has for it. The <strong>right-click menu</strong> has
+<strong>Open</strong>, <strong>Show in File Explorer</strong> and <strong>Hear again in another language...</strong>.</p>
+<p><strong>Hear again...</strong> asks for the language (one of the 99 the model knows, or <code>auto</code>; the one set in <strong>SpeechLanguage</strong> is offered first) and hears the selected videos again;
+<strong>Hear all again...</strong> does it for every video that has sound. It takes about a third of the length of the videos, so a whole library takes hours; a bar shows how far it is, and <strong>Stop</strong>
+stops it. The text of a video is replaced when its new text is ready, so a run that is stopped leaves the rest as it was. The language is kept as you chose it: <strong>Update index</strong> with the same language
+in <strong>SpeechLanguage</strong> does not hear them again (with another one it asks first). While <strong>Update index</strong> runs the videos cannot be heard again.</p>
+<p><strong>Export to Excel...</strong> saves every video, also the ones nothing is known of, as an <code>.xlsx</code> file with two sheets: a row for every video (path, length, recorded, status, language,
+moments and their times, the whole text) and a row for every stretch of speech (path, start, end, text), which is the sheet to filter and search in. An Excel cell holds 32,000 characters, so a longer text is cut
+there. A file that Excel has open is not replaced: the window says so.</p>
 
 <h3>Saving a picture of a video</h3>
 <p><kbd>Ctrl</kbd>+<kbd>S</kbd> saves the picture the video shows now (the first one, if it is not playing) as a photo in the Liked folder, full size, named after the video and the place

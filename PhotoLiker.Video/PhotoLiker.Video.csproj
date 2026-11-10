@@ -37,6 +37,10 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>PhotoLiker.Video.Tests</_Parameter1>
     </AssemblyAttribute>
+    <!-- The tests of the windows point the library at the ffmpeg of the repository (Ffmpeg.ExecutableOverride) -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLikerUI.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>

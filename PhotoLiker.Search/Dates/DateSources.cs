@@ -12,7 +12,10 @@ namespace PhotoLiker.Search
         /// <summary>The date in the name of the folder the photo is in ("2015-05-01", "20150501", "01.05.2015 Anna").</summary>
         FolderName = 1,
 
-        /// <summary>The date of the file: when it was created, else when it was last changed (for a copied photo that is about the day of the copy).</summary>
+        /// <summary>
+        /// The date of the file: when it was created, else when it was last changed (for a copied photo that is about the day of the copy). A date that is believable is
+        /// preferred; the person chose this source, so when there is none the date the file has is taken as it is (<see cref="DateSources.FromFileAsItIs"/>).
+        /// </summary>
         FileDate = 2,
 
         /// <summary>A date the person typed.</summary>
@@ -37,12 +40,18 @@ namespace PhotoLiker.Search
         /// <param name="now">The present, passed in so that the rules can be tested.</param>
         public static DateTime? Resolve(DateChoice choice, PhotoDateFacts facts, string root, DateTime? typed, DateTime now) => choice switch
         {
-            DateChoice.ExifAsItIs => FromExif(facts.Exif.Dates),
-            DateChoice.FolderName => FromFolderName(root, facts.Path, FromExif(facts.Exif.Dates)),
-            DateChoice.FileDate => FromFile(facts, now),
+            DateChoice.ExifAsItIs => Own(facts),
+            DateChoice.FolderName => FromFolderName(root, facts.Path, Own(facts)),
+            DateChoice.FileDate => FromFile(facts, now) ?? FromFileAsItIs(facts),
             DateChoice.Typed => typed,
             _ => null,
         };
+
+        /// <summary>
+        /// The date the file has itself: the date taken that is believed (also that of a video, which has no EXIF), else what the camera wrote, believed or not. Null if it has none.
+        /// A file that is already dated is chosen by the person to be dated by another rule, so these two answers must not come back empty for it.
+        /// </summary>
+        private static DateTime? Own(PhotoDateFacts facts) => facts.Taken ?? FromExif(facts.Exif.Dates);
 
         /// <summary>The date the camera wrote, believed or not: DateTimeOriginal, else DateTimeDigitized, else DateTime. Null if it wrote none (or only blanks).</summary>
         public static DateTime? FromExif(ExifDates dates) => dates.Original ?? dates.Digitized ?? dates.Modified;
@@ -57,6 +66,13 @@ namespace PhotoLiker.Search
             }
             return null;
         }
+
+        /// <summary>
+        /// The date of the file as it is, believable or not (a card whose clock was reset gives files of 1987): when it was created, else when it was last changed. Null for a file that
+        /// has neither. Only for a person who chose "the date of the file" for these very files, as with <see cref="DateChoice.ExifAsItIs"/>: nothing that goes by itself may use it.
+        /// </summary>
+        public static DateTime? FromFileAsItIs(PhotoDateFacts facts) =>
+            PhotoDates.FileTime(facts.CreatedUtc) ?? PhotoDates.FileTime(facts.ModifiedUtc);
 
         /// <summary>
         /// The date in the name of the folder the photo is in (the innermost folder below the photo folder that has one), at the time of day of

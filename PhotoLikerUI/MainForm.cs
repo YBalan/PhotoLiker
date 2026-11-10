@@ -35,6 +35,7 @@
             InitializeDateAlignment();
             InitializeEmptyFolders();
             InitializeDuplicates();
+            InitializeVideoSpeech();
             InitializeRotate();
             InitializeTaskbarProgress();
             InitializeLanguage();
@@ -1141,6 +1142,7 @@
             var folder = _currentConfig.CurrentFolder;
             var files = _currentConfig.Files;
             var searchIndex = _folderSearch?.Index;
+            var videoCatalog = MediaKinds.IsVideo(file) ? VideoLibrary.Current : null;
 
             try
             {
@@ -1153,6 +1155,10 @@
                     DeletedPhotos.Move(folder, file);
                     try { searchIndex?.RemoveFile(file); }
                     catch { /* the next "Update index" forgets it anyway */ }
+
+                    // A video is known to the catalog of the videos (its moments, faces and speech), not to the index of the photos
+                    try { videoCatalog?.Forget(file); }
+                    catch { /* the catalog was closed (another folder): the next "Update index" forgets it anyway */ }
                 });
             }
             catch (Exception ex)
@@ -1187,7 +1193,7 @@
                 LoadImage(next);
             }
 
-            UpdateSearchControls(); // the index has one photo less
+            UpdateSearchControls(); // the index has one photo (or video) less
             SetStatus(string.Format(MainFormStrings.StatusPhotoDeleted, Path.GetFileName(file), files.Count));
         }
 
@@ -1639,6 +1645,7 @@
                     existing.Thumb.BorderStyle = isCurrent ? BorderStyle.Fixed3D : BorderStyle.None;
                     existing.Label.ForeColor = isCurrent ? Color.White : (isLiked ? Color.LightGreen : Color.LightGray);
                     existing.Thumb.Invalidate(); // the liked badge may have changed
+                    _heardTip.SetToolTip(existing.Thumb, HeardTooltipOf(filePath) ?? string.Empty); // and what a new search found in what is said
                     continue;
                 }
 
@@ -1679,6 +1686,8 @@
 
                 thumb.Click += PreviewThumb_Click;
                 label.Click += PreviewThumb_Click;
+                if (HeardTooltipOf(filePath) is { } heardText)
+                    _heardTip.SetToolTip(thumb, heardText);
 
                 // Not cached yet: the cache assigns the thumbnail once it has been loaded
                 if (_photoCache.TryGet(filePath, out var cached) && cached.Thumb is not null)
@@ -1713,7 +1722,11 @@
         private void ThumbPaint_LikedBadge(object? sender, PaintEventArgs e)
         {
             if (sender is PictureBox { Tag: string videoPath } video && MediaKinds.IsVideo(videoPath))
+            {
                 DrawThumbVideoMark(e.Graphics, video.Size);
+                if (HeardHitOf(videoPath) is not null)
+                    DrawThumbSpeechMark(e.Graphics, video.Size);
+            }
 
             if (sender is not PictureBox { Tag: string filePath } pb || !IsSaved(filePath)) return;
 

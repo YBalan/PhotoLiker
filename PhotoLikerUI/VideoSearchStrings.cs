@@ -30,6 +30,9 @@ namespace PhotoLikerUI
         public static string StatusSpeechSilentPartFormat => T();
         public static string SpeechDownloadQuestionFormat => T();
         public static string SpeechDownloadTitle => T();
+        public static string SpeechRereadQuestionFormat => T();
+        public static string SpeechRereadTitle => T();
+        public static string StatusSpeechRereadPartFormat => T();
         public static string ScopePhotosButton => T();
         public static string ScopePhotosTooltip => T();
         public static string ScopeVideosButton => T();
@@ -42,5 +45,8 @@ namespace PhotoLikerUI
         public static string ImportVideosNoteFormat => T();
         public static string StatusImportedVideosFormat => T();
         public static string StatusImportedVideosOffNote => T();
+        public static string StatusResultsHeardNoteFormat => T();
+        public static string StatusVideoHeardFormat => T();
+        public static string ThumbHeardTooltipFormat => T();
     }
 }

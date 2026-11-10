@@ -5,7 +5,8 @@ namespace PhotoLiker.Video
     /// <summary>
     /// What the Align dates tool needs to know of a video, in the form it knows photos in (<see cref="PhotoDateFacts"/>): the date the video says it was recorded (the one
     /// <see cref="VideoDates"/> believes, taken from the file's own header, not from the date of the file) and the dates of the file. The tool then makes the dates of the file the
-    /// date recorded. A video has no place inside it that the tool could write (no EXIF), so only the dates of the file change: the video itself is never written.
+    /// date recorded. A video has no EXIF, so only the dates of the file change, unless the person gave it a date and asked for it to be written: then the date it says it was recorded is overwritten
+    /// in place too (see <see cref="VideoContainerDates"/>).
     /// </summary>
     public static class VideoDateFacts
     {

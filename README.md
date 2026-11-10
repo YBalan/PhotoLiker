@@ -361,11 +361,12 @@ work on the photo again.
 | **Align dates** (the calendar with the green equals sign) | Make the dates of the photo files the date the photo was taken, see [Aligning file dates](#aligning-file-dates). |
 | **Remove empty folders** (a folder with a red cross) | List the folders that hold no photos and remove them, see [Removing empty folders](#removing-empty-folders). |
 | **Find duplicates** (two overlapping photos) | Find photos that are the same file in different folders and move the copies in the worse folders away, see [Finding duplicates](#finding-duplicates). |
+| **Video speech** (a video frame with a speech bubble; there while **SupportVideo** is on) | A table of the videos of the folder with what is said in each of them and their moments, hearing videos again in another language, and an export of the whole table to Excel, see [Videos](#videos). |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
 
 The window that a button opens carries the icon of that button: in its title bar, and in Alt+Tab. Generate Video, Align dates (also the window that gives
-photos a date), Remove empty folders, Find duplicates and the About box (the question mark) have theirs; the People window, the windows that
+photos a date), Remove empty folders, Find duplicates, Video speech and the About box (the question mark) have theirs; the People window, the windows that
 rename a person or a group and the one that copies results into a group have the icon of the People button of the search strip, and the one that
 names a face has the faces icon. They are drawn from the same pictures as the buttons, again at each size a title bar can ask for (16 to 64 px), so
 they stay sharp at any scaling of the screen. (A window with the dialog frame has no icon in its title bar in Windows, so those windows have a thin
@@ -647,7 +648,7 @@ subfolders with the same name don't meet. If a photo with that name is already i
 
 The `Deleted` folder of the photo folder is left out when the folder is listed (also with **GoThroughSubFolders** on) and
 by the search indexer. Only that one: a folder called `Deleted` further down is yours and is listed as any folder. A photo
-that is deleted leaves the search index at once; its copies in the Liked and group folders stay where they are. Open the
+that is deleted leaves the search index at once (a video leaves the catalog of the videos too, with its moments, its faces and its speech); its copies in the Liked and group folders stay where they are. Open the
 `Deleted` folder itself with the folder button to look at what is in it. The copies that [Find duplicates](#finding-duplicates) moves
 away are in `Deleted\Duplicated`, in the same way.
 
@@ -836,8 +837,26 @@ Switching the search model makes the moments again with the new model, like the 
 sentence. It takes about a third of the length of the speech: 3 hours of video in about an hour; it continues where it stopped. A word that you type is then looked for in what is said, in whatever
 form it was said (<q>лошадка</q> finds <q>лошадку</q>), also when the sentence was cut in two by the model, and a video where it is said comes before the ones that only look right. The words are
 shown in a line under the player while the video plays. The text is the model's guess: it is good with adult speech and poor with children's and with noise (a song is written as its words), and the
-**SpeechLanguage** row (`ru`, `uk`, `en`, or `auto`) helps it when the family speaks one language. **SpeechModel** chooses `tiny`, `base` or `small`. Nothing leaves the computer.
+**SpeechLanguage** row (`ru`, `uk`, `en`, or `auto`) helps it when the family speaks one language: left to find the language itself (`auto`), the small model takes a short or noisy video for Norwegian, Japanese, Javanese or Korean and writes nonsense (about a fifth of the videos of a real Russian-speaking library). With a language set, **Update index** also hears again the videos that were heard as another language; it asks first, with how many videos and how long they are, because that replaces their text (so a language changed for a try cannot replace the good text of a whole library), **No** reads only the videos not read yet, and a run that is stopped continues where it stopped. **SpeechModel** chooses `tiny`, `base` or `small`. Nothing leaves the computer.
+
+**Which videos were found by what is said.** A video found in its speech carries a teal **speech bubble** on its thumbnail in the list at the side (hold the pointer over it to read the words), and the
+status line says how many of the videos were found that way. In the viewer the places found in the speech have a speech bubble on the strip and a teal tick on the slider, while what the pictures found stays
+orange; hold the pointer over a moment of the strip, or a place on the slider, to read what is said there. The line under the player shows only while somebody is speaking, and only for videos whose speech
+has been read: **Update index** reads the rest, a folder after a folder (it goes by path, so a library is read in that order, and a video not read yet is found by its pictures only).
 (The words are searched in the text whichever search model is chosen; for a query in Russian or Ukrainian the pictures are best searched with the XLM-R model of the [photo search](#photo-search).)
+
+**The table of what is said.** The **Video speech** button of the toolbar (a video frame with a speech bubble; it is there while **SupportVideo** is on) opens a table of every video the catalog
+knows (all the videos below the folder, whether the list shows the subfolders or not): its path below the folder, its length, where it stands (**With speech**, **Nothing heard**, **Not read yet**,
+**No sound**, or a failure), the language it was read as, how many moments it has, and what is said in it. A click on a column title sorts by it; the **Find** box keeps the videos whose path or words
+contain what you type, and the box next to it keeps one status. Select a video and under the table are its moments (the small pictures, a speech bubble on the ones where something is said; hold the
+pointer over a picture to read the words) and the words with their times; a click on a moment selects the words said there. A double click (or <kbd>Enter</kbd>) plays the video in the program Windows
+has for it, and the right-click menu has **Open**, **Show in File Explorer** and **Hear again in another language...**. That asks for the language (one of the 99 the model knows, or `auto`; the
+one set in **SpeechLanguage** is the first offer) and hears the selected videos again; **Hear all again...** does it for every video that has sound, which takes a third of their length, so for a whole
+library hours: a bar shows how far it is, with a **Stop** button. The text of a video is replaced when its new text is ready, so a run that is stopped leaves the rest as they were. The language is kept as
+you chose it, so **Update index** with the same language in **SpeechLanguage** does not hear them again (with another one it asks first, as above). While **Update index** runs the videos cannot be heard
+again: both write the same catalog. **Export to Excel...** saves every video, also the ones nothing is known of, as an `.xlsx` file with two sheets: a row for every video (path, length, recorded, status,
+language, moments and their times, the whole text) and a row for every stretch of speech (path, start, end, text), which is the one to filter and search in. An Excel cell holds 32,000 characters, so a
+longer text is cut there. The file is written whole or not at all, and a file that Excel has open says so instead of being replaced.
 
 **Saving a picture of a video.** <kbd>Ctrl</kbd>+<kbd>S</kbd> saves the picture the video shows now (the first one, if it is not playing) as a photo in the Liked folder: full size, named after the
 video and the place (`MVI_4069 1m23s.jpg`), with the date it was recorded at that place as its date taken, so it is a photo like any other.
@@ -939,8 +958,12 @@ even on a network drive, and can be stopped) and shows, before anything is touch
 - A **double click** on a row opens the photo in the program Windows has for it (the right-click menu also has *Open* and *Show in
   File Explorer*, which opens the folder with the file selected), to look at it before deciding. This works while a run is in progress too.
 - **Videos.** With **SupportVideo** on, the videos of the folder are looked at too: the date a video says it was recorded (read from its header with ffmpeg, kept in the video catalog, and believed by the
-  same rules) is its date taken, and its file dates are set to it. Nothing is written into a video (it has no EXIF), so *Dates inside the photo too* and writing a given date into the file
-  are for photos only; a video is the same byte for byte after a run. The catalog of the videos is told the new date of change, so that **Update index** does not analyze them again.
+  same rules) is its date taken, and its file dates are set to it. A video has no EXIF, so *Dates inside the photo too* is for photos only: a video is the same byte for byte after a run,
+  **unless you give it a date with Use a date...** (below) and leave the tick that writes the date into the file on. Then the date it says it was recorded is overwritten in place, where its
+  kind keeps one: the movie header of an MP4, MOV, M4V or 3GP (the creation time, UTC, also in the tracks that had one) or the date chunk of an AVI (in the form the camera wrote it). Nothing
+  else moves: the size stays, and no picture or sound is touched. A video of another kind (MKV, MTS, MPG...) or an AVI without a date chunk only gets its file dates, and the question says
+  how many. **Undo last run** puts the old bytes back. The catalog of the videos is told the new date of change (and, for a written video, the new date recorded; its moments and speech stay),
+  so that **Update index** does not analyze them again.
   The first look reads the header of every video that has not been read (about 0.4 seconds each over a network share, a few at a time).
 - Only the date the camera wrote is used, and only if PhotoLiker believes it (see [Photo search](#photo-search): not before
   1995, not in the future, not a camera that lost its clock). A photo without such a date is listed under **No usable EXIF
@@ -949,14 +972,18 @@ even on a network drive, and can be stopped) and shows, before anything is touch
 
 **Photos without a usable date.** Select some of them (or none, for all) and press **Use a date...** (<kbd>Enter</kbd>, or
 the right-click menu). It asks where their date taken comes from, and shows for each answer how many of the photos have one
-from there, and what it would be:
+from there, and what it would be. The same button dates **any files you select**, also ones that already have a usable date
+(say, some videos or a few photos that must follow another rule than the rest): the date you choose replaces the one the file
+has, and the file is then changed like the others. With nothing selected it is for the photos that have no usable date:
 
 - *The date the photo has: I know it is right*: the EXIF date that looks like a camera that lost its clock but is real, a
-  photo of New Year's night in a folder `2016-01-01`;
+  photo of New Year's night in a folder `2016-01-01`; for a file that is dated already, the date it has;
 - *The date in the name of its folder*: a day in the folder name (`2015-05-01`, `20150501`, `01.05.2015 Anna`), the innermost
   folder that has one, at the time of day the photo has, or at noon (a folder called `2015-05` has no day and gives none);
 - *The date of the file*: when it was created, else changed. For a photo that was copied this is the day of the copy, which
-  the dialog says;
+  the dialog says. A file date that is not believed otherwise (before 1995, a card whose clock was reset) is used too, when no
+  believable one is there: you chose this source for these files. For a video whose recorded date is wrong and whose file dates are right, this
+  is the way to make the date it says agree with the date of its file;
 - *This date*: one you type.
 
 ![The question of Use a date: the selected photo, the date in the name of its folder chosen with the example it would get, and the tick that writes the date into the photo](docs/images/31-use-a-date.png)
@@ -1201,12 +1228,13 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown. Shared by all front ends. |
 | `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run, the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
-| `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form) and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
+| `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form, heard again in a language that is chosen), the table of it for the window and the Excel file (`.xlsx`, written with the zip and XML of the framework) of that table, and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
 | `PhotoLiker.GenerateVideo.Tests` | xUnit tests of the video library: the order and the times of the photos, the sequence of a video (cover, repeats, audio), the ffmpeg arguments, the cuts on the beat, the rhythm analysis (on synthetic songs), the settings file. They need no ffmpeg. |
-| `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg), the pictures taken out of a real video and their times, the choice of moments, the faces, the search (words, people, dates, speech) and its merge with the photos, the word forms of the speech and the speech job with a stand-in for the model, saving a picture. The tests that make a short video do so with the ffmpeg of the repository and do nothing without it; the one that runs the real CLIP model does nothing without it. |
+| `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg), the pictures taken out of a real video and their times, the choice of moments, the faces, the search (words, people, dates, speech) and its merge with the photos, the word forms of the speech and the speech job with a stand-in for the model (also hearing chosen videos again), the table of the speech, the Excel writer (read back as XML), saving a picture. The tests that make a short video do so with the ffmpeg of the repository and do nothing without it; the one that runs the real CLIP model does nothing without it. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
+| `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question: which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |
 | `.github` | `workflows\build.yml` (builds every push and pull request to `master`, as artifacts) and `workflows\release.yml` (makes a GitHub release from a tag, see [Releasing](#releasing)), with `release-intro.md`, the text that opens the notes of a release. |
@@ -1223,6 +1251,7 @@ dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests of the Co
 dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.csproj  # run the tests of the video library
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
 dotnet test  PhotoLiker.Video.Tests\PhotoLiker.Video.Tests.csproj  # run the tests of the video library (videos in the archive)
+dotnet test  PhotoLikerUI.Tests\PhotoLikerUI.Tests.csproj  # run the tests that open the real windows (they flash on your desktop for a few seconds)
 installer\build-installer.ps1                           # publish and pack the installer (needs Inno Setup 6)
 ```
 

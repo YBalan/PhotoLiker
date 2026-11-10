@@ -272,6 +272,37 @@ namespace PhotoLikerUI
             g.FillEllipse(light, 2.8f, 5.6f, 2.4f, 2.4f);
         });
 
+        // ── Video speech (the table of what is said in the videos) ────────
+        // A dark video frame with a play mark, and the teal speech bubble of "found in what is said" over its lower right corner
+        public static Bitmap VideoSpeech() => DrawOnBitmap(g =>
+        {
+            using var frame = new LinearGradientBrush(new RectangleF(0.5f, 1.5f, 11.5f, 9.5f), Color.FromArgb(85, 95, 125), Color.FromArgb(35, 40, 65), 90f);
+            g.FillRoundedRectangle(frame, 0.5f, 1.5f, 11.5f, 9.5f, 1.5f);
+            using var rim = new Pen(Color.FromArgb(235, 240, 250), 0.9f);
+            g.DrawRectangle(rim, 1f, 2f, 10.5f, 8.5f);
+
+            using var play = new SolidBrush(Color.FromArgb(225, 232, 245));
+            g.FillPolygon(play, [new PointF(3.6f, 3.9f), new PointF(3.6f, 8.7f), new PointF(7.4f, 6.3f)]);
+
+            // The bubble: the body, the tail down to the left, a white rim so that it stands out of the frame, and three dots for words
+            using var bubble = new GraphicsPath();
+            bubble.AddArc(6.2f, 6.4f, 3f, 3f, 180, 90);
+            bubble.AddArc(12.4f, 6.4f, 3f, 3f, 270, 90);
+            bubble.AddArc(12.4f, 10.2f, 3f, 3f, 0, 90);
+            bubble.AddLine(10.9f, 13.2f, 8.4f, 15.5f);
+            bubble.AddLine(8.4f, 15.5f, 8.7f, 13.2f);
+            bubble.AddArc(6.2f, 10.2f, 3f, 3f, 90, 90);
+            bubble.CloseFigure();
+            using var teal = new SolidBrush(Color.FromArgb(0, 190, 168));
+            g.FillPath(teal, bubble);
+            using var edge = new Pen(Color.White, 0.9f) { LineJoin = LineJoin.Round };
+            g.DrawPath(edge, bubble);
+
+            using var dot = new SolidBrush(Color.White);
+            foreach (var x in new[] { 8.2f, 10.8f, 13.4f })
+                g.FillEllipse(dot, x - 0.75f, 9.65f, 1.5f, 1.5f);
+        });
+
         // ── Help / About ──────────────────────────────────────────────────
         // A blue disc with a white rim and a white question mark (the Help button, which opens the About box)
         public static Bitmap Help() => DrawOnBitmap(g =>
@@ -445,7 +476,7 @@ namespace PhotoLikerUI
     /// </summary>
     internal static class DialogIcons
     {
-        private static Icon? _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help;
+        private static Icon? _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech;
 
         public static Icon GenerateVideo => _generateVideo ??= AppIcons.WindowIcon(AppIcons.GenerateVideo);
 
@@ -460,6 +491,8 @@ namespace PhotoLikerUI
         public static Icon FaceRecognition => _faceRecognition ??= AppIcons.WindowIcon(AppIcons.FaceRecognition);
 
         public static Icon Help => _help ??= AppIcons.WindowIcon(AppIcons.Help);
+
+        public static Icon VideoSpeech => _videoSpeech ??= AppIcons.WindowIcon(AppIcons.VideoSpeech);
     }
 
     internal static class GraphicsExtensions

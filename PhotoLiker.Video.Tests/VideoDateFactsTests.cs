@@ -216,6 +216,44 @@ public sealed class VideoDateFactsTests : IDisposable
     }
 
     [Fact]
+    public async Task ADateWrittenIntoTheVideo_IsTheDateTheCatalogKnowsItBy_ItsAnalysisStays_AndAnUndoPutsEverythingBack()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        using var catalog = VideoCatalog.Open(_root, DbFile);
+        var (video, file) = await AnalyzedVideo(catalog, Recorded);
+        var before = File.ReadAllBytes(file);
+        var given = new DateTime(2003, 1, 31, 18, 6, 0);
+        var entry = DateAlignment.Plan(await VideoDateFacts.InspectAsync(catalog, Listed(file), default), DateAlignmentOptions.Default, given, writeTaken: true);
+        Assert.True(entry.SetExif.HasFlag(ExifDateFields.Original));
+
+        var report = DateAligner.Apply([entry], _root, Path.Combine(_root, "log.jsonl"), null, null, default);
+        Assert.Empty(report.Failures);
+        catalog.UpdateStamps([.. report.Photos.Select(p => (p.Path, p.PreviousModifiedUtc.Ticks, p.ModifiedUtc.Ticks))]);
+        await catalog.RefreshRecordedAsync(file);
+
+        Assert.Equal(before.Length, new FileInfo(file).Length); // written in place
+        Same(given, (await VideoProbe.ReadAsync(file)).Recorded); // what ffmpeg reads from the file itself
+        var again = await catalog.GetAsync(file);
+        Assert.Equal(video.Id, again.Id); // the same video: not read again
+        Same(given, again.Info!.Recorded);
+        Same(given, again.Date.Taken);
+        Assert.Equal((1, 2), catalog.CountAnalyzed(Clip));
+        Assert.Equal((1, 1), catalog.CountTranscribed("small"));
+
+        var undone = DateAligner.Undo(report.LogFile, null, default);
+        catalog.UpdateStamps([.. undone.Photos.Select(p => (p.Path, p.PreviousModifiedUtc.Ticks, p.ModifiedUtc.Ticks))]);
+        foreach (var p in undone.Photos.Where(p => p.Written.HasFlag(ExifDateFields.Original)))
+            await catalog.RefreshRecordedAsync(p.Path);
+
+        Assert.Equal(before, File.ReadAllBytes(file)); // every byte as it was
+        var back = await catalog.GetAsync(file);
+        Assert.Equal(video.Id, back.Id);
+        Same(RecordedLocal, back.Date.Taken);
+        Assert.Equal((1, 2), catalog.CountAnalyzed(Clip));
+    }
+
+    [Fact]
     public async Task AStampThatIsNotTheOneTheCatalogKnows_IsIgnored_TheVideoWasChangedBySomeoneElse()
     {
         if (RealFfmpeg.Path is null) return;
