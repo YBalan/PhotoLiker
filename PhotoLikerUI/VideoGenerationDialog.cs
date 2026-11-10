@@ -1013,9 +1013,20 @@ namespace PhotoLikerUI
                 if (!await _ensureDepthModelAsync())
                     _parallaxCheckBox.Checked = false;
             }
+            catch (OperationCanceledException)
+            {
+                _parallaxCheckBox.Checked = false; // the program is closing: nothing to say
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // This runs from a click, which has nobody to catch what is thrown out of it: the model could not be had, so the box is not ticked, and the log says why
+                _parallaxCheckBox.Checked = false;
+                AppendOutput(string.Format(VideoStrings.LogParallaxModelFailedFormat, ex.Message));
+            }
             finally
             {
-                _parallaxCheckBox.Enabled = !_isGenerating;
+                if (!IsDisposed)
+                    _parallaxCheckBox.Enabled = !_isGenerating;
             }
         }
 

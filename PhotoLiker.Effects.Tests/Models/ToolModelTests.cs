@@ -114,18 +114,77 @@ public class ToolModelTests : IDisposable
     }
 
     [Fact]
-    public async Task AFileThatIsThereAlready_IsNotDownloadedAgain_NorChanged()
+    public async Task AFileThatIsThereAlready_AndIsTheOneThatWasTested_IsNotDownloadedAgain_NorChanged()
     {
         using var server = new LocalFileServer("new bytes");
         var model = Served(server, "new bytes");
         var path = model.PathIn(_models.Path);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, "old bytes");
+        File.WriteAllText(path, "new bytes");
+        var written = File.GetLastWriteTimeUtc(path);
 
         await new EffectModels(_models.Path).EnsureDownloadedAsync(model, null, CancellationToken.None);
 
         Assert.Equal(0, server.Requests);
+        Assert.Equal("new bytes", File.ReadAllText(path));
+        Assert.Equal(written, File.GetLastWriteTimeUtc(path));
+    }
+
+    [Fact]
+    public async Task AFileThatIsThereAlready_ButIsNotTheOneThatWasTested_IsDownloadedAgain()
+    {
+        using var server = new LocalFileServer("new bytes");
+        var model = Served(server, "new bytes");
+        var path = model.PathIn(_models.Path);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "old by"); // cut short, damaged, or changed by something else
+
+        await new EffectModels(_models.Path).EnsureDownloadedAsync(model, null, CancellationToken.None);
+
+        Assert.Equal(1, server.Requests);
+        Assert.Equal("new bytes", File.ReadAllText(path));
+        Assert.False(File.Exists(path + ".part"));
+    }
+
+    [Fact]
+    public async Task AFileThatIsNotTheOneThatWasTested_AndANewOneThatIsNotEither_LeavesNothingToUse()
+    {
+        using var server = new LocalFileServer("something else");
+        var model = Served(server, "new bytes");
+        var path = model.PathIn(_models.Path);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "old bytes");
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => new EffectModels(_models.Path).EnsureDownloadedAsync(model, null, CancellationToken.None));
+
+        Assert.False(model.IsPresentIn(_models.Path)); // the bad file that was there is not left to be used
+        Assert.False(File.Exists(path + ".part"));
+    }
+
+    [Fact]
+    public async Task WithNoHashToGoBy_AFileThatIsThere_IsKept()
+    {
+        using var server = new LocalFileServer("new bytes");
+        var path = _models.File(Path.Combine("search-model", "model.onnx"));
+        File.WriteAllText(path, "old bytes");
+
+        await ModelFiles.DownloadAsync(server.Url("model.onnx"), path, "a model", null, CancellationToken.None);
+
+        Assert.Equal(0, server.Requests);
         Assert.Equal("old bytes", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void TheHashOfAFile_IsComparedWithoutRegardToCase_AndAFileThatCannotBeReadIsAnError()
+    {
+        var path = _models.File("file.bin");
+        File.WriteAllBytes(path, Encoding.ASCII.GetBytes("model-bytes"));
+        var lower = Convert.ToHexString(SHA256.HashData(Encoding.ASCII.GetBytes("model-bytes"))).ToLowerInvariant();
+
+        Assert.True(ModelFiles.HasSha256(path, lower));
+        Assert.True(ModelFiles.HasSha256(path, lower.ToUpperInvariant()));
+        Assert.False(ModelFiles.HasSha256(path, new string('0', 64)));
+        Assert.ThrowsAny<IOException>(() => ModelFiles.HasSha256(_models.File("gone.bin"), lower));
     }
 
     [Fact]
@@ -143,6 +202,87 @@ public class ToolModelTests : IDisposable
 
         using var server = new LocalFileServer("model-bytes");
         await new EffectModels(_models.Path).EnsureDownloadedAsync(Served(server, "model-bytes"), null, CancellationToken.None);
+    }
+
+    // ── a session that is let go of while it runs ───────────────────────────
+
+    [Fact]
+    public void TheGuard_FreesAtOnce_WhenNothingRuns_AndRefusesWhatComesAfter()
+    {
+        var freed = 0;
+        var guard = new RunGuard(() => freed++, "model");
+
+        guard.Enter();
+        guard.Leave();
+        Assert.Equal(0, freed);
+
+        guard.Dispose();
+        Assert.Equal(1, freed);
+        guard.Dispose(); // twice is the same as once
+        Assert.Equal(1, freed);
+        Assert.Throws<ObjectDisposedException>(() => guard.Enter());
+    }
+
+    [Fact]
+    public void TheGuard_WaitsForTheRunsThatAreGoingOn_AndTheLastOneFrees()
+    {
+        var freed = 0;
+        var guard = new RunGuard(() => freed++, "model");
+
+        guard.Enter();
+        guard.Enter();
+        guard.Dispose(); // while two runs are going on
+        Assert.Equal(0, freed);
+        Assert.Throws<ObjectDisposedException>(() => guard.Enter()); // no new one begins
+
+        guard.Leave();
+        Assert.Equal(0, freed); // one is still going on
+        guard.Leave();
+        Assert.Equal(1, freed);
+    }
+
+    [Fact]
+    public async Task TheGuard_FreesOnce_WhenManyRunsEndAtTheSameTimeAsItIsDisposed()
+    {
+        for (var round = 0; round < 200; round++)
+        {
+            var freed = 0;
+            var guard = new RunGuard(() => Interlocked.Increment(ref freed), "model");
+            var runs = Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
+            {
+                try
+                {
+                    guard.Enter();
+                }
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
+                Thread.SpinWait(200);
+                guard.Leave();
+            })).ToArray();
+
+            guard.Dispose();
+            await Task.WhenAll(runs);
+
+            Assert.Equal(1, freed);
+        }
+    }
+
+    [Fact]
+    public async Task ADepthModelThatIsDisposedOfWhileItRuns_FinishesTheRun_AndDoesNotCrash()
+    {
+        if (!ToolModels.Depth.IsPresentIn(RealModels.Folder)) return;
+        var estimator = new PhotoLiker.Effects.Depth.DepthEstimator(ToolModels.Depth.PathIn(RealModels.Folder), 2);
+        var photo = new DecodedPhoto(320, 200, Enumerable.Range(0, 320 * 200 * 3).Select(i => (byte)(i % 251)).ToArray());
+
+        var run = Task.Run(() => estimator.Estimate(photo));
+        await Task.Delay(100); // the model is at work
+        estimator.Dispose();   // the program closes: this used to free the session under the run (a crash of the whole process)
+
+        var depth = await run; // the run that had begun finished, with its result
+        Assert.True(depth.Width > 0 && depth.Values.Length == depth.Width * depth.Height);
+        Assert.ThrowsAny<ObjectDisposedException>(() => estimator.Estimate(photo)); // and a new one is refused
     }
 
     /// <summary>Answers every request on a free local port with the same bytes, and counts them.</summary>

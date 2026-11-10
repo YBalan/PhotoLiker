@@ -18,6 +18,7 @@ namespace PhotoLiker.Effects.Colorize
 
         private readonly InferenceSession _session;
         private readonly string _input;
+        private readonly RunGuard _guard;
 
         /// <exception cref="FileNotFoundException">The model's file is not there (see <see cref="EffectModels.ColorizerDownloaded"/>).</exception>
         public Colorizer(string modelPath, int threads)
@@ -32,6 +33,7 @@ namespace PhotoLiker.Effects.Colorize
 
             _session = new InferenceSession(modelPath, options);
             _input = _session.InputMetadata.Keys.First();
+            _guard = new RunGuard(_session.Dispose, nameof(Colorizer));
         }
 
         /// <summary>
@@ -69,11 +71,19 @@ namespace PhotoLiker.Effects.Colorize
                 input[2 * plane + i] = grey;
             }
 
-            using var results = _session.Run([NamedOnnxValue.CreateFromTensor(_input, new DenseTensor<float>(input, [1, 3, ModelSide, ModelSide]))]);
-            var chroma = results.First().AsTensor<float>().ToArray();
-            if (chroma.Length != 2 * plane)
-                throw new InvalidDataException($"The colorizing model gave {chroma.Length} numbers, not {2 * plane}.");
-            return chroma;
+            _guard.Enter(); // the program may be closing: the session is not freed under a run that has begun
+            try
+            {
+                using var results = _session.Run([NamedOnnxValue.CreateFromTensor(_input, new DenseTensor<float>(input, [1, 3, ModelSide, ModelSide]))]);
+                var chroma = results.First().AsTensor<float>().ToArray();
+                if (chroma.Length != 2 * plane)
+                    throw new InvalidDataException($"The colorizing model gave {chroma.Length} numbers, not {2 * plane}.");
+                return chroma;
+            }
+            finally
+            {
+                _guard.Leave();
+            }
         }
 
         /// <summary>The photo's own lightness with the colours of the model, stretched (smoothly) to the size of the photo.</summary>
@@ -132,7 +142,8 @@ namespace PhotoLiker.Effects.Colorize
             return new DecodedPhoto(width, height, result);
         }
 
-        public void Dispose() => _session.Dispose();
+        /// <summary>Lets go of the model: at once, or when the last run that is going on has ended (see <see cref="RunGuard"/>). A run begun after this is refused.</summary>
+        public void Dispose() => _guard.Dispose();
     }
 
     /// <summary>The colours that the colorizing model gave a photo (see <see cref="Colorizer.Analyze"/>): kept, so that they can be put on the photo again with other <see cref="ColorTuning"/>s.</summary>

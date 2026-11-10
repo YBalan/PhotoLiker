@@ -10,8 +10,10 @@ namespace PhotoLikerUI
     public partial class MainForm
     {
         private readonly EffectModels _effects = new();                         // the models of the depth and the colours (the search has its own, _models)
+        private readonly object _toolModelGate = new();                    // guards the three below: never held while waiting for anything
         private readonly Dictionary<string, Task<bool>> _toolModelDownloads = [];
         private readonly HashSet<string> _toolModelsDeclined = [];
+        private readonly HashSet<string> _toolModelsVerified = [];         // "id|size|time" of the files that were found to be the ones that were tested
         private readonly CancellationTokenSource _toolModelStop = new();
 
         /// <summary>Asked before a model is downloaded. A test answers it.</summary>
@@ -23,24 +25,84 @@ namespace PhotoLikerUI
         /// True when the model of a feature is there, after asking and downloading it if it was not. <paramref name="askAgain"/> asks again even when the person has said no before during this run
         /// (a button they pressed themselves), which the start of a slideshow does not: it does without the model.
         /// </summary>
-        private async Task<bool> EnsureToolModelAsync(ToolModel model, string feature, bool askAgain)
+        private Task<bool> EnsureToolModelAsync(ToolModel model, string feature, bool askAgain)
         {
-            if (model.IsPresentIn(_effects.ModelsFolder))
-                return true;
-            if (_toolModelDownloads.TryGetValue(model.Id, out var running))
-                return await running;
-            if (!askAgain && _toolModelsDeclined.Contains(model.Id))
-                return false;
+            // Registered before anything is asked: the question is a message box, which lets the window go on working, and whoever asks for the same model meanwhile (a second click, the start of
+            // a slideshow) waits for this one's answer instead of asking again and downloading the same file to the same place
+            TaskCompletionSource<bool> mine;
+            lock (_toolModelGate)
+            {
+                if (_toolModelDownloads.TryGetValue(model.Id, out var running))
+                    return running;
 
-            var download = DownloadToolModelAsync(model, feature);
-            _toolModelDownloads[model.Id] = download;
+                mine = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _toolModelDownloads[model.Id] = mine.Task;
+            }
+
+            _ = EnsureToolModelCoreAsync(model, feature, askAgain, mine);
+            return mine.Task;
+        }
+
+        private async Task EnsureToolModelCoreAsync(ToolModel model, string feature, bool askAgain, TaskCompletionSource<bool> answer)
+        {
             try
             {
-                return await download;
+                if (model.IsPresentIn(_effects.ModelsFolder) && await IsTestedFileAsync(model))
+                {
+                    answer.SetResult(true);
+                    return;
+                }
+
+                // Not there, or there but not the file that was tested (cut short, damaged, changed by something else): either way it is asked for and downloaded
+                bool declinedBefore;
+                lock (_toolModelGate)
+                    declinedBefore = _toolModelsDeclined.Contains(model.Id);
+                if (declinedBefore && !askAgain)
+                {
+                    answer.SetResult(false);
+                    return;
+                }
+
+                answer.SetResult(await DownloadToolModelAsync(model, feature));
+            }
+            catch (Exception ex)
+            {
+                answer.TrySetException(ex);
             }
             finally
             {
-                _toolModelDownloads.Remove(model.Id);
+                lock (_toolModelGate)
+                    _toolModelDownloads.Remove(model.Id);
+            }
+        }
+
+        /// <summary>
+        /// Whether the file of the model that is on this computer is the one that was tested (its SHA-256, which takes about 0.2 s for 100 MB, off the window's thread). Looked at once for each file in a
+        /// run (the same size and time as when it was found good), so the check costs nothing after the first.
+        /// </summary>
+        private async Task<bool> IsTestedFileAsync(ToolModel model)
+        {
+            var path = model.PathIn(_effects.ModelsFolder);
+            try
+            {
+                var info = new FileInfo(path);
+                var key = $"{model.Id}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+                lock (_toolModelGate)
+                {
+                    if (_toolModelsVerified.Contains(key))
+                        return true;
+                }
+
+                if (!await Task.Run(() => ModelFiles.HasSha256(path, model.Sha256)))
+                    return false;
+
+                lock (_toolModelGate)
+                    _toolModelsVerified.Add(key);
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return false; // a file that can not be read is no good to anybody
             }
         }
 
@@ -57,12 +119,14 @@ namespace PhotoLikerUI
         {
             if (!ConfirmToolModelDownload(feature, model))
             {
-                _toolModelsDeclined.Add(model.Id);
+                lock (_toolModelGate)
+                    _toolModelsDeclined.Add(model.Id);
                 SetStatus(string.Format(ToolModelStrings.StatusDeclinedFormat, model.Title));
                 return false;
             }
 
-            _toolModelsDeclined.Remove(model.Id);
+            lock (_toolModelGate)
+                _toolModelsDeclined.Remove(model.Id);
             try
             {
                 var progress = new Progress<DownloadProgress>(p =>
@@ -79,8 +143,9 @@ namespace PhotoLikerUI
             {
                 return false; // the program is closing
             }
-            catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
+                // Whatever went wrong (the network, the disk, a file that is not the one that was tested, something not thought of): this is called from handlers that have nobody to catch an exception
                 if (!IsDisposed)
                     SetStatus(string.Format(ToolModelStrings.StatusFailedFormat, model.Title, ex.Message));
                 return false;

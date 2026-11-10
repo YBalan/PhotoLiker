@@ -119,6 +119,7 @@ namespace PhotoLikerUI
         public static string LogParallaxOn => T();
         public static string LogParallaxOnCoverStill => T();
         public static string LogParallaxNoModel => T();
+        public static string LogParallaxModelFailedFormat => T();
         public static string LogParallaxDepthFailedFormat => T();
         public static string CutOnBeat => T();
         public static string CutOnBeatHint => T();

@@ -81,7 +81,8 @@ namespace PhotoLiker.Search
 
         /// <summary>
         /// Downloads a file to <paramref name="destination"/> unless it is there already: to a file of the same name with ".part" added first, so that what is there is whole or not at all. It is the
-        /// downloader of every model of the program, those of the search and those of the effects (which have their own list of files, in PhotoLiker.Effects).
+        /// downloader of every model of the program, those of the search and those of the effects (which have their own list of files, in PhotoLiker.Effects). A file that is there is kept as it is
+        /// when there is no hash to go by; with one it is looked at first, and a file that is not the one that was tested (cut short, damaged, changed by something else) is deleted and downloaded again.
         /// </summary>
         /// <param name="name">What the progress says is being downloaded.</param>
         /// <param name="sha256">The SHA-256 the file must have, in hex; one that has another is deleted and an <see cref="InvalidDataException"/> thrown. Null: not checked.</param>
@@ -89,7 +90,12 @@ namespace PhotoLiker.Search
             string url, string destination, string name, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken, string? sha256 = null)
         {
             if (File.Exists(destination))
-                return;
+            {
+                if (sha256 is null || await Task.Run(() => HasSha256(destination, sha256), cancellationToken))
+                    return;
+
+                File.Delete(destination); // not the file that was tested: it is not used, it is got again
+            }
 
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
             var partial = destination + ".part";
@@ -116,7 +122,7 @@ namespace PhotoLiker.Search
                     throw new IOException($"Download of {name} ended early ({done} of {total} bytes).");
             }
 
-            if (sha256 is not null && !MatchesSha256(partial, sha256))
+            if (sha256 is not null && !HasSha256(partial, sha256))
             {
                 File.Delete(partial);
                 throw new InvalidDataException($"The downloaded {name} is not the file that was tested (its SHA-256 differs).");
@@ -125,7 +131,9 @@ namespace PhotoLiker.Search
             File.Move(partial, destination, overwrite: true);
         }
 
-        private static bool MatchesSha256(string file, string expected)
+        /// <summary>Whether the file has this SHA-256 (hex, in either case). Reads all of it: about 0.2 s for 100 MB.</summary>
+        /// <exception cref="IOException">The file can not be read.</exception>
+        public static bool HasSha256(string file, string expected)
         {
             using var stream = File.OpenRead(file);
             return string.Equals(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)), expected, StringComparison.OrdinalIgnoreCase);

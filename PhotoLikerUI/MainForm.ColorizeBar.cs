@@ -257,7 +257,21 @@ namespace PhotoLikerUI
                 return;
             }
 
-            if (!await EnsureToolModelAsync(ToolModels.Colorizer, ToolModelStrings.ColorizeFeature, askAgain: true))
+            bool haveModel;
+            try
+            {
+                haveModel = await EnsureToolModelAsync(ToolModels.Colorizer, ToolModelStrings.ColorizeFeature, askAgain: true);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // Nobody waits for this (it is started by a click): an exception would be lost, and the bar would stay as if the colours were coming
+                _barColours = false;
+                if (generation == _barGeneration && !IsDisposed)
+                    bar.Status = string.Format(ColorizeStrings.BarStatusFailedFormat, ex.Message);
+                return;
+            }
+
+            if (!haveModel)
             {
                 _barColours = false; // asked, and the answer was no (or it could not be had): the main window says which
                 return;

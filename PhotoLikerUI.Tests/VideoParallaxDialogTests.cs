@@ -90,6 +90,48 @@ public sealed class VideoParallaxDialogTests : IDisposable
     }
 
     [Fact]
+    public void WhenGettingTheModelThrows_TheBoxGoesBackToUnticked_TheLogSaysWhy_AndNothingEscapesTheClick()
+    {
+        MakePhotos();
+        var asked = 0;
+
+        // An exception that nobody thought of (not a download error): it must not leave the click, which has nobody to catch it
+        Ui.Run(() => Create([], () => { asked++; throw new InvalidOperationException("the model folder is gone"); }), async dialog =>
+        {
+            var box = ParallaxBox(dialog);
+
+            Click(box);
+            Assert.True(await Ui.Until(() => asked == 1 && box.Enabled, 10000), "the question was asked, and the box is usable again");
+            Assert.False(box.Checked, "no model: not ticked");
+
+            var log = Ui.Controls<TextBox>(dialog).Single(text => text.Multiline && text.ReadOnly);
+            Assert.Contains(string.Format(VideoStrings.LogParallaxModelFailedFormat, "the model folder is gone"), log.Text);
+
+            // and it can be tried again
+            Click(box);
+            Assert.True(await Ui.Until(() => asked == 2 && box.Enabled, 10000));
+            Assert.False(box.Checked);
+        });
+    }
+
+    [Fact]
+    public void WhenGettingTheModelIsCancelled_TheBoxGoesBackToUnticked_WithNothingSaid()
+    {
+        MakePhotos();
+
+        Ui.Run(() => Create([], () => throw new OperationCanceledException()), async dialog =>
+        {
+            var box = ParallaxBox(dialog);
+
+            Click(box);
+            Assert.True(await Ui.Until(() => box.Enabled, 10000));
+            Assert.False(box.Checked);
+            var log = Ui.Controls<TextBox>(dialog).Single(text => text.Multiline && text.ReadOnly);
+            Assert.DoesNotContain(VideoStrings.LogParallaxModelFailedFormat.Split('{')[0], log.Text);
+        });
+    }
+
+    [Fact]
     public void WhatTheSavedSettingsPutIn_IsNotAskedAbout()
     {
         MakePhotos();

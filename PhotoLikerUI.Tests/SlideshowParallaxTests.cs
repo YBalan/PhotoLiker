@@ -218,6 +218,31 @@ public sealed class SlideshowParallaxTests : IDisposable
     }
 
     [Fact]
+    public void AFrameThatWasBeingMadeWhenParallaxWasChosen_GetsItsDepthWhenItIsPublished()
+    {
+        var photos = MakePhotos(3);
+
+        Ui.Run(() => new Form(), async host =>
+        {
+            using var frames = new SlideshowFrames(ScreenBounds.Size, 1L << 28, 3, 3, facesOf: null, depthOf: MadeUpDepth().Estimate);
+            frames.SetWindow(photos, pinned: photos[0].OriginalFilePath);
+
+            // The pool makes the frames, looks at "is the effect on?" (no), and waits to hand them over to this thread, which is kept busy (it does not yield): nothing is in the list of frames yet
+            Thread.Sleep(1500);
+            Assert.False(frames.TryGet(photos[0].OriginalFilePath, out _), "nothing is published yet");
+
+            frames.SetDepthWanted(true); // the effect is chosen: the frames that are here (none) are worked on
+
+            Assert.True(await Ui.Until(() => photos.All(photo => frames.TryGet(photo.OriginalFilePath, out _)), 10000), "the frames are published");
+            foreach (var photo in photos)
+            {
+                Assert.True(frames.TryGet(photo.OriginalFilePath, out var frame));
+                Assert.True(await Ui.Until(() => frame.Depth is not null, 10000), $"{Path.GetFileName(photo.OriginalFilePath)} has its depth, though the effect was chosen after it was made");
+            }
+        });
+    }
+
+    [Fact]
     public void DepthIsWorkedOutOnce_ForAFrame_WhoeverAsks()
     {
         var photos = MakePhotos(1);

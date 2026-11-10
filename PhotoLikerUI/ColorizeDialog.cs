@@ -376,7 +376,25 @@ namespace PhotoLikerUI
 
             try
             {
-                if (!await _ensureModelAsync())
+                bool haveModel;
+                try
+                {
+                    haveModel = await _ensureModelAsync();
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not OperationCanceledException)
+                {
+                    // The model could not be had: every photo says so (the button has nobody to catch what is thrown out of it)
+                    foreach (var item in items)
+                        item.SubItems[ResultColumn].Text = string.Format(ColorizeStrings.ResultFailedFormat, ex.Message);
+                    failed = items.Count;
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    haveModel = false; // the program is closing
+                }
+
+                if (!haveModel)
                 {
                     declined = true;
                     foreach (var item in items)

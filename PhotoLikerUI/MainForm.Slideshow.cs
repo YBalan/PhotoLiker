@@ -44,7 +44,30 @@ namespace PhotoLikerUI
             _slideshow?.ShowIndexing(null);
         }
 
+        private bool _slideshowStarting;              // a show is being started, or is on the screen: the key that starts one is not asked twice
+
+        /// <summary>
+        /// Alt+Enter. The start is not at once (the video that plays lets go of its file, the engine of the videos and the depth model of the Parallax effect are looked at first), and the key comes
+        /// again in that time: it repeats while it is held, and a person presses it twice. A second show on top of the first would have to be ended one Esc at a time and would work the photos
+        /// twice, so while one is on its way, or on the screen, the key is not taken as a request for another.
+        /// </summary>
         private async void StartSlideshow()
+        {
+            if (_slideshowStarting)
+                return;
+
+            _slideshowStarting = true;
+            try
+            {
+                await RunSlideshowAsync();
+            }
+            finally
+            {
+                _slideshowStarting = false;
+            }
+        }
+
+        private async Task RunSlideshowAsync()
         {
             // The video that plays in the window lets go of its file, and of the engine's picture, before the show has its own
             if (_player is { Visible: true })
@@ -77,7 +100,11 @@ namespace PhotoLikerUI
             if (SlideshowEffects.UsesDepth(_currentConfig.SlideshowEffect) && !await EnsureToolModelAsync(ToolModels.Depth, ToolModelStrings.ParallaxFeature, askAgain: false))
                 SetStatus(ToolModelStrings.StatusParallaxWithoutModel);
 
-            if (CreateSlideshow(useVideo) is not { } slideshow)
+            // The depth model is given to the show when its file is the one that was tested, also when the show starts with another effect (Down can change to Parallax while it runs): the file is looked
+            // at once a run (see IsTestedFileAsync), so this costs nothing after the first show
+            var depthTested = _effects.DepthDownloaded && await IsTestedFileAsync(ToolModels.Depth);
+
+            if (CreateSlideshow(useVideo, depthTested) is not { } slideshow)
             {
                 SetStatus(SlideshowStrings.StatusNoPhotos);
                 return;
@@ -116,7 +143,7 @@ namespace PhotoLikerUI
         /// The slideshow of the list that is open (the photos of the folder, or the search results while they are shown); null if it has nothing to show. The videos of the
         /// list are in it only if <paramref name="useVideo"/> says so, else they are left out.
         /// </summary>
-        private SlideshowSession? CreateSlideshow(bool useVideo)
+        private SlideshowSession? CreateSlideshow(bool useVideo, bool depthTested)
         {
             var files = (useVideo ? _currentConfig.Files : _currentConfig.Files.Where(f => !f.IsVideo)).ToList();
             if (files.Count == 0)
@@ -127,7 +154,7 @@ namespace PhotoLikerUI
             return new SlideshowSession(
                 files, start, _currentConfig.SlideshowMode, _currentConfig.SlideshowTimeout, _currentConfig.SlideshowWatermark, screens, primary,
                 _currentConfig.SlideshowEffect, useVideo ? SlideshowVideoSettings() : null, SlideshowPeopleOptionsOfTheFolder(),
-                _effects.DepthDownloaded ? SlideshowDepthOptions.Of(_effects) : null);
+                depthTested ? SlideshowDepthOptions.Of(_effects) : null);
         }
 
         /// <summary>

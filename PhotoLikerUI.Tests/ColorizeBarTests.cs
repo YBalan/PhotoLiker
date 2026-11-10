@@ -23,10 +23,21 @@ public sealed class ColorizeBarTests : IDisposable
     private sealed class TestMainForm(string folder) : MainForm(folder)
     {
         public int Asked;
+        public bool Throws;
+
+        /// <summary>Done while the question is open: a message box lets the window go on working, and a click or a key can come in that asks for the same model again.</summary>
+        public Action? WhileAsking;
 
         protected override bool ConfirmToolModelDownload(string feature, ToolModel model)
         {
             Asked++;
+            if (WhileAsking is { } during)
+            {
+                WhileAsking = null; // once: it is the second click, not a loop
+                during();
+            }
+            if (Throws)
+                throw new InvalidOperationException("no way to ask");
             return false;
         }
     }
@@ -42,13 +53,23 @@ public sealed class ColorizeBarTests : IDisposable
         if (!ToolModels.Colorizer.IsPresentIn(RealModels))
             return false;
 
+        var source = ToolModels.Colorizer.PathIn(RealModels);
         var target = ToolModels.Colorizer.PathIn(Path.Combine(AppPaths.DataFolder, "models"));
-        if (!File.Exists(target))
+        if (!File.Exists(target) || new FileInfo(target).Length != new FileInfo(source).Length) // not one that another test left cut short or changed
         {
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            File.Copy(ToolModels.Colorizer.PathIn(RealModels), target);
+            File.Copy(source, target, overwrite: true);
         }
         return true;
+    }
+
+    /// <summary>Takes the colorizing model out of the data folder of the tests, so that the window has to ask for it (it is copied back by <see cref="ModelAvailable"/> when a test needs it).</summary>
+    private static string TakeTheModelAway()
+    {
+        var target = ToolModels.Colorizer.PathIn(Path.Combine(AppPaths.DataFolder, "models"));
+        File.Delete(target);
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        return target;
     }
 
     // ── photos ─────────────────────────────────────────────────────────────
@@ -218,6 +239,103 @@ public sealed class ColorizeBarTests : IDisposable
             if (!ModelAvailable())
                 Assert.True(await Ui.Until(() => ((TestMainForm)form).Asked > asked, 5000), "it asked for the model");
         }, seconds: 90);
+    }
+
+    [Fact]
+    public void WhenTheModelCannotBeHad_BecauseOfAnError_TheBarSaysWhy_AndIsNotLeftWorking()
+    {
+        var photo = GreyPhoto("a.jpg");
+        TakeTheModelAway(); // it must be missing for it to be asked for (other tests copy it into the data folder of the tests)
+
+        Ui.Run(() => new TestMainForm(_folder.Path) { Throws = true }, async form =>
+        {
+            Assert.True(await Ui.Until(() => FileCount(form) == 1, 20000));
+            Show(form, photo);
+            Assert.True(await Ui.Until(() => BarOf(form) is { Visible: true }, 10000));
+            var bar = BarOf(form)!;
+
+            Press(In<Button>(bar, ColorizeStrings.BarColorize));
+
+            Assert.True(await Ui.Until(() => bar.Status.Contains("no way to ask"), 10000), $"the bar says why ({bar.Status})");
+            Assert.False(bar.ColoursShown);
+            Assert.True(In<Button>(bar, ColorizeStrings.BarColorize).Enabled, "it can be tried again");
+        }, seconds: 60);
+    }
+
+    [Fact]
+    public void TheQuestionAboutAModel_IsAskedOnce_AlsoWhenTheSameModelIsAskedForWhileItIsOpen()
+    {
+        TakeTheModelAway();
+
+        Ui.Run(() => new TestMainForm(_folder.Path), async form =>
+        {
+            var test = (TestMainForm)form;
+            var ensure = typeof(MainForm).GetMethod("EnsureToolModelAsync", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            Task<bool> Ask() => (Task<bool>)ensure.Invoke(form, [ToolModels.Colorizer, "Colorize", true])!;
+
+            Task<bool>? second = null;
+            test.WhileAsking = () => second ??= Ask(); // the second click, while the question is on the screen
+
+            Assert.False(await Ask());
+            Assert.NotNull(second);
+            Assert.False(await second!);
+            Assert.Equal(1, test.Asked); // one question, and one answer for both
+
+            // Once it is over, a new request asks again (the person said no, and may have changed their mind)
+            test.WhileAsking = null;
+            Assert.False(await Ask());
+            Assert.Equal(2, test.Asked);
+        }, seconds: 60);
+    }
+
+    [Fact]
+    public void TheCheckOfAModelFile_SaysYesForTheTestedFile_NoForAnyOther_AndDoesNotRememberAYesForAFileThatChanged()
+    {
+        if (!ModelAvailable()) return;
+
+        Ui.Run(() => new TestMainForm(_folder.Path), async form =>
+        {
+            var check = typeof(MainForm).GetMethod("IsTestedFileAsync", BindingFlags.NonPublic | BindingFlags.Instance)!;
+            Task<bool> Tested() => (Task<bool>)check.Invoke(form, [ToolModels.Colorizer])!;
+            var path = ToolModels.Colorizer.PathIn(Path.Combine(AppPaths.DataFolder, "models"));
+
+            Assert.True(await Tested(), "the model that was tested");
+            Assert.True(await Tested(), "and again (the answer is kept)");
+
+            File.WriteAllBytes(path, [1, 2, 3, 4]); // another file in its place: not the answer that was kept
+            Assert.False(await Tested());
+
+            File.Delete(path);
+            Assert.False(await Tested(), "nothing there is not the model either");
+        }, seconds: 60);
+    }
+
+    [Fact]
+    public void AModelFileThatIsNotTheOneThatWasTested_IsAskedForAgain_NotUsed()
+    {
+        var target = TakeTheModelAway();
+        File.WriteAllBytes(target, [1, 2, 3, 4]); // there, but not the model: cut short, or changed by something else
+        var photo = GreyPhoto("a.jpg");
+
+        try
+        {
+            Ui.Run(() => new TestMainForm(_folder.Path), async form =>
+            {
+                Assert.True(await Ui.Until(() => FileCount(form) == 1, 20000));
+                Show(form, photo);
+                Assert.True(await Ui.Until(() => BarOf(form) is { Visible: true }, 10000));
+                var bar = BarOf(form)!;
+
+                Press(In<Button>(bar, ColorizeStrings.BarColorize));
+
+                Assert.True(await Ui.Until(() => ((TestMainForm)form).Asked == 1, 10000), "it was asked for again");
+                Assert.False(bar.ColoursShown);
+            }, seconds: 60);
+        }
+        finally
+        {
+            File.Delete(target); // what the next test finds is no junk (ModelAvailable copies the real model back)
+        }
     }
 
     [Fact]

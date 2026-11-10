@@ -1014,6 +1014,7 @@ VideoStrings.DepthParallaxHint = Every photo moves a little while it is shown, a
 VideoStrings.LogParallaxOn = Depth parallax: every photo moves by its depth.
 VideoStrings.LogParallaxOnCoverStill = Depth parallax: every photo moves by its depth; the cover stays still.
 VideoStrings.LogParallaxNoModel = The depth model is not on this computer: the video is made without the parallax.
+VideoStrings.LogParallaxModelFailedFormat = The depth model could not be had ({0}): the Depth parallax box is not ticked.
 VideoStrings.LogParallaxDepthFailedFormat = Could not work out the depth of {0} ({1}): it is shown without motion.
 
 # ──────────── VideoPlayerStrings ────────────

@@ -89,6 +89,7 @@ namespace PhotoLiker.Effects.Depth
 
         private readonly InferenceSession _session;
         private readonly string _input;
+        private readonly RunGuard _guard;
 
         /// <exception cref="FileNotFoundException">The model's file is not there (see <see cref="EffectModels.DepthDownloaded"/>).</exception>
         public DepthEstimator(string modelPath, int threads)
@@ -103,6 +104,7 @@ namespace PhotoLiker.Effects.Depth
 
             _session = new InferenceSession(modelPath, options);
             _input = _session.InputMetadata.Keys.First();
+            _guard = new RunGuard(_session.Dispose, nameof(DepthEstimator));
         }
 
         /// <summary>The size the model is given for a picture of this size: the longer side is <see cref="LongSide"/>, both sides multiples of 14, and the shape is kept.</summary>
@@ -128,12 +130,20 @@ namespace PhotoLiker.Effects.Depth
             var (w, h) = InputSizeFor(width, height);
             var input = Prepare(pixels, bytesPerPixel, width, height, w, h);
 
-            using var results = _session.Run([NamedOnnxValue.CreateFromTensor(_input, new DenseTensor<float>(input, [1, 3, h, w]))]);
-            var raw = results.First().AsTensor<float>().ToArray();
-            if (raw.Length != w * h)
-                throw new InvalidDataException($"The depth model gave {raw.Length} numbers for a picture of {w} by {h}.");
+            _guard.Enter(); // the program may be closing: the session is not freed under a run that has begun
+            try
+            {
+                using var results = _session.Run([NamedOnnxValue.CreateFromTensor(_input, new DenseTensor<float>(input, [1, 3, h, w]))]);
+                var raw = results.First().AsTensor<float>().ToArray();
+                if (raw.Length != w * h)
+                    throw new InvalidDataException($"The depth model gave {raw.Length} numbers for a picture of {w} by {h}.");
 
-            return new DepthMap(w, h, Stretch(raw)).Blurred(EdgeSoftening);
+                return new DepthMap(w, h, Stretch(raw)).Blurred(EdgeSoftening);
+            }
+            finally
+            {
+                _guard.Leave();
+            }
         }
 
         /// <summary>The planar RGB floats the model takes: the picture made <paramref name="w"/> by <paramref name="h"/>, normalised with the mean and deviation of ImageNet.</summary>
@@ -260,6 +270,7 @@ namespace PhotoLiker.Effects.Depth
             return bytes;
         }
 
-        public void Dispose() => _session.Dispose();
+        /// <summary>Lets go of the model: at once, or when the last run that is going on has ended (see <see cref="RunGuard"/>). A run begun after this is refused.</summary>
+        public void Dispose() => _guard.Dispose();
     }
 }

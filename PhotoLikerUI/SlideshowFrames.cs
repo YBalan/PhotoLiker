@@ -374,6 +374,12 @@ namespace PhotoLikerUI
 
             _frames[path] = frame;
             _bytes += frame.Bytes;
+
+            // The Parallax effect was chosen while this frame was being made: the pool thread that made it looked at _warmDepth before that, and SetDepthWanted worked on the frames that were here
+            // then, not on this one (it was on its way). A frame that has its depth, or has been tried, costs nothing here.
+            if (_warmDepth && frame.Depth is null && _depthOf is { } estimate)
+                _ = Task.Run(() => frame.EnsureDepth(estimate));
+
             Loaded?.Invoke(path, frame);
             EnforceBudget();
         }

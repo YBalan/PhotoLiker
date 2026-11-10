@@ -1000,6 +1000,7 @@ VideoStrings.DepthParallaxHint = Кожне фото трохи рухаєтьс
 VideoStrings.LogParallaxOn = Паралакс за глибиною: кожне фото рухається за своєю глибиною.
 VideoStrings.LogParallaxOnCoverStill = Паралакс за глибиною: кожне фото рухається за своєю глибиною; обкладинка стоїть на місці.
 VideoStrings.LogParallaxNoModel = Моделі глибини немає на цьому комп'ютері: відео робиться без паралакса.
+VideoStrings.LogParallaxModelFailedFormat = Не вдалося отримати модель глибини ({0}): позначку «Паралакс глибини» не поставлено.
 VideoStrings.LogParallaxDepthFailedFormat = Не вдалося визначити глибину {0} ({1}): його показано без руху.
 
 # ──────────── VideoPlayerStrings ────────────

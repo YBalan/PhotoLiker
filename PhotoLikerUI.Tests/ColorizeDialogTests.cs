@@ -196,6 +196,24 @@ public sealed class ColorizeDialogTests : IDisposable
     }
 
     [Fact]
+    public void GettingTheModelThrowing_IsAFailureOfEveryPhoto_NotACrash()
+    {
+        var photo = Grey("a.jpg");
+
+        // Something nobody thought of, thrown out of the question about the model: the button has nobody to catch it
+        Ui.Run(() => Create([photo], current: null, ensure: () => throw new InvalidOperationException("no way to ask")), async dialog =>
+        {
+            await WaitForScan(dialog);
+            ColorizeButton(dialog).PerformClick();
+
+            Assert.True(await Ui.Until(() => ListOf(dialog).Items[0].SubItems[3].Text.Contains("no way to ask"), 20000), "the photo says why");
+            Assert.True(await Ui.Until(() => ColorizeButton(dialog).Enabled, 5000), "it can be tried again");
+        });
+
+        Assert.Single(Directory.GetFiles(_folder.Path, "*.jpg"));
+    }
+
+    [Fact]
     public void AModelThatIsNotThere_IsAFailureOfEveryPhoto_NotACrash()
     {
         var photos = new[] { Grey("a.jpg"), Grey("b.jpg") };
