@@ -67,3 +67,37 @@ jobs:
           path: publish/installer/PhotoLiker-Setup-*.exe
           if-no-files-found: error
           compression-level: 0 # the installer is compressed already
+
+  # The tests run beside the build, not in front of it: a red test does not take the installer of a feature branch away, but the push (or pull request) shows red. Every suite runs
+  # even when an earlier one failed, so that one run says everything that is wrong, not only the first thing (the same suites as the release in release.yml, which stops at the first).
+  test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test the Core library
+        run: dotnet test PhotoLiker.Tests/PhotoLiker.Tests.csproj --configuration Release
+
+      - name: Test the video library
+        if: ${{ !cancelled() }}
+        run: dotnet test PhotoLiker.GenerateVideo.Tests/PhotoLiker.GenerateVideo.Tests.csproj --configuration Release
+
+      - name: Test the library of videos in the archive
+        if: ${{ !cancelled() }}
+        run: dotnet test PhotoLiker.Video.Tests/PhotoLiker.Video.Tests.csproj --configuration Release
+
+      - name: Test the search library
+        if: ${{ !cancelled() }}
+        run: dotnet test PhotoLiker.Search.Tests/PhotoLiker.Search.Tests.csproj --configuration Release
+
+      # Opens the real windows of the app (a short flash on the runner's desktop)
+      - name: Test the windows
+        if: ${{ !cancelled() }}
+        run: dotnet test PhotoLikerUI.Tests/PhotoLikerUI.Tests.csproj --configuration Release
