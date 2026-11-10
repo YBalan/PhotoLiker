@@ -138,6 +138,9 @@ namespace PhotoLiker.Search
                         photos.Add(new AlignedFile(
                             result.Prepared.Path, result.Prepared.WrittenFields, result.CreatedUtc, result.ModifiedUtc, result.Prepared.OldModified,
                             result.Prepared.OldLength, result.Length));
+                        // What could not be done for the file is told, though what could be done was
+                        if (result.Prepared.Note is { } note)
+                            failures.Add(new DateAlignmentFailure(result.Prepared.Path, note));
                     }
                 }
 
@@ -151,15 +154,20 @@ namespace PhotoLiker.Search
         /// <summary>What a photo (or a copy of one) is like now, and what it has to become.</summary>
         private sealed record Prepared(
             string Path, bool IsCopy, DateTime OldCreated, DateTime OldModified, DateTime NewCreated, DateTime NewModified,
-            List<ExifEdit> Edits, ExifDateFields WrittenFields, long OldLength = 0, long NewLength = 0, SpliceWork? Splice = null, string? RenameTo = null)
+            List<ExifEdit> Edits, ExifDateFields WrittenFields, long OldLength = 0, long NewLength = 0, SpliceWork? Splice = null, string? RenameTo = null, string? Note = null)
         {
             public LogLine ToLog() => new(
                 Path, IsCopy, OldCreated.Ticks, OldModified.Ticks, NewCreated.Ticks, NewModified.Ticks,
-                Edits.Count > 0 ? [.. Edits.Select(e => new LogExif(e.Offset, Encoding.ASCII.GetString(e.Old), Encoding.ASCII.GetString(e.New)))] : null,
-                Splice?.ToLog(), RenameTo);
+                Edits.Any(e => !e.Binary) ? [.. Edits.Where(e => !e.Binary).Select(e => new LogExif(e.Offset, Encoding.ASCII.GetString(e.Old), Encoding.ASCII.GetString(e.New)))] : null,
+                Splice?.ToLog(), RenameTo,
+                Edits.Any(e => e.Binary) ? [.. Edits.Where(e => e.Binary).Select(e => new LogPatch(e.Offset, Convert.ToBase64String(e.Old), Convert.ToBase64String(e.New)))] : null);
         }
 
-        private sealed record ExifEdit(long Offset, byte[] Old, byte[] New);
+        /// <summary>
+        /// Bytes of the file that are overwritten by as many other bytes: the text of an EXIF date, or (<paramref name="Binary"/>) the bytes of a date in the header of a video,
+        /// which are not text and are kept in the log in base64.
+        /// </summary>
+        private sealed record ExifEdit(long Offset, byte[] Old, byte[] New, bool Binary = false);
 
         /// <summary>
         /// The Exif block of the photo is replaced by a larger one that has the date taken (see <see cref="JpegExif"/>). <paramref name="OldBytes"/> are the
@@ -183,8 +191,29 @@ namespace PhotoLiker.Search
             var takenUtc = DateAlignment.ToUtc(taken);
             var edits = new List<ExifEdit>();
             SpliceWork? splice = null;
+            string? note = null;
+            var written = entry.SetExif;
 
-            if (entry.SetExif != ExifDateFields.None)
+            if (MediaKinds.IsVideo(entry.Path))
+            {
+                // A video has no EXIF: "Original" stands for the date it says it was recorded, which is overwritten in place where the file keeps it (the size stays)
+                written = ExifDateFields.None;
+                if (entry.SetExif.HasFlag(ExifDateFields.Original))
+                {
+                    using var stream = new FileStream(entry.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                    if (VideoContainerDates.Plan(stream, taken) is { } patches)
+                    {
+                        edits.AddRange(patches.Select(p => new ExifEdit(p.Offset, p.Old, p.New, Binary: true)));
+                        if (edits.Count > 0)
+                            written = ExifDateFields.Original;
+                    }
+                    else
+                    {
+                        note = SearchLibStrings.VideoNoPlaceForDate; // its file dates are still set
+                    }
+                }
+            }
+            else if (entry.SetExif != ExifDateFields.None)
             {
                 var text = ExifReader.FormatDate(taken);
                 using var stream = new FileStream(entry.Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
@@ -230,7 +259,7 @@ namespace PhotoLiker.Search
                 entry.Path, IsCopy: false, info.CreationTimeUtc, info.LastWriteTimeUtc,
                 entry.SetCreated ? takenUtc : info.CreationTimeUtc,
                 entry.SetModified ? takenUtc : info.LastWriteTimeUtc,
-                edits, entry.SetExif, info.Length, splice is null ? info.Length : info.Length + splice.Splice.LengthChange, splice);
+                edits, written, info.Length, splice is null ? info.Length : info.Length + splice.Splice.LengthChange, splice, Note: note);
         }
 
         private static ExifChange ChangeOf(ExifDateFields fields, DateTime taken) => new()
@@ -439,7 +468,8 @@ namespace PhotoLiker.Search
                             if (item.Copy)
                                 Interlocked.Increment(ref copies);
                             else
-                                photos.Add(new AlignedFile(item.Path, ExifDateFields.None, after.CreationTimeUtc, after.LastWriteTimeUtc, result.Before, result.BeforeLength, after.Length));
+                                photos.Add(new AlignedFile(
+                                    item.Path, result.Patched ? ExifDateFields.Original : ExifDateFields.None, after.CreationTimeUtc, after.LastWriteTimeUtc, result.Before, result.BeforeLength, after.Length));
                         }
                     }
                     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -464,7 +494,7 @@ namespace PhotoLiker.Search
         }
 
         /// <param name="Before">The date of change the file had before it was put back.</param>
-        private sealed record Restored(bool Skipped, FileInfo? After, DateTime Before, long BeforeLength = 0, bool Renamed = false);
+        private sealed record Restored(bool Skipped, FileInfo? After, DateTime Before, long BeforeLength = 0, bool Renamed = false, bool Patched = false);
 
         private static Restored Restore(LogLine item)
         {
@@ -485,6 +515,7 @@ namespace PhotoLiker.Search
             var skipped = (createdChanged && !createdOurs) || (modifiedChanged && !modifiedOurs);
             var wrote = false;
             var spliceUndone = false;
+            var patched = false;
 
             // A date is only put back if it is the run's; a file that is written meanwhile keeps the one it has otherwise (writing moves it to now)
             var created = createdOurs ? new DateTime(item.Created, DateTimeKind.Utc) : createdNow;
@@ -520,6 +551,29 @@ namespace PhotoLiker.Search
                         FileDates.SetOnHandle(stream, created, modified);
                 }
 
+                if (item.Patches is { Count: > 0 } patches)
+                {
+                    // The dates the run wrote into a video go back, where the video still has what the run wrote
+                    using var stream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+                    foreach (var patch in patches)
+                    {
+                        var written = Convert.FromBase64String(patch.New);
+                        var current = new byte[written.Length];
+                        stream.Seek(patch.Offset, SeekOrigin.Begin);
+                        if (stream.Read(current, 0, current.Length) != current.Length || !current.AsSpan().SequenceEqual(written))
+                        {
+                            skipped = true; // not the date the run wrote
+                            continue;
+                        }
+                        stream.Seek(patch.Offset, SeekOrigin.Begin);
+                        stream.Write(Convert.FromBase64String(patch.Old));
+                        wrote = patched = true;
+                    }
+                    stream.Flush(flushToDisk: true);
+                    if (patched)
+                        FileDates.SetOnHandle(stream, created, modified);
+                }
+
                 // By name, for what was not written (a date that is the run's and nothing else) and for a drive that did not take the dates through the handle
                 if ((createdOurs || spliceUndone) && !DateAlignment.SameMoment(new FileInfo(path).CreationTimeUtc, created))
                     File.SetCreationTimeUtc(path, created); // after a file was written anew it was created now, and that was not the run's to put back
@@ -535,7 +589,7 @@ namespace PhotoLiker.Search
                 renamed = true;
             }
 
-            return new Restored(skipped, createdOurs || modifiedOurs || wrote ? new FileInfo(path) : null, modifiedNow, lengthNow, renamed);
+            return new Restored(skipped, createdOurs || modifiedOurs || wrote ? new FileInfo(path) : null, modifiedNow, lengthNow, renamed, patched);
         }
 
         private static bool UndoSplice(string path, LogSplice splice, DateTime created, DateTime modified)
@@ -563,6 +617,10 @@ namespace PhotoLiker.Search
 
         /// <summary>One file: its times (as ticks of UTC) before and after the run, the EXIF dates that were overwritten, the Exif block that was replaced, and the name a copy was given.</summary>
         private sealed record LogLine(
-            string Path, bool Copy, long Created, long Modified, long NewCreated, long NewModified, List<LogExif>? Exif, LogSplice? Splice = null, string? RenamedTo = null);
+            string Path, bool Copy, long Created, long Modified, long NewCreated, long NewModified, List<LogExif>? Exif, LogSplice? Splice = null, string? RenamedTo = null,
+            List<LogPatch>? Patches = null);
+
+        /// <summary>Bytes of a video that the run overwrote: where, what was there (base64) and what the run wrote (base64).</summary>
+        private sealed record LogPatch(long Offset, string Old, string New);
     }
 }

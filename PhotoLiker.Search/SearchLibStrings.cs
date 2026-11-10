@@ -14,6 +14,8 @@ namespace PhotoLiker.Search
         public static string PhotoGone => T();
         public static string PhotoChangedLookAgain => T();
         public static string NotDateLog => T();
+        public static string VideoDateOutOfRange => T();
+        public static string VideoNoPlaceForDate => T();
         public static string SharedPeopleDamagedFormat => T();
         public static string GroupsDamagedFormat => T();
         public static string GroupNeedsName => T();

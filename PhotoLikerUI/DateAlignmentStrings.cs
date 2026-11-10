@@ -39,6 +39,7 @@ namespace PhotoLikerUI
         public static string ActionCreated => T();
         public static string ActionModified => T();
         public static string ActionExifOriginal => T();
+        public static string ActionRecorded => T();
         public static string ActionExifDigitized => T();
         public static string ActionExifModified => T();
         public static string ActionFailedFormat => T();
@@ -96,6 +97,7 @@ namespace PhotoLikerUI
         public static string StatusNothingToGive => T();
         public static string StatusGiven => T();
         public static string StatusGivenNonePart => T();
+        public static string StatusGivenAlignedPart => T();
         public static string StatusForgot => T();
         public static string Photo => T(); // forms for Plural.Count: "photo|photos"
 

@@ -958,8 +958,12 @@ even on a network drive, and can be stopped) and shows, before anything is touch
 - A **double click** on a row opens the photo in the program Windows has for it (the right-click menu also has *Open* and *Show in
   File Explorer*, which opens the folder with the file selected), to look at it before deciding. This works while a run is in progress too.
 - **Videos.** With **SupportVideo** on, the videos of the folder are looked at too: the date a video says it was recorded (read from its header with ffmpeg, kept in the video catalog, and believed by the
-  same rules) is its date taken, and its file dates are set to it. Nothing is written into a video (it has no EXIF), so *Dates inside the photo too* and writing a given date into the file
-  are for photos only; a video is the same byte for byte after a run. The catalog of the videos is told the new date of change, so that **Update index** does not analyze them again.
+  same rules) is its date taken, and its file dates are set to it. A video has no EXIF, so *Dates inside the photo too* is for photos only: a video is the same byte for byte after a run,
+  **unless you give it a date with Use a date...** (below) and leave the tick that writes the date into the file on. Then the date it says it was recorded is overwritten in place, where its
+  kind keeps one: the movie header of an MP4, MOV, M4V or 3GP (the creation time, UTC, also in the tracks that had one) or the date chunk of an AVI (in the form the camera wrote it). Nothing
+  else moves: the size stays, and no picture or sound is touched. A video of another kind (MKV, MTS, MPG...) or an AVI without a date chunk only gets its file dates, and the question says
+  how many. **Undo last run** puts the old bytes back. The catalog of the videos is told the new date of change (and, for a written video, the new date recorded; its moments and speech stay),
+  so that **Update index** does not analyze them again.
   The first look reads the header of every video that has not been read (about 0.4 seconds each over a network share, a few at a time).
 - Only the date the camera wrote is used, and only if PhotoLiker believes it (see [Photo search](#photo-search): not before
   1995, not in the future, not a camera that lost its clock). A photo without such a date is listed under **No usable EXIF
@@ -968,14 +972,18 @@ even on a network drive, and can be stopped) and shows, before anything is touch
 
 **Photos without a usable date.** Select some of them (or none, for all) and press **Use a date...** (<kbd>Enter</kbd>, or
 the right-click menu). It asks where their date taken comes from, and shows for each answer how many of the photos have one
-from there, and what it would be:
+from there, and what it would be. The same button dates **any files you select**, also ones that already have a usable date
+(say, some videos or a few photos that must follow another rule than the rest): the date you choose replaces the one the file
+has, and the file is then changed like the others. With nothing selected it is for the photos that have no usable date:
 
 - *The date the photo has: I know it is right*: the EXIF date that looks like a camera that lost its clock but is real, a
-  photo of New Year's night in a folder `2016-01-01`;
+  photo of New Year's night in a folder `2016-01-01`; for a file that is dated already, the date it has;
 - *The date in the name of its folder*: a day in the folder name (`2015-05-01`, `20150501`, `01.05.2015 Anna`), the innermost
   folder that has one, at the time of day the photo has, or at noon (a folder called `2015-05` has no day and gives none);
 - *The date of the file*: when it was created, else changed. For a photo that was copied this is the day of the copy, which
-  the dialog says;
+  the dialog says. A file date that is not believed otherwise (before 1995, a card whose clock was reset) is used too, when no
+  believable one is there: you chose this source for these files. For a video whose recorded date is wrong and whose file dates are right, this
+  is the way to make the date it says agree with the date of its file;
 - *This date*: one you type.
 
 ![The question of Use a date: the selected photo, the date in the name of its folder chosen with the example it would get, and the tick that writes the date into the photo](docs/images/31-use-a-date.png)
@@ -1226,6 +1234,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.GenerateVideo.Tests` | xUnit tests of the video library: the order and the times of the photos, the sequence of a video (cover, repeats, audio), the ffmpeg arguments, the cuts on the beat, the rhythm analysis (on synthetic songs), the settings file. They need no ffmpeg. |
 | `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg), the pictures taken out of a real video and their times, the choice of moments, the faces, the search (words, people, dates, speech) and its merge with the photos, the word forms of the speech and the speech job with a stand-in for the model (also hearing chosen videos again), the table of the speech, the Excel writer (read back as XML), saving a picture. The tests that make a short video do so with the ffmpeg of the repository and do nothing without it; the one that runs the real CLIP model does nothing without it. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
+| `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question: which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |
 | `.github` | `workflows\build.yml` (builds every push and pull request to `master`, as artifacts) and `workflows\release.yml` (makes a GitHub release from a tag, see [Releasing](#releasing)), with `release-intro.md`, the text that opens the notes of a release. |
@@ -1242,6 +1251,7 @@ dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests of the Co
 dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.csproj  # run the tests of the video library
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
 dotnet test  PhotoLiker.Video.Tests\PhotoLiker.Video.Tests.csproj  # run the tests of the video library (videos in the archive)
+dotnet test  PhotoLikerUI.Tests\PhotoLikerUI.Tests.csproj  # run the tests that open the real windows (they flash on your desktop for a few seconds)
 installer\build-installer.ps1                           # publish and pack the installer (needs Inno Setup 6)
 ```
 

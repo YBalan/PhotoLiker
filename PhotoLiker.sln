@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLiker.Video", "PhotoLi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLiker.Video.Tests", "PhotoLiker.Video.Tests\PhotoLiker.Video.Tests.csproj", "{C271A71D-6D78-4BF7-B114-F695FEA9AE83}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLikerUI.Tests", "PhotoLikerUI.Tests\PhotoLikerUI.Tests.csproj", "{3EAB5179-E2BE-491D-B72A-980A1720447D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -153,6 +155,18 @@ Global
 		{C271A71D-6D78-4BF7-B114-F695FEA9AE83}.Release|x64.Build.0 = Release|Any CPU
 		{C271A71D-6D78-4BF7-B114-F695FEA9AE83}.Release|x86.ActiveCfg = Release|Any CPU
 		{C271A71D-6D78-4BF7-B114-F695FEA9AE83}.Release|x86.Build.0 = Release|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Debug|x64.Build.0 = Debug|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Debug|x86.Build.0 = Debug|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Release|x64.ActiveCfg = Release|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Release|x64.Build.0 = Release|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Release|x86.ActiveCfg = Release|Any CPU
+		{3EAB5179-E2BE-491D-B72A-980A1720447D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -8,7 +8,7 @@ namespace PhotoLikerUI
     /// <summary>
     /// Shows what "Align dates" would do - how many photos, and which - and does it when asked. The photos are looked at once
     /// (the start of each file is read); what the ticks mean for each of them is worked out again at once whenever a tick changes. Videos (when they are listed) are
-    /// looked at too: the date a video says it was recorded is its date taken, and only the dates of its file change (nothing is written into a video).
+    /// looked at too: the date a video says it was recorded is its date taken, and only the dates of its file change (a video is written into only when a date was given to it and the tick for writing it is on).
     /// </summary>
     internal sealed class DateAlignmentDialog : Form
     {
@@ -88,6 +88,8 @@ namespace PhotoLikerUI
             ClientSize = new Size(1020, 640);
             MinimumSize = new Size(760, 480);
 
+            ConfirmUndo = question => MessageBox.Show(this, question, DateAlignmentStrings.Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+
             BuildLayout();
             Wire();
             ApplyTheme();
@@ -98,6 +100,9 @@ namespace PhotoLikerUI
 
         /// <summary>Whether any file was changed (or put back): the photo list of the main window is out of date then.</summary>
         public bool Changed { get; private set; }
+
+        /// <summary>Asks whether the last run is to be put back; a message box, unless a test answers for the person.</summary>
+        internal Func<string, bool> ConfirmUndo = null!; // set by the constructor
 
         // ── building the dialog ────────────────────────────────────────────
 
@@ -215,7 +220,7 @@ namespace PhotoLikerUI
                 var ready = _phase == Phase.Ready;
                 var selected = SelectedPhotos();
                 _leaveOut.Enabled = _include.Enabled = ready && selected.Any(i => _entries[i].Status == DateAlignmentStatus.Change);
-                _assignItem.Enabled = ready && selected.Any(Eligible);
+                _assignItem.Enabled = ready && selected.Any(Readable);
                 _forgetItem.Enabled = ready && selected.Any(i => _assigned.ContainsKey(_facts[i].Path));
                 _openItem.Enabled = _showItem.Enabled = selected.Count > 0; // opening a photo changes nothing, so it works at any time
                 if (selected.Count == 0)
@@ -385,17 +390,11 @@ namespace PhotoLikerUI
         }
 
         /// <summary>
-        /// What the options mean for one file. A video has no place for a date inside it, so the dates inside and a date taken that would be written into the file are for photos
-        /// only: of a video only the dates of the file are changed.
+        /// What the options mean for one file. A video has no EXIF, so "dates inside the photo too" is for photos only: of a video the dates of the file are changed, and the date it
+        /// was recorded only when a date was given to it and the tick that writes it is on (<see cref="VideoContainerDates"/>: where the kind of video keeps one, and unless it says that date already).
         /// </summary>
-        private DateAlignmentEntry PlanOf(PhotoDateFacts facts, DateAlignmentOptions options)
-        {
-            var video = MediaKinds.IsVideo(facts.Path);
-            var own = video ? options with { ExifFields = false } : options;
-            return _assigned.TryGetValue(facts.Path, out var given)
-                ? DateAlignment.Plan(facts, own, given.Date, given.WriteTaken && !video)
-                : DateAlignment.Plan(facts, own);
-        }
+        private DateAlignmentEntry PlanOf(PhotoDateFacts facts, DateAlignmentOptions options) =>
+            GivenDates.Plan(facts, options, _assigned.TryGetValue(facts.Path, out var given) ? given : null);
 
         private void RebuildView()
         {
@@ -517,7 +516,7 @@ namespace PhotoLikerUI
             if (entry.SetModified)
                 parts.Add(DateAlignmentStrings.ActionModified);
             if (entry.SetExif.HasFlag(ExifDateFields.Original))
-                parts.Add(DateAlignmentStrings.ActionExifOriginal);
+                parts.Add(MediaKinds.IsVideo(entry.Path) ? DateAlignmentStrings.ActionRecorded : DateAlignmentStrings.ActionExifOriginal);
             if (entry.SetExif.HasFlag(ExifDateFields.Digitized))
                 parts.Add(DateAlignmentStrings.ActionExifDigitized);
             if (entry.SetExif.HasFlag(ExifDateFields.Modified))
@@ -545,19 +544,24 @@ namespace PhotoLikerUI
 
         // ── photos without a usable date ───────────────────────────────────
 
-        /// <summary>A photo that could be read and has no EXIF date that is believed: it can be given a date.</summary>
-        private bool Eligible(int i) => _facts[i].Problem is null && _facts[i].Taken is null;
+        /// <summary>A file that could be read: it can be given a date, whether it has a usable one or not (the person may want it dated by another rule).</summary>
+        private bool Readable(int i) => GivenDates.CanBeGiven(_facts[i]);
 
-        /// <summary>Asks where the date of the photos without a usable one comes from, and gives them that date: they are then planned like the others.</summary>
+        /// <summary>A file that could be read and has no date that is believed: it waits for a date.</summary>
+        private bool Eligible(int i) => GivenDates.WaitsForDate(_facts[i]);
+
+        /// <summary>
+        /// Asks where the date of the selected files comes from (or of the photos without a usable one, when none is selected), and gives them that date,
+        /// in place of the one they have if they have one: they are then planned like the others.
+        /// </summary>
         private void AssignDate()
         {
             if (_phase != Phase.Ready)
                 return;
 
-            // "All" means the photos still waiting for a date, not the ones that were given one a moment ago: the selected ones may be either
-            var candidates = Enumerable.Range(0, _facts.Length).Where(Eligible).ToList();
-            var waiting = candidates.Where(i => !_assigned.ContainsKey(_facts[i].Path)).ToList();
-            var selected = SelectedPhotos().Where(Eligible).Distinct().ToList();
+            // "All" means the photos still waiting for a date, not the ones that were given one a moment ago: the selected ones may be any readable files
+            var waiting = Enumerable.Range(0, _facts.Length).Where(Eligible).Where(i => !_assigned.ContainsKey(_facts[i].Path)).ToList();
+            var selected = SelectedPhotos().Where(Readable).Distinct().ToList();
             if (waiting.Count == 0 && selected.Count == 0)
             {
                 _status.Text = DateAlignmentStrings.StatusNothingToGive;
@@ -570,13 +574,14 @@ namespace PhotoLikerUI
 
             var now = DateTime.Now;
             var scope = dialog.Scope().Select(f => f.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            int given = 0, none = 0;
-            foreach (var i in candidates.Where(i => scope.Contains(_facts[i].Path)))
+            int none = 0;
+            var givenTo = new List<int>();
+            foreach (var i in Enumerable.Range(0, _facts.Length).Where(i => Readable(i) && scope.Contains(_facts[i].Path)))
             {
                 if (DateSources.Resolve(dialog.Choice, _facts[i], _folder, dialog.Typed, now) is { } date)
                 {
                     _assigned[_facts[i].Path] = (date, dialog.WriteTaken);
-                    given++;
+                    givenTo.Add(i);
                 }
                 else
                 {
@@ -584,8 +589,13 @@ namespace PhotoLikerUI
                 }
             }
 
-            _status.Text = string.Format(DateAlignmentStrings.StatusGiven, Plural.Count(given, DateAlignmentStrings.Photo), none > 0 ? string.Format(DateAlignmentStrings.StatusGivenNonePart, Plural.Count(none, DateAlignmentStrings.Photo)) : string.Empty);
             Replan();
+
+            // A file that has the date it was given as its file dates already needs no change, so it leaves "Will change": say so, or it looks as if it was lost
+            var matching = givenTo.Count(i => _entries[i].Status == DateAlignmentStatus.Aligned);
+            var parts = (none > 0 ? string.Format(DateAlignmentStrings.StatusGivenNonePart, Plural.Count(none, DateAlignmentStrings.Photo)) : string.Empty)
+                + (matching > 0 ? string.Format(DateAlignmentStrings.StatusGivenAlignedPart, Plural.Count(matching, DateAlignmentStrings.Photo)) : string.Empty);
+            _status.Text = string.Format(DateAlignmentStrings.StatusGiven, Plural.Count(givenTo.Count, DateAlignmentStrings.Photo), parts);
         }
 
         /// <summary>Takes the date back from the selected photos: they have none again.</summary>
@@ -666,6 +676,11 @@ namespace PhotoLikerUI
 
                 // A photo that got a date taken added has another size, and its copies another name: what is known of them follows
                 await FollowChangedSizesAsync(report);
+
+                // The dates that were given are in the files now: they are no longer "given", and what the list knows of those files is read again from them
+                var applied = report.Photos.Where(p => _assigned.Remove(p.Path)).Select(p => p.Path).ToList();
+                if (applied.Count > 0)
+                    await LookAtAgainAsync(applied);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -715,7 +730,7 @@ namespace PhotoLikerUI
             }
 
             var question = string.Format(DateAlignmentStrings.UndoQuestionFormat, File.GetLastWriteTime(log), Path.GetFileName(log));
-            if (MessageBox.Show(this, question, DateAlignmentStrings.Title, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            if (!ConfirmUndo(question))
                 return;
 
             SetPhase(Phase.Working);
@@ -848,6 +863,13 @@ namespace PhotoLikerUI
                     if (_videos is not null && videos.Count > 0)
                         _videos.UpdateStamps(videos.Select(p => (p.Path, p.PreviousModifiedUtc.Ticks, p.ModifiedUtc.Ticks)).ToArray());
                 });
+
+                // A date written into a video (or put back by an undo) is the date the catalog has to know it by: only that is read again, nothing else is lost
+                if (_videos is not null)
+                {
+                    foreach (var video in videos.Where(v => v.Written.HasFlag(ExifDateFields.Original)))
+                        await _videos.RefreshRecordedAsync(video.Path);
+                }
                 return string.Empty;
             }
             catch (Exception ex)

@@ -572,11 +572,12 @@ order of the list (<strong>SortOrder</strong> goes by the created date) agree wi
   <li>The ticks choose what is set: the <em>created</em> date and the <em>modified</em> date of the file (on), and, if you wish, the other dates
   inside the photo (off).</li>
   <li>Select a photo and press <kbd>Space</kbd> to leave it out of the run. Double-click a row to look at the photo.</li>
-  <li><strong>Videos.</strong> With <strong>SupportVideo</strong> on, the videos are in the list too: the date recorded in a video is its date taken, and only the dates of its file are set (the video itself is never written, and it is not analyzed again afterwards).</li>
+  <li><strong>Videos.</strong> With <strong>SupportVideo</strong> on, the videos are in the list too: the date recorded in a video is its date taken, and only the dates of its file are set (the video is not analyzed again afterwards). A video is written to only when you give it a date with <strong>Use a date…</strong> and leave the tick on: the date it says it was recorded is then overwritten in place (MP4, MOV, 3GP: the movie header; AVI: the camera's date chunk), its size stays the same, and <strong>Undo last run…</strong> puts the old bytes back.</li>
   <li><strong>Photos without a usable date.</strong> A camera that lost its clock writes <code>2001-01-01</code>; such dates are not believed. Select those
   photos and press <strong>Use a date…</strong> to give them one: the date the photo has, the date in the name of its folder
   (<code>2015-05-01</code>, <code>01.05.2015 Anna</code>), the date of the file, or one you type. The date is also written into the photo as its
-  <strong>Date Taken (Original)</strong> (a tick, on by default), also where the photo had no place for it: its file then grows a little, and Undo takes it out again.</li>
+  <strong>Date Taken (Original)</strong> (a tick, on by default), also where the photo had no place for it: its file then grows a little, and Undo takes it out again.
+  The same button works for any files you select, also ones that already have a usable date: the date you choose replaces it, so a few files can be dated by another rule than the rest.</li>
   <li><strong>Change N photos</strong> does it, and the copies in the Liked and group folders get the same dates. Every run writes a log in the photo
   folder, and <strong>Undo last run…</strong> puts the dates back.</li>
 </ul>

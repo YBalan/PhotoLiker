@@ -44,7 +44,7 @@ namespace PhotoLiker.Search
     public sealed record PhotoDateFacts(string Path, ExifDateSlots Exif, DateTime? Taken, DateTime CreatedUtc, DateTime ModifiedUtc, string? Problem = null);
 
     /// <summary>What the options mean for one photo.</summary>
-    /// <param name="Assigned">The date taken is one a person gave the photo (see <see cref="DateSources"/>), which has none that is believed: <c>Facts.Taken</c> is that date.</param>
+    /// <param name="Assigned">The date taken is one a person gave the photo (see <see cref="DateSources"/>), which has none that is believed or was chosen to be dated by another rule: <c>Facts.Taken</c> is that date.</param>
     public sealed record DateAlignmentEntry(PhotoDateFacts Facts, DateAlignmentStatus Status, bool SetCreated, bool SetModified, ExifDateFields SetExif, bool Assigned = false)
     {
         public string Path => Facts.Path;
@@ -161,14 +161,15 @@ namespace PhotoLiker.Search
         }
 
         /// <summary>What has to be done to the photo for the options: nothing, a change, or why it is left alone.</summary>
-        /// <param name="assigned">The date taken to use if the photo has none that is believed: a date a person gave it, from where it said.</param>
+        /// <param name="assigned">The date taken to use instead of what the photo says: a date a person gave it, from where it said. A photo that has no date that is believed gets it
+        /// to have one; a photo that has one gets it in place of that one (the person chose these files to be changed by another rule).</param>
         /// <param name="writeTaken">Write that date into the photo as its Date Taken (Original), also where the photo has no place for it yet (the Exif block is made larger), whatever the options say.</param>
         public static DateAlignmentEntry Plan(PhotoDateFacts facts, DateAlignmentOptions options, DateTime? assigned = null, bool writeTaken = false)
         {
             if (facts.Problem is not null)
                 return new DateAlignmentEntry(facts, DateAlignmentStatus.Unreadable, false, false, ExifDateFields.None);
             var given = false;
-            if (facts.Taken is null && assigned is { } date)
+            if (assigned is { } date)
             {
                 // From here on the photo has a date taken like any other; what is written inside it (even a date that is not believed) is replaced when asked for
                 facts = facts with { Taken = date };

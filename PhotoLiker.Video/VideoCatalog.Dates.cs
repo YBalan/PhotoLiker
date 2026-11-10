@@ -56,5 +56,46 @@ namespace PhotoLiker.Video
                 }
             }
         }
+
+        /// <summary>
+        /// The date a video says it was recorded was written into the video by the program (Align dates), or put back by its undo. The header is read again, but nothing else
+        /// of what is known of the video is dropped (its moments, its speech): only the date it was recorded and the date taken that follows from it change. Call
+        /// <see cref="UpdateStamps"/> first, so that the video is still the one the catalog knows. A video that is not known, or cannot be read, is left to be read when it is next asked for.
+        /// </summary>
+        public async Task RefreshRecordedAsync(string fullPath, CancellationToken cancellationToken = default)
+        {
+            var file = new FileInfo(fullPath);
+            if (!file.Exists)
+                return;
+
+            VideoInfo fresh;
+            try
+            {
+                fresh = await VideoProbe.ReadAsync(fullPath, cancellationToken);
+            }
+            catch (InvalidDataException)
+            {
+                return;
+            }
+
+            var now = DateTime.Now;
+            lock (_gate)
+            {
+                if (Lookup(RelativeOf(fullPath)) is not { Record.Info: { } kept })
+                    return;
+
+                var info = kept with { Recorded = fresh.Recorded };
+                var date = VideoDates.Resolve(info, file.CreationTimeUtc, file.LastWriteTimeUtc, now);
+                Execute(
+                    "UPDATE videos SET container_date = $container, taken = $taken, taken_source = $source, date_version = $version WHERE path = $path",
+                    ("$container", info.Recorded is { } recorded ? (object)recorded.Ticks : DBNull.Value),
+                    ("$taken", date.Taken is { } taken ? (object)taken.Ticks : DBNull.Value),
+                    ("$source", (int)date.Source),
+                    ("$version", date.Version),
+                    ("$path", RelativeOf(fullPath)));
+                BumpMomentsVersion();
+                BumpSpeechVersion();
+            }
+        }
     }
 }
