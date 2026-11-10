@@ -932,7 +932,7 @@ namespace PhotoLikerUI
             }
 
             _videoStartedAt = Stopwatch.GetTimestamp();
-            _screens[_primary].ShowVideo(file, segments, options.Mute, facts.Taken);
+            _screens[_primary].ShowVideo(file, segments, options.Mute, facts.Taken, options.ShowCaptions ? facts.Speech : null);
         }
 
         private void OnVideoFinished(SlideshowScreen screen)

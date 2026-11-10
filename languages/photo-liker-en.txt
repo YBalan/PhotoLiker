@@ -869,6 +869,7 @@ SettingsStrings.SlideshowUseVideo = True: the slideshow (Alt+Enter) plays the vi
 SettingsStrings.SlideshowMuteVideo = True: the videos of the slideshow play without their sound.
 SettingsStrings.SlideshowVideoPart = How much of a video the slideshow plays. OnlyFoundTimeFrames: only the places a search found in it, 6 seconds around each (2 before and 4 after); a video in the slideshow of a folder, where nothing was searched for, has none and is played whole. FullVideo: the whole video.
 SettingsStrings.SlideshowLowerOtherAudio = While a video plays with its sound, the sound of the other programs (a player in the background, a browser) is turned down by this many percent, and put back when the video ends. 50 by default; 0 leaves them as they are, 100 silences them. Not used when MuteVideo is True.
+SettingsStrings.SlideshowShowCaptions = True: what is said in a video (the speech the index read, see VideoSpeech) is written over the picture as captions while the video plays in the slideshow, also when MuteVideo is True. A video whose speech was not read has no captions. False by default.
 
 # ──────────── SlideshowStrings ────────────
 SlideshowStrings.Loading = Loading...

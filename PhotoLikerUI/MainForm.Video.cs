@@ -495,8 +495,7 @@ namespace PhotoLikerUI
             if (_player is not { } player)
                 return;
 
-            var line = _speech.Count == 0 ? null : _speech.FirstOrDefault(s => timeMs >= s.StartMs - 300 && timeMs <= s.EndMs + 1200);
-            player.SetCaption(line?.Text);
+            player.SetCaption(SpeechCaptions.At(_speech, timeMs));
         }
 
         // The thumbnails of the model that is chosen; a video that was analyzed with another model only still shows its moments

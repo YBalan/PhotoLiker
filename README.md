@@ -551,7 +551,7 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 | **SpeechLanguage** | The language that is spoken: `ru`, `uk`, `en` ..., or `auto` (the model hears it for each video). |
 | **CpuCores** | How many cores of this computer the speech recognition may use, from 1 to all the cores it has (the default). With more cores several videos are heard at the same time. It can be changed while **Update index** runs: the next video that is started follows it. |
 
-The group **6. Slideshow** has its own eleven rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **UseVideo**, **MuteVideo**, **VideoPart** and **LowerOtherAudio**; see [Slideshow](#slideshow).
+The group **6. Slideshow** has its own twelve rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **UseVideo**, **MuteVideo**, **VideoPart**, **LowerOtherAudio** and **ShowCaptions**; see [Slideshow](#slideshow).
 
 The rows of **Current File** (except **LikedFolder**) and **TotalFiles** are read-only, and so are **PhotoCount** and **VideoCount**, which say how many of the files in the list now are photos and how many are
 videos (together they are **TotalFiles**; there are no videos unless **SupportVideo** is on). **CurrentIndex** is the number of the shown photo, counted
@@ -746,7 +746,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   `Fade`, `Slide`, `Zoom`, `KenBurns`, `Parallax`, `Random`) while the show runs (`Parallax` is left out while the depth model is not on this computer). The name is written in the top left corner of every monitor for about two seconds
   (`Effect: Slide`), the next change of photo is made by that effect, and with `KenBurns` the photo that is on the screen begins to move at once. The effect
   the show ended with becomes the setting: the **Effect** row shows it afterwards, and it is saved with the other settings of the folder.
-- The settings are the eleven rows of the **6. Slideshow** group of the settings grid (the last four are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
+- The settings are the twelve rows of the **6. Slideshow** group of the settings grid (the last five are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
   folder can have its own.
 
 | Setting | Meaning |
@@ -762,6 +762,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 | **MuteVideo** | `True`: the videos of the slideshow play without their sound. `False` (the default). |
 | **VideoPart** | How much of a video is played. `OnlyFoundTimeFrames` (the default): only the places a search found in it, 6 seconds around each (2 before, 4 after; places that touch are one stretch); a video of a folder, where nothing was searched for, has none and is played whole. `FullVideo`: the whole video. |
 | **LowerOtherAudio** | While a video plays with its sound, the sound of the other programs (a player in the background, a browser) is turned down by this many percent, and put back when the video ends: 50 by default, 0 leaves them as they are, 100 silences them. Not used when **MuteVideo** is `True`. |
+| **ShowCaptions** | `True`: what is said in a video is written over the picture as captions while it plays. `False` (the default). The words are the speech the index read (**VideoSpeech**, see [Videos](#videos)); a video whose speech was not read has no captions. See [below](#videos-in-the-slideshow). |
 
 **How the effects stay smooth.** GDI+, which draws everything else in the program, needs 13 ms (plus 7 ms for the black around it) to draw a full HD photo that is only partly there and 23 to 43 ms
 to draw one that is magnified (four times that on a 4K monitor: 50 ms, and 85 to 190 ms): that is a slide show of slides. So while an effect lasts, the photos are put together by a small compositor of our
@@ -842,6 +843,11 @@ a slideshow of what a search found in them). The photos go on exactly as they di
 - **Keys.** <kbd>Right</kbd> / <kbd>Left</kbd> skip a video that plays (and in a list of videos only go to the next / the previous one); any other key but <kbd>Esc</kbd> pauses the video (and the show), <kbd>Space</kbd> plays it on; <kbd>Esc</kbd> and <kbd>Alt</kbd>+<kbd>Enter</kbd> go back.
 - **Sound.** The other programs' sound is turned down by **LowerOtherAudio** percent through the Windows mixer (every program has a volume of its own there) and put back when the videos are over
   or the show ends; a volume you changed meanwhile is left as you set it. With **MuteVideo** nothing is touched.
+- **Captions.** With **ShowCaptions** on, the words that are said in the video are written at the bottom of the screen, centred, white on black, above the date: the line of the speech that covers
+  the playing time, from 0.3 s before the voice starts to 1.2 s after it stops (the same lines as under the player of the viewer), up to four lines on two thirds of the screen's width, the rest
+  cut with `…`. They come from the speech the index read, so **VideoSpeech** has to have been on while the folder was indexed; a video without it, or with no sound, shows none. They are written
+  also when **MuteVideo** is on (the show is read, not heard), and in a part found by a search they appear while that part plays. The box is a plain black one, not see-through: the picture of
+  a video is a window of its own, over which the program can only draw whole controls.
 - **The player.** Videos are played by the same engine as in the viewer; if it has to be [downloaded](#videos), you are asked before the show starts. It is started before the first video so that
   the screen does not wait for it (the first start can take seconds).
 

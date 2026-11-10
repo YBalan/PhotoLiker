@@ -366,6 +366,7 @@ for search, with the people named. How they were left when the show ended is wha
     <tr><td><strong>MuteVideo</strong></td><td><code>True</code>: the videos play without their sound.</td></tr>
     <tr><td><strong>VideoPart</strong></td><td><code>OnlyFoundTimeFrames</code> (the default): only the places a search found in a video, 6 seconds around each (2 before, 4 after); a video of a folder, where nothing was searched for, is played whole. <code>FullVideo</code>: the whole video.</td></tr>
     <tr><td><strong>LowerOtherAudio</strong></td><td>While a video plays with its sound, the sound of the other programs is turned down by this many percent and put back after: 50 by default, 0 leaves it alone, 100 silences it. Not used with <strong>MuteVideo</strong>.</td></tr>
+    <tr><td><strong>ShowCaptions</strong></td><td><code>True</code>: what is said in a video (the speech the index read, see <strong>VideoSpeech</strong>) is written over the picture as captions while it plays, also with <strong>MuteVideo</strong>. <code>False</code> (the default). A video whose speech was not read has none.</td></tr>
   </tbody>
 </table>
 </div>
@@ -381,7 +382,8 @@ It takes about half a second of work for each photo, done ahead of time, so the 
 <p>With <strong>UseVideo</strong> on, the videos of the list (the folder, or the results of a search) are part of the show. The photos go on as before and a video is played <strong>in between</strong>,
 on the screen PhotoLiker is on <strong>only</strong>: with several monitors the others keep their photos while it plays. One by one, a video plays where it lies in the list; at random, videos come as
 often as they are among the items. With <strong>OnlyFoundTimeFrames</strong> and search results shown, only the places the search found are played (2 seconds before to 4 after each). <kbd>Right</kbd> and
-<kbd>Left</kbd> skip a video. While a video plays with its sound the other programs' sound is turned down by <strong>LowerOtherAudio</strong> percent and put back after.</p>
+<kbd>Left</kbd> skip a video. While a video plays with its sound the other programs' sound is turned down by <strong>LowerOtherAudio</strong> percent and put back after. With <strong>ShowCaptions</strong> on, the words
+of the video are written at the bottom of the screen while they are said (white on black, up to four lines).</p>
 
 <figure><img src="images/40-slideshow-video.png" alt="A video playing over the whole screen in the slideshow, with the date it was recorded in the bottom right corner" width="1280" height="720"><figcaption>A video in the slideshow: it plays over the whole screen, and the date it was recorded is in the corner, as a photo's date is.</figcaption></figure>
 
@@ -453,7 +455,7 @@ description: select it and the pane under the table says what it is for.</p>
 
 <p><strong>CurrentIndex</strong> is the number of the shown photo, counted from 0: type another number into it to jump to that
 photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong>, <strong>PhotoCount</strong> (how many of the files in the list are photos), <strong>VideoCount</strong> (how many are videos) and the other rows
-that show information cannot be changed. The group <strong>6. Slideshow</strong> has eleven rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
+that show information cannot be changed. The group <strong>6. Slideshow</strong> has twelve rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
 
 <h3 id="language">Language</h3>
 <p>The <strong>Language</strong> row of the settings table chooses the language of the program: pick <strong>English</strong> or <strong>Українська</strong> (Ukrainian) in the list. The

@@ -106,6 +106,7 @@ public class SlideshowVideoTests : IDisposable
         Assert.False(settings.SlideshowMuteVideo);
         Assert.Equal(SlideshowVideoPart.OnlyFoundTimeFrames, settings.SlideshowVideoPart);
         Assert.Equal(50, settings.SlideshowLowerOtherAudio);
+        Assert.False(settings.SlideshowShowCaptions);
     }
 
     [Fact]
@@ -114,7 +115,7 @@ public class SlideshowVideoTests : IDisposable
         new Settings
         {
             CurrentFolder = _root, SlideshowUseVideo = true, SlideshowMuteVideo = true,
-            SlideshowVideoPart = SlideshowVideoPart.FullVideo, SlideshowLowerOtherAudio = 70,
+            SlideshowVideoPart = SlideshowVideoPart.FullVideo, SlideshowLowerOtherAudio = 70, SlideshowShowCaptions = true,
         }.Save(_root);
 
         var loaded = Settings.Load(_root);
@@ -123,6 +124,7 @@ public class SlideshowVideoTests : IDisposable
         Assert.True(loaded.SlideshowMuteVideo);
         Assert.Equal(SlideshowVideoPart.FullVideo, loaded.SlideshowVideoPart);
         Assert.Equal(70, loaded.SlideshowLowerOtherAudio);
+        Assert.True(loaded.SlideshowShowCaptions);
     }
 
     [Fact]
@@ -136,6 +138,7 @@ public class SlideshowVideoTests : IDisposable
         Assert.False(loaded.SlideshowUseVideo);
         Assert.Equal(SlideshowVideoPart.OnlyFoundTimeFrames, loaded.SlideshowVideoPart);
         Assert.Equal(50, loaded.SlideshowLowerOtherAudio);
+        Assert.False(loaded.SlideshowShowCaptions);
     }
 
     [Fact]

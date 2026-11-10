@@ -359,6 +359,7 @@
     <tr><td><strong>MuteVideo</strong></td><td><code>True</code>: відео відтворюються без звуку.</td></tr>
     <tr><td><strong>VideoPart</strong></td><td><code>OnlyFoundTimeFrames</code> (за замовчуванням): лише місця, які знайшов у відео пошук, по 6 секунд навколо кожного (2 до і 4 після); відео папки, де нічого не шукали, відтворюється повністю. <code>FullVideo</code>: усе відео.</td></tr>
     <tr><td><strong>LowerOtherAudio</strong></td><td>Поки відео відтворюється зі звуком, звук інших програм притишується на стільки відсотків і повертається після: за замовчуванням 50, 0 лишає його як є, 100 вимикає. Не діє з <strong>MuteVideo</strong>.</td></tr>
+    <tr><td><strong>ShowCaptions</strong></td><td><code>True</code>: те, що сказано у відео (мовлення, яке прочитав індекс, див. <strong>VideoSpeech</strong>), пишеться поверх картинки субтитрами, поки воно грає, також з <strong>MuteVideo</strong>. <code>False</code> (за замовчуванням). Відео, мовлення якого не прочитано, субтитрів не має.</td></tr>
   </tbody>
 </table>
 </div>
@@ -373,7 +374,7 @@
 <p>Коли ввімкнено <strong>UseVideo</strong>, відео зі списку (папки або результатів пошуку) беруть участь у показі. Фото йдуть як раніше, а відео відтворюється <strong>між ними</strong>, і <strong>лише</strong> на екрані,
 де відкрито PhotoLiker: з кількома моніторами решта показує фото, поки відео грає. По черзі відео грає там, де лежить у списку; випадково відео трапляються так часто, як їх серед елементів. З <strong>OnlyFoundTimeFrames</strong>
 і показаними результатами пошуку відтворюються лише знайдені місця (2 секунди до і 4 після кожного). <kbd>Right</kbd> і <kbd>Left</kbd> пропускають відео. Поки відео грає зі звуком, звук інших програм притишується
-на <strong>LowerOtherAudio</strong> відсотків і повертається після.</p>
+на <strong>LowerOtherAudio</strong> відсотків і повертається після. З увімкненим <strong>ShowCaptions</strong> слова з відео пишуться внизу екрана, поки їх вимовляють (білим на чорному, до чотирьох рядків).</p>
 
 <figure><img src="images/40-slideshow-video.png" alt="Відео в показі слайдів: грає на весь екран, у правому нижньому куті — дата, коли його записано" width="1280" height="720"><figcaption>Відео в показі слайдів: воно грає на весь екран, а дата його запису стоїть у кутку, як дата фото.</figcaption></figure>
 
@@ -444,7 +445,7 @@
 </div>
 
 <p><strong>CurrentIndex</strong> — номер показаного фото, починаючи з 0: впишіть інше число, щоб перейти до того фото (число поза списком веде до найближчого краю).
-<strong>CurrentFile</strong>, <strong>TotalFiles</strong>, <strong>PhotoCount</strong> (скільки з файлів списку — фото), <strong>VideoCount</strong> (скільки — відео) та інші рядки з відомостями змінити не можна. Група <strong>6. Slideshow</strong> має одинадцять власних рядків, див. <a href="#slideshow">Показ слайдів</a>.</p>
+<strong>CurrentFile</strong>, <strong>TotalFiles</strong>, <strong>PhotoCount</strong> (скільки з файлів списку — фото), <strong>VideoCount</strong> (скільки — відео) та інші рядки з відомостями змінити не можна. Група <strong>6. Slideshow</strong> має дванадцять власних рядків, див. <a href="#slideshow">Показ слайдів</a>.</p>
 
 <h3 id="language">Мова програми</h3>
 <p>Рядок <strong>Language</strong> таблиці налаштувань вибирає мову програми: оберіть у списку <strong>English</strong> або <strong>Українська</strong>. Зміна діє одразу, нічого

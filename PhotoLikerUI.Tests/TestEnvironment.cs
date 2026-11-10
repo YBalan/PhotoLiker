@@ -47,8 +47,8 @@ internal static class TestFfmpeg
         public void Dispose() => Ffmpeg.ExecutableOverride = _before;
     }
 
-    /// <summary>A one second MP4 that says it was recorded at this time (UTC text, "2003-01-31T15:06:00Z"), made by ffmpeg; its file dates are as they come.</summary>
-    internal static string MakeMp4(string folder, string name, string recordedUtc)
+    /// <summary>A one second MP4 (or one of <paramref name="seconds"/>) that says it was recorded at this time (UTC text, "2003-01-31T15:06:00Z"), made by ffmpeg; its file dates are as they come.</summary>
+    internal static string MakeMp4(string folder, string name, string recordedUtc, int seconds = 1)
     {
         var file = System.IO.Path.Combine(folder, name);
         var start = new ProcessStartInfo(Path!)
@@ -60,7 +60,7 @@ internal static class TestFfmpeg
         };
         foreach (var argument in new[]
         {
-            "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=160x120:rate=10:duration=1",
+            "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=160x120:rate=10:duration=" + seconds,
             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-metadata", "creation_time=" + recordedUtc, file,
         })
             start.ArgumentList.Add(argument);

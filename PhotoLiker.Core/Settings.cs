@@ -150,6 +150,9 @@ namespace PhotoLiker.Core
         /// <summary>By how many percent the sound of the other programs is turned down while a video plays with its sound (50: to half of what it was; 0: left alone), see <see cref="SlideshowVideo.LowerOtherAudioOf"/>.</summary>
         public int SlideshowLowerOtherAudio { get; set; } = SlideshowVideo.DefaultLowerOtherAudioPercent;
 
+        /// <summary>Whether the slideshow writes what is said in a video (the speech the index read, see <see cref="VideoSpeech"/>) over the picture as captions while the video plays. Off by default.</summary>
+        public bool SlideshowShowCaptions { get; set; } = false;
+
         // Main window of the WinForms app
         public int    WindowLeft     { get; set; } = 100;
         public int    WindowTop      { get; set; } = 100;

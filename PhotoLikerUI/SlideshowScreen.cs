@@ -36,6 +36,9 @@ namespace PhotoLikerUI
         private const int VideoWatchMs = 100;             // how often it is looked at whether a stretch of a video is over
         private const int VideoStartTimeoutMs = 15_000;   // a video that has not begun to play by then is given up
         private const int VideoSettleMs = 400;            // after a stretch is started the player still says what it said before: not believed for this long
+        private const float CaptionHeightDivisor = 30f;   // the caption's letters are this much of the height of the screen
+        private const float MinCaptionFontPixels = 16f;
+        private const int CaptionMaxLines = 4;            // a longer caption is cut with "…"
 
         private readonly SlideshowSession _session;
         private readonly SlideshowWatermark _watermark;
@@ -62,6 +65,8 @@ namespace PhotoLikerUI
         private MediaPlayer? _videoPlayer;
         private LibVLC? _videoEngine;                      // the one the player was made with (it belongs to VideoPlayerPanel and is not disposed here)
         private Label? _videoMark;                         // the date of the video, in the corner, as a photo has it
+        private Label? _captionMark;                       // what is said in the video just now, at the bottom (see ShowVideo); hidden when nothing is said or captions are off
+        private Font? _captionFont;
         private Label? _pausedMark;                        // "Paused" over the video (the window can not draw over a player, which is a window of its own)
         private bool _paused;                              // the show is paused: this screen says so, and holds its video
         private IndexingMark? _indexingMark;               // what the indexing that runs behind the show says, at the top, over a photo and over a video alike; null until there is something to say
@@ -333,8 +338,9 @@ namespace PhotoLikerUI
         /// <summary>
         /// Plays a video over the whole screen, in place of the photo that is there (no effect: the video just begins), each of <paramref name="segments"/> after the other, then raises
         /// <see cref="VideoFinished"/>. <paramref name="taken"/> is written in the corner as a photo's is. A photo shown after it (see <see cref="ShowFrame"/>) takes the screen back.
+        /// With <paramref name="speech"/> (what is said in the video, as the index read it) the words are written over the picture, at the bottom, as captions while they are said.
         /// </summary>
-        internal async void ShowVideo(string path, IReadOnlyList<VideoSegment> segments, bool mute, DateTime? taken)
+        internal async void ShowVideo(string path, IReadOnlyList<VideoSegment> segments, bool mute, DateTime? taken, IReadOnlyList<PhotoLiker.Video.SpeechSegment>? speech = null)
         {
             var generation = ++_videoGeneration;
             _animation.Stop();
@@ -342,11 +348,12 @@ namespace PhotoLikerUI
             _outgoing = null;
             _transition = SlideshowTransition.None;
             _message = null;
-            _video = new VideoRun(path, segments.Count > 0 ? segments : [new VideoSegment(0, null)], mute);
+            _video = new VideoRun(path, segments.Count > 0 ? segments : [new VideoSegment(0, null)], mute, speech is { Count: > 0 } ? speech : null);
 
             EnsureVideoView();
             _videoView!.Visible = true;
             ShowVideoMark(taken);
+            ShowCaption(null);
             UpdatePausedMark();
             Invalidate();
 
@@ -378,6 +385,7 @@ namespace PhotoLikerUI
                 view.Visible = false;
             if (_videoMark is { } mark)
                 mark.Visible = false;
+            ShowCaption(null);
             UpdatePausedMark();
         }
 
@@ -386,6 +394,14 @@ namespace PhotoLikerUI
             if (_videoView is not null)
                 return;
 
+            _captionFont = new Font(_watermarkFont.FontFamily, Math.Max(MinCaptionFontPixels, Bounds.Height / CaptionHeightDivisor), FontStyle.Bold, GraphicsUnit.Pixel);
+            _captionMark = new Label
+            {
+                AutoSize = false, BackColor = Color.Black, ForeColor = Color.White, Font = _captionFont, Visible = false, UseMnemonic = false,
+                TextAlign = ContentAlignment.MiddleCenter, AutoEllipsis = true,
+                Padding = new Padding(_captionFont.Height / 3, _captionFont.Height / 8, _captionFont.Height / 3, _captionFont.Height / 8),
+            };
+            Controls.Add(_captionMark);
             _videoMark = new Label
             {
                 AutoSize = true, BackColor = Color.Black, ForeColor = Color.White, Font = _watermarkFont, Visible = false, UseMnemonic = false,
@@ -399,6 +415,7 @@ namespace PhotoLikerUI
             Controls.Add(_pausedMark);
             Controls.Add(_videoView);
             Controls.SetChildIndex(_videoMark, 0); // over the video, which is a window of its own
+            Controls.SetChildIndex(_captionMark, 0);
             Controls.SetChildIndex(_pausedMark, 0);
             _indexingMark?.BringToFront();
         }
@@ -443,11 +460,48 @@ namespace PhotoLikerUI
             mark.BringToFront();
         }
 
+        /// <summary>
+        /// Writes <paramref name="text"/> over the video as a caption, centred at the bottom above the date (up to four lines, the width of two thirds of the screen at most); null hides it.
+        /// What is on the screen already is not touched when the text is the same, so a caption that is looked at every 100 ms does not flicker.
+        /// </summary>
+        private void ShowCaption(string? text)
+        {
+            if (_captionMark is not { } label)
+                return;
+
+            if (string.IsNullOrEmpty(text) || _videoView is not { Visible: true })
+            {
+                label.Visible = false;
+                label.Text = string.Empty;
+                return;
+            }
+
+            if (label.Visible && label.Text == text)
+                return;
+
+            var margin = ClientSize.Height / 40;
+            var maxWidth = ClientSize.Width * 2 / 3;
+            label.Text = text;
+            var size = label.GetPreferredSize(new Size(maxWidth, 0));
+            var lineHeight = TextRenderer.MeasureText("Ag", label.Font, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.NoPadding).Height;
+            var height = Math.Min(size.Height, lineHeight * CaptionMaxLines + lineHeight / 2);
+            var width = Math.Min(maxWidth, size.Width);
+
+            // Above the line the date is written on (it is in the corner, but a long caption reaches under it)
+            var dateHeight = _videoMark is { Visible: true } mark ? mark.Height : 0;
+            var bottom = ClientSize.Height - margin - (dateHeight > 0 ? dateHeight + margin / 2 : 0);
+            label.SetBounds((ClientSize.Width - width) / 2, bottom - height, width, height);
+            label.Visible = true;
+            label.BringToFront();
+            _indexingMark?.BringToFront();
+        }
+
         private void StartSegment(LibVLC engine)
         {
             if (_video is not { } run)
                 return;
 
+            ShowCaption(null); // the words of the stretch before are not those of this one
             var segment = run.Segments[run.Index];
             if (_videoPlayer is null)
             {
@@ -499,6 +553,9 @@ namespace PhotoLikerUI
             var sinceStart = (Stopwatch.GetTimestamp() - run.StartedAt) * 1000.0 / Stopwatch.Frequency;
             var segment = run.Segments[run.Index];
             var settled = sinceStart > VideoSettleMs;
+            if (run.Speech is not null && settled && state == VLCState.Playing)
+                ShowCaption(PhotoLiker.Video.SpeechCaptions.At(run.Speech, player.Time));
+
             var over = state == VLCState.Error
                 || (settled && state == VLCState.Ended)
                 || (settled && state == VLCState.Stopped && run.SawPlaying)
@@ -531,6 +588,7 @@ namespace PhotoLikerUI
 
             _videoWatch.Stop();
             _video = null;
+            ShowCaption(null);
             if (_videoPlayer is { } player)
                 _ = Task.Run(() => { try { player.Stop(); } catch (Exception ex) when (ex is not OutOfMemoryException) { /* it is going away */ } });
 
@@ -538,11 +596,13 @@ namespace PhotoLikerUI
         }
 
         /// <summary>The video that is playing: where, the stretches of it, which one is on, whether it is silent, and how its stretch is going.</summary>
-        private sealed class VideoRun(string path, IReadOnlyList<VideoSegment> segments, bool mute)
+        private sealed class VideoRun(string path, IReadOnlyList<VideoSegment> segments, bool mute, IReadOnlyList<PhotoLiker.Video.SpeechSegment>? speech)
         {
             public string Path { get; } = path;
             public IReadOnlyList<VideoSegment> Segments { get; } = segments;
             public bool Mute { get; } = mute;
+            /// <summary>What is said in the video, for the captions; null when there are none to write (they are off, or the speech was not read).</summary>
+            public IReadOnlyList<PhotoLiker.Video.SpeechSegment>? Speech { get; } = speech;
             public int Index { get; set; }
             public long StartedAt { get; set; }
             public bool SawPlaying { get; set; }
@@ -862,6 +922,7 @@ namespace PhotoLikerUI
                 _noticeTimer.Dispose();
                 _videoWatch.Dispose();
                 _indexingFont?.Dispose();
+                _captionFont?.Dispose();
                 if (_videoView is not null)
                     _videoView.MediaPlayer = null;
                 if (_videoPlayer is { } player)

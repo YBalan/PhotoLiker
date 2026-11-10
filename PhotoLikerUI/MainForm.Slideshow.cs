@@ -192,6 +192,7 @@ namespace PhotoLikerUI
             }
 
             var hits = _resultsActive ? _resultHits : new Dictionary<string, SearchHit>(StringComparer.Ordinal);
+            var captions = _currentConfig.SlideshowShowCaptions;
             return new SlideshowVideoOptions(
                 _currentConfig.SlideshowMuteVideo, _currentConfig.SlideshowVideoPart, _currentConfig.SlideshowLowerOtherAudio,
                 path =>
@@ -201,8 +202,22 @@ namespace PhotoLikerUI
                     long? length = record?.Info is { DurationSeconds: > 0 } info ? (long)(info.DurationSeconds * 1000) : null;
                     var taken = hit?.Taken ?? record?.Date.Taken;
                     // A search by date alone lists videos without having found anything inside them (its score is 0): those are played whole
-                    return new SlideshowVideoFacts(hit is { Score: > 0 } ? hit.Moments : null, length, taken);
-                });
+                    return new SlideshowVideoFacts(hit is { Score: > 0 } ? hit.Moments : null, length, taken, captions ? SpeechOfTheVideo(path) : null);
+                },
+                ShowCaptions: captions);
+        }
+
+        /// <summary>What is said in a video of the show, as the index read it (one query of the catalog when the video starts); none if it was not read, or the catalog is gone (another folder was opened).</summary>
+        private static IReadOnlyList<SpeechSegment>? SpeechOfTheVideo(string file)
+        {
+            try
+            {
+                return VideoLibrary.Current?.SpeechOf(file);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                return null;
+            }
         }
 
         /// <summary>The screens the slideshow covers, left to right, and which of them the window is on: that one only, or every screen that is connected.</summary>
