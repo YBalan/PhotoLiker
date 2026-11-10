@@ -284,7 +284,7 @@ public class VideoDateRunTests : IDisposable
         var old = VideoBytes.Seconds(new DateTime(2003, 1, 31, 15, 6, 0, DateTimeKind.Utc));
         var original = VideoBytes.Mp4(old, old, old);
         var path = Video("SDV_0667.mp4", original);
-        var given = new DateTime(2011, 5, 23, 3, 25, 4); // the date of the file, as local time
+        var given = FileDate.ToLocalTime(); // the date of the file, as local time (whatever the zone of the machine: the file dates then are that date already)
 
         var entry = Planned(path, given);
         Assert.Equal(DateAlignmentStatus.Change, entry.Status);
@@ -332,7 +332,7 @@ public class VideoDateRunTests : IDisposable
     {
         var old = VideoBytes.Seconds(new DateTime(2003, 1, 31, 15, 6, 0, DateTimeKind.Utc));
         var path = Video("a.mp4", VideoBytes.Mp4(old, old, old));
-        var report = Run(Planned(path, new DateTime(2011, 5, 23, 3, 25, 4)));
+        var report = Run(Planned(path, FileDate.ToLocalTime()));
 
         // Someone wrote another date there after the run
         var bytes = File.ReadAllBytes(path);
