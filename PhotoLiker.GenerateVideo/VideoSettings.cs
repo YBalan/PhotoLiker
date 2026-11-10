@@ -64,6 +64,9 @@ namespace PhotoLiker.GenerateVideo
         /// <summary>How many times ÷2 (negative) or ×2 (positive) was pressed for the beats found.</summary>
         public int? TempoOctaves { get; set; }
 
+        /// <summary>Every photo moves by its depth while it is shown (the Parallax of the slideshow): the video is drawn frame by frame.</summary>
+        public bool? DepthParallax { get; set; }
+
         /// <summary>The sort order, if the file has one this version knows.</summary>
         public PhotoSortOrder? GetSortOrder() =>
             Enum.TryParse<PhotoSortOrder>(SortOrder, ignoreCase: true, out var order) && Enum.IsDefined(order) ? order : null;

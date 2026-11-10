@@ -63,6 +63,9 @@ namespace PhotoLikerUI
 
         private readonly Lazy<IReadOnlyList<FaceLabel>> _faces;
         private readonly Lazy<string?> _names;
+        private readonly object _depthGate = new();
+        private DepthMap? _depth;
+        private bool _depthTried;
 
         /// <summary>Takes <paramref name="image"/>: its pixels are copied and it is disposed.</summary>
         /// <param name="facesOf">Says who is in the photo (by its file); asked once, the first time <see cref="Faces"/> or <see cref="Names"/> is wanted. Null: nobody is.</param>
@@ -107,6 +110,38 @@ namespace PhotoLikerUI
         /// <summary>Works out who is in the photo now, if that has not been done: for a thread of the pool, ahead of the first time the window asks.</summary>
         public void WarmPeople() => _ = _names.Value;
 
+        /// <summary>
+        /// How near each part of the photo is, for the Parallax effect; null until it has been worked out (<see cref="EnsureDepth"/>), and for ever when that was not possible. Never waits: the window
+        /// reads it while it paints.
+        /// </summary>
+        public DepthMap? Depth => Volatile.Read(ref _depth);
+
+        /// <summary>
+        /// Works out the depth of the photo, once (a second call, or one that comes while the first is working, finds it done or waits for it): half a second of a processor, so only a thread of the pool
+        /// may call it. A photo that the model fails on keeps no depth, and is not tried again.
+        /// </summary>
+        public void EnsureDepth(Func<uint[], int, int, DepthMap?>? estimate)
+        {
+            if (estimate is null)
+                return;
+
+            lock (_depthGate)
+            {
+                if (_depthTried)
+                    return;
+
+                _depthTried = true;
+                try
+                {
+                    Volatile.Write(ref _depth, estimate(Pixels, Width, Height));
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    // the photo moves like any other (Ken Burns) without it
+                }
+            }
+        }
+
         /// <summary>The file the photo is from.</summary>
         public string Path { get; }
 
@@ -133,6 +168,8 @@ namespace PhotoLikerUI
         private readonly int _maxParallelLoads; // the decoder keeps up when several photos are made at once (GDI+ does not), and over a network their reads overlap
         private readonly Func<string, IReadOnlyList<FaceLabel>>? _facesOf; // who is in a photo (the frames ask it when they are shown); null when there is no index to ask
         private volatile bool _warmPeople;   // the people are shown (the boxes or the names are on): they are worked out along with a frame, not when it is first painted
+        private readonly Func<uint[], int, int, DepthMap?>? _depthOf; // works out the depth of a frame (the Parallax effect); null when the depth model is not here
+        private volatile bool _warmDepth;    // the Parallax effect is on: the depth is worked out along with a frame, before it is published
         private readonly Dictionary<string, SlideshowFrame> _frames = new(StringComparer.Ordinal);
         private readonly HashSet<string> _loading = new(StringComparer.Ordinal);
         private readonly HashSet<string> _failed = new(StringComparer.Ordinal);
@@ -146,8 +183,12 @@ namespace PhotoLikerUI
         private int _activePumps;
 
         /// <param name="facesOf">Says who is in a photo; called on the threads that make the frames and, when a frame has not been asked yet, on the window's thread, so it must be safe to call from any thread. Null: nobody is.</param>
-        public SlideshowFrames(Size screen, long maxBytes, int minFrames, int maxParallelLoads, Func<string, IReadOnlyList<FaceLabel>>? facesOf = null)
+        /// <param name="depthOf">Works out how near each part of a picture is, from its pixels and size (called on the threads that make the frames, so it must be safe to call from any thread). Null: there is no depth, and no photo has any.</param>
+        public SlideshowFrames(
+            Size screen, long maxBytes, int minFrames, int maxParallelLoads, Func<string, IReadOnlyList<FaceLabel>>? facesOf = null,
+            Func<uint[], int, int, DepthMap?>? depthOf = null)
         {
+            _depthOf = depthOf;
             _screen = screen;
             _maxBytes = maxBytes;
             _minFrames = minFrames;
@@ -167,6 +208,21 @@ namespace PhotoLikerUI
 
             var here = _frames.Values.ToList();
             _ = Task.Run(() => Parallel.ForEach(here, new ParallelOptions { MaxDegreeOfParallelism = 2 }, frame => frame.WarmPeople()));
+        }
+
+        /// <summary>
+        /// Says whether the Parallax effect is on. When it is, every frame that is made has its depth worked out before it is published (on its thread of the pool, so a photo is shown with its depth as
+        /// soon as it is shown at all), and turning it on works out the depth of the frames that are here already (in the background, two at a time).
+        /// </summary>
+        public void SetDepthWanted(bool wanted)
+        {
+            _warmDepth = wanted && _depthOf is not null;
+            if (!_warmDepth || _frames.Count == 0)
+                return;
+
+            var here = _frames.Values.ToList();
+            var estimate = _depthOf;
+            _ = Task.Run(() => Parallel.ForEach(here, new ParallelOptions { MaxDegreeOfParallelism = 2 }, frame => frame.EnsureDepth(estimate)));
         }
 
         /// <summary>A frame finished loading and is now here.</summary>
@@ -247,6 +303,8 @@ namespace PhotoLikerUI
                             var made = ImageHelper.LoadSlide(photo, _screen, _facesOf);
                             if (_warmPeople)
                                 made.WarmPeople();
+                            if (_warmDepth)
+                                made.EnsureDepth(_depthOf);
                             return made;
                         });
                     }

@@ -42,6 +42,7 @@ namespace PhotoLiker.GenerateVideo
             photo.CreationTimeUtc != default ? photo.CreationTimeUtc : photo.LastWriteTimeUtc;
 
         /// <param name="sequence">The pictures and their times, as <see cref="BuildSequence"/> makes them.</param>
+        /// <param name="ffmpegPath">The ffmpeg to run; the one that comes with the program when not given.</param>
         public static async Task GenerateAsync(
             VideoSequence sequence,
             string outputPath,
@@ -51,7 +52,8 @@ namespace PhotoLiker.GenerateVideo
             int crf,
             string? audioPath,
             Action<string> appendOutput,
-            Action<int> reportProgress)
+            Action<int> reportProgress,
+            string? ffmpegPath = null)
         {
             var listFilePath = Path.Combine(Path.GetTempPath(), $"photoliker_ffmpeg_{Guid.NewGuid():N}.txt");
 
@@ -63,7 +65,7 @@ namespace PhotoLiker.GenerateVideo
                 File.WriteAllText(listFilePath, concatContent);
 
                 var arguments = BuildFfmpegArguments(listFilePath, outputPath, width, height, codec, crf, audioPath, sequence.Audio, sequence.AudioEndSeconds);
-                var ffmpegExecutablePath = ResolveFfmpegExecutablePath();
+                var ffmpegExecutablePath = ffmpegPath ?? ResolveFfmpegExecutablePath();
 
                 using var process = new System.Diagnostics.Process
                 {
@@ -153,14 +155,42 @@ namespace PhotoLiker.GenerateVideo
             double? endSeconds = null)
         {
             var scaleFilter = $"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2";
-            var hasAudio = !string.IsNullOrWhiteSpace(audioPath);
-            var audioInput = hasAudio ? $"{(audio == AudioPlayback.Loop ? " -stream_loop -1" : string.Empty)} -i \"{audioPath}\"" : string.Empty;
-            var cutAt = hasAudio && endSeconds is { } end ? $" -t {end.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}" : string.Empty;
-            var audioOutput = hasAudio
-                ? $" -map 0:v:0 -map 1:a:0{(audio == AudioPlayback.OnceThenSilence ? " -af apad" : string.Empty)} -c:a aac -b:a 192k -shortest{cutAt}"
-                : string.Empty;
+            var (audioInput, audioOutput) = AudioArguments(audioPath, audio, endSeconds);
 
             return $"-y -f concat -safe 0 -noautorotate -i \"{listFilePath}\"{audioInput} -vf \"{scaleFilter}\"{audioOutput} -c:v {codec} -crf {crf}{NoBFrames(codec)} -pix_fmt yuv420p -progress pipe:1 -nostats \"{outputPath}\"";
+        }
+
+        /// <summary>
+        /// The same video made from frames that are given to ffmpeg one after the other on its standard input (<see cref="VideoFrames"/>): raw pixels of the size of the video
+        /// (<c>bgra</c>: a pixel is the four bytes of a 32 bit bitmap), <paramref name="framesPerSecond"/> of them for every second. They are already the size of the video, upright, and
+        /// have their black bars, so there is nothing to scale, pad or turn. The audio is as in <see cref="BuildFfmpegArguments"/>.
+        /// </summary>
+        internal static string BuildPipedFfmpegArguments(
+            string outputPath,
+            int width,
+            int height,
+            int framesPerSecond,
+            string codec,
+            int crf,
+            string? audioPath = null,
+            AudioPlayback audio = AudioPlayback.Loop,
+            double? endSeconds = null)
+        {
+            var (audioInput, audioOutput) = AudioArguments(audioPath, audio, endSeconds);
+
+            return $"-y -f rawvideo -pixel_format bgra -video_size {width}x{height} -framerate {framesPerSecond} -i pipe:0{audioInput}{audioOutput} -c:v {codec} -crf {crf}{NoBFrames(codec)} -pix_fmt yuv420p -progress pipe:1 -nostats \"{outputPath}\"";
+        }
+
+        /// <summary>The audio input and the output options that go with it, for a video that has it (both are empty for one that has not): see <see cref="BuildFfmpegArguments"/> for what they do.</summary>
+        private static (string Input, string Output) AudioArguments(string? audioPath, AudioPlayback audio, double? endSeconds)
+        {
+            var hasAudio = !string.IsNullOrWhiteSpace(audioPath);
+            var input = hasAudio ? $"{(audio == AudioPlayback.Loop ? " -stream_loop -1" : string.Empty)} -i \"{audioPath}\"" : string.Empty;
+            var cutAt = hasAudio && endSeconds is { } end ? $" -t {end.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}" : string.Empty;
+            var output = hasAudio
+                ? $" -map 0:v:0 -map 1:a:0{(audio == AudioPlayback.OnceThenSilence ? " -af apad" : string.Empty)} -c:a aac -b:a 192k -shortest{cutAt}"
+                : string.Empty;
+            return (input, output);
         }
 
         /// <summary>

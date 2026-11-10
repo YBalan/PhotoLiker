@@ -66,6 +66,7 @@ namespace PhotoLikerUI
         private SlideshowIndexing? _indexing;                  // what the indexing behind the show says now; null when none runs
         private long _playPauseAt;                            // when the last Play/Pause button was taken (0: none yet), so that one press that arrives twice is not taken twice
         private readonly bool _hasPeople;                      // there is something to ask who is in a photo (the folder has an index)
+        private readonly SlideshowDepthOptions? _depth;        // how to work out how near the parts of a photo are (the Parallax effect); null when the depth model is not on this computer
         private bool _showFaces;                               // the boxes with the names on the faces are on (F)
         private bool _showNames;                               // the line of names in the corner is on (N)
         private bool _cursorHidden;
@@ -93,10 +94,11 @@ namespace PhotoLikerUI
         /// <param name="primary">Which of them the main window is on. With more screens than photos, those farthest from it are left out. The videos play on this one only.</param>
         /// <param name="video">How the videos are played; null leaves them out of the show.</param>
         /// <param name="people">Who is in a photo, and whether the boxes with the names on the faces (F) and the line of names (N) are on when the show begins; null when there is nobody to ask (the folder has no index), and then the two keys say so.</param>
+        /// <param name="depth">How to work out the depth of a photo, for <see cref="SlideshowEffect.Parallax"/>; null when the depth model is not here, and then that effect is a Ken Burns one and the Down and Up keys skip it.</param>
         public SlideshowSession(
             IReadOnlyList<PhotoFile> items, int start, SlideshowMode mode, double timeoutSeconds, SlideshowWatermark watermark,
             IReadOnlyList<Rectangle> screens, int primary, SlideshowEffect effect = SlideshowEffect.None, SlideshowVideoOptions? video = null,
-            SlideshowPeopleOptions? people = null)
+            SlideshowPeopleOptions? people = null, SlideshowDepthOptions? depth = null)
         {
             ArgumentOutOfRangeException.ThrowIfZero(items.Count);
             ArgumentOutOfRangeException.ThrowIfZero(screens.Count);
@@ -163,7 +165,8 @@ namespace PhotoLikerUI
 
             var frameBytes = MaxFrameBytes / chosen.Length;
             var parallelLoads = Math.Max(2, MaxParallelLoads / chosen.Length);
-            _screens = [.. chosen.Select(i => new SlideshowScreen(this, screens[i], watermark, frameBytes, MinFrames, parallelLoads, people?.FacesOf))];
+            _screens = [.. chosen.Select(i => new SlideshowScreen(this, screens[i], watermark, frameBytes, MinFrames, parallelLoads, people?.FacesOf, depth?.Estimate))];
+            _depth = depth;
             _hasPeople = people is not null;
             _showFaces = people?.ShowFaces ?? false;
             _showNames = people?.ShowNames ?? false;
@@ -176,6 +179,7 @@ namespace PhotoLikerUI
             }
 
             _effect = effect;
+            WantDepthIfNeeded();
             _timeoutSeconds = Slideshow.TimeoutOf(timeoutSeconds);
             _timer.Interval = (int)Math.Round(_timeoutSeconds * 1000);
             _timer.Tick += (_, _) => AdvanceByTimer();
@@ -556,19 +560,33 @@ namespace PhotoLikerUI
         /// <summary>Down / Up: the next / previous effect, from now on; the person is told which, on every screen.</summary>
         internal void ChangeEffect(int direction)
         {
-            _effect = SlideshowEffects.Next(_effect, direction);
+            var next = SlideshowEffects.Next(_effect, direction);
+            if (SlideshowEffects.UsesDepth(next) && _depth is null)
+                next = SlideshowEffects.Next(next, direction); // there is no depth model: that one is not offered
+            _effect = next;
+            WantDepthIfNeeded();
 
             var text = string.Format(SlideshowStrings.EffectFormat, _effect);
             foreach (var screen in _screens)
                 screen.ShowNotice(text);
 
-            if (_effect == SlideshowEffect.KenBurns)
+            if (SlideshowEffects.HasMotion(_effect))
             {
-                // The photo that is on the screen has none yet: it begins to move now, not at the next change
+                // The photo that is on the screen has none yet: it begins to move now, not at the next change (by its depth if it has it, else as Ken Burns)
                 var plan = PlanEffect(byTimer: false);
                 foreach (var screen in _screens)
                     screen.StartMotion(plan);
             }
+        }
+
+        /// <summary>The effect is one that moves photos by their depth: the frames work the depth out as they are made, and for the ones that are here already.</summary>
+        private void WantDepthIfNeeded()
+        {
+            if (_depth is null || !SlideshowEffects.UsesDepth(_effect))
+                return;
+
+            foreach (var screen in _screens)
+                screen.Frames.SetDepthWanted(true);
         }
 
         // ── what comes next ────────────────────────────────────────────────
@@ -747,6 +765,8 @@ namespace PhotoLikerUI
                 return default;
 
             var effect = SlideshowEffects.Resolve(_effect, _lastEffect, Random.Shared.Next);
+            if (SlideshowEffects.UsesDepth(effect) && _depth is null)
+                effect = SlideshowEffect.KenBurns; // no depth model: the nearest thing there is
             _lastEffect = effect;
 
             var transition = byTimer ? SlideshowEffects.TransitionOf(effect) : SlideshowTransition.None;
@@ -754,7 +774,7 @@ namespace PhotoLikerUI
             return new SlideshowShowPlan(
                 transition, transition == SlideshowTransition.None ? 0 : seconds,
                 SlideshowEffects.HasMotion(effect), SlideshowEffects.MotionSeconds(_timeoutSeconds, seconds),
-                Stopwatch.GetTimestamp());
+                Stopwatch.GetTimestamp(), SlideshowEffects.UsesDepth(effect));
         }
 
         private void RestartTimer()

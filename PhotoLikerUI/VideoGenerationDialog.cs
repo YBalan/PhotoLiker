@@ -88,6 +88,8 @@ namespace PhotoLikerUI
         private readonly ComboBox _playModeCombo = new();
         private readonly ComboBox _audioPlayModeCombo = new();
         private readonly CheckBox _beatCheckBox = new();
+        private readonly CheckBox _parallaxCheckBox = new();
+        private readonly Func<Task<bool>>? _ensureDepthModelAsync;
         private readonly Label _beatStatusLabel = new();
         private readonly Button _slowerBeatButton = new();
         private readonly Button _fasterBeatButton = new();
@@ -114,6 +116,7 @@ namespace PhotoLikerUI
         /// <param name="defaultSortOrder">The order that is picked when the dialog opens.</param>
         /// <param name="dark">True: the dialog is in the dark theme.</param>
         /// <param name="generateVideoAsync">Makes the video from the pictures and their times (the cover first, when the options have one).</param>
+        /// <param name="ensureDepthModelAsync">Makes sure the depth model of the parallax is on this computer (asks, and downloads it, if it is not) and says whether it is; null when it is always there.</param>
         public VideoGenerationDialog(
             string defaultOutputFolder,
             IReadOnlyList<PhotoFile> currentPhotos,
@@ -121,7 +124,8 @@ namespace PhotoLikerUI
             IReadOnlyCollection<string> extensions,
             PhotoSortOrder defaultSortOrder,
             bool dark,
-            Func<VideoGenerationOptions, VideoSequence, Action<string>, Action<int>, Task> generateVideoAsync)
+            Func<VideoGenerationOptions, VideoSequence, Action<string>, Action<int>, Task> generateVideoAsync,
+            Func<Task<bool>>? ensureDepthModelAsync = null)
         {
             var current = new Source(VideoStrings.SourceCurrent, null, defaultOutputFolder, VideoStrings.NoPhotosLoaded) { Photos = [.. currentPhotos] };
             var liked = new Source(VideoStrings.SourceLiked, likedFolder, likedFolder, VideoStrings.EmptyFolder);
@@ -129,6 +133,7 @@ namespace PhotoLikerUI
             _likedFolder = likedFolder;
             _extensions = extensions;
             _generateVideoAsync = generateVideoAsync;
+            _ensureDepthModelAsync = ensureDepthModelAsync;
 
             Text = MainFormStrings.VideoDialogTitle;
             FormBorderStyle = FormBorderStyle.FixedSingle; // not FixedDialog: Windows shows no icon in the caption of that frame
@@ -145,12 +150,12 @@ namespace PhotoLikerUI
                 Dock = DockStyle.Fill,
                 Padding = new Padding(12),
                 ColumnCount = 3,
-                RowCount = 20
+                RowCount = 21
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, _labelColumnWidth));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, _buttonColumnWidth));
-            for (var row = 0; row < 18; row++)
+            for (var row = 0; row < 19; row++)
                 layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -307,6 +312,10 @@ namespace PhotoLikerUI
             toolTip.SetToolTip(_rhythmView, VideoStrings.RhythmViewHint);
             _beatToolTip = toolTip;
 
+            _parallaxCheckBox.Text = VideoStrings.DepthParallax;
+            _parallaxCheckBox.AutoSize = true;
+            toolTip.SetToolTip(_parallaxCheckBox, VideoStrings.DepthParallaxHint);
+
             _codecCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _codecCombo.Items.AddRange(["libx264", "libx265"]);
             _codecCombo.SelectedIndex = 0;
@@ -428,16 +437,20 @@ namespace PhotoLikerUI
             layout.Controls.Add(playPanel, 1, 11);
             layout.SetColumnSpan(playPanel, 2);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelVideoLength, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 12);
-            layout.Controls.Add(_videoLengthLabel, 1, 12);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelMotion, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 12);
+            layout.Controls.Add(_parallaxCheckBox, 1, 12);
+            layout.SetColumnSpan(_parallaxCheckBox, 2);
+
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelVideoLength, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 13);
+            layout.Controls.Add(_videoLengthLabel, 1, 13);
             layout.SetColumnSpan(_videoLengthLabel, 2);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelCodec, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 13);
-            layout.Controls.Add(_codecCombo, 1, 13);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelCodec, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 14);
+            layout.Controls.Add(_codecCombo, 1, 14);
             layout.SetColumnSpan(_codecCombo, 2);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelQuality, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 14);
-            layout.Controls.Add(_crfNumeric, 1, 14);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelQuality, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 15);
+            layout.Controls.Add(_crfNumeric, 1, 15);
             layout.SetColumnSpan(_crfNumeric, 2);
 
             var hintLabel = new Label
@@ -447,14 +460,14 @@ namespace PhotoLikerUI
                 ForeColor = SystemColors.GrayText,
                 Margin = new Padding(0, 8, 0, 0)
             };
-            layout.Controls.Add(hintLabel, 0, 15);
+            layout.Controls.Add(hintLabel, 0, 16);
             layout.SetColumnSpan(hintLabel, 3);
 
             _rhythmView.Dock = DockStyle.Fill;
             _rhythmView.Height = RhythmViewHeight;
             _rhythmView.Margin = new Padding(0, 6, 0, 0);
             _rhythmView.Visible = false;
-            layout.Controls.Add(_rhythmView, 0, 16);
+            layout.Controls.Add(_rhythmView, 0, 17);
             layout.SetColumnSpan(_rhythmView, 3);
 
             _progressBar.Dock = DockStyle.Fill;
@@ -462,7 +475,7 @@ namespace PhotoLikerUI
             _progressBar.Maximum = 100;
             _progressBar.Visible = false;
             TaskbarProgress.Watch(_progressBar, () => _isGenerating); // the bar stays on the dialog after the video is made
-            layout.Controls.Add(_progressBar, 0, 17);
+            layout.Controls.Add(_progressBar, 0, 18);
             layout.SetColumnSpan(_progressBar, 3);
 
             _outputLogTextBox.Multiline = true;
@@ -471,7 +484,7 @@ namespace PhotoLikerUI
             _outputLogTextBox.ScrollBars = ScrollBars.Both;
             _outputLogTextBox.Dock = DockStyle.Fill;
             _outputLogTextBox.Visible = false;
-            layout.Controls.Add(_outputLogTextBox, 0, 18);
+            layout.Controls.Add(_outputLogTextBox, 0, 19);
             layout.SetColumnSpan(_outputLogTextBox, 3);
 
             var buttonsPanel = new FlowLayoutPanel
@@ -505,7 +518,7 @@ namespace PhotoLikerUI
             buttonsPanel.Controls.Add(_runButton);
             buttonsPanel.Controls.Add(_cancelButton);
 
-            layout.Controls.Add(buttonsPanel, 0, 19);
+            layout.Controls.Add(buttonsPanel, 0, 20);
             layout.SetColumnSpan(buttonsPanel, 3);
 
             Controls.Add(layout);
@@ -530,6 +543,7 @@ namespace PhotoLikerUI
                 _frameTimeStartNumeric,
                 _frameTimeEndNumeric,
                 _randomFrameTimesCheckBox,
+                _parallaxCheckBox,
                 _codecCombo,
                 _crfNumeric,
                 browseButton
@@ -575,6 +589,7 @@ namespace PhotoLikerUI
 
             // The experimental cut on the beat: ticking it finds the rhythm of the audio
             _beatCheckBox.CheckedChanged += (_, _) => StartRhythmAnalysis();
+            _parallaxCheckBox.Click += async (_, _) => await ParallaxTickedAsync(); // a click, not a change: what the saved settings put in is not asked about
             _slowerBeatButton.Click += (_, _) => ChangeTempo(-1);
             _fasterBeatButton.Click += (_, _) => ChangeTempo(1);
             UpdateRhythmUi();
@@ -840,18 +855,36 @@ namespace PhotoLikerUI
                     AppendOutput(VideoStrings.LogCoverUnused);
                 }
 
+                // With the depth parallax the frames are drawn here from the photos themselves (read upright, of any kind), so ffmpeg is not given the photos as files and nothing is copied first
+                var parallax = options.DepthParallax;
+                if (parallax && _ensureDepthModelAsync is not null && !await _ensureDepthModelAsync())
+                {
+                    AppendOutput(VideoStrings.LogParallaxNoModel);
+                    parallax = false;
+                    options = options with { DepthParallax = false };
+                }
+
                 // ffmpeg is told not to turn the photos by their EXIF orientation (it gets it wrong for the photos next to a turned one),
                 // so the ones that have to be turned are copied upright first, as the app shows them (the cover goes with them, first)
-                AppendOutput(VideoStrings.LogLookingUpright);
-                IReadOnlyList<string> toTurn = cover is null ? files : [cover, .. files];
-                using var upright = await UprightPhotos.CreateAsync(toTurn, options.WidthPixels, options.HeightPixels, SetProgress);
-                AppendOutput(upright.Turned > 0
-                    ? string.Format(VideoStrings.LogTurnedFormat, Plural.Count(upright.Turned, VideoStrings.Photo))
-                    : VideoStrings.LogNoneTurned);
-                if (upright.Converted > 0)
-                    AppendOutput(string.Format(VideoStrings.LogConvertedFormat, Plural.Count(upright.Converted, VideoStrings.Picture)));
-                if (upright.Failed > 0)
-                    AppendOutput(string.Format(VideoStrings.LogFailedFormat, Plural.Count(upright.Failed, VideoStrings.Picture)));
+                UprightPhotos? upright = null;
+                if (parallax)
+                {
+                    AppendOutput(cover is null ? VideoStrings.LogParallaxOn : VideoStrings.LogParallaxOnCoverStill);
+                }
+                else
+                {
+                    AppendOutput(VideoStrings.LogLookingUpright);
+                    IReadOnlyList<string> toTurn = cover is null ? files : [cover, .. files];
+                    upright = await UprightPhotos.CreateAsync(toTurn, options.WidthPixels, options.HeightPixels, SetProgress);
+                    AppendOutput(upright.Turned > 0
+                        ? string.Format(VideoStrings.LogTurnedFormat, Plural.Count(upright.Turned, VideoStrings.Photo))
+                        : VideoStrings.LogNoneTurned);
+                    if (upright.Converted > 0)
+                        AppendOutput(string.Format(VideoStrings.LogConvertedFormat, Plural.Count(upright.Converted, VideoStrings.Picture)));
+                    if (upright.Failed > 0)
+                        AppendOutput(string.Format(VideoStrings.LogFailedFormat, Plural.Count(upright.Failed, VideoStrings.Picture)));
+                }
+                using var uprightHolder = upright; // the copies go when the video is made
                 SetProgress(0);
 
                 // Cut on the beat: the rhythm is the one found when the box was ticked (waited for, if that is still going on)
@@ -876,10 +909,12 @@ namespace PhotoLikerUI
                 if (repeat && audioSeconds is null)
                     AppendOutput(VideoStrings.LogAudioUnknown);
 
-                var uprightPhotos = cover is null ? upright.Files : [.. upright.Files.Skip(1)];
+                IReadOnlyList<string> uprightPhotos = upright is null
+                    ? files
+                    : cover is null ? upright.Files : [.. upright.Files.Skip(1)];
                 var sequence = VideoGenerationService.BuildSequence(
                     uprightPhotos,
-                    cover is null ? null : upright.Files[0],
+                    cover is null ? null : upright is null ? cover : upright.Files[0],
                     options.CoverSeconds,
                     options.StartFrameTimeSeconds,
                     options.EndFrameTimeSeconds,
@@ -962,7 +997,26 @@ namespace PhotoLikerUI
                 CoverStartSeconds,
                 CoverEndSeconds,
                 RepeatPhotosSelected,
-                RepeatAudioSelected);
+                RepeatAudioSelected,
+                _parallaxCheckBox.Checked);
+        }
+
+        /// <summary>The parallax box was ticked by the person: its model has to be on this computer, so it is asked for (and downloaded) now, and the box stays unticked if it is not to be.</summary>
+        private async Task ParallaxTickedAsync()
+        {
+            if (!_parallaxCheckBox.Checked || _ensureDepthModelAsync is null)
+                return;
+
+            _parallaxCheckBox.Enabled = false; // while the question and the download go on
+            try
+            {
+                if (!await _ensureDepthModelAsync())
+                    _parallaxCheckBox.Checked = false;
+            }
+            finally
+            {
+                _parallaxCheckBox.Enabled = !_isGenerating;
+            }
         }
 
         /// <summary>
@@ -1412,6 +1466,7 @@ namespace PhotoLikerUI
             Crf = (int)_crfNumeric.Value,
             CutOnBeat = _beatCheckBox.Checked,
             TempoOctaves = _tempoOctaves,
+            DepthParallax = _parallaxCheckBox.Checked,
         };
 
         /// <summary>
@@ -1473,6 +1528,8 @@ namespace PhotoLikerUI
             SetNumeric(_frameTimeEndNumeric, settings.EndFrameTimeSeconds);
             if (settings.UseRandom is { } random)
                 _randomFrameTimesCheckBox.Checked = random;
+            if (settings.DepthParallax is { } parallax)
+                _parallaxCheckBox.Checked = parallax;
 
             if (settings.Codec is { } codec && _codecCombo.Items.Contains(codec))
                 _codecCombo.SelectedItem = codec;
@@ -1958,5 +2015,6 @@ namespace PhotoLikerUI
         double? CoverSeconds,
         double? CoverEndSeconds,
         bool RepeatToAudio,
-        bool RepeatAudio);
+        bool RepeatAudio,
+        bool DepthParallax = false);
 }

@@ -212,6 +212,7 @@ GenerateVideoStrings.FfmpegNotFound = ffmpeg executable not found. Place ffmpeg.
 GenerateVideoStrings.TooManyRepeatsFormat = The photos would have to be repeated {0:N0} times to last as long as the audio: too many. Let them play once.
 GenerateVideoStrings.AudioUnreadable = ffmpeg cannot read this file as audio
 GenerateVideoStrings.DurationSecondsFormat = {0:0.0} s
+GenerateVideoStrings.PictureFailedFormat = Could not read {0} ({1}): its time is shown black.
 
 # ──────────── VideoLibStrings ────────────
 VideoLibStrings.FfmpegNotFound = ffmpeg was not found next to the program (in its ffmpeg folder), so videos cannot be read.
@@ -860,7 +861,7 @@ SettingsStrings.SlideshowTimeout = How many seconds the slideshow keeps a photo 
 SettingsStrings.SlideshowWatermark = What the slideshow writes in the bottom right corner of the screen: Year or DateTime (the day and the time) the photo was taken, or None. The date is the one the search and PageUp / PageDown use: the date the camera wrote into the photo, else the date of the file; a photo without a date gets no text.
 SettingsStrings.SlideshowPeopleFaces = True: the slideshow (Alt+Enter) puts a box round the face of every known person in the photo with the name above it, as the main window shows the faces: green and solid when you named the face yourself, gold and dashed with a question mark after the name when the face only looks like that person; a face nobody is known by gets no box. It uses the faces the search found, so the folder has to be indexed and the people named (the Faces button). The F key turns it on and off while the show runs, and what the show ended with is kept here. False: no boxes.
 SettingsStrings.SlideshowPeopleNames = True: the slideshow writes the names of the people in the photo in one line in the bottom left corner, left to right as they stand, for example Anna, Oleh?, Mom (a question mark: the face only looks like that person). It uses the faces the search found, so the folder has to be indexed and the people named (the Faces button). The N key turns it on and off while the show runs, and what the show ended with is kept here. False: no names. It does not depend on PeopleFaces: with both on the names are written twice.
-SettingsStrings.SlideshowEffect =How the slideshow changes from one photo to the next. None: at once. Fade: the old photo dissolves into the new one. Slide: the new photo pushes the old one out to the left. Zoom: the new photo grows from a smaller size as it fades in. KenBurns: every photo drifts and zooms slowly all the time it is shown, and dissolves into the next. Random: one of Fade, Slide, Zoom and KenBurns for every change, never the same twice in a row. A change takes 0.8 seconds at most and never more than 40% of the Timeout. Left and Right put the next photo there at once (with KenBurns it still moves).
+SettingsStrings.SlideshowEffect = How the slideshow changes from one photo to the next. None: at once. Fade: the old photo dissolves into the new one. Slide: the new photo pushes the old one out to the left. Zoom: the new photo grows from a smaller size as it fades in. KenBurns: every photo drifts and zooms slowly all the time it is shown, and dissolves into the next. Parallax: every photo is a little scene in depth, and while it is shown the camera moves sideways, so the near parts (a face, a flower) move against the far ones (the hills, the wall); it needs the depth model (Depth Anything V2 Small, 99 MB, which the program offers to download the first time), takes about half a second of work for every photo (done ahead, along with the frame), and without the model moves like KenBurns. Random: one of Fade, Slide, Zoom and KenBurns for every change, never the same twice in a row (not Parallax). A change takes 0.8 seconds at most and never more than 40% of the Timeout. Left and Right put the next photo there at once (with KenBurns and Parallax it still moves).
 SettingsStrings.SlideshowUseVideo = True: the slideshow (Alt+Enter) plays the videos of the list as well, between the photos (there are videos in the list while SupportVideo is on). False: it shows photos only. With several screens a video plays on the screen PhotoLiker is on only; the others go on with photos.
 SettingsStrings.SlideshowMuteVideo = True: the videos of the slideshow play without their sound.
 SettingsStrings.SlideshowVideoPart = How much of a video the slideshow plays. OnlyFoundTimeFrames: only the places a search found in it, 6 seconds around each (2 before and 4 after); a video in the slideshow of a folder, where nothing was searched for, has none and is played whole. FullVideo: the whole video.
@@ -1007,6 +1008,13 @@ VideoStrings.LogBeatsNone = No clear beat in the audio: the photo times are used
 VideoStrings.LogBeatsFailedFormat = The rhythm of the audio could not be found ({0}): the photo times are used as set.
 VideoStrings.LogSettingsSavedFormat = The settings of this video are saved in {0}: the dialog starts from them the next time you pick this folder.
 VideoStrings.LogSettingsNotSavedFormat = The settings of this video could not be saved ({0}).
+VideoStrings.LabelMotion = Motion:
+VideoStrings.DepthParallax = Depth parallax
+VideoStrings.DepthParallaxHint = Every photo moves a little while it is shown, as if the camera went sideways: a model works out how near each part of the photo is (Depth Anything V2 Small, 99 MB, which the program offers to download when this is first ticked), and the near parts move against the far ones, as in the Parallax effect of the slideshow. The cover stays still. It takes about half a second of work for each photo, and the video is drawn frame by frame here instead of being cut from the photos by ffmpeg, so it takes longer to make: at full HD about 10 to 25 ms for every frame, 25 frames for every second of the video.
+VideoStrings.LogParallaxOn = Depth parallax: every photo moves by its depth.
+VideoStrings.LogParallaxOnCoverStill = Depth parallax: every photo moves by its depth; the cover stays still.
+VideoStrings.LogParallaxNoModel = The depth model is not on this computer: the video is made without the parallax.
+VideoStrings.LogParallaxDepthFailedFormat = Could not work out the depth of {0} ({1}): it is shown without motion.
 
 # ──────────── VideoPlayerStrings ────────────
 VideoPlayerStrings.PlayTooltip = Play / pause (Enter)
@@ -1184,3 +1192,53 @@ ToolbarStrings.OpenLikedTooltip = Open liked folder in File Explorer
 ToolbarStrings.LoadLiked = Load Liked Folder
 ToolbarStrings.LoadLikedTooltip = Select and load a liked folder
 ToolbarStrings.GpsTooltip = Open location in Google Maps
+
+# ──────────── ToolModelStrings ────────────
+ToolModelStrings.ParallaxFeature = The Parallax effect
+ToolModelStrings.ColorizeFeature = Colorize
+ToolModelStrings.DownloadTitle = Download a model
+ToolModelStrings.DownloadQuestionFormat = {0} needs a model that is not on this computer yet:\n\n{1} ({2} MB)\n{3}\n\nIt is downloaded once, from huggingface.co, and kept. Download it now?
+ToolModelStrings.StatusDownloadingFormat = Downloading {0}: {1} of {2} MB
+ToolModelStrings.StatusReadyFormat = {0} is ready.
+ToolModelStrings.StatusFailedFormat = Could not download {0}: {1}
+ToolModelStrings.StatusDeclinedFormat = {0} was not downloaded.
+ToolModelStrings.StatusParallaxWithoutModel = Parallax needs the depth model; the show moves its photos like Ken Burns instead.
+
+# ──────────── ColorizeStrings ────────────
+ColorizeStrings.ButtonText = Colorize
+ColorizeStrings.ButtonTooltip = Give colours to black and white photos (an AI model that runs on this computer; the photos are not changed)
+ColorizeStrings.StatusNoPhotos = There are no photos to colorize.
+ColorizeStrings.StatusIndexing = Photos are being indexed: colorize when that is over (the copies would join the list in the middle of it).
+ColorizeStrings.StatusDoneFormat = Colorized: {0}. The folder is listed again.
+ColorizeStrings.Title = Colorize black and white photos
+ColorizeStrings.Intro = Gives colours to black and white photos with an AI model (DDColor) that runs on this computer. The photos are not changed: each colorized copy is saved next to its photo as "name (colorized).jpg", with the date taken and the other details of the photo and the dates of its file, and never over another file. The colours are the model's guess, from what is in the picture: a sky is blue and grass is green, but a dress can be any colour. Takes about 2 seconds for a photo.
+ColorizeStrings.ScopeThisFormat = This photo: {0}
+ColorizeStrings.ScopeList = The black and white photos of the list
+ColorizeStrings.StrengthLabel = Strength of the colours:
+ColorizeStrings.StrengthHint = 100 is as the model gives the colours; less makes them paler, more stronger.
+ColorizeStrings.ColumnPhoto = Photo
+ColorizeStrings.ColumnColour = Colour now
+ColorizeStrings.ColumnResult = Result
+ColorizeStrings.ColourGrey = black and white
+ColorizeStrings.ColourToned = toned (one colour)
+ColorizeStrings.ColourColour = has colours
+ColorizeStrings.ColourUnreadable = cannot be read
+ColorizeStrings.ColorizeButton = Colorize
+ColorizeStrings.StopButton = Stop
+ColorizeStrings.CloseButton = Close
+ColorizeStrings.TickAllButton = Tick all
+ColorizeStrings.TickNoneButton = Tick none
+ColorizeStrings.StatusLookingFormat = Looking at the photos: {0} of {1}
+ColorizeStrings.StatusFoundFormat = {0} of {1} photos are black and white. Untick the ones that should stay as they are.
+ColorizeStrings.StatusNoneFound = None of the {0} photos is black and white.
+ColorizeStrings.StatusPreparing = Preparing the model...
+ColorizeStrings.StatusWorkingFormat = Colorizing {0} of {1}
+ColorizeStrings.StatusFinishedFormat = Done: {0} colorized, {1} failed.
+ColorizeStrings.StatusStopped = Stopped.
+ColorizeStrings.SummaryTickedFormat = {0} of {1} ticked
+ColorizeStrings.ResultWorking = working...
+ColorizeStrings.ResultSavedFormat = saved as {0}
+ColorizeStrings.ResultFailedFormat = failed: {0}
+ColorizeStrings.ResultHasCopyFormat = has a copy: {0}
+ColorizeStrings.ResultNotDone = not done
+ColorizeStrings.ColumnFolder = Folder

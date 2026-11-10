@@ -73,6 +73,10 @@ namespace PhotoLikerUI
                 }
             }
 
+            // The Parallax effect needs the depth model (it is asked for once; without it the show moves its photos like Ken Burns does)
+            if (SlideshowEffects.UsesDepth(_currentConfig.SlideshowEffect) && !await EnsureToolModelAsync(ToolModels.Depth, ToolModelStrings.ParallaxFeature, askAgain: false))
+                SetStatus(ToolModelStrings.StatusParallaxWithoutModel);
+
             if (CreateSlideshow(useVideo) is not { } slideshow)
             {
                 SetStatus(SlideshowStrings.StatusNoPhotos);
@@ -122,7 +126,8 @@ namespace PhotoLikerUI
             var (screens, primary) = SlideshowScreens();
             return new SlideshowSession(
                 files, start, _currentConfig.SlideshowMode, _currentConfig.SlideshowTimeout, _currentConfig.SlideshowWatermark, screens, primary,
-                _currentConfig.SlideshowEffect, useVideo ? SlideshowVideoSettings() : null, SlideshowPeopleOptionsOfTheFolder());
+                _currentConfig.SlideshowEffect, useVideo ? SlideshowVideoSettings() : null, SlideshowPeopleOptionsOfTheFolder(),
+                _effects.DepthDownloaded ? SlideshowDepthOptions.Of(_effects) : null);
         }
 
         /// <summary>

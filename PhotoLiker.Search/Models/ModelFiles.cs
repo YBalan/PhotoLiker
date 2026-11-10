@@ -79,7 +79,14 @@ namespace PhotoLiker.Search
             File.Move(partial, destination, overwrite: true);
         }
 
-        private static async Task DownloadAsync(string url, string destination, string name, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken)
+        /// <summary>
+        /// Downloads a file to <paramref name="destination"/> unless it is there already: to a file of the same name with ".part" added first, so that what is there is whole or not at all. It is the
+        /// downloader of every model of the program, those of the search and those of the effects (which have their own list of files, in PhotoLiker.Effects).
+        /// </summary>
+        /// <param name="name">What the progress says is being downloaded.</param>
+        /// <param name="sha256">The SHA-256 the file must have, in hex; one that has another is deleted and an <see cref="InvalidDataException"/> thrown. Null: not checked.</param>
+        public static async Task DownloadAsync(
+            string url, string destination, string name, IProgress<DownloadProgress>? progress, CancellationToken cancellationToken, string? sha256 = null)
         {
             if (File.Exists(destination))
                 return;
@@ -109,7 +116,19 @@ namespace PhotoLiker.Search
                     throw new IOException($"Download of {name} ended early ({done} of {total} bytes).");
             }
 
+            if (sha256 is not null && !MatchesSha256(partial, sha256))
+            {
+                File.Delete(partial);
+                throw new InvalidDataException($"The downloaded {name} is not the file that was tested (its SHA-256 differs).");
+            }
+
             File.Move(partial, destination, overwrite: true);
+        }
+
+        private static bool MatchesSha256(string file, string expected)
+        {
+            using var stream = File.OpenRead(file);
+            return string.Equals(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream)), expected, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

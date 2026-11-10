@@ -253,6 +253,7 @@ photo again.</p></div>
   <li><strong>Generate Video</strong>: make a video of your photos, see <a href="#video">Making a video</a>.</li>
   <li><strong>Align dates</strong>, <strong>Remove empty folders</strong>, <strong>Find duplicates</strong>: see <a href="#tools">Tidying up</a>.</li>
   <li><strong>Video speech</strong> (a video frame with a speech bubble; it is there while <strong>SupportVideo</strong> is on): a table of what is said in the videos of the folder, see <a href="#speech-table">The table of what is said</a>.</li>
+  <li><strong>Colorize</strong> (a photo that is grey in one corner and coloured in the other): give colours to black and white photos, see <a href="#colorize">Colorize</a>.</li>
   <li><strong>Register Context Menu</strong> / <strong>Unregister Context Menu</strong>: add or remove <em>Open in Photo Liker</em> in the right-click menu of folders.</li>
   <li><strong>Help</strong> (the question mark): the About box, with the keys and this manual.</li>
 </ul>
@@ -360,7 +361,7 @@ for search, with the people named. How they were left when the show ended is wha
     <tr><td><strong>Watermark</strong></td><td>What is written in the bottom right corner: <code>DateTime</code> (the default), the day and the time the photo was taken, <code>Year</code>, or <code>None</code>. It is the date the camera wrote in the photo, when that can be believed, else the date of the file. A photo with no date gets no text.</td></tr>
     <tr><td><strong>PeopleFaces</strong></td><td><code>False</code> (the default): no boxes. <code>True</code>: <strong>a box round the face of every known person, with the name above it</strong>, as the window shows the faces: green for a face you named yourself, dashed gold with a <code>?</code> after the name for a face that only looks like that person. A face nobody is known by gets no box. It uses the faces the search found, so the folder has to be indexed and the people named (the <strong>Faces</strong> button). The <kbd>F</kbd> key turns it on and off while the show runs. The boxes go with the photo through every effect and cost the show next to nothing.</td></tr>
     <tr><td><strong>PeopleNames</strong></td><td><code>False</code> (the default): no names. <code>True</code>: the names of the people in one line in the bottom left corner, left to right as they stand (<code>Anna, Oleh?, Mom</code>). The <kbd>N</kbd> key turns it on and off while the show runs. It does not depend on <strong>PeopleFaces</strong>.</td></tr>
-    <tr><td><strong>Effect</strong></td><td>How one photo takes the place of the last. <code>Fade</code> (the default): the old photo dissolves into the new one. <code>Slide</code>: the new photo pushes the old one out to the left. <code>Zoom</code>: the new photo grows from a smaller size as it fades in. <code>KenBurns</code>: every photo drifts and zooms slowly all the time it is on the screen, and dissolves into the next. <code>Random</code>: one of those four for every change, never the same twice in a row. <code>None</code>: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the <strong>Timeout</strong>. <kbd>→</kbd> / <kbd>←</kbd> put the next photo there at once, with no change (with <code>KenBurns</code> it still moves).</td></tr>
+    <tr><td><strong>Effect</strong></td><td>How one photo takes the place of the last. <code>Fade</code> (the default): the old photo dissolves into the new one. <code>Slide</code>: the new photo pushes the old one out to the left. <code>Zoom</code>: the new photo grows from a smaller size as it fades in. <code>KenBurns</code>: every photo drifts and zooms slowly all the time it is on the screen, and dissolves into the next. <code>Parallax</code>: every photo is a little scene in depth, and while it is shown the camera goes sideways across it, so the near parts move against the far ones, see <a href="#parallax">Depth parallax</a>. <code>Random</code>: one of the first four for every change (not <code>Parallax</code>), never the same twice in a row. <code>None</code>: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the <strong>Timeout</strong>. <kbd>→</kbd> / <kbd>←</kbd> put the next photo there at once, with no change (with <code>KenBurns</code> and <code>Parallax</code> it still moves).</td></tr>
     <tr><td><strong>UseVideo</strong></td><td><code>False</code> (the default): photos only. <code>True</code>: the videos of the list are played too, between the photos (there are videos in the list while <strong>SupportVideo</strong> is on).</td></tr>
     <tr><td><strong>MuteVideo</strong></td><td><code>True</code>: the videos play without their sound.</td></tr>
     <tr><td><strong>VideoPart</strong></td><td><code>OnlyFoundTimeFrames</code> (the default): only the places a search found in a video, 6 seconds around each (2 before, 4 after); a video of a folder, where nothing was searched for, is played whole. <code>FullVideo</code>: the whole video.</td></tr>
@@ -368,6 +369,13 @@ for search, with the people named. How they were left when the show ended is wha
   </tbody>
 </table>
 </div>
+
+<h3 id="parallax">Depth parallax</h3>
+<p>With <strong>Effect</strong> set to <code>Parallax</code>, every photo moves as if the camera went sideways across it: the near parts of the photo (a face, a flower) move against
+the far ones (the hills, the wall), as if the photo were real space. A model that runs on your computer works out how near each part is. The first time you need it PhotoLiker asks
+whether to download it (99 MB, once); until it is there the photos move the plain way (like <code>KenBurns</code>), and the <kbd>↓</kbd> / <kbd>↑</kbd> keys skip this effect.
+It takes about half a second of work for each photo, done ahead of time, so the show does not wait. <code>Random</code> never picks it. The <strong>Depth parallax</strong> box of
+<a href="#video">Making a video</a> does the same for a video.</p>
 
 <h3>Videos in the slideshow</h3>
 <p>With <strong>UseVideo</strong> on, the videos of the list (the folder, or the results of a search) are part of the show. The photos go on as before and a video is played <strong>in between</strong>,
@@ -621,6 +629,19 @@ photos that show <em>exactly the same picture</em> in different folders, keeps o
 
 <div class="note"><p>Do not tidy a folder while it is being indexed for search: stop the indexing first.</p></div>
 
+<h3 id="colorize">Colorize</h3>
+<p>The <strong>Colorize</strong> button gives colours to black and white photos, with an AI model that runs on your computer. <strong>Your photos are not changed</strong>: every result is
+saved next to its photo as <code>name (colorized).jpg</code>, with the date taken and the other details of the photo, and never over another file. The first time, PhotoLiker asks whether to
+download the model (135 MB, once).</p>
+<ul>
+  <li><strong>This photo</strong> colorizes the photo that is shown, whatever it is like. <strong>The black and white photos of the list</strong> looks at every photo of the list
+    (the folder, or the search results) and lists the ones that have no colour, or only one tint (a brown print, a blue one), all ticked: untick the ones that should stay as they are. A photo
+    that has a copy already is listed but not ticked.</li>
+  <li><strong>Strength of the colours</strong>: 100 is as the model gives them, less is paler, more is stronger.</li>
+  <li><strong>Colorize</strong> starts, <strong>Stop</strong> ends after the photo that is being done. A photo takes about two seconds. When you close the window the folder is listed again, and the copies are in it.</li>
+</ul>
+<div class="note"><p>The colours are the model's guess from what is in the picture: skin, sky, grass and wood come out as they usually are, a dress can be any colour.</p></div>
+
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="video">16. Making a video</h2>
 
@@ -669,6 +690,11 @@ a title picture and with a song under it. Nothing else has to be installed.</p>
     every photo is shown for a whole number of beats, as near its time as that can be. The bars that open at the bottom of the dialog show how hard the sound hits (blue),
     the beats found (orange) and where the photos change (green); <strong>÷2</strong> and <strong>×2</strong> take the beats found as half or twice as many, when the
     tempo was taken wrong. <strong>Use random</strong> and <em>Photos: Repeat</em> are off while it is ticked.
+  </li>
+  <li>
+    <strong>Depth parallax (optional).</strong> Tick <strong>Depth parallax</strong> and every photo moves a little while it is shown, as in the <a href="#parallax">slideshow effect</a>; the cover
+    stays still. The first time, PhotoLiker asks to download the model that works out the depth (99 MB, once). The video is then drawn frame by frame, so it takes about as long to make as it
+    plays, and half a second more for every photo. Everything else works as before.
   </li>
   <li>
     <strong>Size and quality.</strong> <strong>Resolution</strong> is the size of the video (1920 × 1080 is Full HD; <strong>Use first image</strong> takes the size of the first photo).

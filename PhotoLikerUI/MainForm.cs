@@ -1,4 +1,6 @@
-﻿namespace PhotoLikerUI
+﻿using PhotoLiker.Search;
+
+namespace PhotoLikerUI
 {
     public partial class MainForm : Form
     {
@@ -35,6 +37,7 @@
             InitializeDateAlignment();
             InitializeEmptyFolders();
             InitializeDuplicates();
+            InitializeColorize();
             InitializeVideoSpeech();
             InitializeRotate();
             InitializeTaskbarProgress();
@@ -217,12 +220,14 @@
             StopListingCheck();
             SaveListingOnClose();
             _engineStop?.Cancel();
+            _toolModelStop.Cancel();
             _photoCache.Dispose();
             _player?.Dispose();
             _strip?.Dispose();
             VideoLibrary.Close();
             DisposeTaskbarProgress();
             ShutDownSearch();
+            _effects.Dispose();
             SaveWindowPosition();
             SaveSettingsToJson();
             _globalConfig.LastFolder = _currentConfig.CurrentFolder;
@@ -512,16 +517,19 @@
                     _currentConfig.Extensions,
                     _currentConfig.SortOrder,
                     _currentConfig.IsDarkTheme,
-                    (options, sequence, appendOutput, reportProgress) => VideoGenerationService.GenerateAsync(
-                        sequence,
-                        options.OutputPath,
-                        options.WidthPixels,
-                        options.HeightPixels,
-                        options.VideoCodec,
-                        options.Crf,
-                        options.AudioPath,
-                        appendOutput,
-                        reportProgress));
+                    (options, sequence, appendOutput, reportProgress) => options.DepthParallax
+                        ? GenerateParallaxVideoAsync(options, sequence, appendOutput, reportProgress)
+                        : VideoGenerationService.GenerateAsync(
+                            sequence,
+                            options.OutputPath,
+                            options.WidthPixels,
+                            options.HeightPixels,
+                            options.VideoCodec,
+                            options.Crf,
+                            options.AudioPath,
+                            appendOutput,
+                            reportProgress),
+                    () => EnsureToolModelAsync(ToolModels.Depth, ToolModelStrings.ParallaxFeature, askAgain: true));
 
                 dialog.ShowDialog(this);
 

@@ -13,5 +13,6 @@ namespace PhotoLiker.GenerateVideo
         public static string TooManyRepeatsFormat => T();
         public static string AudioUnreadable => T();
         public static string DurationSecondsFormat => T();
+        public static string PictureFailedFormat => T();
     }
 }

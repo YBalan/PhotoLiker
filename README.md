@@ -26,12 +26,14 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Deleting photos](#deleting-photos)
 - [Rotating photos](#rotating-photos)
 - [Slideshow](#slideshow)
+  - [Depth parallax](#depth-parallax)
 - [Videos](#videos)
 - [Big folders open at once](#big-folders-open-at-once)
 - [EXIF and GPS](#exif-and-gps)
 - [Aligning file dates](#aligning-file-dates)
 - [Removing empty folders](#removing-empty-folders)
 - [Finding duplicates](#finding-duplicates)
+- [Colorizing black and white photos](#colorizing-black-and-white-photos)
 - [Progress on the taskbar](#progress-on-the-taskbar)
 - [Dark and light theme](#dark-and-light-theme)
 - [Language](#language)
@@ -57,9 +59,13 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - **Rotate** turns the shown photo a quarter clockwise (or counterclockwise, with the button before it; <kbd>Ctrl</kbd>+<kbd>+</kbd> and <kbd>Ctrl</kbd>+<kbd>-</kbd>) from the buttons in the right corner of the status bar and saves
   it in its file, without losing anything (see [Rotating photos](#rotating-photos)).
 - **Slideshow** on the whole screen, or on every monitor with a different photo on each (<kbd>Alt</kbd>+<kbd>Enter</kbd>): random or one by one,
-  with a time for each photo, an effect between the photos (fade, slide, zoom, Ken Burns or a random one) and the year or the date and time the photo was taken in the
+  with a time for each photo, an effect between the photos (fade, slide, zoom, Ken Burns, depth parallax or a random one) and the year or the date and time the photo was taken in the
   bottom right corner. <kbd>Right</kbd> / <kbd>Left</kbd> go to the photos next to the shown one, also in
   the random mode, and holding a key scrolls at the speed of the key repeat (see [Slideshow](#slideshow)).
+- **Depth parallax**, an effect of the slideshow and an option of Generate Video, makes every photo look like a little scene in depth: an AI model works out how near each
+  part of it is, and while the photo is shown the camera goes sideways, so the near parts move against the far ones. See [Depth parallax](#depth-parallax).
+- **Colorize** gives colours to black and white photos with an AI model that runs on this computer, and saves each result as a copy next to its photo, with its date taken:
+  the photos are never changed. See [Colorizing black and white photos](#colorizing-black-and-white-photos).
 - **Videos** next to the photos, when **SupportVideo** is on: a poster picture with a play mark in the viewer and the strip, and an
   embedded player (any format: AVI of a camera, MP4 and MOV of a phone ...) with a slider, a box to type a time to jump to, and keys to step 5 or 30 seconds.
   They are liked, grouped, copied and deleted like photos. See [Videos](#videos).
@@ -363,11 +369,12 @@ work on the photo again.
 | **Remove empty folders** (a folder with a red cross) | List the folders that hold no photos and remove them, see [Removing empty folders](#removing-empty-folders). |
 | **Find duplicates** (two overlapping photos) | Find photos that are the same file in different folders and move the copies in the worse folders away, see [Finding duplicates](#finding-duplicates). |
 | **Video speech** (a video frame with a speech bubble; there while **SupportVideo** is on) | A table of the videos of the folder with what is said in each of them and their moments, hearing videos again in another language, and an export of the whole table to Excel, see [Videos](#videos). |
+| **Colorize** (a photo that is grey in its lower left and in colour in its upper right) | Give colours to black and white photos with an AI model, as copies next to them, see [Colorizing black and white photos](#colorizing-black-and-white-photos). |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
 
 The window that a button opens carries the icon of that button: in its title bar, and in Alt+Tab. Generate Video, Align dates (also the window that gives
-photos a date), Remove empty folders, Find duplicates, Video speech and the About box (the question mark) have theirs; the People window, the windows that
+photos a date), Remove empty folders, Find duplicates, Colorize, Video speech and the About box (the question mark) have theirs; the People window, the windows that
 rename a person or a group and the one that copies results into a group have the icon of the People button of the search strip, and the one that
 names a face has the faces icon. They are drawn from the same pictures as the buttons, again at each size a title bar can ask for (16 to 64 px), so
 they stay sharp at any scaling of the screen. (A window with the dialog frame has no icon in its title bar in Windows, so those windows have a thin
@@ -392,7 +399,7 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   folder of the picked source (the Liked or group folder, or the folder of the loaded photos), and the next time you open the dialog or pick that
   folder in *Photos from* they are put back. The log says where they were saved.
   - What is kept: the sort order, the output folder and file name, the audio and its Repeat/Once, the cover with its ticks and times, the
-    resolution, *Start*, *End* and *Use random*, the codec, the quality, and the cut on the beat with its ÷2/×2.
+    resolution, *Start*, *End* and *Use random*, the codec, the quality, the cut on the beat with its ÷2/×2, and the depth parallax.
   - Paths below the folder or beside it are stored relative to it (`"AudioPath": "..\\music\\song.mp3"`), so a folder that is moved or opened from
     another machine keeps working. A file name the dialog made itself (`timelapse_<date>_<time>.mp4`) is not put back, a new one is made each time.
     The random times are not kept: they are drawn again.
@@ -453,14 +460,25 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   - **Audio: Repeat** (the default) plays an audio that is shorter than the photos over and over until they end.
   - **Audio: Once** plays it once and the rest of the video is silent (the video is as long as the photos either way).
   - An audio whose length is not known (`Length: unknown`) is not repeated for.
+- **Motion: Depth parallax** (not ticked to begin with) makes every photo move a little while it is shown, as the Parallax effect does in the slideshow (see
+  [Depth parallax](#depth-parallax)): the near parts of a photo move against the far ones, and the cover stays still. Ticking it asks to download the depth model
+  (99 MB, once) if it is not on this computer. The video is then drawn frame by frame here and given to ffmpeg (25 frames for every second of the video), instead of being cut
+  from the photos by ffmpeg, so it takes about as long as the video plays and half a second more for every photo; everything else (the times, the cover, the audio and how it
+  repeats, the cut on the beat, the size, the codec) works as it does without it.
 - **Video length** is how long the video will be with the settings as they are: the photos of the picked folder with the time of each, plus the
   cover (and its time at the end, if ticked; with the photos set to **Repeat** and a longer audio: the length of the audio). It follows every change at once, and, when an audio is
   chosen, says what becomes of it (cut, played over and over, played once and then silence, about as long as the video, or how many times the
   photos play). It is exact for the photos it counts: photos that have gone from the disk since they were listed are not taken off, and the video
   is a few hundredths of a second longer than the times add up to.
+  With **Depth parallax** the video is exactly that long (checked against real ffmpeg in 19 settings: covers, random times, the cut on the beat, an audio that is cut, repeated or followed
+  by silence, photos that repeat for it). Made the usual way, one case is not: with **Photos: Repeat** and a longer audio, and no cover at the end, the video ends with the last photo that is shown
+  whole, up to one photo's time before the audio ends (9.04 s for a 10 s audio and photos of 1 s). That is ffmpeg making a video of stills at the rate they come; a constant 25 frames a second
+  makes this case right and every other one up to a second too long, so it is left as it is (a test keeps it from getting worse).
 
 How the photos are prepared:
 
+- With **Depth parallax** none of the following is done: the photos are read as the slideshow reads them (upright, any kind of picture), drawn into frames the size of the video
+  with black bars where the photo does not reach, and given to ffmpeg as raw frames.
 - Photos that have gone from the disk since they were listed are left out.
 - The photos come out the way the app shows them, turned upright by their EXIF orientation. ffmpeg is told not to turn them itself (ffmpeg 7.1
   also turned the photos that come after a turned one, so landscape photos came out as portrait), so before it starts, each photo that has to be
@@ -724,7 +742,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   at random), and give that photo its full time again (when the show is not paused). After the last photo comes the first, and before the first the last. A key that is held
   down keeps scrolling.
 - <kbd>Down</kbd> / <kbd>Up</kbd> choose **the next / previous effect** (in the order of the drop-down of the **Effect** row, round at the ends: `None`,
-  `Fade`, `Slide`, `Zoom`, `KenBurns`, `Random`) while the show runs. The name is written in the top left corner of every monitor for about two seconds
+  `Fade`, `Slide`, `Zoom`, `KenBurns`, `Parallax`, `Random`) while the show runs (`Parallax` is left out while the depth model is not on this computer). The name is written in the top left corner of every monitor for about two seconds
   (`Effect: Slide`), the next change of photo is made by that effect, and with `KenBurns` the photo that is on the screen begins to move at once. The effect
   the show ended with becomes the setting: the **Effect** row shows it afterwards, and it is saved with the other settings of the folder.
 - The settings are the eleven rows of the **6. Slideshow** group of the settings grid (the last four are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
@@ -738,7 +756,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 | **Watermark** | What is written in the bottom right corner, white on a dark band: `DateTime` (the default), the day and the time the photo was taken (`14 Aug 2025 09:12:07`, as everywhere in the program), `Year`, or `None`. The date is the one the search and <kbd>PageUp</kbd> / <kbd>PageDown</kbd> use: the date the camera wrote into the photo if it can be believed, else the date of the file (see [Aligning file dates](#aligning-file-dates)). A photo with no date at all gets no text. |
 | **PeopleFaces** | `False` (the default): no boxes. `True`: **a box round the face of every known person with the name above it**, as the main window shows the faces: green and solid for a face you named yourself, gold and dashed with a `?` after the name for a face that only looks like that person; a face nobody is known by gets no box. The faces are the ones the [search](#photo-search) found, so the folder has to be indexed and the people named (the **Faces** button); a photo that is not in the index yet, or has no known person, is shown as it is, and videos have no boxes. The <kbd>F</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. The boxes are drawn on the window after the photo, at the place the photo has at that moment, so they go with it through every effect (Ken Burns, Slide, Zoom) and fade with it while it dissolves into the next; the lines and the letters keep their size on the screen, so they stay sharp when the photo is magnified. The name goes under the box, or inside it, or to the left, where there is no room above it or at the right. **What it costs.** Drawing the boxes takes about a millisecond for each picture put on the screen (0.6 ms for 3 faces at 720p, about 1 ms for 6 faces at full HD) and nothing while they are off. Working out who is who takes about 0.6 microseconds for every face and every named example (7 ms for a photo with 6 faces against 2,000 named faces, 38 ms against 10,000): it is done once for a photo, in the background, along with the making of its frame, and only while the boxes or the names are on (with both off the index is not asked at all; turning one on during the show works out the photos that are ready already, two at a time, and a photo that is painted before its turn comes is worked out at once). A frame of a 12 MP JPEG at full HD took about 65 ms on this PC, so the lookup adds 5 to 11 ms with 2,000 named faces and 37 ms with 10,000: the show goes on as fast as it did, only the photos that are made ahead come a little later. |
 | **PeopleNames** | `False` (the default): no names. `True`: the names of the people in the photo in one line in the bottom left corner, in the same band as the date has on the other side, left to right as the people stand (`Anna, Oleh?, Mom`; the `?` is a face that only looks like that person). They come from the same faces as **PeopleFaces**, and a person with several faces is written once (without the `?` if any of the faces is named). A long list is wrapped over more lines upwards and leaves room for the date, and while a change is under way the names fade like the date. The <kbd>N</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. It does not depend on **PeopleFaces** (with both on the names are written twice). |
-| **Effect** | How one photo takes the place of the last. `Fade` (the default): the old photo dissolves into the new one. `Slide`: the new photo pushes the old one out to the left (the date in the corner stays where it is). `Zoom`: the new photo grows from 80% of its size while it fades in over the old one. `KenBurns`: every photo drifts and zooms slowly all the time it is on the screen (in or out, by 8 to 16%, around a point of the picture chosen at random, and never so that part of the screen it covered at the start is left bare), and dissolves into the next. `Random`: one of those four for every change, never the same twice in a row. `None`: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the **Timeout** (so a short timeout still leaves the photo on the screen for most of it); it begins when the timer ends, and the time of the new photo counts from then. While a change is under way the date fades out in the first half and the new one fades in in the second, so two dates are never written over each other. <kbd>Right</kbd> / <kbd>Left</kbd> put the next photo there at once, with no change (whoever holds a key wants to get on), but with `KenBurns` it still moves. <kbd>Down</kbd> / <kbd>Up</kbd> change the effect while the show runs (see above). With **Monitors** `All` all the monitors change at the same moment, each by the same effect. |
+| **Effect** | How one photo takes the place of the last. `Fade` (the default): the old photo dissolves into the new one. `Slide`: the new photo pushes the old one out to the left (the date in the corner stays where it is). `Zoom`: the new photo grows from 80% of its size while it fades in over the old one. `KenBurns`: every photo drifts and zooms slowly all the time it is on the screen (in or out, by 8 to 16%, around a point of the picture chosen at random, and never so that part of the screen it covered at the start is left bare), and dissolves into the next. `Parallax`: every photo is a little scene in depth: while it is on the screen the camera goes sideways across it, so the near parts of the photo move against the far ones (see [Depth parallax](#depth-parallax)); it needs the depth model, and without it moves like `KenBurns`. `Random`: one of the first four for every change (not `Parallax`, which costs half a second of work for every photo), never the same twice in a row. `None`: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the **Timeout** (so a short timeout still leaves the photo on the screen for most of it); it begins when the timer ends, and the time of the new photo counts from then. While a change is under way the date fades out in the first half and the new one fades in in the second, so two dates are never written over each other. <kbd>Right</kbd> / <kbd>Left</kbd> put the next photo there at once, with no change (whoever holds a key wants to get on), but with `KenBurns` and `Parallax` it still moves. <kbd>Down</kbd> / <kbd>Up</kbd> change the effect while the show runs (see above). With **Monitors** `All` all the monitors change at the same moment, each by the same effect. |
 | **UseVideo** | `False` (the default): the slideshow shows photos only. `True`: it plays the videos of the list as well, between the photos (there are videos in the list while **SupportVideo** is on). See [below](#videos-in-the-slideshow). |
 | **MuteVideo** | `True`: the videos of the slideshow play without their sound. `False` (the default). |
 | **VideoPart** | How much of a video is played. `OnlyFoundTimeFrames` (the default): only the places a search found in it, 6 seconds around each (2 before, 4 after; places that touch are one stretch); a video of a folder, where nothing was searched for, has none and is played whole. `FullVideo`: the whole video. |
@@ -770,6 +788,42 @@ nearest that is ready first, so holding a key scrolls as fast as the photos can 
 (12 MP test photos) a held key showed 59 of the 60 photos, at the 30 a second the keyboard repeats at; over a network share the reads set the pace.
 A photo that cannot be read is passed over (a list of only such photos says so on the black screen).
 
+
+### Depth parallax
+
+The **Parallax** effect of the slideshow, and the **Depth parallax** box of [Generate Video](#generate-video), make a photo look like a little scene in depth: while it is shown the "camera"
+goes sideways across it, and the near parts of the photo (a face, a flower) move against the far ones (the hills, the wall), as if the photo were real space. No two photos move the same way:
+the direction, how much the camera leans up or down, and how far the photo is pushed in are drawn at random for each.
+
+- **The depth.** A model works out for every part of the photo how near it is: Depth Anything V2 Small (Apache 2.0, 25 million weights), run on this computer with ONNX Runtime. Its file
+  (`model.onnx`, 99 MB, the ONNX export of the `onnx-community` repository on Hugging Face at a fixed revision, checked against its SHA-256) is downloaded to
+  `%LocalAppData%\PhotoLiker\models\depth-anything-v2-small` the first time it is needed, after asking: when a slideshow starts with **Effect** `Parallax`, or when the box of Generate Video
+  is ticked. Without it the slideshow moves the photos as Ken Burns does (the setting stays `Parallax`) and the <kbd>Down</kbd> / <kbd>Up</kbd> keys skip the effect. The float32 file is used
+  although the 8 bit one is four times smaller: on a processor that one is 2.4 times slower (1.2 s against 0.5 s for a photo). On this PC (12 cores, four of them used) the depth of a photo
+  takes 0.55 to 0.8 s. The slideshow works it out along with the frame, ahead of time, on its threads of the pool, so a photo is shown with its depth; choosing the effect while a show runs
+  works out the depth of the photos that are ready already (the one that is shown moves like Ken Burns until the next change).
+- **The movement.** The camera goes across the photo at an even speed for 2.8 s in the slideshow (the time the photo stays and the change that takes it off the screen). In a video a photo that
+  is shown for 3 seconds or more goes the whole way across, a shorter one goes a part of the way, from the middle of it, so that the speed is the same for every photo and a photo of half a
+  second does not jerk. A part of the photo of depth *d* (0 the farthest, 1 the nearest) is moved by (*d* − ½) times the shift: over the whole way the nearest and the farthest parts go
+  5% of the longer side of the photo against each other (96 px on a full HD photo). The photo stays in the place it has on the screen (the black bars stay black) and what it shows moves
+  inside it, magnified by 2.5% (a little more for a photo that is taller than wide) and pushed in by another 1.5 to 3.5% by the end, so that moving it never shows what is beyond its edge.
+  The cover of a video does not move.
+- **How it is drawn.** In the same compositor as the other effects (`FrameCompositor`), on all the cores. For the grid of the depth (about 500 points on the longer side) it works out how far
+  each point is moved: the place the point is taken from is where it would be without the depth, moved by the depth found there, which is looked for in two steps (the depth to use is that of
+  the place it comes from). The points of the screen between those of the grid are given their displacement by interpolation, and the colour is taken smoothly (bilinear) from the four points
+  of the photo round the place. The edges between near and far things in the depth are softened by 2 points of the grid first: a picture that is moved by a cliff of depth tears along it into
+  a ragged edge (seen at 1:1 on a 1080p screen; with 2 it is clean and still sharp, with 4 it begins to look soft). The first version worked every point of the screen out for itself and took
+  20 to 30 ms for a frame at full HD and 65 to 80 ms at 4K; working the displacement out on the grid takes about half of that: **10 to 14 ms at full HD and about 40 ms at 4K** on this PC (the first
+  frames of a run take twice that while the code warms up). The boxes round the faces (<kbd>F</kbd>) are placed as for a magnified photo, so with this effect they can be off by a few pixels.
+- **In a video** ffmpeg is not given the photos as files: the frames are drawn here, 25 for every second of the video, and written to ffmpeg's standard input as raw pixels, which it encodes and
+  adds the audio to as for any video, so the times, the cover, the repeat for the audio and the cut on the beat all work as they do without it. The next three photos are made ahead (read, and
+  their depth worked out) while a frame is drawn and the one before it is written, and the depth of the last 400 photos is kept, so photos that play over and over for a longer audio are not
+  worked out again. A photo that cannot be read is black for its time (the log says which), and one whose depth cannot be worked out is shown still. On this PC a video of four photos of 3 seconds
+  at 960 × 540 took 6.3 s to make, twice as fast as it plays.
+- **Checked.** On real photos (a cat, a cup of coffee, a rendered flower, a landscape with a sun) the frames at the start and at the end of a photo show the near part moved against the far
+  one, with clean edges and the black bars unchanged. The tests of the compositor check the movement on made-up depths (and fail if its direction or the lookup of the depth is broken), the
+  window tests run a real slideshow with a made-up depth and a real Generate Video window, and one test makes a real video with the real model and ffmpeg and looks at its frames.
+  **Not checked:** a real full-screen slideshow by eye on a monitor (smoothness at 60 Hz, 4K at about 25 frames a second by the numbers), photos from the router, and a long video of hundreds of photos.
 
 ### Videos in the slideshow
 
@@ -1090,6 +1144,36 @@ Which folder you open matters for one thing: the `Deleted` folder directly insid
 scanned; a `Deleted` folder deeper down is a folder like any other, and its copies are found and are the first to go.
 Afterwards **Remove empty folders** clears the card folders that are left with nothing in them.
 
+## Colorizing black and white photos
+
+The **Colorize** button (a photo that is grey in its lower left and in colour in its upper right) opens a window that gives colours to black and white photos with an AI model that runs on this
+computer. **No photo is changed**: each colorized copy is saved next to its photo as `name (colorized).jpg` (`name (colorized) 2.jpg` when that name is taken; nothing is ever written over another
+file), with the Exif of the photo (the date taken, the place, the camera; the orientation is put to "upright", since the copy is) and the creation and change dates of the photo's file, so that it
+is listed beside the photo and found by the same searches. When the window closes after copies were made, the folder is listed again. It is not offered while an index is being made.
+
+- **Which photos.** **This photo** (the one shown in the main window; it is colorized whatever its colour is: the model takes the lightness of a photo only, so a photo that has colours gets the
+  model's instead) or **The black and white photos of the list** (the list of the main window: the folder, or the search results that are shown). For the list the window looks at every photo in
+  the background, and puts the ones that have no colour, or one tint only, in a list with ticks, all ticked: untick the ones that should stay as they are. A photo that has a copy already is listed
+  but not ticked (`has a copy: name (colorized).jpg`), and a copy that was made by this window is not offered at all. A double click on a row opens its copy, or the photo. Looking at a photo
+  takes a small decode of it (128 px on the longer side, a JPEG is decoded at that size straight away): 32 ms for a 3840 × 2400 JPEG on one thread and 9.7 ms on four, which is about 100 photos
+  a second with the files in the cache of Windows (what a real disk or the router add is the reading of the files; not measured).
+- **What counts as black and white.** The photos with an average strength of colour (the chroma of CIE Lab) below 5 (a scan has a slight cast, a JPEG a little noise), and the photos whose colours
+  all lie on one line from grey to a single tint (a brown print, a blue one) that is not stronger than 30: the colours spread across their main direction by less than 1.5. On test photos
+  (a portrait, a cat, a cup of coffee, a rocket, made grey, brown and blue and saved as JPEG at quality 75, 90 and 100) every copy came out at a spread of 0.4 to 0.8 and the chroma of the tinted
+  ones at 4 to 16, so they were all found; the photos with colours came out at 2.2 to 15 for the spread, and the two lowest (a rocket and a muted sunset landscape, 2.2 and 2.5) would have been taken for black and white with a limit of 3, which is why it is 1.5. It is a rule of thumb, tested on those test photos and **not on real old scans**: look at the list before pressing Colorize, and
+  use *This photo* for one that is left out.
+- **Strength of the colours** (20 to 200%, 100 to begin with) multiplies the colours the model gives: less is paler, more is stronger.
+- **The model** is DDColor tiny (Apache 2.0; "DDColor: Towards Photo-Realistic Image Colorization via Dual Decoders", ICCV 2023, by the DAMO Academy of Alibaba), exported to ONNX with float16 weights
+  by the `edgetools` repository on Hugging Face from the authors' `ddcolor_paper_tiny` checkpoint. Its file (135 MB) is checked against its SHA-256 and kept in
+  `%LocalAppData%\PhotoLiker\models\ddcolor-tiny`; it is downloaded after asking, when **Colorize** is first pressed. The model sees the photo as a grey picture of 512 × 512 and says what colour
+  (the *a* and *b* of CIE Lab) each point of it should have; the lightness of the result is the photo's own, at the size it has, so nothing of its detail is lost, and the colours, which are smooth,
+  are stretched to the size of the photo. A photo takes 1.5 to 2.2 s on this PC whatever its size (a 6400 × 4000 one 2.2 s, with 270 MB of memory more) and is saved as a JPEG of quality 95
+  (one that is more than 8000 px on its longer side is made smaller first). The colours are a guess from what is in the picture: skin, sky, grass and wood come out as they usually are, a dress can
+  be any colour.
+- **Checked** on grey copies of real photos (a portrait, a cat, a cup of coffee, a rocket): the skin, the nose of the cat and the coffee came out like the originals, the lightness is the photo's.
+  The tests of the library check the colour maths against the numbers of OpenCV (the convention the model was trained with), the rule above, and the copy (name, Exif, dates, never over another
+  file); the window tests open the real window, tick and untick, refuse the model, and run the real model on a few files. **Not tried:** real old scans, a real library, photos over the router.
+
 ## Progress on the taskbar
 
 Whatever takes a while also shows its progress on the taskbar button of PhotoLiker, as a green bar that fills up under the icon, the way a browser
@@ -1193,7 +1277,7 @@ shared between machines that may run different versions. The spelling `GoThrough
 as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized. `SortOrder` is written by name
 (`OldestFirst`, `NewestFirst`, `ByName`, `Random` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
 as `OldestFirst` and does not spoil the rest of the file. `SlideshowMode` (`Random`, `OneByOne`), `SlideshowMonitors` (`Current`, `All`), `SlideshowWatermark` (`None`, `Year`, `DateTime`) and
-`SlideshowEffect` (`None`, `Fade`, `Slide`, `Zoom`, `KenBurns`, `Random`) are
+`SlideshowEffect` (`None`, `Fade`, `Slide`, `Zoom`, `KenBurns`, `Parallax`, `Random`) are
 written by name and read the same way (an unknown name gives `Random` / `Current` / `DateTime` / `Fade`); `SlideshowPeopleFaces` and `SlideshowPeopleNames` are `true` or `false`; `SlideshowTimeout` is in seconds. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
 settings of the [photo search](#photo-search).
 
@@ -1227,15 +1311,17 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 |---|---|
 | `PhotoLikerUI` | The Windows (WinForms) app. Everything that needs WinForms or GDI+: the window, decoding and caching of photos, the settings grid with its editors, themes, the context menu registration. |
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown. Shared by all front ends. |
-| `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run, the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
+| `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run (also of frames that are drawn one by one: `VideoFrames`), the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
+| `PhotoLiker.Effects` | What is done to a photo apart from looking at it and searching it, without a user interface. The folders are the namespaces (`PhotoLiker.Effects.<folder>`): `Transitions` (the rules of the effects of the [slideshow](#slideshow): which one is used, how long a change takes, how two photos are drawn in the middle of it), `Motion` (the slow movements of one photo: Ken Burns and the [depth parallax](#depth-parallax)), `Compositing` (`FrameCompositor`, which puts the pictures of an effect together on the pixels, on all the cores, also moving a picture by its depth), `Depth` (the depth of a picture, Depth Anything V2 Small) and `Colorize` (the colours of a black and white photo, DDColor; the copy that is saved next to the photo; how much colour a photo has) and `Models` (the list of the files of the two models, and `EffectModels`, which downloads them and makes the ONNX sessions). It uses Core for the settings (`SlideshowEffect`, the name of the effect, is a setting and stays there) and Search for what the two have in common: decoding a photo, downloading model files, and the check that ONNX Runtime can start. |
 | `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form, heard again in a language that is chosen), the table of it for the window and the Excel file (`.xlsx`, written with the zip and XML of the framework) of that table, and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
 | `PhotoLiker.GenerateVideo.Tests` | xUnit tests of the video library: the order and the times of the photos, the sequence of a video (cover, repeats, audio), the ffmpeg arguments, the cuts on the beat, the rhythm analysis (on synthetic songs), the settings file. They need no ffmpeg. |
 | `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg), the pictures taken out of a real video and their times, the choice of moments, the faces, the search (words, people, dates, speech) and its merge with the photos, the word forms of the speech and the speech job with a stand-in for the model (also hearing chosen videos again), the table of the speech, the Excel writer (read back as XML), saving a picture. The tests that make a short video do so with the ffmpeg of the repository and do nothing without it; the one that runs the real CLIP model does nothing without it. |
+| `PhotoLiker.Effects.Tests` | xUnit tests of the effects library, in folders that are the namespaces they test: the transitions and the movements, the compositor (also on a made-up depth, and mutation-checked: they fail if the direction of the movement or the lookup of the depth is broken), the depth (the numbers of the model made into bytes, the blur, the size the model is given), the colours (Lab against the numbers of OpenCV, the rule for black and white, the copy with its name, Exif and dates) and the downloading of the model files (from a local socket, with the SHA-256 check). The tests that run a real model do so only if its file is there (in the app's models folder, or in the one named by `PHOTOLIKER_TEST_MODELS`). |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
-| `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question: which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
+| `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question, the Colorize window, the Depth parallax box of Generate Video, the slideshow with the Parallax effect and a video made with it (with the real depth model where it is): which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |
 | `.github` | `workflows\build.yml` (builds every push and pull request to `master`, as artifacts, and runs every test suite in a job beside the build, so that a failing test shows on the push and not only at release time) and `workflows\release.yml` (makes a GitHub release from a tag, see [Releasing](#releasing)), with `release-intro.md`, the text that opens the notes of a release. |
@@ -1251,6 +1337,7 @@ dotnet build PhotoLikerUI\PhotoLikerUI.csproj          # build the app
 dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests of the Core library
 dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.csproj  # run the tests of the video library
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
+dotnet test  PhotoLiker.Effects.Tests\PhotoLiker.Effects.Tests.csproj  # run the tests of the effects library (the depth, the colours, the compositor, the slideshow effects)
 dotnet test  PhotoLiker.Video.Tests\PhotoLiker.Video.Tests.csproj  # run the tests of the video library (videos in the archive)
 dotnet test  PhotoLikerUI.Tests\PhotoLikerUI.Tests.csproj  # run the tests that open the real windows (they flash on your desktop for a few seconds)
 installer\build-installer.ps1                           # publish and pack the installer (needs Inno Setup 6)
