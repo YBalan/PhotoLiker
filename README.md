@@ -255,7 +255,8 @@ not need a graphics card.
 
 Where the date of a photo comes from: the EXIF date of the camera. If that is missing or cannot be believed, the date the file
 was created is used instead (for photos copied off a camera or a card that is about the day they were copied), and the status
-bar says how many of the results are dated that way. A camera date is not believed when it is before 1995 or in the future, or
+bar says how many of the results are dated that way. A camera date is not believed when it is before 1900 or in the future (a scanned film of 1987 is fine; the date of a file before 1995 is
+not believed, it is the clock of a card that was reset), or
 when it is on January 1 before noon (an old camera that lost its clock starts again there, and writes `2001-01-01` into every
 photo) and the file was not created at about that time (two days, for a time zone); a real photo of New Year's night is
 kept. An index made before dates were kept gets them when you press **Update index**: that reads only the start of each file,
@@ -966,7 +967,7 @@ even on a network drive, and can be stopped) and shows, before anything is touch
   so that **Update index** does not analyze them again.
   The first look reads the header of every video that has not been read (about 0.4 seconds each over a network share, a few at a time).
 - Only the date the camera wrote is used, and only if PhotoLiker believes it (see [Photo search](#photo-search): not before
-  1995, not in the future, not a camera that lost its clock). A photo without such a date is listed under **No usable EXIF
+  1900, not in the future, not a camera that lost its clock). A photo without such a date is listed under **No usable EXIF
   date** and left as it is, unless you give it one (next list). The date of the camera has no time zone, so it is taken as the
   time of this computer.
 

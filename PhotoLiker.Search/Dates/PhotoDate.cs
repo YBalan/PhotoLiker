@@ -33,10 +33,20 @@ namespace PhotoLiker.Search
     public static class PhotoDates
     {
         /// <summary>Raised when the rules change in a way that gives other dates: the dates are then read again, which is quick.</summary>
-        public const int Version = 1;
+        public const int Version = 2;
 
-        /// <summary>Digital cameras for the public are not older than this.</summary>
+        /// <summary>
+        /// The first year in which the date of a FILE can be believed: before it a file has no real date (Windows and FAT start at 1980, a card
+        /// whose clock was reset says 1987 or 2001), and digital cameras for the public are not older than this.
+        /// </summary>
         public const int FirstBelievableYear = 1995;
+
+        /// <summary>
+        /// The first year in which an EXIF date can be believed. Much earlier than <see cref="FirstBelievableYear"/> because a scanned film is
+        /// a photo of 1987 whose date somebody typed into it; a clock that was reset gives January 1 (see <see cref="LooksLikeAResetClock"/>)
+        /// or a year after the camera was made, which this does not let through.
+        /// </summary>
+        public const int FirstBelievableExifYear = 1900;
 
         /// <summary>
         /// A camera whose clock was reset starts again at January 1 00:00 and counts from there, so a date on that morning
@@ -81,7 +91,7 @@ namespace PhotoLiker.Search
             utc.Year > 1700 ? DateTime.SpecifyKind(utc, DateTimeKind.Utc).ToLocalTime() : null;
 
         public static bool IsBelievableExif(DateTime date, DateTime? fileCreated, DateTime now) =>
-            IsBelievableFile(date, now) && (!LooksLikeAResetClock(date) || AgreesWithTheFile(date, fileCreated, now));
+            date.Year >= FirstBelievableExifYear && date <= now.AddDays(1) && (!LooksLikeAResetClock(date) || AgreesWithTheFile(date, fileCreated, now));
 
         public static bool IsBelievableFile(DateTime date, DateTime now) =>
             date.Year >= FirstBelievableYear && date <= now.AddDays(1);
