@@ -16,7 +16,7 @@ namespace PhotoLikerUI
                 Image = AppIcons.Colorize(),
                 ToolTipText = ColorizeStrings.ButtonTooltip,
             };
-            _colorizeButton.Click += (_, _) => Colorize();
+            _colorizeButton.Click += (_, _) => ColorizeButtonClicked();
 
             toolStrip1.Items.Insert(toolStrip1.Items.IndexOf(_findDuplicatesButton) + 1, _colorizeButton);
         }
@@ -25,8 +25,10 @@ namespace PhotoLikerUI
         {
             _colorizeButton.Text = ColorizeStrings.ButtonText;
             _colorizeButton.ToolTipText = ColorizeStrings.ButtonTooltip;
+            _bar?.ApplyTexts();
         }
 
+        /// <summary>The window for many photos: this photo, or the black and white photos of the list (the bar over a photo that is shown works on that one photo; its "Many photos" button opens this).</summary>
         private void Colorize()
         {
             var photos = _currentConfig.Files.Where(file => !file.IsVideo).Select(file => file.OriginalFilePath).ToList();
@@ -44,7 +46,8 @@ namespace PhotoLikerUI
 
             var current = pictureBox1.Tag is string shown && !MediaKinds.IsVideo(shown) ? shown : null;
             using var dialog = new ColorizeDialog(
-                photos, current, _effects, () => EnsureToolModelAsync(ToolModels.Colorizer, ToolModelStrings.ColorizeFeature, askAgain: true), _currentConfig.IsDarkTheme);
+                photos, current, _effects, () => EnsureToolModelAsync(ToolModels.Colorizer, ToolModelStrings.ColorizeFeature, askAgain: true), _currentConfig.IsDarkTheme,
+                _bar?.Tuning ?? new ColorTuning(_globalConfig.ColorizeStrength / 100f, _globalConfig.ColorizeWarmth / (float)ColorizeBar.MaxWarmth));
             dialog.ShowDialog(this);
 
             if (dialog.Saved == 0)

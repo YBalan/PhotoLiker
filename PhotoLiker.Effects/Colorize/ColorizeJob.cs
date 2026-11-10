@@ -25,10 +25,15 @@ namespace PhotoLiker.Effects.Colorize
         /// the model instead, from its lightness). Takes the 2 seconds the model needs and 270 MB of memory besides the photo. Returns the path of the copy.
         /// </summary>
         /// <param name="saturation">How strong the colours are: 1 as the model gives them (see <see cref="Colorizer.Colorize"/>).</param>
-        public static string Colorize(Colorizer colorizer, string path, float saturation = 1f)
+        public static string Colorize(Colorizer colorizer, string path, float saturation = 1f) =>
+            Colorize(colorizer, path, new ColorTuning(saturation));
+
+        /// <param name="tuning">The strength and the warmth of the colours (see <see cref="ColorTuning"/>).</param>
+        public static string Colorize(Colorizer colorizer, string path, ColorTuning tuning)
         {
             var bytes = FileReading.ReadAllBytesShared(path);
-            var colorized = colorizer.Colorize(WicPhotoDecoder.Decode(bytes, MaxSide), saturation);
+            var photo = WicPhotoDecoder.Decode(bytes, MaxSide);
+            var colorized = Colorizer.Apply(photo, colorizer.Analyze(photo), tuning);
             return ColorizedCopy.Save(path, bytes, colorized);
         }
     }

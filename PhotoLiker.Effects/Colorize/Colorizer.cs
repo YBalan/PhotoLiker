@@ -39,11 +39,20 @@ namespace PhotoLiker.Effects.Colorize
         /// looked at, so its colours are replaced by the model's, whatever they were.
         /// </summary>
         /// <param name="saturation">How strong the colours are: 1 as the model gives them, less is paler, more is stronger (the Lab a and b are multiplied by it).</param>
-        public DecodedPhoto Colorize(DecodedPhoto photo, float saturation = 1f)
-        {
-            var chroma = Chroma(photo);
-            return Combine(photo, chroma, saturation);
-        }
+        public DecodedPhoto Colorize(DecodedPhoto photo, float saturation = 1f) =>
+            Apply(photo, Analyze(photo), new ColorTuning(saturation));
+
+        /// <summary>
+        /// Runs the model on the photo (the two seconds of it) and gives the colours it thinks the photo should have. They can then be put on the photo with <see cref="Apply"/>, as often as wanted and
+        /// with any <see cref="ColorTuning"/>, without running the model again: this is how a person can change the colours and see the photo change as they do.
+        /// </summary>
+        public ModelColours Analyze(DecodedPhoto photo) => new(Chroma(photo));
+
+        /// <summary>
+        /// The photo with the colours that <see cref="Analyze"/> gave it (for this photo, or a larger or smaller picture of it), changed as <paramref name="tuning"/> says. Takes tens of milliseconds
+        /// for a few megapixels, on all the cores, and needs no model. Safe to call from any thread.
+        /// </summary>
+        public static DecodedPhoto Apply(DecodedPhoto photo, ModelColours colours, ColorTuning tuning) => Combine(photo, colours.Values, tuning);
 
         /// <summary>The a and b the model gives for every point of a square 512 by 512 picture of the photo: first all the a's, then all the b's.</summary>
         private float[] Chroma(DecodedPhoto photo)
@@ -68,8 +77,13 @@ namespace PhotoLiker.Effects.Colorize
         }
 
         /// <summary>The photo's own lightness with the colours of the model, stretched (smoothly) to the size of the photo.</summary>
-        internal static DecodedPhoto Combine(DecodedPhoto photo, float[] chroma, float saturation)
+        internal static DecodedPhoto Combine(DecodedPhoto photo, float[] chroma, float saturation) =>
+            Combine(photo, chroma, new ColorTuning(saturation));
+
+        internal static DecodedPhoto Combine(DecodedPhoto photo, float[] chroma, ColorTuning tuning)
         {
+            var saturation = tuning.Saturation;
+            var warmth = tuning.Warmth;
             var width = photo.Width;
             var height = photo.Height;
             var plane = ModelSide * ModelSide;
@@ -102,7 +116,16 @@ namespace PhotoLiker.Effects.Colorize
 
                     var p = (y * width + x) * 3;
                     var lightness = LabColor.LightnessOf(LabColor.Luminance(photo.Bgr[p], photo.Bgr[p + 1], photo.Bgr[p + 2]));
-                    LabColor.ToBgr(lightness, Sample(0) * saturation, Sample(plane) * saturation, out result[p], out result[p + 1], out result[p + 2]);
+                    var a = Sample(0) * saturation;
+                    var b = Sample(plane) * saturation;
+                    if (warmth != 0f)
+                    {
+                        var shift = warmth * ColorTuning.WarmthWeight(lightness);
+                        a += shift * ColorTuning.WarmthA;
+                        b += shift * ColorTuning.WarmthB;
+                    }
+
+                    LabColor.ToBgr(lightness, a, b, out result[p], out result[p + 1], out result[p + 2]);
                 }
             });
 
@@ -110,5 +133,19 @@ namespace PhotoLiker.Effects.Colorize
         }
 
         public void Dispose() => _session.Dispose();
+    }
+
+    /// <summary>The colours that the colorizing model gave a photo (see <see cref="Colorizer.Analyze"/>): kept, so that they can be put on the photo again with other <see cref="ColorTuning"/>s.</summary>
+    public sealed class ModelColours
+    {
+        internal ModelColours(float[] values)
+        {
+            if (values.Length != 2 * Colorizer.ModelSide * Colorizer.ModelSide)
+                throw new ArgumentException($"The colours of the model are {2 * Colorizer.ModelSide * Colorizer.ModelSide} numbers, not {values.Length}.", nameof(values));
+            Values = values;
+        }
+
+        /// <summary>First all the a's, then all the b's, of a square picture of <see cref="Colorizer.ModelSide"/> points a side.</summary>
+        internal float[] Values { get; }
     }
 }

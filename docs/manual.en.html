@@ -630,14 +630,24 @@ photos that show <em>exactly the same picture</em> in different folders, keeps o
 <div class="note"><p>Do not tidy a folder while it is being indexed for search: stop the indexing first.</p></div>
 
 <h3 id="colorize">Colorize</h3>
-<p>The <strong>Colorize</strong> button gives colours to black and white photos, with an AI model that runs on your computer. <strong>Your photos are not changed</strong>: every result is
+<p>PhotoLiker gives colours to black and white photos with an AI model that runs on your computer. <strong>Your photos are not changed</strong>: every result is
 saved next to its photo as <code>name (colorized).jpg</code>, with the date taken and the other details of the photo, and never over another file. The first time, PhotoLiker asks whether to
 download the model (135 MB, once).</p>
+<p><strong>The bar over a photo.</strong> When the photo you look at is black and white, a small bar floats at the bottom of the picture:</p>
+<ul>
+  <li><strong>Colorize</strong> shows the photo with colours (about two seconds). The button then says <strong>Show original</strong>, which brings the grey photo back at once.</li>
+  <li><strong>Strength</strong> and <strong>Warmth</strong> (cooler, bluer, to warmer, yellower) change the colours <em>while you drag</em> the slider; a double click puts a slider back. With the strength at 0 the
+    warmth gives the whole photo one tone, like a sepia print.</li>
+  <li><strong>Save a copy</strong> writes what you see as <code>name (colorized).jpg</code> next to the photo; you can save more copies with other settings.</li>
+  <li><strong>Many photos...</strong> opens the window below. <strong>✕</strong> closes the bar; the <strong>Colorize</strong> button of the toolbar brings it back, to any photo. Drag the dotted handle to move the bar.</li>
+</ul>
+<p>The colours go on to the next black and white photo you look at, until you press <strong>Show original</strong>. The bar is not shown for photos that have colours.</p>
+<p><strong>Many photos at once.</strong> The <strong>Colorize</strong> button with no photo shown, or <strong>Many photos...</strong>, opens a window:</p>
 <ul>
   <li><strong>This photo</strong> colorizes the photo that is shown, whatever it is like. <strong>The black and white photos of the list</strong> looks at every photo of the list
     (the folder, or the search results) and lists the ones that have no colour, or only one tint (a brown print, a blue one), all ticked: untick the ones that should stay as they are. A photo
     that has a copy already is listed but not ticked.</li>
-  <li><strong>Strength of the colours</strong>: 100 is as the model gives them, less is paler, more is stronger.</li>
+  <li><strong>Strength of the colours</strong>: 100 is as the model gives them, less is paler, more is stronger. <strong>Warmth</strong> moves them towards blue or towards yellow and red. Both start as they are on the bar.</li>
   <li><strong>Colorize</strong> starts, <strong>Stop</strong> ends after the photo that is being done. A photo takes about two seconds. When you close the window the folder is listed again, and the copies are in it.</li>
 </ul>
 <div class="note"><p>The colours are the model's guess from what is in the picture: skin, sky, grass and wood come out as they usually are, a dress can be any colour.</p></div>

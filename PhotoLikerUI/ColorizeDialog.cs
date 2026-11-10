@@ -23,7 +23,8 @@ namespace PhotoLikerUI
 
         private readonly RadioButton _thisPhoto = new() { AutoSize = true, Margin = new Padding(3, 3, 18, 3) };
         private readonly RadioButton _listPhotos = new() { AutoSize = true, Margin = new Padding(3, 3, 18, 3) };
-        private readonly NumericUpDown _strength = new() { Minimum = 20, Maximum = 200, Increment = 10, Value = 100, Width = 64 };
+        private readonly NumericUpDown _strength = new() { Minimum = ColorizeBar.MinStrength, Maximum = ColorizeBar.MaxStrength, Increment = 10, Value = 100, Width = 64 };
+        private readonly NumericUpDown _warmth = new() { Minimum = -ColorizeBar.MaxWarmth, Maximum = ColorizeBar.MaxWarmth, Increment = 5, Value = 0, Width = 64 };
         private readonly ListView _list = new() { View = View.Details, CheckBoxes = true, FullRowSelect = true, HideSelection = false, Dock = DockStyle.Fill };
         private readonly Label _summary = new() { AutoSize = true };
         private readonly ProgressBar _progress = new() { Dock = DockStyle.Fill, Height = 14, Minimum = 0, Maximum = 100 };
@@ -43,7 +44,8 @@ namespace PhotoLikerUI
         /// <param name="photos">The photos of the list of the main window (the videos are not looked at, nor the copies that were made by this window).</param>
         /// <param name="current">The photo that is shown in the main window, or null when none is.</param>
         /// <param name="ensureModelAsync">Makes sure the colorizing model is on this computer (asks, and downloads it, if it is not) and says whether it is.</param>
-        public ColorizeDialog(IReadOnlyList<string> photos, string? current, EffectModels models, Func<Task<bool>> ensureModelAsync, bool dark)
+        /// <param name="initial">The strength and the warmth the boxes start with (those of the bar over the photo, if the person has set them there); null for the colours as the model gives them.</param>
+        public ColorizeDialog(IReadOnlyList<string> photos, string? current, EffectModels models, Func<Task<bool>> ensureModelAsync, bool dark, ColorTuning? initial = null)
         {
             _photos = [.. photos.Where(path => !MediaKinds.IsVideo(path) && !ColorizedCopy.IsCopy(path))];
             _current = current;
@@ -58,6 +60,12 @@ namespace PhotoLikerUI
             ShowInTaskbar = false;
             ClientSize = new Size(860, 580);
             MinimumSize = new Size(640, 440);
+
+            if (initial is { } start)
+            {
+                _strength.Value = Math.Clamp((decimal)Math.Round(start.Saturation * 100), _strength.Minimum, _strength.Maximum);
+                _warmth.Value = Math.Clamp((decimal)Math.Round(start.Warmth * ColorizeBar.MaxWarmth), _warmth.Minimum, _warmth.Maximum);
+            }
 
             BuildLayout();
 
@@ -110,6 +118,11 @@ namespace PhotoLikerUI
             var strength = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
             strength.Controls.AddRange([strengthLabel, _strength, percent, hint]);
 
+            var warmthLabel = new Label { Text = ColorizeStrings.WarmthLabel, AutoSize = true, Margin = new Padding(3, 7, 3, 0), BackColor = Color.Transparent };
+            var warmthHint = new Label { Text = ColorizeStrings.WarmthHint, AutoSize = true, Margin = new Padding(3, 7, 3, 0), ForeColor = SystemColors.GrayText, BackColor = Color.Transparent };
+            var warmth = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
+            warmth.Controls.AddRange([warmthLabel, _warmth, warmthHint]);
+
             var left = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Left, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
             left.Controls.AddRange([_tickAll, _tickNone]);
             var right = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Right, FlowDirection = FlowDirection.RightToLeft, WrapContents = false };
@@ -127,8 +140,9 @@ namespace PhotoLikerUI
             bottom.Controls.Add(_status, 0, 2);
             bottom.Controls.Add(buttons, 0, 3);
 
-            var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, Padding = new Padding(12, 10, 12, 8) };
+            var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6, Padding = new Padding(12, 10, 12, 8) };
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -137,8 +151,9 @@ namespace PhotoLikerUI
             root.Controls.Add(intro, 0, 0);
             root.Controls.Add(scope, 0, 1);
             root.Controls.Add(strength, 0, 2);
-            root.Controls.Add(_list, 0, 3);
-            root.Controls.Add(bottom, 0, 4);
+            root.Controls.Add(warmth, 0, 3);
+            root.Controls.Add(_list, 0, 4);
+            root.Controls.Add(bottom, 0, 5);
             Controls.Add(root);
 
             CancelButton = _close;
@@ -388,7 +403,7 @@ namespace PhotoLikerUI
 
                 using (colorizer)
                 {
-                    var strength = (float)_strength.Value / 100f;
+                    var tuning = new ColorTuning((float)_strength.Value / 100f, (float)_warmth.Value / ColorizeBar.MaxWarmth);
                     for (var i = 0; i < items.Count; i++)
                     {
                         if (run.IsCancellationRequested)
@@ -405,7 +420,7 @@ namespace PhotoLikerUI
 
                         try
                         {
-                            var copy = await Task.Run(() => ColorizeJob.Colorize(colorizer, path, strength));
+                            var copy = await Task.Run(() => ColorizeJob.Colorize(colorizer, path, tuning));
                             ((Row)item.Tag!).Copy = copy;
                             item.SubItems[ResultColumn].Text = string.Format(ColorizeStrings.ResultSavedFormat, Path.GetFileName(copy));
                             saved++;
@@ -455,7 +470,7 @@ namespace PhotoLikerUI
             _stop.Visible = phase == Phase.Working;
             _close.Enabled = phase != Phase.Working;
             _tickAll.Enabled = _tickNone.Enabled = !busy && _list.Items.Count > 0;
-            _strength.Enabled = phase is not Phase.Working;
+            _strength.Enabled = _warmth.Enabled = phase is not Phase.Working;
             _thisPhoto.Enabled = !busy && _current is not null;
             _listPhotos.Enabled = !busy;
             _progress.Visible = busy || _progress.Value > 0;

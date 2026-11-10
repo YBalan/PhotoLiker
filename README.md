@@ -64,8 +64,9 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
   the random mode, and holding a key scrolls at the speed of the key repeat (see [Slideshow](#slideshow)).
 - **Depth parallax**, an effect of the slideshow and an option of Generate Video, makes every photo look like a little scene in depth: an AI model works out how near each
   part of it is, and while the photo is shown the camera goes sideways, so the near parts move against the far ones. See [Depth parallax](#depth-parallax).
-- **Colorize** gives colours to black and white photos with an AI model that runs on this computer, and saves each result as a copy next to its photo, with its date taken:
-  the photos are never changed. See [Colorizing black and white photos](#colorizing-black-and-white-photos).
+- **Colorize** gives colours to black and white photos with an AI model that runs on this computer: a bar floats over a black and white photo that is shown, the colours are seen in the
+  viewer and change as its sliders are moved, and **Save a copy** writes them next to the photo, with its date taken (or many photos at once, from a window): the photos are never changed.
+  See [Colorizing black and white photos](#colorizing-black-and-white-photos).
 - **Videos** next to the photos, when **SupportVideo** is on: a poster picture with a play mark in the viewer and the strip, and an
   embedded player (any format: AVI of a camera, MP4 and MOV of a phone ...) with a slider, a box to type a time to jump to, and keys to step 5 or 30 seconds.
   They are liked, grouped, copied and deleted like photos. See [Videos](#videos).
@@ -369,7 +370,7 @@ work on the photo again.
 | **Remove empty folders** (a folder with a red cross) | List the folders that hold no photos and remove them, see [Removing empty folders](#removing-empty-folders). |
 | **Find duplicates** (two overlapping photos) | Find photos that are the same file in different folders and move the copies in the worse folders away, see [Finding duplicates](#finding-duplicates). |
 | **Video speech** (a video frame with a speech bubble; there while **SupportVideo** is on) | A table of the videos of the folder with what is said in each of them and their moments, hearing videos again in another language, and an export of the whole table to Excel, see [Videos](#videos). |
-| **Colorize** (a photo that is grey in its lower left and in colour in its upper right) | Give colours to black and white photos with an AI model, as copies next to them, see [Colorizing black and white photos](#colorizing-black-and-white-photos). |
+| **Colorize** (a photo that is grey in its lower left and in colour in its upper right) | Give colours to the black and white photo that is shown (the bar over it: the colours change as you move its sliders, and **Save a copy** writes them), or to many photos at once, as copies next to them, see [Colorizing black and white photos](#colorizing-black-and-white-photos). |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
 
@@ -1146,10 +1147,41 @@ Afterwards **Remove empty folders** clears the card folders that are left with n
 
 ## Colorizing black and white photos
 
-The **Colorize** button (a photo that is grey in its lower left and in colour in its upper right) opens a window that gives colours to black and white photos with an AI model that runs on this
-computer. **No photo is changed**: each colorized copy is saved next to its photo as `name (colorized).jpg` (`name (colorized) 2.jpg` when that name is taken; nothing is ever written over another
-file), with the Exif of the photo (the date taken, the place, the camera; the orientation is put to "upright", since the copy is) and the creation and change dates of the photo's file, so that it
-is listed beside the photo and found by the same searches. When the window closes after copies were made, the folder is listed again. It is not offered while an index is being made.
+**Colorize** gives colours to black and white photos with an AI model that runs on this computer, in two ways: a **bar over the photo** that is shown, where the colours are seen and tuned
+before they are saved, and a **window for many photos** at once. **No photo is changed**: each colorized copy is saved next to its photo as `name (colorized).jpg` (`name (colorized) 2.jpg` when
+that name is taken; nothing is ever written over another file), with the Exif of the photo (the date taken, the place, the camera; the orientation is put to "upright", since the copy is) and the
+creation and change dates of the photo's file, so that it is listed beside the photo and found by the same searches. A copy is not made while an index is being made.
+
+### The bar over a black and white photo
+
+When the photo in the viewer is black and white (no colour at all, or one tint only, a brown print or a blue one: see *What counts as black and white* below), a small bar floats at the bottom of
+the viewer, in the middle. It comes a moment after the photo (not for each photo that a held arrow key goes through) and goes with it.
+
+- **Colorize** runs the model on the photo (about 2 seconds for a photo of 12 megapixels; about 2 more the first time, while the model starts) and the viewer shows the photo with its colours. The button then says **Show
+  original**, which brings the grey photo back at once; the colours are kept, so asking for them again costs nothing. The first time the model is not on the computer, PhotoLiker asks before
+  downloading it (135 MB, once).
+- **Strength** (20 to 200%; 100 is as the model gives the colours) and **Warmth** (-100, cooler, towards blue, to +100, warmer, towards yellow and red; it is added to the middle tones, so that
+  black and white stay as they are) change the picture **while the slider is dragged**. The model is not run again: the colours it gave are put on the photo again, which takes 0.1 to 0.25 s
+  for a photo of 12 megapixels, less for a smaller one (a Release build on 12 cores; the picture on the screen is at most 4096 px on the longer side, and while one is being made the sliders may
+  move on: only the last position is made after it). Saving the copy of such a photo takes about 0.2 s more. A double click on a slider puts it back. With the strength at 0 the warmth gives the whole photo one tone, like a sepia print. Where the sliders are is
+  kept for the next photo and the next start (in `global-config.json` in the program's data folder).
+- **Save a copy** writes what is on the screen as the copy next to the photo, at the size of the photo (up to 8000 px on the longer side), without running the model again. The copy joins the list
+  at once and the photo stays where it is, so more copies can be made with other settings (`name (colorized) 2.jpg`).
+- **Many photos...** opens the window below, which starts with the strength and the warmth of the bar. **✕** closes the bar: it then stays away from the photos until the **Colorize** button of the
+  toolbar is pressed. The dotted handle on the left moves the bar (the place is kept until the program is closed); the status text tells what is going on, and its tip has the whole of a long text.
+
+The colours **go on to the next black and white photo**: it is coloured after about half a second (so that a held key does not run the model for each photo), until **Show original** is pressed. A
+photo with colours, a video and a copy that Colorize made get no bar of themselves. The **Colorize** button of the toolbar brings the bar (and the colours) to any photo that is shown: the model
+takes the lightness of a photo only, so a photo that has colours gets the model's instead (with the bar there already it does what the bar's **Colorize** does; only ✕ closes the bar); with no
+photo shown it opens the window for the list.
+
+The viewer shows a picture of its own while the colours are on: the photo that the program keeps in its cache is not touched, and a photo that is turned or edited meanwhile (its file is not what the
+colours were made from) is shown as it is. The colorizing model is let go of (135 MB on disk, about 270 MB in memory while it works) when the bar is closed. The bar was tried in real windows with
+the real model on made-up photos and its states, sliders, original, save, the next photo and the settings are tested that way; it has **not** been tried on real old scans, or on photos over the router.
+
+### Many photos at once
+
+The **Colorize** button with no photo shown, or **Many photos...** on the bar, opens a window that gives colours to many photos; when it closes after copies were made, the folder is listed again.
 
 - **Which photos.** **This photo** (the one shown in the main window; it is colorized whatever its colour is: the model takes the lightness of a photo only, so a photo that has colours gets the
   model's instead) or **The black and white photos of the list** (the list of the main window: the folder, or the search results that are shown). For the list the window looks at every photo in
@@ -1162,7 +1194,8 @@ is listed beside the photo and found by the same searches. When the window close
   (a portrait, a cat, a cup of coffee, a rocket, made grey, brown and blue and saved as JPEG at quality 75, 90 and 100) every copy came out at a spread of 0.4 to 0.8 and the chroma of the tinted
   ones at 4 to 16, so they were all found; the photos with colours came out at 2.2 to 15 for the spread, and the two lowest (a rocket and a muted sunset landscape, 2.2 and 2.5) would have been taken for black and white with a limit of 3, which is why it is 1.5. It is a rule of thumb, tested on those test photos and **not on real old scans**: look at the list before pressing Colorize, and
   use *This photo* for one that is left out.
-- **Strength of the colours** (20 to 200%, 100 to begin with) multiplies the colours the model gives: less is paler, more is stronger.
+- **Strength of the colours** (20 to 200%, 100 to begin with) multiplies the colours the model gives: less is paler, more is stronger. **Warmth** (-100 to 100, 0 to begin with) moves them
+  towards blue or towards yellow and red, as on the bar; both start with the values the bar has.
 - **The model** is DDColor tiny (Apache 2.0; "DDColor: Towards Photo-Realistic Image Colorization via Dual Decoders", ICCV 2023, by the DAMO Academy of Alibaba), exported to ONNX with float16 weights
   by the `edgetools` repository on Hugging Face from the authors' `ddcolor_paper_tiny` checkpoint. Its file (135 MB) is checked against its SHA-256 and kept in
   `%LocalAppData%\PhotoLiker\models\ddcolor-tiny`; it is downloaded after asking, when **Colorize** is first pressed. The model sees the photo as a grey picture of 512 × 512 and says what colour
@@ -1319,9 +1352,9 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
 | `PhotoLiker.GenerateVideo.Tests` | xUnit tests of the video library: the order and the times of the photos, the sequence of a video (cover, repeats, audio), the ffmpeg arguments, the cuts on the beat, the rhythm analysis (on synthetic songs), the settings file. They need no ffmpeg. |
 | `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg), the pictures taken out of a real video and their times, the choice of moments, the faces, the search (words, people, dates, speech) and its merge with the photos, the word forms of the speech and the speech job with a stand-in for the model (also hearing chosen videos again), the table of the speech, the Excel writer (read back as XML), saving a picture. The tests that make a short video do so with the ffmpeg of the repository and do nothing without it; the one that runs the real CLIP model does nothing without it. |
-| `PhotoLiker.Effects.Tests` | xUnit tests of the effects library, in folders that are the namespaces they test: the transitions and the movements, the compositor (also on a made-up depth, and mutation-checked: they fail if the direction of the movement or the lookup of the depth is broken), the depth (the numbers of the model made into bytes, the blur, the size the model is given), the colours (Lab against the numbers of OpenCV, the rule for black and white, the copy with its name, Exif and dates) and the downloading of the model files (from a local socket, with the SHA-256 check). The tests that run a real model do so only if its file is there (in the app's models folder, or in the one named by `PHOTOLIKER_TEST_MODELS`). |
+| `PhotoLiker.Effects.Tests` | xUnit tests of the effects library, in folders that are the namespaces they test: the transitions and the movements, the compositor (also on a made-up depth, and mutation-checked: they fail if the direction of the movement or the lookup of the depth is broken), the depth (the numbers of the model made into bytes, the blur, the size the model is given), the colours (Lab against the numbers of OpenCV, the rule for black and white, the strength and the warmth put on the colours of the model without it running again, one photo coloured and saved by `ColorPreview`, the copy with its name, Exif and dates) and the downloading of the model files (from a local socket, with the SHA-256 check). The tests that run a real model do so only if its file is there (in the app's models folder, or in the one named by `PHOTOLIKER_TEST_MODELS`). |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
-| `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question, the Colorize window, the Depth parallax box of Generate Video, the slideshow with the Parallax effect and a video made with it (with the real depth model where it is): which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
+| `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question, the Colorize window and the bar over a black and white photo (when it comes and goes, the colours in the viewer and the sliders, the original, the saved copy, the next photo, what is kept; mutation-checked), the Depth parallax box of Generate Video, the slideshow with the Parallax effect and a video made with it (with the real depth model where it is): which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
 | `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |
 | `.github` | `workflows\build.yml` (builds every push and pull request to `master`, as artifacts, and runs every test suite in a job beside the build, so that a failing test shows on the push and not only at release time) and `workflows\release.yml` (makes a GitHub release from a tag, see [Releasing](#releasing)), with `release-intro.md`, the text that opens the notes of a release. |

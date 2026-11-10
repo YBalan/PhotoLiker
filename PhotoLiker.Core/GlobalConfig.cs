@@ -14,6 +14,15 @@ namespace PhotoLiker.Core
         /// <summary>The language of the program, by <see cref="AppLanguage.Code"/> ("en", "ua"). One for the whole program, so it is kept here and not in the settings of a photo folder. A language whose file is gone is English.</summary>
         public string Language { get; set; } = AppLanguage.EnglishCode;
 
+        /// <summary>Whether the bar for colorizing floats over a black and white photo that is shown. Closing the bar turns it off; the Colorize button of the toolbar turns it on again.</summary>
+        public bool ColorizeBar { get; set; } = true;
+
+        /// <summary>The strength of the colours on the bar, in percent (100 is as the colorizing model gives them): the same for the next photo.</summary>
+        public int ColorizeStrength { get; set; } = 100;
+
+        /// <summary>The warmth of the colours on the bar, from -100 (cooler) to 100 (warmer).</summary>
+        public int ColorizeWarmth { get; set; }
+
         public static GlobalConfig Load()
         {
             if (!File.Exists(FilePath)) return new GlobalConfig();

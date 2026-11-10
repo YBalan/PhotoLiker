@@ -21,6 +21,8 @@ namespace PhotoLikerUI
         public static string ScopeList => T();
         public static string StrengthLabel => T();
         public static string StrengthHint => T();
+        public static string WarmthLabel => T();
+        public static string WarmthHint => T();
         public static string ColumnPhoto => T();
         public static string ColumnFolder => T();
         public static string ColumnColour => T();
@@ -53,5 +55,31 @@ namespace PhotoLikerUI
         public static string ResultFailedFormat => T();
         public static string ResultHasCopyFormat => T();
         public static string ResultNotDone => T();
+
+        // The floating bar over a black and white photo
+        public static string BarTitle => T();
+        public static string BarColorize => T();
+        public static string BarOriginal => T();
+        public static string BarStrength => T();
+        public static string BarWarmth => T();
+        public static string BarSave => T();
+        public static string BarMore => T();
+        public static string BarGripTooltip => T();
+        public static string BarMoreTooltip => T();
+        public static string BarCloseTooltip => T();
+        public static string BarColorizeTooltip => T();
+        public static string BarStrengthTooltip => T();
+        public static string BarWarmthTooltip => T();
+        public static string BarSaveTooltip => T();
+        public static string BarStatusReady => T();
+        public static string BarStatusHasColours => T();
+        public static string BarStatusStarting => T();
+        public static string BarStatusColouring => T();
+        public static string BarStatusShown => T();
+        public static string BarStatusOriginal => T();
+        public static string BarStatusSaving => T();
+        public static string BarStatusSavedFormat => T();
+        public static string BarStatusFailedFormat => T();
+        public static string BarStatusSaveFailedFormat => T();
     }
 }

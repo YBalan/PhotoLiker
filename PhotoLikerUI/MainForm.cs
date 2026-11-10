@@ -227,6 +227,7 @@ namespace PhotoLikerUI
             VideoLibrary.Close();
             DisposeTaskbarProgress();
             ShutDownSearch();
+            DisposeColorizeBar();
             _effects.Dispose();
             SaveWindowPosition();
             SaveSettingsToJson();
@@ -245,6 +246,7 @@ namespace PhotoLikerUI
         private void ApplyTheme(bool dark)
         {
             ThemeManager.Apply(this, dark);
+            _bar?.Restyle();
             themeToggleToolStripButton.Text = dark ? MainFormStrings.ThemeLightLabel : MainFormStrings.ThemeDarkLabel;
         }
 
@@ -552,6 +554,7 @@ namespace PhotoLikerUI
             // Abandon a folder scan that is still running
             _folderGeneration++;
 
+            ColorizeBarCleared();
             HidePlayer(); // a video that is playing belongs to the list that is being replaced
             UpdateMomentStrip(null);
 
@@ -1467,6 +1470,7 @@ namespace PhotoLikerUI
                 // Navigation state is updated right away, so arrow keys keep working while the image is still loading
                 var index = _currentConfig.Files.IndexOf(file);
                 pictureBox1.Tag = file; // Store the file path in the Tag property
+                ColorizeBarPhotoChosen(file);
                 _currentConfig.CurrentFilePath = file;
                 _currentConfig.CurrentFileName = Path.GetFileName(file);
                 _currentConfig.CurrentIndex = index;
@@ -1496,6 +1500,7 @@ namespace PhotoLikerUI
             _imageMessage = string.Empty;
             pictureBox1.Image = entry.Full;
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; // Set the size mode to zoom
+            ColorizeBarPhotoShown(); // the colours that were put on this photo stay over it
 
             // The dates of a JPEG can be edited in the grid: the photo is saved again with the new date
             var metadataWrapper = new MetadataWrapper(
