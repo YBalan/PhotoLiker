@@ -403,7 +403,7 @@ namespace PhotoLiker.Search
         }
 
         /// <summary>Runs the action with the read-only mark of the file taken off, and puts it back.</summary>
-        private static void WithWritableFile(string path, Action action)
+        internal static void WithWritableFile(string path, Action action)
         {
             var attributes = File.GetAttributes(path);
             var readOnly = attributes.HasFlag(FileAttributes.ReadOnly);

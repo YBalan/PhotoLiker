@@ -24,6 +24,16 @@ public class VideoMetadataTests
     }
 
     [Fact]
+    public void TheRecordedRow_HasTheIdTheGridEditsBy_AndNoOtherRowHasIt()
+    {
+        // The grid makes the date row of a video editable by this id (MetadataWrapper): if the row moved to another number, the date could not be edited any more
+        var rows = VideoMetadata.Entries(Record(Canon), new FileInfo(typeof(VideoMetadataTests).Assembly.Location));
+
+        Assert.Equal(VideoMetadata.RecordedName, Assert.Single(rows, r => r.TagId == VideoMetadata.RecordedTagId).Name);
+        Assert.Equal(MetadataEntry.VideoTagBase + 6, VideoMetadata.RecordedTagId);
+    }
+
+    [Fact]
     public void TheValues_AreReadable()
     {
         var rows = VideoMetadata.Entries(Record(Canon)).ToDictionary(r => r.Name, r => r.Value);

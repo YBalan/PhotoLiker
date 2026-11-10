@@ -859,6 +859,13 @@ video held upright is stored sideways, and the row says so), **Frame rate**, **V
 (see [Photo search](#photo-search)); a Canon camera writes its own clock, a phone writes UTC, which is shown as local time. **File dates** shows the dates of the file next to it:
 a copied file is created when it is copied, so it is often days younger than the recording (`≠ Recorded`).
 
+**Changing the date a video was recorded.** The **Recorded** row can be edited, like the date rows of a photo: type a date (`2015-05-01 14:30:00`, `01.05.2015 14:30`, a day alone is
+taken at noon) or press the `...` button of the row and pick one. The date is written into the video where it keeps it (MP4, MOV, M4V, 3GP: the creation time in the movie and track headers;
+AVI: the `IDIT` chunk a camera writes; the size of the file and every picture and sound stay as they are) and **the created and modified dates of the file become the same moment**.
+The catalog of the videos is told, so the video keeps its moments and its speech. A video that has no place for a date (Matroska, MPEG, WMV, an AVI with no `IDIT` chunk) gets the dates of its file
+only, and the status line says so; a date such a video already says inside is not touched, and the program still goes by it. The copies in the Liked and group folders get the new dates and names,
+as for a photo. A video that is playing is let go of first. There is no Undo for a single edit (type the old date back); the **Align dates** tool does the same for many videos at once, keeps a log and can undo.
+
 ![A video in the viewer: its poster picture with the round play mark and the length in the corner, the video's thumbnail with a small play mark in the strip, and the 0. Video category in the grid](docs/images/34-video-poster.png)
 
 **Playing.** <kbd>Enter</kbd>, or a click on the poster, puts the player over the picture; under it are the play / pause button, where you are (`0:12 / 1:17`), a slider to go

@@ -1502,9 +1502,9 @@ namespace PhotoLikerUI
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; // Set the size mode to zoom
             ColorizeBarPhotoShown(); // the colours that were put on this photo stay over it
 
-            // The dates of a JPEG can be edited in the grid: the photo is saved again with the new date
+            // The dates of a JPEG can be edited in the grid: the photo is saved again with the new date. So can the Recorded row of a video
             var metadataWrapper = new MetadataWrapper(
-                entry.Metadata, pictureBox1.Tag is string shown && JpegOrientation.IsJpeg(shown) ? PhotoDateEdited : null);
+                entry.Metadata, pictureBox1.Tag is string shown && (JpegOrientation.IsJpeg(shown) || MediaKinds.IsVideo(shown)) ? PhotoDateEdited : null);
             imageMetaPropertyGrid.SelectedObject = metadataWrapper;
             ScrollPropertyGridToTop(imageMetaPropertyGrid);
             UpdateGpsLink(metadataWrapper);
