@@ -67,8 +67,8 @@ public sealed class ColorizeBarTests : IDisposable
     private static string TakeTheModelAway()
     {
         var target = ToolModels.Colorizer.PathIn(Path.Combine(AppPaths.DataFolder, "models"));
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!); // first: on a machine that never had the model (a clean one, the CI) the folder is not there, and deleting in it fails
         File.Delete(target);
-        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         return target;
     }
 
