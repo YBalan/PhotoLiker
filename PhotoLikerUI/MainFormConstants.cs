@@ -91,6 +91,8 @@ namespace PhotoLikerUI
         public static string DateEditOk => T();
         public static string DateEditCancel => T();
         public static string StatusDateBusy => T();
+        public static string StatusDateNoPhoto => T();
+        public static string StatusDateOnlyJpegOrVideo => T();
         public static string StatusDateSetFormat => T();
         public static string StatusDateAndFileSet => T();
         public static string StatusDateError => T();

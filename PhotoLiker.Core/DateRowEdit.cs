@@ -8,7 +8,10 @@ namespace PhotoLiker.Core
     /// </summary>
     public sealed record DateRowEdit(ExifChange Change, DateTime? FileDatesUtc)
     {
-        private const int DateTakenTag = 0x9003;
+        /// <summary>The id of the "Date Taken (Original)" row, the one Ctrl+D asks a date for.</summary>
+        public const int DateTakenTagId = 0x9003;
+
+        private const int DateTakenTag = DateTakenTagId;
         private const int DigitizedTag = 0x9004;
         private const int LastSavedTag = 0x0132;
 

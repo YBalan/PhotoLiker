@@ -344,6 +344,7 @@ What is kept where:
 | <kbd>F5</kbd> | List the folder again from scratch instead of from the saved list (see [Big folders open at once](#big-folders-open-at-once)). |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
 | <kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd> | Rotate the photo a quarter clockwise / counterclockwise and save it (see [Rotating photos](#rotating-photos)). The plus of the main keyboard (with or without <kbd>Shift</kbd>) and the numpad keys both work. |
+| <kbd>Ctrl</kbd>+<kbd>D</kbd> | Change the date of the shown file in a small dialog: the **Date Taken (Original)** of a JPEG photo (the dates of its file follow it) or **Recorded** of a video (written into the video, and the dates of its file follow). It is the same dialog and the same saving as the **...** of that row in the metadata grid. A file of another kind has no date to change and the status bar says so. Not in the [slideshow](#slideshow). |
 | <kbd>Ctrl</kbd>+mouse wheel | Over the photo: zoom, then drag to pan. Over the thumbnail strip: change the size of the thumbnails. |
 | <kbd>Enter</kbd> | On a video: play it, or pause / resume it ([Videos](#videos)). A click on the poster plays it, a click on the playing picture pauses it. |
 | <kbd>Shift</kbd>+<kbd>Right</kbd> / <kbd>Left</kbd>, <kbd>Ctrl</kbd>+<kbd>Right</kbd> / <kbd>Left</kbd> | While a video plays: 5 seconds / 30 seconds ahead or back. |
