@@ -182,8 +182,10 @@ internal sealed partial class Tour
         screen.Activate();
 
         await Settle(2500); // the frames of the photos ahead are made
-        SendKeys.SendWait("{DOWN}"); // the next effect: its name is written in the corner for two seconds
-        await Settle(700);
+        SendKeys.SendWait("{DOWN}"); // the next effect: its name is written in the corner for two seconds (and any key but Esc pauses the show)
+        await Settle(300);
+        SendKeys.SendWait(" "); // Space goes on: "Paused" in the corner is not what the picture is about
+        await Settle(500);
         using (var picture = ScreenCapture.Capture(screen.Bounds))
             SaveScaled(picture, "39-slideshow", 1280);
 

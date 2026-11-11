@@ -130,7 +130,7 @@ in the background, nothing runs at startup.
 Searching is what PhotoLiker is mostly for. For a library of thousands of old photos on a NAS, PhotoLiker can look at every photo once (**Index photos**, in the strip
 above the viewer) and then answer questions about them. Nothing is uploaded: the analysis runs on this computer.
 
-![The search strip above the viewer, dark theme: the index menu, Index photos, the search box, More like this, the faces icon, the people icon and the precision slider](docs/images/17-search-bar.png)
+![The search strip above the viewer, dark theme: the index menu, Index photos, the search box, More like this, the faces icon, the people icon, the Photos and Videos buttons and the precision slider](docs/images/17-search-bar.png)
 
 1. **Index photos** analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the
    time left. You can keep browsing, stop it (the button turns into **Stop indexing**) and continue later: only new or
@@ -1527,15 +1527,35 @@ dotnet run -c Release --project tools\SmokeTour -- --only-dialogs --screenshots 
 
 `--only-search` is another: it indexes the demo folder **for real**, with the models the app has already downloaded (they are linked, read only, into
 the tour's own data folder with a junction, which is taken out again; nothing is written to `%LocalAppData%\PhotoLiker`), presses **More like
-this** on the first photo and photographs the search strip: `17-search-bar`, `18-search-wide` and `19-search-precise` of `docs\images`. It needs
+this** on the first photo and photographs the search strip: `17-search-bar`, `18-search-wide` and `19-search-precise` of `docs\images`, and, with the
+side panel narrowed so that the model box is on the strip, `20-search-model`, the box with its list open. It needs
 those models (it says so and stops if they are not there), and takes a minute or two:
 
 ```powershell
 dotnet run -c Release --project tools\SmokeTour -- --only-search --screenshots docs\images
 ```
 
-The mouse pointer is parked in the corner of the screen before each picture, so that no tip of a button it rests on is in it. The pictures `28-people-groups`
-and `29-face-menu-groups` are made by hand with made-up people (no tour makes them), and `20-search-model` shows the model box with its list open.
+`--only-video` is a fourth: it makes two clips of 12 seconds with the ffmpeg of the app (a harbour, a drawn boat and a sunset; a drawn Christmas tree, a
+drawn birthday cake and mountains), turns **SupportVideo** on and photographs a video's poster in the window and the player at 0:08 (`34-video-poster`,
+`35-video-playing`), then indexes the photos **and the videos for real** (the models are linked as for `--only-search`), photographs the search strip
+(`38-search-strip-video`), searches for `birthday cake` and photographs the strip of the moments under the video and the video playing from the moment that fits best
+(`36-video-search`, `37-video-search-playing`), and ends with the slideshow on the whole screen, with a photo and with a video (`39-slideshow`, `40-slideshow-video`).
+It takes about a minute:
+
+```powershell
+dotnet run -c Release --project tools\SmokeTour -- --only-video --screenshots docs\images
+```
+
+`--only-people` opens the People window with 28 made-up people sorted into three groups (written to the tour's own data folder, no model is needed), selects
+two of them and photographs it: `28-people-groups`. It takes a few seconds:
+
+```powershell
+dotnet run -c Release --project tools\SmokeTour -- --only-people --screenshots docs\images
+```
+
+The mouse pointer is parked in the corner of the screen before each picture, so that no tip of a button it rests on is in it. The tour without a flag makes the pictures `01-home` to
+`11-light-theme` and `30-align-dates` to `33-find-duplicates` (it also leaves `30b-aligned` and `32b-unreadable-photos`, which no page uses). Only `29-face-menu-groups` is made by hand
+(a menu of a face cut from the window, with made-up people).
 
 `--only-language` is a third, short one: it changes the **Language** row of the settings grid to Ukrainian, checks that the buttons of the toolbar and
 the search strip, the status bar, the help of the grid and the lines of the model box are Ukrainian at once and that the language went to

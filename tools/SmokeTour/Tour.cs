@@ -215,7 +215,28 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         checks.That(editor?.GetType().Name == "FolderPickerEditor", $"LikedFolder has the folder picker ({editor?.GetType().Name})");
         checks.That(editor?.GetEditStyle(null) == UITypeEditorEditStyle.Modal, "it is a modal editor: the grid shows the \"...\" button");
 
+        // All six groups show in the picture: the progress and the slideshow are folded, and the pane is taller for the rows of the others
+        var root = form.SettingsGrid.SelectedGridItem!;
+        while (root.Parent is not null)
+            root = root.Parent;
+
+        var folded = root.GridItems.Cast<GridItem>().Where(group => group.Label is "1. Progress" or "6. Slideshow").ToList();
+        foreach (var group in folded)
+            group.Expanded = false;
+
+        form.Find<SplitContainer>("splitContainer2").SplitterDistance = SettingsGridHeight + 100;
+        view.Focus();
+        form.SettingsRow("LikedFolder").Select();
+        await Settle();
         (await Shot("06-settings", AreaOf(form.SettingsGrid))).Dispose();
+
+        foreach (var group in folded)
+            group.Expanded = true;
+
+        form.Find<SplitContainer>("splitContainer2").SplitterDistance = SettingsGridHeight;
+        view.Focus();
+        form.SettingsRow("LikedFolder").Select();
+        await Settle();
 
         // Open the real dialog through the editor, photograph it, cancel it
         var before = form.Config.LikedFolder;
@@ -330,7 +351,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
     {
         checks.Step("5b. A folder opens from its saved list, is checked for changes afterwards, and F5 lists it again");
 
-        var key = new ListingKey(folder, form.Config.GoThroughSubFolders, form.Config.Extensions, form.Config.LikedFolder);
+        var key = new ListingKey(folder, form.Config.GoThroughSubFolders, form.Config.ListedExtensions, form.Config.LikedFolder);
         var total = form.Config.Files.Count;
         var shown = form.Config.CurrentFilePath;
         checks.That(await Until(() => File.Exists(key.CacheFile)), "the list of the folder was saved when it was listed");
@@ -669,7 +690,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         ScreenCapture.BringToFront(dialog.Handle);
         await Settle(600);
         using (var picture = ScreenCapture.Capture(dialog.Handle))
-            Save(picture, "11-align-dates");
+            Save(picture, "30-align-dates");
 
         apply.PerformClick();
         checks.That(await Until(() => Controls<Label>(dialog).Any(l => l.Text.StartsWith("Done: ")), 30000), "it does the work");
@@ -688,7 +709,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         var byTaken = photos.OrderBy(p => takenAt[p]).ToList();
         checks.That(await Until(() => form.Config.Files.Count == photos.Count && PhotoShown() && form.Config.Files.Select(f => f.OriginalFilePath).SequenceEqual(byTaken)), "the list is sorted by the date taken");
         checks.That(await Until(() => DrivenForm.Row(form.MetadataGrid, "File Date").Value is string text && text.EndsWith("(= Date Taken (Original))")), $"and the File Date row of the photo shown says it is the date taken ({DrivenForm.Row(form.MetadataGrid, "File Date").Value})");
-        (await Shot("12-aligned")).Dispose();
+        (await Shot("30b-aligned")).Dispose();
 
         // The second time there is nothing to do
         form.BeginInvoke(button.PerformClick);
@@ -749,7 +770,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         ScreenCapture.BringToFront(dialog.Handle);
         await Settle(600);
         using (var picture = ScreenCapture.Capture(dialog.Handle))
-            Save(picture, "13-empty-folders");
+            Save(picture, "32-empty-folders");
 
         // Un-ticking the folder inside takes the folder around it with it: that one could not be removed without it
         rows[1].Checked = false;
@@ -840,7 +861,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         ScreenCapture.BringToFront(dialog.Handle);
         await Settle(600);
         using (var picture = ScreenCapture.Capture(dialog.Handle))
-            Save(picture, "14-duplicates");
+            Save(picture, "33-find-duplicates");
 
         // The group the folders can not decide waits for a person
         Controls<RadioButton>(dialog).First(r => r.Text.StartsWith("Need your choice")).Checked = true;
@@ -966,7 +987,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         ScreenCapture.BringToFront(chooser.Handle);
         await Settle(500);
         using (var picture = ScreenCapture.Capture(chooser.Handle))
-            Save(picture, "11b-use-a-date");
+            Save(picture, "31-use-a-date");
         checks.That(Buttons(chooser).First(b => b.Text == "Use this date").Enabled, "and the folder date can be used");
         Buttons(chooser).First(b => b.Text == "Use this date").PerformClick();
         checks.That(await Until(() => FindDialog("AssignDateDialog") is null), "the question closes");
@@ -1144,7 +1165,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         ScreenCapture.BringToFront(dialog.Handle);
         await Settle(500);
         using (var picture = ScreenCapture.Capture(dialog.Handle))
-            Save(picture, "13b-unreadable-photos");
+            Save(picture, "32b-unreadable-photos");
 
         Buttons(dialog).First(b => b.Text == "Tick all").PerformClick();
         checks.That(rows.All(r => r.Checked) && move().Text == "Move 2 photos to Deleted\\Unreadable" && move().Enabled, $"'Tick all' ticks them ({move().Text})");
@@ -1510,6 +1531,13 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
     /// <summary>Photographs the window; saves it as <paramref name="name"/> (or just the <paramref name="crop"/> of it).</summary>
     private async Task<Bitmap> Shot(string? name, Rectangle? crop = null)
     {
+        // In the modes where the window is TopMost it has to be on top of everything at this moment (a run once photographed the editor behind it)
+        if (form.TopMost && ScreenCapture.FindDialogOfThisThread(Window) == IntPtr.Zero)
+        {
+            form.BringToFront();
+            ScreenCapture.BringToFront(Window);
+        }
+
         ScreenCapture.ParkMouse();
         await Settle(450);
         var picture = ScreenCapture.Capture(Window);

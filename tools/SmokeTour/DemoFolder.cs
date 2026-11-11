@@ -49,11 +49,65 @@ internal static class DemoFolder
 
     public static string[] FileNames => [.. Scenes.Select(s => Path.GetFileName(s.File))];
 
+    /// <summary>Two clips, three scenes of four seconds each; they sort after the photos. The cake and the tree (drawn, see <see cref="DemoScenes"/>) are about
+    /// different things, so the search has moments to tell apart; the other four scenes are demo photos.</summary>
+    private static readonly (string File, string[] Scenes, DateTime Recorded)[] Clips =
+    [
+        ("11-harbour.mp4", ["02-harbour.jpg", "@boat", "03-sunset.jpg"], new DateTime(2025, 8, 15, 10, 30, 0)),
+        ("12-party.mp4", ["@tree", "@cake", "05-mountains.jpg"], new DateTime(2025, 8, 16, 20, 15, 0)),
+    ];
+
+    public static int VideoCount => Clips.Length;
+
+    /// <summary>Makes the clips of <see cref="Clips"/> with the ffmpeg of the app. False when there is none or it fails.</summary>
+    private static bool MakeVideos(string folder)
+    {
+        var ffmpeg = Path.Combine(AppContext.BaseDirectory, "ffmpeg", "ffmpeg.exe");
+        if (!File.Exists(ffmpeg))
+            return false;
+
+        var drawn = Path.Combine(folder, ".scenes");
+        foreach (var kind in new[] { "cake", "tree", "boat" })
+            DemoScenes.Render(Path.Combine(drawn, kind + ".jpg"), kind);
+
+        foreach (var (file, scenes, recorded) in Clips)
+        {
+            var path = Path.Combine(folder, file);
+            var inputs = new StringBuilder();
+            var chain = new StringBuilder();
+            for (var i = 0; i < scenes.Length; i++)
+            {
+                var source = scenes[i].StartsWith('@') ? Path.Combine(drawn, scenes[i][1..] + ".jpg") : Path.Combine(folder, scenes[i]);
+                inputs.Append($" -loop 1 -t 4 -i \"{source}\"");
+                chain.Append($"[{i}:v]scale=1280:800,setsar=1,fps=25[v{i}];");
+            }
+
+            chain.Append(string.Concat(scenes.Select((_, i) => $"[v{i}]")) + $"concat=n={scenes.Length}:v=1:a=0,format=yuv420p");
+            var start = new System.Diagnostics.ProcessStartInfo(ffmpeg)
+            {
+                Arguments = $"-hide_banner -loglevel error -y{inputs} -filter_complex \"{chain}\" -c:v libx264 -preset veryfast -crf 23 "
+                    + $"-metadata creation_time={recorded.ToUniversalTime():yyyy-MM-ddTHH:mm:ssZ} \"{path}\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            using var process = System.Diagnostics.Process.Start(start)!;
+            process.WaitForExit();
+            if (process.ExitCode != 0 || !File.Exists(path))
+                return false;
+
+            File.SetCreationTime(path, recorded);
+            File.SetLastWriteTime(path, recorded);
+        }
+
+        Directory.Delete(drawn, recursive: true);
+        return true;
+    }
+
     /// <summary>
     /// Recreates the folder: photos, plus the settings file the first run would have left (dark, JPEG only).
     /// Throws if the folder exists and is not one this tool made.
     /// </summary>
-    public static void Create(string folder, Rectangle window)
+    public static void Create(string folder, Rectangle window, bool videos = false)
     {
         if (Directory.Exists(folder))
         {
@@ -77,10 +131,16 @@ internal static class DemoFolder
             File.SetLastWriteTime(path, FileDates[i]);
         }
 
+        if (videos && !MakeVideos(folder))
+            throw new InvalidOperationException("The demo videos could not be made (is ffmpeg\\ffmpeg.exe beside the tour?).");
+
         new Settings
         {
             CurrentFolder = folder,
             Extensions = [".jpg"],
+            // Subfolders are on by default now; the tour starts from a folder without them and turns them on as its story goes
+            GoThroughSubFolders = false,
+            SupportVideo = true,
             IsDarkTheme = true,
             ThumbnailSize = 120,
             WindowLeft = window.Left,

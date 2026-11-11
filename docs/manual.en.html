@@ -84,7 +84,7 @@ another folder, so nothing is hidden in a database and your originals are never 
 <p>Searching is what PhotoLiker is mostly for. For a library of thousands of old photos on a disk or a NAS, PhotoLiker can look at every photo once and then answer questions about
 them. Nothing is uploaded: the analysis runs on this computer, and your photos are only read, never changed.</p>
 
-<figure><img src="images/17-search-bar.png" alt="The strip above the photo: the index menu, Index photos, the search box, More like this, the faces icon, the people icon and the precision slider" width="947" height="27"></figure>
+<figure><img src="images/17-search-bar.png" alt="The strip above the photo: the index menu, Index photos, the search box, More like this, the faces icon, the people icon, the Photos and Videos buttons and the precision slider" width="999" height="27"></figure>
 
 <ol class="steps">
   <li><strong>Index photos</strong> (in the strip above the photo) analyzes the folder and its subfolders in the background, with a progress bar and an estimate of the time
@@ -129,13 +129,13 @@ them. Nothing is uploaded: the analysis runs on this computer, and your photos a
   (looser matches), to the right fewer (closer matches), the middle is the standard. It applies to a description, to <strong>More like this</strong> and to the photos of a person. Moving it repeats the
   last search at once, so you can widen a search that found too little or narrow one that found too much. Hold the mouse over it to see the numbers. Each folder keeps its own position
   (<code>SearchPrecision</code> in its <code>photo-liker-config.json</code>).
-    <figure><img src="images/18-search-wide.png" alt="The strip with results open and the slider at Wide" width="1024" height="27"><figcaption>The slider at <strong>Wide</strong>: more photos, looser matches.</figcaption></figure>
-    <figure><img src="images/19-search-precise.png" alt="The strip with results open and the slider at Precise" width="1024" height="27"><figcaption>The same search at <strong>Precise</strong>: fewer photos, closer matches.</figcaption></figure>
+    <figure><img src="images/18-search-wide.png" alt="The strip with results open and the slider at Wide" width="1076" height="27"><figcaption>The slider at <strong>Wide</strong>: more photos, looser matches.</figcaption></figure>
+    <figure><img src="images/19-search-precise.png" alt="The strip with results open and the slider at Precise" width="1076" height="27"><figcaption>The same search at <strong>Precise</strong>: fewer photos, closer matches.</figcaption></figure>
   </li>
   <li><strong>Model.</strong> The box at the right end of the strip chooses the model that matches words with photos; each line of the list gives the name, the vendor in brackets and the languages the model understands. Each folder keeps its own choice
   (<code>SearchModel</code> in its <code>photo-liker-config.json</code>). The numbers are from a test with 300 photos and their 1,500 descriptions: how often the right photo was the first result,
   and one of the first ten.
-    <figure><img src="images/20-search-model.png" alt="The model box with its list open" width="831" height="105"><figcaption>The model box.</figcaption></figure>
+    <figure><img src="images/20-search-model.png" alt="The model box with its list open" width="737" height="105"><figcaption>The model box.</figcaption></figure>
     <table class="wide-first">
       <tr><th>Model</th><th>First</th><th>In the first 10</th><th>Speed of the model</th><th>Download</th><th>Understands</th></tr>
       <tr><td><strong>CLIP B/32</strong> (OpenAI)</td><td>74 %</td><td>97 %</td><td>21 photos/s</td><td>610 MB</td><td>English</td></tr>
@@ -400,7 +400,7 @@ of the video are written at the bottom of the screen while they are said (white 
 description: select it and the pane under the table says what it is for.</p>
 
 <figure>
-  <img src="images/06-settings.png" alt="The settings table, LikedFolder selected with its ... button" width="424" height="475">
+  <img src="images/06-settings.png" alt="The settings table, LikedFolder selected with its ... button" width="424" height="575">
   <figcaption>The settings table, with the <strong>LikedFolder</strong> row selected.</figcaption>
 </figure>
 
@@ -598,7 +598,7 @@ order of the list (<strong>SortOrder</strong> goes by the created date) agree wi
   folder, and <strong>Undo last run…</strong> puts the dates back.</li>
 </ul>
 
-<figure><img src="images/31-use-a-date.png" alt="The question of Use a date: where the date taken of the photos without a usable date comes from" width="612" height="552"><figcaption><strong>Use a date…</strong> asks where the date of the photos without a usable one comes from, and shows for each answer how many photos have one from there and what it would be. The tick at the bottom writes the date into the photo.</figcaption></figure>
+<figure><img src="images/31-use-a-date.png" alt="The question of Use a date: where the date taken of the photos without a usable date comes from" width="612" height="592"><figcaption><strong>Use a date…</strong> asks where the date of the photos without a usable one comes from, and shows for each answer how many photos have one from there and what it would be. The tick at the bottom writes the date into the photo.</figcaption></figure>
 
 <h3>Remove empty folders</h3>
 <p>Moving and deleting photos leaves empty folders behind, and Windows leaves thumbnail caches (<code>Thumbs.db</code>) in the ones it showed.
@@ -673,14 +673,14 @@ a title picture and with a song under it. Nothing else has to be installed.</p>
   </li>
   <li>
     <strong>Click Generate Video</strong>, the button with the film icon in the toolbar. The dialog opens at once.
-    <figure><img src="images/12-generate-video-button.png" alt="The Generate Video button in the toolbar" width="422" height="25"></figure>
+    <figure><img src="images/12-generate-video-button.png" alt="The Generate Video button in the toolbar" width="416" height="25"></figure>
   </li>
   <li>
     <strong>Choose the photos and the order.</strong> <strong>Photos from</strong> lists <strong>Current</strong> (what the window shows now: the folder, or the search
     results), <strong>Liked</strong> and each group folder, every one with its number of photos. <strong>Sort order</strong> sets the order in the video: oldest
     first, newest first, by name, random, or as listed. The <strong>Output folder</strong> follows the choice, so the video lands next to the photos it was made of;
     <strong>Output file name</strong> is its name.
-    <figure><img src="images/13-generate-video-dialog.png" alt="The Generate Video dialog as it opens" width="562" height="659"></figure>
+    <figure><img src="images/13-generate-video-dialog.png" alt="The Generate Video dialog as it opens" width="562" height="684"></figure>
   </li>
   <li>
     <strong>A title picture (optional).</strong> <strong>Cover</strong>: click <strong>Browse…</strong>, pick a picture and a preview shows it.
@@ -697,7 +697,7 @@ a title picture and with a song under it. Nothing else has to be installed.</p>
     <strong>How long each photo is shown.</strong> <strong>Frame time range (sec)</strong>: <strong>Start</strong> is the time of the first photo, <strong>End</strong> the time of the last, and the photos
     in between go in even steps. <strong>Use random</strong> gives every photo a time of its own between the two. <strong>Video length</strong> tells how long the video will
     be, and what becomes of the song, and follows every change you make.
-    <figure><img src="images/14-generate-video-settings.png" alt="The dialog with a cover, a song and the times filled in" width="562" height="659"></figure>
+    <figure><img src="images/14-generate-video-settings.png" alt="The dialog with a cover, a song and the times filled in" width="562" height="684"></figure>
   </li>
   <li>
     <strong>Repeat or once (needs a song).</strong> <em>Photos: Repeat</em> shows the photos over and over until a long song ends, instead of cutting the song.
@@ -723,7 +723,7 @@ a title picture and with a song under it. Nothing else has to be installed.</p>
     photos taken with the phone held upright are turned the right way. When the log says <em>Video generation completed</em>, the video is in the output folder
     and <strong>Play</strong> opens it. The settings of the dialog are kept in <code>photo-liker-video.json</code> in the folder of the photos, and are put back
     the next time you pick that folder.
-    <figure><img src="images/15-generate-video-done.png" alt="The finished video" width="842" height="809"></figure>
+    <figure><img src="images/15-generate-video-done.png" alt="The finished video" width="842" height="834"></figure>
   </li>
 </ol>
 
@@ -865,7 +865,7 @@ keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and t
 You do not need the box for that: <kbd>F3</kbd> opens the English manual and <kbd>F2</kbd> the Ukrainian one, from the main window.</p>
 
 <figure>
-  <img src="images/16-about.png" alt="The About box with the keys and the manual buttons" width="797" height="581">
+  <img src="images/16-about.png" alt="The About box with the keys and the manual buttons" width="818" height="746">
   <figcaption>The About box.</figcaption>
 </figure>
 
@@ -877,7 +877,7 @@ A copy that was unpacked from the zip, or run from the source, cannot be replace
 case where <strong>Install</strong> asks first. The copy you ran it from stays where it is.</p>
 
 <figure>
-  <img src="images/27-about-update.png" alt="The About box after Check for updates found a newer version" width="797" height="581">
+  <img src="images/27-about-update.png" alt="The About box after Check for updates found a newer version" width="818" height="746">
   <figcaption>A newer version was found.</figcaption>
 </figure>
 

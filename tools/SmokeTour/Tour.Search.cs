@@ -79,6 +79,38 @@ internal sealed partial class Tour
         await Settle(2000);
         checks.Note($"Precise: {form.Status}");
         await ShotOfSearchStrip(strip, "19-search-precise");
+
+        await ModelBox(strip);
+    }
+
+    /// <summary>
+    /// The box of the search model with its list open (the picture 20). The model box is the last thing on the strip: the side panel is narrowed
+    /// so that it is on the strip and not in the overflow menu, and the list is a window of its own, so a part of the screen is photographed.
+    /// </summary>
+    private async Task ModelBox(ToolStrip strip)
+    {
+        checks.Step("2. The model box of the strip, with its list open");
+
+        form.Find<SplitContainer>("splitContainer1").SplitterDistance = 40;
+        await Settle(800);
+
+        var box = (ToolStripComboBox)strip.Items["searchModelToolStripComboBox"]!;
+        checks.That(box.Visible && !box.IsOnOverflow, "the model box is on the strip");
+        checks.That(box.Items.Count >= 3, $"it lists the models ({box.Items.Count})");
+
+        ScreenCapture.ParkMouse();
+        box.ComboBox.Focus();
+        box.ComboBox.DroppedDown = true;
+        await Settle(900);
+
+        var left = strip.Items["similarToolStripButton"]!.Bounds.Left - 8;
+        var width = box.Bounds.Right + 3 - left;
+        var area = strip.RectangleToScreen(new Rectangle(left, 0, width, strip.Height + 78));
+        using (var picture = ScreenCapture.Capture(area))
+            Save(picture, "20-search-model");
+
+        box.ComboBox.DroppedDown = false;
+        await Settle();
     }
 
     /// <summary>The search strip as far as the "Precise" end of its slider, as the README shows it.</summary>
