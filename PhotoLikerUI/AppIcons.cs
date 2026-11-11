@@ -241,28 +241,14 @@ namespace PhotoLikerUI
         // A photo that is grey in its lower left half and in colour in its upper right half: a sky, a sun and a hill
         public static Bitmap Colorize() => DrawOnBitmap(g =>
         {
-            void Scene(Func<Color, Color> tone)
-            {
-                using var sky = new LinearGradientBrush(new RectangleF(1, 2, 14, 12), tone(Color.FromArgb(200, 230, 255)), tone(Color.FromArgb(140, 190, 245)), 90f);
-                g.FillRoundedRectangle(sky, 1, 2, 14, 12, 1.5f);
-                using var sun = new SolidBrush(tone(Color.FromArgb(250, 170, 40)));
-                g.FillEllipse(sun, 9.4f, 3.8f, 3.2f, 3.2f);
-                using var hill = new SolidBrush(tone(Color.FromArgb(45, 150, 80)));
-                g.FillPolygon(hill, [new PointF(2f, 13.2f), new PointF(6.2f, 7.4f), new PointF(9.2f, 11f), new PointF(10.8f, 9.2f), new PointF(14f, 13.2f)]);
-            }
-
-            Scene(colour => colour);
+            DrawScene(g, colour => colour);
 
             // The lower left half again in grey, over the colours: the line between them goes from the top left corner to the bottom right one
             using (var lowerLeft = new GraphicsPath())
             {
                 lowerLeft.AddPolygon([new PointF(0f, 2f), new PointF(0f, 16f), new PointF(16f, 16f)]);
                 g.SetClip(lowerLeft);
-                Scene(colour =>
-                {
-                    var grey = (int)(0.30 * colour.R + 0.59 * colour.G + 0.11 * colour.B);
-                    return Color.FromArgb(grey, grey, grey);
-                });
+                DrawScene(g, Grey);
                 g.ResetClip();
             }
 
@@ -270,6 +256,60 @@ namespace PhotoLikerUI
             g.DrawLine(seam, 1.4f, 2.6f, 14.6f, 13.4f);
             using var rim = new Pen(Color.FromArgb(25, 55, 130), 1.2f);
             g.DrawRectangle(rim, 1.5f, 2.5f, 13f, 11f);
+        });
+
+        // ── Show original (the Colorize bar) ──────────────────────────────
+        // The same photo all in grey: what the button brings back while the colours are on (the Colorize picture is what it does while they are off)
+        public static Bitmap OriginalPhoto() => DrawOnBitmap(g =>
+        {
+            DrawScene(g, Grey);
+            using var rim = new Pen(Color.FromArgb(70, 70, 70), 1.2f);
+            g.DrawRectangle(rim, 1.5f, 2.5f, 13f, 11f);
+        });
+
+        // ── Save a copy (the Colorize bar) ────────────────────────────────
+        // A floppy disk: a blue body with a cut corner, the metal shutter at the top and the white label at the bottom
+        public static Bitmap SaveCopy() => DrawOnBitmap(g =>
+        {
+            using var body = new GraphicsPath();
+            body.AddPolygon([new PointF(1.5f, 2.5f), new PointF(2.5f, 1.5f), new PointF(11.5f, 1.5f), new PointF(14.5f, 4.5f), new PointF(14.5f, 13.5f), new PointF(13.5f, 14.5f), new PointF(2.5f, 14.5f), new PointF(1.5f, 13.5f)]);
+            using var fill = new LinearGradientBrush(new RectangleF(1, 1, 14, 14), Color.FromArgb(70, 135, 235), Color.FromArgb(25, 70, 170), 90f);
+            g.FillPath(fill, body);
+            using var rim = new Pen(Color.FromArgb(20, 45, 115), 0.9f) { LineJoin = LineJoin.Round };
+            g.DrawPath(rim, body);
+
+            using var shutter = new SolidBrush(Color.FromArgb(225, 232, 245));
+            g.FillRectangle(shutter, 4.5f, 1.5f, 6.5f, 4.2f);
+            using var slot = new SolidBrush(Color.FromArgb(60, 75, 120));
+            g.FillRectangle(slot, 8.6f, 2.3f, 1.4f, 2.6f);
+
+            using var label = new SolidBrush(Color.FromArgb(246, 248, 253));
+            g.FillRectangle(label, 3.5f, 8.2f, 9f, 6.3f);
+            using var lines = new Pen(Color.FromArgb(150, 165, 200), 0.8f);
+            g.DrawLine(lines, 5f, 10.3f, 11f, 10.3f);
+            g.DrawLine(lines, 5f, 12.4f, 11f, 12.4f);
+        });
+
+        // ── Many photos (the Colorize bar) ────────────────────────────────
+        // A stack of three photos, the one in front with its sky, sun and hill (the window that works on many photos at once)
+        public static Bitmap ManyPhotos() => DrawOnBitmap(g =>
+        {
+            using var rim = new Pen(Color.FromArgb(110, 130, 170), 0.9f);
+            using var back = new SolidBrush(Color.FromArgb(185, 200, 225));
+            g.FillRoundedRectangle(back, 5.5f, 0.8f, 9.5f, 8f, 1.2f);
+            g.DrawRectangle(rim, 6f, 1.3f, 8.5f, 7f);
+            using var middle = new SolidBrush(Color.FromArgb(212, 224, 244));
+            g.FillRoundedRectangle(middle, 3.2f, 3f, 9.5f, 8f, 1.2f);
+            g.DrawRectangle(rim, 3.7f, 3.5f, 8.5f, 7f);
+
+            using var sky = new LinearGradientBrush(new RectangleF(1, 5.5f, 10.5f, 9.5f), Color.FromArgb(200, 230, 255), Color.FromArgb(140, 190, 245), 90f);
+            g.FillRoundedRectangle(sky, 1, 5.5f, 10.5f, 9.5f, 1.2f);
+            using var sun = new SolidBrush(Color.FromArgb(250, 170, 40));
+            g.FillEllipse(sun, 7.6f, 7.1f, 2.4f, 2.4f);
+            using var hill = new SolidBrush(Color.FromArgb(45, 150, 80));
+            g.FillPolygon(hill, [new PointF(1.6f, 14.3f), new PointF(4.6f, 10f), new PointF(6.6f, 12.4f), new PointF(7.8f, 11.2f), new PointF(11f, 14.3f)]);
+            using var front = new Pen(Color.FromArgb(25, 55, 130), 1.1f);
+            g.DrawRectangle(front, 1.5f, 6f, 9.5f, 8.5f);
         });
 
         // ── Photos (the search filter) ────────────────────────────────────
@@ -354,6 +394,23 @@ namespace PhotoLikerUI
             g.FillEllipse(dot, 6.95f, 10.8f, 2.1f, 2.1f);
         });
 
+        /// <summary>
+        /// One of the pictures of this class drawn at <paramref name="size"/> px instead of 16 (the drawings are in the units of 16, so they are scaled and stay sharp): for a button
+        /// that is bigger than one of the toolbar. The caller disposes the bitmap.
+        /// </summary>
+        public static Bitmap Sized(int size, Func<Bitmap> picture)
+        {
+            _renderSize = size;
+            try
+            {
+                return picture();
+            }
+            finally
+            {
+                _renderSize = 0;
+            }
+        }
+
         // ── The icon of a window ──────────────────────────────────────────
         /// <summary>
         /// The icon of a window that a toolbar button opens, made from the picture of the button: the same drawing at 16, 20, 24, 32, 40, 48 and
@@ -366,18 +423,10 @@ namespace PhotoLikerUI
             var pictures = new List<byte[]>();
             foreach (var size in sizes)
             {
-                _renderSize = size;
-                try
-                {
-                    using var bitmap = toolbarIcon();
-                    using var png = new MemoryStream();
-                    bitmap.Save(png, ImageFormat.Png);
-                    pictures.Add(png.ToArray());
-                }
-                finally
-                {
-                    _renderSize = 0;
-                }
+                using var bitmap = Sized(size, toolbarIcon);
+                using var png = new MemoryStream();
+                bitmap.Save(png, ImageFormat.Png);
+                pictures.Add(png.ToArray());
             }
 
             // An .ico file: the header, one entry for each picture (its size and where it is), then the pictures (PNG, which Windows reads
@@ -459,6 +508,24 @@ namespace PhotoLikerUI
             // Gloss sheen on body top
             using var sheen = new SolidBrush(Color.FromArgb(50, 255, 255, 255));
             g.FillRectangle(sheen, 2, 7, 11, 3);
+        }
+
+        /// <summary>The sky, the sun and the hill of a photo, every colour passed through <paramref name="tone"/>: the same picture in colour and in grey.</summary>
+        private static void DrawScene(Graphics g, Func<Color, Color> tone)
+        {
+            using var sky = new LinearGradientBrush(new RectangleF(1, 2, 14, 12), tone(Color.FromArgb(200, 230, 255)), tone(Color.FromArgb(140, 190, 245)), 90f);
+            g.FillRoundedRectangle(sky, 1, 2, 14, 12, 1.5f);
+            using var sun = new SolidBrush(tone(Color.FromArgb(250, 170, 40)));
+            g.FillEllipse(sun, 9.4f, 3.8f, 3.2f, 3.2f);
+            using var hill = new SolidBrush(tone(Color.FromArgb(45, 150, 80)));
+            g.FillPolygon(hill, [new PointF(2f, 13.2f), new PointF(6.2f, 7.4f), new PointF(9.2f, 11f), new PointF(10.8f, 9.2f), new PointF(14f, 13.2f)]);
+        }
+
+        /// <summary>The grey of a colour, as the brightness the eye sees.</summary>
+        private static Color Grey(Color colour)
+        {
+            var grey = (int)(0.30 * colour.R + 0.59 * colour.G + 0.11 * colour.B);
+            return Color.FromArgb(grey, grey, grey);
         }
 
         private static void FillQuad(Graphics g, Color c, float x, float y, float w, float h)

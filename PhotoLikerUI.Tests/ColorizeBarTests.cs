@@ -142,11 +142,12 @@ public sealed class ColorizeBarTests : IDisposable
     private static async Task<bool> PhotoShown(Form form, string path) =>
         await Ui.Until(() => Viewer(form).Tag as string == path && Viewer(form).Image is not null, 20000);
 
-    private static T In<T>(Control root, string text) where T : ButtonBase => Ui.Controls<T>(root).First(b => b.Text == text);
+    /// <summary>A button by its name: the buttons of the bar that have a picture have no word on them, so the name is the accessible one.</summary>
+    private static T In<T>(Control root, string name) where T : ButtonBase => Ui.Controls<T>(root).First(b => b.AccessibleName == name || b.Text == name);
 
     private static void Press(Button button)
     {
-        Assert.True(button.Enabled, $"the button {button.Text} is on");
+        Assert.True(button.Enabled, $"the button {button.AccessibleName} is on");
         button.PerformClick();
     }
 
@@ -476,7 +477,7 @@ public sealed class ColorizeBarTests : IDisposable
             var asGiven = Colourfulness(viewer.Image);
             Assert.True(asGiven > 4, $"it has colours: {asGiven}");
             Assert.True(In<Button>(bar, ColorizeStrings.BarSave).Enabled);
-            Assert.Equal(ColorizeStrings.BarOriginal, Ui.Controls<Button>(bar).First(b => b.Text == ColorizeStrings.BarOriginal).Text);
+            Assert.Equal(ColorizeStrings.BarOriginal, In<Button>(bar, ColorizeStrings.BarOriginal).AccessibleName); // the colour button now brings the original back
             Save(form, "bar-coloured");
 
             // The strength: paler, and stronger

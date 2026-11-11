@@ -123,7 +123,7 @@ public sealed class VideoSpeechDialogTests : IDisposable
             Assert.Equal(["base (2), small (1) ✓", "base (1) ✓", string.Empty], Column(list, ModelsColumn));
 
             // The box lists the models with how many videos each has speech for, and shows the one the table is of
-            Assert.Equal(["Whisper tiny (0)", "Whisper base (2)", "Whisper small (1)"], box.Items.Cast<object>().Select(item => item.ToString()).ToArray());
+            Assert.Equal(["Whisper tiny (0)", "Whisper base (2)", "Whisper small (1)"], box.Items.Cast<object>().Select(item => item.ToString() ?? string.Empty).ToArray());
             Assert.Equal(2, box.SelectedIndex);
             Assert.Equal(["small a", string.Empty, string.Empty], Column(list, SpeechColumn));
             Assert.Equal([VideoSpeechStrings.StatusHeard, VideoSpeechStrings.StatusNotRead, VideoSpeechStrings.StatusNotRead], Column(list, StatusColumn));
@@ -141,7 +141,7 @@ public sealed class VideoSpeechDialogTests : IDisposable
 
             // Videos can be heard again with a model of their own from the right-click menu
             var hearWith = list.ContextMenuStrip!.Items.OfType<ToolStripMenuItem>().Single(item => item.Text == VideoSpeechStrings.MenuHearWith);
-            Assert.Equal(["Whisper tiny", "Whisper base", "Whisper small"], hearWith.DropDownItems.Cast<ToolStripItem>().Select(item => item.Text).ToArray());
+            Assert.Equal(["Whisper tiny", "Whisper base", "Whisper small"], hearWith.DropDownItems.Cast<ToolStripItem>().Select(item => item.Text ?? string.Empty).ToArray());
             dialog.Close();
         }, seconds: 120);
     }

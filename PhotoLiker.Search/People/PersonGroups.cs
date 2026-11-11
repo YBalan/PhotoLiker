@@ -270,6 +270,19 @@ namespace PhotoLiker.Search
             }
         }
 
+        /// <summary>
+        /// People were deleted: they leave every group (the groups stay, even empty; somebody who is named so later starts with no group).
+        /// Throws if the file can't be written.
+        /// </summary>
+        public void RemoveMembers(IEnumerable<string> people)
+        {
+            var names = people.Select(p => p.Trim()).Where(p => p.Length > 0).ToList();
+            lock (_gate)
+            {
+                Change(() => _groups.Sum(group => group.Members.RemoveAll(m => names.Any(name => SameName(m, name)))) > 0);
+            }
+        }
+
         // Reads the file, lets the change happen on what it holds, and writes it back if the change did something: to the file (which must work),
         // then to the copy in the photo folder (which may fail). The caller holds the lock.
         private void Change(Func<bool> change)

@@ -27,7 +27,7 @@ public sealed class VideoDateEditTests : IDisposable
 
     private static PropertyGrid GridOf(Form form) => Field<PropertyGrid>(form, "imageMetaPropertyGrid");
 
-    private static string StatusOf(Form form) => Field<ToolStripStatusLabel>(form, "toolStripStatusLabel1").Text;
+    private static string StatusOf(Form form) => Field<ToolStripStatusLabel>(form, "toolStripStatusLabel1").Text ?? string.Empty;
 
     private static PropertyDescriptor? Row(Form form, string name) =>
         GridOf(form).SelectedObject is ICustomTypeDescriptor wrapper

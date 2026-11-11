@@ -54,8 +54,9 @@ namespace PhotoLikerUI
         private readonly Label _findLabel = new() { Text = PeopleStrings.FindLabel, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 0, 6, 0) };
         private readonly TextBox _find = new() { PlaceholderText = PeopleStrings.FindPlaceholder, Width = 200, Margin = new Padding(0, 3, 0, 3) };
         private readonly ListView _list = new();
-        private readonly Label _summary = new() { AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 6, 0, 0) };
+        private readonly Label _summary = new() { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 4, 0, 0) }; // wraps in its two lines when the buttons take the width
         private readonly Button _renamePerson = new() { Text = PeopleStrings.RenamePersonButton, AutoSize = true, MinimumSize = new Size(130, 26), Margin = new Padding(8, 4, 0, 0), Enabled = false };
+        private readonly Button _deletePerson = new() { Text = PeopleStrings.DeletePersonButton, AutoSize = true, MinimumSize = new Size(120, 26), Margin = new Padding(6, 4, 3, 0), Enabled = false }; // 3 on the right: the edge of the list, which has the default margin
         private readonly Label _groupsHeading = new() { Text = PeopleStrings.GroupsHeading, AutoSize = true, Margin = new Padding(0, 0, 0, 4) };
         private readonly CheckedListBox _groups = new() { CheckOnClick = true, IntegralHeight = false, Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle };
         private readonly Label _groupsHint = new() { AutoSize = true, Margin = new Padding(0, 4, 0, 4) };
@@ -132,11 +133,15 @@ namespace PhotoLikerUI
             left.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             left.Controls.Add(filter, 0, 0);
             left.Controls.Add(_list, 0, 1);
-            var below = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 2, RowCount = 1, Margin = new Padding(0) };
+            var below = new TableLayoutPanel { Dock = DockStyle.Fill, Height = 38, ColumnCount = 3, RowCount = 1, Margin = new Padding(0) };
             below.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             below.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            below.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            below.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             below.Controls.Add(_summary, 0, 0);
             below.Controls.Add(_renamePerson, 1, 0);
+            below.Controls.Add(_deletePerson, 2, 0);
+            left.RowStyles[2] = new RowStyle(SizeType.Absolute, 40);
             left.Controls.Add(below, 0, 2);
 
             var right = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Margin = new Padding(0) };
@@ -180,6 +185,7 @@ namespace PhotoLikerUI
             CancelButton = _close;
             _tips.SetToolTip(_groups, PeopleStrings.GroupsTooltip);
             _tips.SetToolTip(_renamePerson, PeopleStrings.RenamePersonTooltip);
+            _tips.SetToolTip(_deletePerson, PeopleStrings.DeletePersonTooltip);
             _tips.SetToolTip(_newGroup, PeopleStrings.NewGroupTooltip);
             _tips.SetToolTip(_export, PeopleStrings.ExportTooltip);
             _tips.SetToolTip(_import, PeopleStrings.ImportTooltip);
@@ -205,6 +211,11 @@ namespace PhotoLikerUI
                     e.SuppressKeyPress = true;
                     RenamePerson();
                 }
+                if (e.KeyCode == Keys.Delete)
+                {
+                    e.SuppressKeyPress = true;
+                    DeletePeople();
+                }
                 if (e.Control && e.KeyCode == Keys.A)
                 {
                     e.SuppressKeyPress = true;
@@ -227,6 +238,7 @@ namespace PhotoLikerUI
             _groups.ItemCheck += Groups_ItemCheck;
             _newGroup.Click += (_, _) => NewGroup();
             _renamePerson.Click += (_, _) => RenamePerson();
+            _deletePerson.Click += (_, _) => DeletePeople();
             _rename.Click += (_, _) => RenameGroup();
             _delete.Click += (_, _) => DeleteGroup();
             _export.Click += (_, _) => ExportPeople();
@@ -319,6 +331,7 @@ namespace PhotoLikerUI
             var groups = _people.Groups.Names;
             var known = _names.ToHashSet(StringComparer.OrdinalIgnoreCase);
             _renamePerson.Enabled = selected.Count == 1;
+            _deletePerson.Enabled = selected.Count > 0;
 
             _updating = true;
             _groups.BeginUpdate();
@@ -372,6 +385,48 @@ namespace PhotoLikerUI
                 _status.Text = string.Format(SearchStrings.StatusSharedPeopleError, shared);
             else
                 ReportFolderCopy();
+        }
+
+        // ── deleting people ────────────────────────────────────────────────
+
+        /// <summary>
+        /// The people who are selected are deleted, after asking: their faces lose the names everywhere and they leave the groups. Nothing else is touched
+        /// (the photos and the faces found in them stay), and the question says how to get a person back.
+        /// </summary>
+        private void DeletePeople()
+        {
+            var selected = SelectedNames();
+            if (selected.Count == 0)
+                return;
+
+            var faces = selected.Sum(name => _faces[name]);
+            var question = selected.Count == 1
+                ? string.Format(PeopleStrings.DeletePersonQuestionFormat, selected[0], faces)
+                : string.Format(PeopleStrings.DeletePeopleQuestionFormat, selected.Count, faces);
+            if (MessageBox.Show(this, question, PeopleStrings.DeletePersonTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                return;
+
+            _status.Text = string.Empty;
+            string? problem = null;
+            try
+            {
+                _people.DeletePeople(selected);
+            }
+            catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+            {
+                problem = string.Format(PeopleStrings.DeletePersonErrorFormat, ex.Message);
+            }
+
+            ShowAgain(); // also after a failure: part of it may have been done (the groups are written last)
+            if (problem is not null)
+                Problem(PeopleStrings.DeletePersonTitle, problem);
+            else if (_people.SharedError is { } shared)
+                _status.Text = string.Format(SearchStrings.StatusSharedPeopleError, shared);
+            else
+            {
+                _status.Text = string.Format(PeopleStrings.DeletedFormat, selected.Count, faces);
+                ReportFolderCopy();
+            }
         }
 
         // ── changing the groups ────────────────────────────────────────────

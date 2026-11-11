@@ -818,6 +818,11 @@ namespace PhotoLikerUI
                 RotateCurrentPhoto(quarterTurns);
                 return true;
             }
+            else if (IsEditDateKey(keyData))
+            {
+                EditDateOfShownFile();
+                return true;
+            }
             else if (keyData == Keys.Space)
             {
                 var currentFile = pictureBox1.Tag as string;

@@ -13,6 +13,57 @@ namespace PhotoLikerUI
         /// <summary>Whether the window is dark, for the dialogs the grid opens.</summary>
         internal bool IsDarkTheme => _currentConfig.IsDarkTheme;
 
+        /// <summary>Ctrl+D without Alt or Shift (the plain letters are the group keys).</summary>
+        private static bool IsEditDateKey(Keys keyData) => keyData == (Keys.Control | Keys.D);
+
+        /// <summary>
+        /// Ctrl+D: asks for a date for the photo or video that is shown, in the same dialog as the "..." of the metadata grid, and saves it as typing it into that row would:
+        /// the Date Taken (Original) of a JPEG (the dates of the file follow it), the Recorded date of a video. Another kind of file has no date to change here, and the status says so.
+        /// Not while the slideshow is on (it is a window of its own and takes the keys; this is only a second guard).
+        /// </summary>
+        private void EditDateOfShownFile()
+        {
+            if (_slideshow is not null)
+                return;
+
+            if (pictureBox1.Tag is not string file)
+            {
+                SetStatus(MainFormStrings.StatusDateNoPhoto);
+                return;
+            }
+
+            var video = MediaKinds.IsVideo(file);
+            if (!video && !JpegOrientation.IsJpeg(file))
+            {
+                SetStatus(string.Format(MainFormStrings.StatusDateOnlyJpegOrVideo, Path.GetFileName(file)));
+                return;
+            }
+
+            if (_likeInProgress)
+            {
+                SetStatus(MainFormStrings.StatusDateBusy);
+                return;
+            }
+
+            var tagId = video ? VideoMetadata.RecordedTagId : DateRowEdit.DateTakenTagId;
+            var rowName = video ? VideoMetadata.RecordedName : ExifTagMap.Tags[tagId];
+
+            // Where the grid row starts from: the date the photo has now; a photo with none starts from the date of its file
+            var shown = _photoCache.TryGet(file, out var entry) ? entry.Metadata.FirstOrDefault(e => e.TagId == tagId)?.Value : null;
+            DateTime start;
+            if (!DateText.TryParseTyped(shown, out start) && !DateText.TryFindDisplayed(shown, out start))
+            {
+                try { start = File.GetLastWriteTime(file); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { start = DateTime.Now; }
+            }
+
+            using var dialog = new DateEditDialog(rowName, start, IsDarkTheme);
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+                PhotoDateEdited(tagId, dialog.Picked);
+            else
+                FocusViewer();
+        }
+
         private void PhotoDateEdited(int tagId, DateTime date)
         {
             if (pictureBox1.Tag is not string file)

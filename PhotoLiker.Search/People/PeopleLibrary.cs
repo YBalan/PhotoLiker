@@ -399,26 +399,94 @@ namespace PhotoLiker.Search
                     return to;
 
                 if (_people.ContainsKey(from))
-                {
-                    var before = _people.ToDictionary(p => p.Key, p => new List<Example>(p.Value), StringComparer.OrdinalIgnoreCase);
-                    MoveKey(_people, from, to);
-                    try
-                    {
-                        Save();
-                    }
-                    catch
-                    {
-                        _people.Clear();
-                        foreach (var (name, examples) in before)
-                            _people[name] = examples;
-                        throw;
-                    }
-                }
+                    ChangeOwnPeople(() => MoveKey(_people, from, to));
 
                 MoveKey(_others, from, to);
                 RenameInShared(from, to);
                 Groups.RenameMember(from, to);
                 return to;
+            }
+        }
+
+        // Changes the faces named in this folder and writes the file; if that fails the faces are as they were and the failure is thrown (the caller holds the lock).
+        private void ChangeOwnPeople(Action change)
+        {
+            var before = _people.ToDictionary(p => p.Key, p => new List<Example>(p.Value), StringComparer.OrdinalIgnoreCase);
+            change();
+            try
+            {
+                Save();
+            }
+            catch
+            {
+                _people.Clear();
+                foreach (var (name, examples) in before)
+                    _people[name] = examples;
+                throw;
+            }
+        }
+
+        // ── deleting people ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Deletes people: every face the user named with their name loses it (in this folder, and in the other folders, which follow when they are
+        /// opened), and they leave all the groups. Only the names go: the photos and the faces found in them stay, a face can be named again.
+        /// Throws <see cref="ArgumentException"/> with a sentence for the user if nobody has one of the names, <see cref="IOException"/> if the file of this
+        /// folder can't be written (then nothing was deleted) or the groups can't be saved (then the people are deleted, the groups still have their names).
+        /// The shared file failing is only reported in <see cref="SharedError"/>.
+        /// </summary>
+        public void DeletePeople(IEnumerable<string> names)
+        {
+            var wanted = names.Select(n => n.Trim()).Where(n => n.Length > 0).ToList();
+            if (wanted.Count == 0)
+                return;
+
+            lock (_gate)
+            {
+                List<string> gone = [];
+                foreach (var name in wanted)
+                {
+                    var known = KnownNames().FirstOrDefault(n => string.Equals(n, name, StringComparison.OrdinalIgnoreCase))
+                        ?? throw new ArgumentException(string.Format(SearchLibStrings.NoSuchPersonFormat, name));
+                    if (!gone.Contains(known, StringComparer.OrdinalIgnoreCase))
+                        gone.Add(known);
+                }
+
+                if (gone.Any(_people.ContainsKey))
+                    ChangeOwnPeople(() => gone.ForEach(name => _people.Remove(name)));
+
+                gone.ForEach(name => _others.Remove(name));
+                DeleteInShared(gone);
+                Groups.RemoveMembers(gone);
+            }
+        }
+
+        // The shared file after people were deleted: they are gone from the slices of the other folders (their own files follow when they are
+        // opened), the deletion is written down, and this folder's slice is put in. The slice of another folder stays even when it is empty now:
+        // it is what tells that folder it has still to hear of the deletion (the caller holds the lock).
+        private void DeleteInShared(List<string> gone)
+        {
+            if (_sharedFile is null)
+                return;
+
+            SharedError = null;
+            try
+            {
+                var shared = ReadShared();
+                foreach (var folder in shared.Folders.Where(f => !SameFolder(f.Path, _folder)))
+                    folder.People.RemoveAll(p => gone.Contains(p.Name, StringComparer.OrdinalIgnoreCase));
+
+                var now = DateTime.UtcNow;
+                shared.Deletions.AddRange(gone.Select(name => new DeletionModel { Name = name, At = now }));
+                if (shared.Deletions.Count > MaxDeletions)
+                    shared.Deletions.RemoveRange(0, shared.Deletions.Count - MaxDeletions);
+
+                WriteShared(shared);
+                TakeOthersFrom(shared);
+            }
+            catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException or FormatException)
+            {
+                SharedError = ex.Message;
             }
         }
 
@@ -478,18 +546,25 @@ namespace PhotoLiker.Search
             }
         }
 
-        // A folder that has not seen a rename (it last agreed with the shared file before it) makes it in its own file: the people it has under the
-        // old name get the new one. A person named later, after the folder agreed with the shared file, is somebody else and is left alone.
-        // A folder that has no slice yet has seen nothing. Returns true if the people of the folder changed (the caller holds the lock).
-        private bool ApplyPendingRenames(SharedFileModel shared)
+        // A folder that has not seen a rename or a deletion (it last agreed with the shared file before it) makes it in its own file, in the order they
+        // were made: the people it has under the old name get the new one, the deleted people lose their faces. A person named later, after the folder
+        // agreed with the shared file, is somebody else and is left alone. A folder that has no slice yet has seen no rename; and it is not told to lose
+        // people it was never known to have here (its photos may come from another computer). Returns true if the people of the folder changed
+        // (the caller holds the lock).
+        private bool ApplyPendingChanges(SharedFileModel shared)
         {
-            if (LoadError is not null || shared.Renames.Count == 0)
+            if (LoadError is not null || (shared.Renames.Count == 0 && shared.Deletions.Count == 0))
                 return false; // a file of the folder that could not be read is not touched
 
-            var synced = shared.Folders.FirstOrDefault(f => SameFolder(f.Path, _folder))?.Synced ?? DateTime.MinValue;
+            var slice = shared.Folders.FirstOrDefault(f => SameFolder(f.Path, _folder));
+            var synced = slice?.Synced ?? DateTime.MinValue;
+            var pending = shared.Renames.Where(r => r.At > synced).Select(r => (r.At, r.From, To: (string?)r.To)).ToList();
+            if (slice is not null)
+                pending.AddRange(shared.Deletions.Where(d => d.At > synced).Select(d => (d.At, From: d.Name, To: (string?)null)));
+
             var changed = false;
-            foreach (var rename in shared.Renames.Where(r => r.At > synced).OrderBy(r => r.At))
-                changed |= MoveKey(_people, rename.From, rename.To);
+            foreach (var (_, from, to) in pending.OrderBy(p => p.At))
+                changed |= to is null ? _people.Remove(from) : MoveKey(_people, from, to);
 
             if (changed)
                 Save();
@@ -628,6 +703,9 @@ namespace PhotoLiker.Search
 
             /// <summary>The people who were given another name, oldest first. A folder that has not seen a rename yet makes it when it is opened (see <see cref="PeopleLibrary.RenamePerson"/>).</summary>
             public List<RenameModel> Renames { get; set; } = [];
+
+            /// <summary>The people who were deleted, oldest first. A folder that has not seen a deletion yet makes it when it is opened (see <see cref="PeopleLibrary.DeletePeople"/>).</summary>
+            public List<DeletionModel> Deletions { get; set; } = [];
         }
 
         private sealed class FolderModel
@@ -647,8 +725,17 @@ namespace PhotoLiker.Search
             public DateTime At { get; set; }
         }
 
+        private sealed class DeletionModel
+        {
+            public string Name { get; set; } = string.Empty;
+            public DateTime At { get; set; }
+        }
+
         /// <summary>How many renames the shared file remembers: a folder that was not opened while more renames than this were made has missed the oldest ones.</summary>
         private const int MaxRenames = 100;
+
+        /// <summary>The same for deleted people (a name is all that is kept, so the list can be long: somebody may clear out hundreds of names at once).</summary>
+        private const int MaxDeletions = 2000;
 
         private static bool SameFolder(string a, string b) =>
             string.Equals(Path.TrimEndingDirectorySeparator(a), Path.TrimEndingDirectorySeparator(b), StringComparison.OrdinalIgnoreCase);
@@ -732,7 +819,7 @@ namespace PhotoLiker.Search
                 try
                 {
                     var shared = ReadShared();
-                    var renamed = ApplyPendingRenames(shared);
+                    var renamed = ApplyPendingChanges(shared);
                     TakeOthersFrom(shared);
                     if (LoadError is null && (renamed || !HoldsMyPeople(shared)))
                         WriteShared(shared);

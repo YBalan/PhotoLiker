@@ -18,6 +18,10 @@ namespace SmokeTour;
 ///   --only-search          instead of the tour: index the demo folder for real and photograph the search strip (the pictures 17-19).
 ///                          It needs the models the app has downloaded: they are linked, read only, into the tour's own data folder
 ///                          (a junction, removed again), so the real %LocalAppData%\PhotoLiker is not written to. A minute or two.
+///   --only-video           instead of the tour: a demo folder with two clips; the poster, the player, a real index with a search that finds a
+///                          place in a video, and the slideshow (the pictures 34-40). Needs the models like --only-search. A few minutes.
+///   --only-people          instead of the tour: the People window with 28 invented people in groups (the picture 28), written to the tour's
+///                          own data folder. No models needed, a few seconds.
 ///
 /// The window takes the screen for about a minute (it is photographed as it is on screen, and one step clicks and types
 /// for real): leave the mouse and the keyboard alone.
@@ -32,6 +36,8 @@ internal static class Program
         var onlyDialogs = args.Contains("--only-dialogs");
         var onlyLanguage = args.Contains("--only-language");
         var onlySearch = args.Contains("--only-search");
+        var onlyVideo = args.Contains("--only-video");
+        var onlyPeople = args.Contains("--only-people");
         var demoFolder = Path.GetFullPath(ValueOf(args, "--demo-folder") ?? DefaultDemoFolder());
 
         // Keep the real %LocalAppData%\PhotoLiker (last folder, crash log) out of this. Has to happen before anything reads AppPaths.
@@ -40,7 +46,7 @@ internal static class Program
 
         var checks = new Checks();
         var modelsLinked = false;
-        if (onlySearch)
+        if (onlySearch || onlyVideo)
         {
             modelsLinked = LinkModels(appData);
             Console.WriteLine(modelsLinked ? "The models of the app are linked into the tour's data folder." : "The app has no models folder: the search cannot be indexed.");
@@ -55,10 +61,10 @@ internal static class Program
 
         var area = Screen.PrimaryScreen!.WorkingArea;
         // The search strip is about a thousand pixels long: the window of that mode takes the width of the screen
-        var window = new Rectangle(area.Left + 30, area.Top + 20, onlySearch ? area.Width - 60 : Math.Min(1500, area.Width - 60), Math.Min(900, area.Height - 40));
+        var window = new Rectangle(area.Left + 30, area.Top + 20, onlySearch || onlyVideo ? area.Width - 60 : Math.Min(1500, area.Width - 60), Math.Min(900, area.Height - 40));
         try
         {
-            DemoFolder.Create(demoFolder, window);
+            DemoFolder.Create(demoFolder, window, onlyVideo);
         }
         catch (InvalidOperationException ex)
         {
@@ -76,7 +82,7 @@ internal static class Program
         {
             try
             {
-                await (onlyDialogs ? tour.RunDialogs() : onlyLanguage ? tour.RunLanguage() : onlySearch ? tour.RunSearch() : tour.Run());
+                await (onlyDialogs ? tour.RunDialogs() : onlyLanguage ? tour.RunLanguage() : onlySearch ? tour.RunSearch() : onlyVideo ? tour.RunVideo() : onlyPeople ? tour.RunPeople() : tour.Run());
             }
             catch (Exception ex)
             {
@@ -91,7 +97,7 @@ internal static class Program
 
         Application.Run(form);
 
-        if (!onlyDialogs && !onlyLanguage && !onlySearch)
+        if (!onlyDialogs && !onlyLanguage && !onlySearch && !onlyVideo && !onlyPeople)
         {
             try
             {

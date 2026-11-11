@@ -29,6 +29,8 @@ namespace PhotoLikerUI
         public static string NewGroupTooltip => T();
         public static string RenamePersonButton => T();
         public static string RenamePersonTooltip => T();
+        public static string DeletePersonButton => T();
+        public static string DeletePersonTooltip => T();
         public static string RenameGroupButton => T();
         public static string DeleteGroupButton => T();
         public static string CloseButton => T();
@@ -38,6 +40,11 @@ namespace PhotoLikerUI
         public static string RenamePersonTitle => T();
         public static string RenamePersonPromptFormat => T();
         public static string RenamePersonErrorFormat => T();
+        public static string DeletePersonTitle => T();
+        public static string DeletePersonQuestionFormat => T();
+        public static string DeletePeopleQuestionFormat => T();
+        public static string DeletePersonErrorFormat => T();
+        public static string DeletedFormat => T();
         public static string MergeTitle => T();
         public static string MergeQuestionFormat => T();
         public static string RenameGroupTitle => T();
