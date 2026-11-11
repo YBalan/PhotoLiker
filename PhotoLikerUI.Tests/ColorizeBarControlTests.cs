@@ -15,7 +15,11 @@ public sealed class ColorizeBarControlTests
             await body(bar);
         }, seconds: 30);
 
-    private static Button ButtonNamed(Control bar, string text) => Ui.Controls<Button>(bar).First(button => button.Text == text);
+    /// <summary>A button of the bar by its name: the buttons with a picture have no word on them, so the name is the accessible one (✕ is a symbol, its text).</summary>
+    private static Button ButtonNamed(Control bar, string name) => Ui.Controls<Button>(bar).First(button => button.AccessibleName == name || button.Text == name);
+
+    private static string TipOf(ColorizeBar bar, Control control) =>
+        ((ToolTip)typeof(ColorizeBar).GetField("_tip", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(bar)!).GetToolTip(control) ?? string.Empty;
 
     private static TrackBar Slider(Control bar, int index) => Ui.Controls<TrackBar>(bar).ElementAt(index);
 
@@ -97,7 +101,7 @@ public sealed class ColorizeBarControlTests
             bar.Busy = false;
             bar.Ready = true;
             bar.ColoursShown = true;
-            Assert.Equal(ColorizeStrings.BarOriginal, ButtonNamed(bar, ColorizeStrings.BarOriginal).Text);
+            Assert.Same(colorize, ButtonNamed(bar, ColorizeStrings.BarOriginal)); // the same button, now with the other name
             Assert.True(ButtonNamed(bar, ColorizeStrings.BarOriginal).Enabled);
             Assert.True(save.Enabled);
             Assert.True(Slider(bar, 0).Enabled);
@@ -112,7 +116,66 @@ public sealed class ColorizeBarControlTests
             bar.Busy = false;
             bar.ColoursShown = false;
             Assert.False(save.Enabled);
-            Assert.Equal(ColorizeStrings.BarColorize, ButtonNamed(bar, ColorizeStrings.BarColorize).Text);
+            Assert.Same(colorize, ButtonNamed(bar, ColorizeStrings.BarColorize));
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheButtons_ShowPictures_NotWords()
+    {
+        Run(async bar =>
+        {
+            foreach (var name in new[] { ColorizeStrings.BarColorize, ColorizeStrings.BarSave, ColorizeStrings.BarMore })
+            {
+                var button = ButtonNamed(bar, name);
+                Assert.NotNull(button.Image);
+                Assert.Equal(string.Empty, button.Text);
+                Assert.Equal(name, button.AccessibleName);
+            }
+
+            // ✕ stays a symbol
+            Assert.Equal("✕", ButtonNamed(bar, "✕").Text);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheColorizeButton_ChangesItsPictureNameAndTip_WithWhatItDoesNext()
+    {
+        Run(async bar =>
+        {
+            var button = ButtonNamed(bar, ColorizeStrings.BarColorize);
+            var turnsColoursOn = button.Image;
+            Assert.Contains(ColorizeStrings.BarColorize, TipOf(bar, button));
+
+            bar.Ready = true;
+            bar.ColoursShown = true;
+            Assert.NotSame(turnsColoursOn, button.Image); // the grey photo: the original comes back
+            Assert.NotNull(button.Image);
+            Assert.Equal(ColorizeStrings.BarOriginal, button.AccessibleName);
+            Assert.Equal(ColorizeStrings.BarOriginal, TipOf(bar, button));
+            Assert.Equal(string.Empty, button.Text);
+
+            bar.ColoursShown = false;
+            Assert.Same(turnsColoursOn, button.Image);
+            Assert.Equal(ColorizeStrings.BarColorize, button.AccessibleName);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheTipsOfTheButtonsWithPictures_SayTheNameThenWhatTheyDo()
+    {
+        Run(async bar =>
+        {
+            Assert.StartsWith(ColorizeStrings.BarSave + ": ", TipOf(bar, ButtonNamed(bar, ColorizeStrings.BarSave)));
+            Assert.Contains(ColorizeStrings.BarSaveTooltip, TipOf(bar, ButtonNamed(bar, ColorizeStrings.BarSave)));
+
+            // "Many photos..." is a name with dots: in the tip they would sit in front of the colon
+            var more = TipOf(bar, ButtonNamed(bar, ColorizeStrings.BarMore));
+            Assert.StartsWith(ColorizeStrings.BarMore.TrimEnd('.', '…') + ": ", more);
+            Assert.DoesNotContain("...:", more);
             await Task.CompletedTask;
         });
     }
@@ -192,7 +255,8 @@ public sealed class ColorizeBarControlTests
             using (PhotoLiker.Core.Loc.Use(PhotoLiker.Core.AppLanguage.English))
                 bar.ApplyTexts();
 
-            Assert.Equal(ColorizeStrings.BarSave, ButtonNamed(bar, ColorizeStrings.BarSave).Text);
+            Assert.Equal(ColorizeStrings.BarSave, ButtonNamed(bar, ColorizeStrings.BarSave).AccessibleName);
+            Assert.StartsWith(ColorizeStrings.BarSave, TipOf(bar, ButtonNamed(bar, ColorizeStrings.BarSave)));
             await Task.CompletedTask;
         });
     }

@@ -17,16 +17,23 @@ namespace PhotoLikerUI
         private readonly Label _grip = new() { Text = "⋮⋮", AutoSize = false, Size = new Size(18, 26), TextAlign = ContentAlignment.MiddleCenter, Cursor = Cursors.SizeAll, Margin = new Padding(0, 0, 2, 0) };
         private readonly Label _title = new() { AutoSize = false, Size = new Size(88, 26), TextAlign = ContentAlignment.MiddleLeft, Cursor = Cursors.SizeAll, Font = new Font(SystemFonts.MessageBoxFont ?? SystemFonts.DefaultFont, FontStyle.Bold) };
         private readonly Label _status = new() { AutoSize = false, Size = new Size(440, 26), TextAlign = ContentAlignment.MiddleLeft, AutoEllipsis = true };
-        private readonly Button _more = new() { AutoSize = true, MinimumSize = new Size(0, 26), TabStop = false, Margin = new Padding(6, 0, 6, 0) };
+        // The buttons that do something show a picture, not a word (the name is the tooltip and the accessible name, as with the buttons of the toolbar); ✕ is a symbol already
+        private const int IconSize = 18;
+        private readonly Bitmap _colorizeIcon = AppIcons.Sized(IconSize, AppIcons.Colorize);
+        private readonly Bitmap _originalIcon = AppIcons.Sized(IconSize, AppIcons.OriginalPhoto);
+        private readonly Bitmap _saveIcon = AppIcons.Sized(IconSize, AppIcons.SaveCopy);
+        private readonly Bitmap _moreIcon = AppIcons.Sized(IconSize, AppIcons.ManyPhotos);
+
+        private readonly Button _more = new() { Size = new Size(36, 26), TabStop = false, Margin = new Padding(6, 0, 6, 0) };
         private readonly Button _close = new() { Text = "✕", Size = new Size(30, 26), TabStop = false, Margin = new Padding(0) };
-        private readonly Button _colorize = new() { AutoSize = true, MinimumSize = new Size(116, 28), TabStop = false, Margin = new Padding(0, 4, 14, 0) };
+        private readonly Button _colorize = new() { Size = new Size(40, 28), TabStop = false, Margin = new Padding(0, 3, 14, 0) };
         private readonly Label _strengthLabel = new() { AutoSize = true, Margin = new Padding(0, 9, 4, 0) };
         private readonly TrackBar _strength = NewSlider(MinStrength, MaxStrength, 100, small: 5, large: 20, width: 120);
         private readonly Label _strengthValue = new() { AutoSize = false, Size = new Size(48, 20), TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 9, 12, 0) };
         private readonly Label _warmthLabel = new() { AutoSize = true, Margin = new Padding(0, 9, 4, 0) };
         private readonly TrackBar _warmth = NewSlider(-MaxWarmth, MaxWarmth, 0, small: 5, large: 20, width: 120);
         private readonly Label _warmthValue = new() { AutoSize = false, Size = new Size(40, 20), TextAlign = ContentAlignment.MiddleLeft, Margin = new Padding(0, 9, 14, 0) };
-        private readonly Button _save = new() { AutoSize = true, MinimumSize = new Size(110, 28), TabStop = false, Margin = new Padding(0, 4, 0, 0) };
+        private readonly Button _save = new() { Size = new Size(40, 28), TabStop = false, Margin = new Padding(0, 3, 0, 0) };
         private readonly ToolTip _tip = new() { InitialDelay = 400, ShowAlways = true };
 
         private bool _coloursShown;
@@ -47,12 +54,24 @@ namespace PhotoLikerUI
 
             var first = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0), FlowDirection = FlowDirection.LeftToRight };
             first.Controls.AddRange([_grip, _title, _status, _more, _close]);
-            var second = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 2, 0, 0), FlowDirection = FlowDirection.LeftToRight };
-            second.Controls.AddRange([_colorize, _strengthLabel, _strength, _strengthValue, _warmthLabel, _warmth, _warmthValue, _save]);
+            var tuning = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0), FlowDirection = FlowDirection.LeftToRight };
+            tuning.Controls.AddRange([_colorize, _strengthLabel, _strength, _strengthValue, _warmthLabel, _warmth, _warmthValue]);
 
-            var rows = new FlowLayoutPanel { AutoSize = true, WrapContents = false, FlowDirection = FlowDirection.TopDown, Margin = new Padding(0), Dock = DockStyle.Fill };
-            rows.Controls.AddRange([first, second]);
+            // The second row is as wide as the first, with the save button at its right end (under ✕), whatever the width of the texts
+            var second = new TableLayoutPanel { AutoSize = true, ColumnCount = 2, RowCount = 1, Margin = new Padding(0, 2, 0, 0), Dock = DockStyle.Fill };
+            second.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            second.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            second.Controls.Add(tuning, 0, 0);
+            second.Controls.Add(_save, 1, 0);
+
+            var rows = new TableLayoutPanel { AutoSize = true, ColumnCount = 1, RowCount = 2, Margin = new Padding(0), Dock = DockStyle.Fill };
+            rows.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            rows.Controls.Add(first, 0, 0);
+            rows.Controls.Add(second, 0, 1);
             Controls.Add(rows);
+
+            _save.Image = _saveIcon;
+            _more.Image = _moreIcon;
 
             _colorize.Click += (_, _) => { ColorsToggled?.Invoke(!_coloursShown); Used?.Invoke(); };
             _save.Click += (_, _) => { SaveClicked?.Invoke(); Used?.Invoke(); };
@@ -175,22 +194,25 @@ namespace PhotoLikerUI
             _title.Text = ColorizeStrings.BarTitle;
             _strengthLabel.Text = ColorizeStrings.BarStrength;
             _warmthLabel.Text = ColorizeStrings.BarWarmth;
-            _save.Text = ColorizeStrings.BarSave;
-            _more.Text = ColorizeStrings.BarMore;
             _tip.SetToolTip(_grip, ColorizeStrings.BarGripTooltip);
             _tip.SetToolTip(_title, ColorizeStrings.BarGripTooltip);
-            _tip.SetToolTip(_more, ColorizeStrings.BarMoreTooltip);
             _tip.SetToolTip(_close, ColorizeStrings.BarCloseTooltip);
-            _tip.SetToolTip(_colorize, ColorizeStrings.BarColorizeTooltip);
             _tip.SetToolTip(_strength, ColorizeStrings.BarStrengthTooltip);
             _tip.SetToolTip(_strengthLabel, ColorizeStrings.BarStrengthTooltip);
             _tip.SetToolTip(_warmth, ColorizeStrings.BarWarmthTooltip);
             _tip.SetToolTip(_warmthLabel, ColorizeStrings.BarWarmthTooltip);
-            _tip.SetToolTip(_save, ColorizeStrings.BarSaveTooltip);
             AccessibleName = ColorizeStrings.BarTitle;
             _close.AccessibleName = ColorizeStrings.BarCloseTooltip;
-            UpdateButtons();
+
+            // A button with a picture has no word on it: its name goes first in the tip, then what it does
+            _save.AccessibleName = ColorizeStrings.BarSave;
+            _tip.SetToolTip(_save, NamedTip(ColorizeStrings.BarSave, ColorizeStrings.BarSaveTooltip));
+            _more.AccessibleName = ColorizeStrings.BarMore;
+            _tip.SetToolTip(_more, NamedTip(ColorizeStrings.BarMore, ColorizeStrings.BarMoreTooltip));
+            UpdateButtons(); // the one that turns the colours on and off
         }
+
+        private static string NamedTip(string name, string what) => $"{name.TrimEnd('.', '…')}: {what}";
 
         /// <summary>
         /// The theme paints every control like a control of a window (labels and sliders in a shade of their own); on a bar they sit on its background, so they are given that. Called after the theme was applied.
@@ -250,7 +272,11 @@ namespace PhotoLikerUI
 
         private void UpdateButtons()
         {
-            _colorize.Text = _coloursShown ? ColorizeStrings.BarOriginal : ColorizeStrings.BarColorize;
+            // The picture is what the button does when pressed, as the word was: the colour photo turns the colours on, the grey one brings the original back
+            _colorize.Image = _coloursShown ? _originalIcon : _colorizeIcon;
+            var colorizeName = _coloursShown ? ColorizeStrings.BarOriginal : ColorizeStrings.BarColorize;
+            _colorize.AccessibleName = colorizeName;
+            _tip.SetToolTip(_colorize, _coloursShown ? colorizeName : NamedTip(colorizeName, ColorizeStrings.BarColorizeTooltip));
             _colorize.Enabled = !_busy;
             _save.Enabled = _ready && _coloursShown && !_busy;
             _strength.Enabled = _warmth.Enabled = _ready && _coloursShown;
@@ -288,6 +314,14 @@ namespace PhotoLikerUI
                 _title.Font.Dispose();
             }
             base.Dispose(disposing);
+            if (disposing)
+            {
+                // After the buttons: they no longer paint them
+                _colorizeIcon.Dispose();
+                _originalIcon.Dispose();
+                _saveIcon.Dispose();
+                _moreIcon.Dispose();
+            }
         }
     }
 }

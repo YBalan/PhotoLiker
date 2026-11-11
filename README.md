@@ -1190,19 +1190,20 @@ creation and change dates of the photo's file, so that it is listed beside the p
 ### The bar over a black and white photo
 
 When the photo in the viewer is black and white (no colour at all, or one tint only, a brown print or a blue one: see *What counts as black and white* below), a small bar floats at the bottom of
-the viewer, in the middle. It comes a moment after the photo (not for each photo that a held arrow key goes through) and goes with it.
+the viewer, in the middle. It comes a moment after the photo (not for each photo that a held arrow key goes through) and goes with it. Its buttons show pictures, not words: point at one to see its
+name and what it does (the names below are the ones in those tips).
 
-- **Colorize** runs the model on the photo (about 2 seconds for a photo of 12 megapixels; about 2 more the first time, while the model starts) and the viewer shows the photo with its colours. The button then says **Show
-  original**, which brings the grey photo back at once; the colours are kept, so asking for them again costs nothing. The first time the model is not on the computer, PhotoLiker asks before
+- **Colorize** (a photo that is grey in its lower left and in colour in its upper right) runs the model on the photo (about 2 seconds for a photo of 12 megapixels; about 2 more the first time, while the model starts) and the viewer shows the photo with its colours. The button then shows a grey photo and is called **Show
+  original**: it brings the grey photo back at once; the colours are kept, so asking for them again costs nothing. The first time the model is not on the computer, PhotoLiker asks before
   downloading it (135 MB, once).
 - **Strength** (20 to 200%; 100 is as the model gives the colours) and **Warmth** (-100, cooler, towards blue, to +100, warmer, towards yellow and red; it is added to the middle tones, so that
   black and white stay as they are) change the picture **while the slider is dragged**. The model is not run again: the colours it gave are put on the photo again, which takes 0.1 to 0.25 s
   for a photo of 12 megapixels, less for a smaller one (a Release build on 12 cores; the picture on the screen is at most 4096 px on the longer side, and while one is being made the sliders may
   move on: only the last position is made after it). Saving the copy of such a photo takes about 0.2 s more. A double click on a slider puts it back. With the strength at 0 the warmth gives the whole photo one tone, like a sepia print. Where the sliders are is
   kept for the next photo and the next start (in `global-config.json` in the program's data folder).
-- **Save a copy** writes what is on the screen as the copy next to the photo, at the size of the photo (up to 8000 px on the longer side), without running the model again. The copy joins the list
+- **Save a copy** (a floppy disk) writes what is on the screen as the copy next to the photo, at the size of the photo (up to 8000 px on the longer side), without running the model again. The copy joins the list
   at once and the photo stays where it is, so more copies can be made with other settings (`name (colorized) 2.jpg`).
-- **Many photos...** opens the window below, which starts with the strength and the warmth of the bar. **✕** closes the bar: it then stays away from the photos until the **Colorize** button of the
+- **Many photos...** (a stack of photos) opens the window below, which starts with the strength and the warmth of the bar. **✕** closes the bar: it then stays away from the photos until the **Colorize** button of the
   toolbar is pressed. The dotted handle on the left moves the bar (the place is kept until the program is closed); the status text tells what is going on, and its tip has the whole of a long text.
 
 The colours **go on to the next black and white photo**: it is coloured after about half a second (so that a held key does not run the model for each photo), until **Show original** is pressed. A
