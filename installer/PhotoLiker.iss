@@ -43,6 +43,8 @@ Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 [CustomMessages]
 english.RuntimeMissing={#AppName} needs the .NET 10 Desktop Runtime, which was not found on this computer.%n%nOpen the download page and exit setup? Choose No to install anyway.
 ukrainian.RuntimeMissing={#AppName} потребує .NET 10 Desktop Runtime, якого не знайдено на цьому комп’ютері.%n%nВідкрити сторінку завантаження і вийти з установника? Виберіть «Ні», щоб усе одно встановити.
+english.VcRuntimeMissing={#AppName} needs the Microsoft Visual C++ Redistributable (x64) 14.40 or newer for the models of the search and of the effects, and it was not found on this computer.%n%nOpen the download page and exit setup? Choose No to install anyway.
+ukrainian.VcRuntimeMissing={#AppName} потребує Microsoft Visual C++ Redistributable (x64) версії 14.40 або новішої для моделей пошуку та ефектів, і його не знайдено на цьому комп’ютері.%n%nВідкрити сторінку завантаження і вийти з установника? Виберіть «Ні», щоб усе одно встановити.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -86,6 +88,19 @@ begin
       end;
 end;
 
+// The models (ONNX Runtime) need the Visual C++ runtime 14.40 or newer (x64); the redistributable of Visual Studio 2015-2022 registers its version here.
+const
+  VcRuntimeKey = 'SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64';
+
+function IsVcRuntimeInstalled: Boolean;
+var
+  Installed, Minor: Cardinal;
+begin
+  Result := False;
+  if RegQueryDWordValue(HKLM64, VcRuntimeKey, 'Installed', Installed) and (Installed = 1) then
+    Result := RegQueryDWordValue(HKLM64, VcRuntimeKey, 'Minor', Minor) and (Minor >= 40);
+end;
+
 function IsDesktopRuntimeInstalled: Boolean;
 var
   FindRec: TFindRec;
@@ -120,6 +135,16 @@ begin
          mbConfirmation, MB_YESNO, IDNO) = IDYES then
     begin
       ShellExec('open', 'https://dotnet.microsoft.com/download/dotnet/10.0', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+      Result := False;
+    end;
+
+  // Asked the same way: No installs anyway, and a silent setup (the update of the program runs it so) never stops here
+  if Result and not IsVcRuntimeInstalled then
+    if SuppressibleMsgBox(
+         ExpandConstant('{cm:VcRuntimeMissing}'),
+         mbConfirmation, MB_YESNO, IDNO) = IDYES then
+    begin
+      ShellExec('open', 'https://aka.ms/vs/17/release/vc_redist.x64.exe', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
       Result := False;
     end;
 end;

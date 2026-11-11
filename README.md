@@ -259,7 +259,9 @@ The models need the current Microsoft Visual C++ runtime (it comes with Windows 
 Redistributable* x64). PhotoLiker loads the one of Windows first thing when it starts: some programs (the shell extension of
 TortoiseGit, for one) put an old private copy of it into every program that opens a file or folder dialog, and ONNX Runtime
 does not just fail with that, it takes the whole program down (`0xC0000005` while loading the models). If an old copy is
-there all the same, loading the models stops with a message that says so.
+there all the same, loading the models stops with a message that says so, and so it does when the runtime is not on the
+computer at all (the message gives the address to get it from). The setup looks for it too (version 14.40 or newer), and
+offers the download page the way it does for the .NET Desktop Runtime; answering *No* installs anyway.
 
 How long indexing takes depends mostly on the processor and on how fast the photos can be read: on a 6-core desktop
 processor it is about three photos per second (20,000 photos: roughly two hours), a network drive can be slower. It does
@@ -1236,7 +1238,7 @@ The **Colorize** button with no photo shown, or **Many photos...** on the bar, o
   by the `edgetools` repository on Hugging Face from the authors' `ddcolor_paper_tiny` checkpoint. Its file (135 MB) is checked against its SHA-256 and kept in
   `%LocalAppData%\PhotoLiker\models\ddcolor-tiny`; it is downloaded after asking, when **Colorize** is first pressed. The model sees the photo as a grey picture of 512 × 512 and says what colour
   (the *a* and *b* of CIE Lab) each point of it should have; the lightness of the result is the photo's own, at the size it has, so nothing of its detail is lost, and the colours, which are smooth,
-  are stretched to the size of the photo. A photo takes 1.5 to 2.2 s on this PC whatever its size (a 6400 × 4000 one 2.2 s, with 270 MB of memory more) and is saved as a JPEG of quality 95
+  are stretched to the size of the photo. A photo takes 1.7 to 2.5 s on this PC whatever its size, with about 300 MB of memory for the model (ONNX Runtime's memory arena is switched off for it: with it the model kept 4.6 GB for as long as it was open, for runs a quarter faster), and is saved as a JPEG of quality 95
   (one that is more than 8000 px on its longer side is made smaller first). The colours are a guess from what is in the picture: skin, sky, grass and wood come out as they usually are, a dress can
   be any colour.
 - **Checked** on grey copies of real photos (a portrait, a cat, a cup of coffee, a rocket): the skin, the nose of the cat and the coffee came out like the originals, the lightness is the photo's.
@@ -1351,8 +1353,9 @@ written by name and read the same way (an unknown name gives `Random` / `Current
 settings of the [photo search](#photo-search).
 
 Besides that the app keeps small files in `%LocalAppData%\PhotoLiker`: `global-config.json` (the last folder that
-was opened, and the [language](#language)), `people.json` (the people named in all folders, see above), `people-groups.json` (the groups of people) and `crash.log` (the stack trace of an unexpected
-error). Set the environment variable `PHOTOLIKER_DATA_DIR` to keep them somewhere else; the tests do that, so running them
+was opened, and the [language](#language)), `people.json` (the people named in all folders, see above), `people-groups.json` (the groups of people), `crash.log` (the stack trace of an unexpected
+error) and `slideshow-memory.log` (a line a minute while a slideshow runs: the memory of the program, its handles and the ffmpeg processes, to find out where the memory goes in a show that
+runs for hours; at most 256 KB, and `slideshow-memory.old.log` is the one before; nothing is sent anywhere). Set the environment variable `PHOTOLIKER_DATA_DIR` to keep them somewhere else; the tests do that, so running them
 leaves your own files alone.
 
 ## User manual

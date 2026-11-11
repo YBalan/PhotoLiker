@@ -59,6 +59,49 @@ public class NativeRuntimeTests
         Assert.NotNull(NativeRuntime.FindOldRuntime([Module("msvcp140.DLL", Tortoise, "14.30.30708.0")]));
     }
 
+    // ── the runtime is not there at all ────────────────────────────────────
+
+    [Fact]
+    public void ARuntimeThatIsNotOnTheComputer_IsReportedWithWhereToGetIt()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => NativeRuntime.Verify([], _ => false));
+
+        Assert.Contains("Visual C++ Redistributable", ex.Message);
+        Assert.Contains("vc_redist.x64.exe", ex.Message);
+        Assert.Contains("VCRUNTIME140.dll", ex.Message); // the first file that was looked for
+    }
+
+    [Fact]
+    public void OneFileOfTheRuntimeThatIsMissing_IsNamed()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => NativeRuntime.Verify([Module("MSVCP140.dll", Windows, "14.50.35719.0")], file => file != "VCRUNTIME140_1.dll"));
+
+        Assert.Contains("VCRUNTIME140_1.dll", ex.Message);
+    }
+
+    [Fact]
+    public void ARuntimeThatCanBeLoaded_IsNotReported()
+    {
+        NativeRuntime.Verify([], _ => true);
+        NativeRuntime.Verify([Module("MSVCP140.dll", Windows, "14.50.35719.0")], _ => true);
+    }
+
+    [Fact]
+    public void AnOldRuntime_IsStillReportedFirst_WhateverCanBeLoaded()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() => NativeRuntime.Verify([Module("MSVCP140.dll", Tortoise, "14.30.30708.0")], _ => true));
+
+        Assert.Contains("old copy", ex.Message);
+    }
+
+    [Fact]
+    public void TheRuntimeOfThisComputer_IsFound()
+    {
+        // The tests run where ONNX Runtime does: the guard must let this computer through, or it would stop every model of every user
+        NativeRuntime.PreferWindowsRuntime();
+        NativeRuntime.EnsureOnnxRuntimeCanLoad();
+    }
+
     [Fact]
     public void PreferringTheRuntimeOfWindows_CanBeDoneAnyNumberOfTimes()
     {

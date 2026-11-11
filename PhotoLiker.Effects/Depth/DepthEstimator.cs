@@ -102,6 +102,12 @@ namespace PhotoLiker.Effects.Depth
                 options.IntraOpNumThreads = threads;
             options.AddSessionConfigEntry("session.intra_op.allow_spinning", "0"); // the program has other things to do with the processor
 
+            // No memory arena: this session is kept for as long as the program runs (the slideshow, the video and every later show use the same), and with the arena it keeps for good what its
+            // busiest moment used (several photos at a time, each of a shape of its own): 0.4 GB after one run, 0.55 to 1.3 GB with the runs of a slideshow. Without it the runs take their
+            // memory from Windows and give it back as they end: 0.15 GB open, 0.7 s a run instead of 0.6 s. (The memory pattern is off with it: it needs the arena.)
+            options.EnableCpuMemArena = false;
+            options.EnableMemoryPattern = false;
+
             _session = new InferenceSession(modelPath, options);
             _input = _session.InputMetadata.Keys.First();
             _guard = new RunGuard(_session.Dispose, nameof(DepthEstimator));

@@ -64,6 +64,7 @@ namespace PhotoLikerUI
 
             form.Controls.Add(tb);
             form.Controls.Add(btnCopy);
+            tb.Disposed += (_, _) => tb.Font.Dispose();
             form.ShowDialog();
 
             return value; // read-only: return original value unchanged

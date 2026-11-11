@@ -1279,7 +1279,9 @@ namespace PhotoLikerUI
             var heading = label.Name is null ? SearchStrings.FaceWhoIsThis
                 : label.Confirmed ? label.Name
                 : string.Format(SearchStrings.FaceLooksLikeFormat, label.Name);
-            menu.Items.Add(new ToolStripLabel(heading) { Font = new Font(Font, FontStyle.Bold) });
+            var headingFont = new Font(Font, FontStyle.Bold); // the menu does not own the font of its items: it goes with the menu
+            menu.Disposed += (_, _) => headingFont.Dispose();
+            menu.Items.Add(new ToolStripLabel(heading) { Font = headingFont });
             menu.Items.Add(new ToolStripSeparator());
 
             AddPeopleToFaceMenu(menu, label, search);

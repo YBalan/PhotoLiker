@@ -77,7 +77,11 @@ namespace PhotoLikerUI
         {
             var label = new Label { Text = text, AutoSize = true, MaximumSize = new Size(470, 0), Margin = new Padding(0, 0, 0, 6) };
             if (bold)
-                label.Font = new Font(label.Font, FontStyle.Bold);
+            {
+                var font = new Font(label.Font, FontStyle.Bold);
+                label.Font = font;
+                label.Disposed += (_, _) => font.Dispose();
+            }
             return label;
         }
     }
