@@ -28,7 +28,7 @@ public sealed class DateShortcutTests : IDisposable
 
     private static PropertyGrid GridOf(Form form) => Field<PropertyGrid>(form, "imageMetaPropertyGrid");
 
-    private static string StatusOf(Form form) => Field<ToolStripStatusLabel>(form, "toolStripStatusLabel1").Text;
+    private static string StatusOf(Form form) => Field<ToolStripStatusLabel>(form, "toolStripStatusLabel1").Text ?? string.Empty;
 
     private static string? RowText(Form form, string name) =>
         GridOf(form).SelectedObject is ICustomTypeDescriptor wrapper && wrapper.GetProperties().Cast<PropertyDescriptor>().FirstOrDefault(p => p.Name == name) is { } row

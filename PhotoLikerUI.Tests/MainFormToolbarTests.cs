@@ -10,7 +10,7 @@ public sealed class MainFormToolbarTests
 
     private static string StatusOf(Form form) =>
         typeof(MainForm).GetField("toolStripStatusLabel1", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .GetValue(form) is ToolStripStatusLabel label ? label.Text : string.Empty;
+            .GetValue(form) is ToolStripStatusLabel label ? label.Text ?? string.Empty : string.Empty;
 
     [Fact]
     public void TheMainWindow_Opens_WithTheColorizeButtonAfterFindDuplicates()
@@ -25,7 +25,7 @@ public sealed class MainFormToolbarTests
             var colorize = names.IndexOf("colorizeToolStripButton");
             Assert.True(duplicates >= 0 && colorize > duplicates, "after Find duplicates");
             Assert.All(names.Skip(duplicates + 1).Take(colorize - duplicates - 1), name => Assert.Contains("ideoSpeech", name));
-            Assert.DoesNotContain(names.Skip(duplicates).Take(colorize - duplicates), name => name.StartsWith("toolStripSeparator"));
+            Assert.DoesNotContain(names.Skip(duplicates).Take(colorize - duplicates), name => name is not null && name.StartsWith("toolStripSeparator"));
             var button = toolbar.Items["colorizeToolStripButton"]!;
             Assert.Equal(ColorizeStrings.ButtonText, button.Text);
             Assert.Equal(ColorizeStrings.ButtonTooltip, button.ToolTipText);
