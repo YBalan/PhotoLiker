@@ -739,6 +739,10 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   a moment; a held key counts once. They show the people the search found, so the folder has to be indexed and the people named: without an index the corner says
   `No people to show: index the folder and name the people first`. The rows **PeopleFaces** and **PeopleNames** of the grid are how the show begins, and how the keys left them when it ended
   is the setting from then on (as with the effect). The boxes follow the photo through every effect.
+- <kbd>C</kbd> turns the **captions** of the videos on and off (the row **ShowCaptions**, see [below](#videos-in-the-slideshow)): the video that plays gets or loses its caption at once, and so do
+  the videos after it. Like every key it pauses the show (<kbd>Space</kbd> continues; a paused video shows the words of the place it stands at). Each press writes `Captions: on` /
+  `Captions: off` in the top left corner for a moment; a held key counts once. A show without videos has nothing to caption: the corner says `No videos to caption: turn UseVideo on (and SupportVideo)`
+  and the setting is left as it is. How the key left the captions when the show ended is the setting from then on.
 - <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one **in the list, also in the random mode** (where only the timer picks
   at random), and give that photo its full time again (when the show is not paused). After the last photo comes the first, and before the first the last. A key that is held
   down keeps scrolling.
@@ -762,7 +766,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 | **MuteVideo** | `True`: the videos of the slideshow play without their sound. `False` (the default). |
 | **VideoPart** | How much of a video is played. `OnlyFoundTimeFrames` (the default): only the places a search found in it, 6 seconds around each (2 before, 4 after; places that touch are one stretch); a video of a folder, where nothing was searched for, has none and is played whole. `FullVideo`: the whole video. |
 | **LowerOtherAudio** | While a video plays with its sound, the sound of the other programs (a player in the background, a browser) is turned down by this many percent, and put back when the video ends: 50 by default, 0 leaves them as they are, 100 silences them. Not used when **MuteVideo** is `True`. |
-| **ShowCaptions** | `True`: what is said in a video is written over the picture as captions while it plays. `False` (the default). The words are the speech the index read (**VideoSpeech**, see [Videos](#videos)); a video whose speech was not read has no captions. See [below](#videos-in-the-slideshow). |
+| **ShowCaptions** | `True`: what is said in a video is written over the picture as captions while it plays. `False` (the default). The <kbd>C</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. The words are the speech the index read (**VideoSpeech**, see [Videos](#videos)); a video whose speech was not read has no captions. See [below](#videos-in-the-slideshow). |
 
 **How the effects stay smooth.** GDI+, which draws everything else in the program, needs 13 ms (plus 7 ms for the black around it) to draw a full HD photo that is only partly there and 23 to 43 ms
 to draw one that is magnified (four times that on a 4K monitor: 50 ms, and 85 to 190 ms): that is a slide show of slides. So while an effect lasts, the photos are put together by a small compositor of our
@@ -912,11 +916,22 @@ shown in a line under the player while the video plays. The text is the model's 
 status line says how many of the videos were found that way. In the viewer the places found in the speech have a speech bubble on the strip and a teal tick on the slider, while what the pictures found stays
 orange; hold the pointer over a moment of the strip, or a place on the slider, to read what is said there. The line under the player shows only while somebody is speaking, and only for videos whose speech
 has been read: **Update index** reads the rest, a folder after a folder (it goes by path, so a library is read in that order, and a video not read yet is found by its pictures only).
+
+**More than one model.** The text is kept for each speech model apart (`tiny`, `base`, `small`): changing **SpeechModel** never replaces what another model wrote. **Update index** with a new model reads
+every video again for it (the whole library, with the model downloaded first), and going back to the old model costs nothing, its text is still there. The words the viewer shows under the player
+and the slideshow writes as captions (**ShowCaptions**) are those of the model set in **SpeechModel** if it heard anything in the video, else of the model that heard the most (a tie goes to the smaller
+name). So a weaker model that was tried on a video does not take its captions over from the one that is set. The word search and the table (below) look at the set model only.
 (The words are searched in the text whichever search model is chosen; for a query in Russian or Ukrainian the pictures are best searched with the XLM-R model of the [photo search](#photo-search).)
 
 **The table of what is said.** The **Video speech** button of the toolbar (a video frame with a speech bubble; it is there while **SupportVideo** is on) opens a table of every video the catalog
-knows (all the videos below the folder, whether the list shows the subfolders or not): its path below the folder, its length, where it stands (**With speech**, **Nothing heard**, **Not read yet**,
-**No sound**, or a failure), the language it was read as, how many moments it has, and what is said in it. A click on a column title sorts by it; the **Find** box keeps the videos whose path or words
+knows (all the videos below the folder, whether the list shows the subfolders or not): its path below the folder, its length, **when it was recorded** (the date and time, as dates are written everywhere in
+the program), where it stands (**With speech**, **Nothing heard**, **Not read yet**, **No sound**, or a failure), the language it was read as, how many moments it has, and what is said in it. A click on a column
+title sorts by it (a second click turns the order round; **Recorded** goes oldest first, then newest first, and a video with no date that can be believed is left blank and is always last, so it is never
+mistaken for the oldest or the newest). The **Models** column lists the models that have heard the video, each with how many stretches of speech it found (`base (2), small (1) ✓`); the tick marks the
+model whose words are the captions of the video (see above). The **Model** box next to the status box chooses the model the table is *of*: its text, its status (what that model has not heard is
+"Not read yet") and its language; each model in the box is followed by how many videos it has speech for, and the tick does not move with it, it follows the **SpeechModel** setting. **Hear again...**
+uses the model that is chosen, and the question names it; so does the right-click item **Hear again with the model**, which lists the three models: it turns the table over to the one you pick and asks
+for the language, so one video (or a few) can be tried with another model without a run over the whole library, and only that model's text for them is replaced. The **Find** box keeps the videos whose path or words
 contain what you type, and the box next to it keeps one status. Select a video and under the table are its moments (the small pictures, a speech bubble on the ones where something is said; hold the
 pointer over a picture to read the words) and the words with their times; a click on a moment selects the words said there. A double click (or <kbd>Enter</kbd>) plays the video in the program Windows
 has for it, and the right-click menu has **Open**, **Show in File Explorer** and **Hear again in another language...**. That asks for the language (one of the 99 the model knows, or `auto`; the

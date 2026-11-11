@@ -463,9 +463,10 @@ namespace PhotoLikerUI
         private async Task LoadSpeechAsync(string file, VideoCatalog catalog, int generation)
         {
             IReadOnlyList<SpeechSegment> speech;
+            var speechModel = SpeechModel.Id; // the words of the model that is set, when it heard anything in this video
             try
             {
-                speech = await Task.Run(() => catalog.SpeechOf(file));
+                speech = await Task.Run(() => catalog.SpeechOf(file, speechModel));
             }
             catch (Exception)
             {

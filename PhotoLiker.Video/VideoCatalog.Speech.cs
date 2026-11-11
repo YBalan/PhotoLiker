@@ -8,6 +8,9 @@ namespace PhotoLiker.Video
     /// <summary>What was done for a video's speech with one model: the version of the way it is done, the language that was heard, how many segments, and why not if none.</summary>
     public sealed record TranscriptState(int Version, string Language, int Segments, string? Failure);
 
+    /// <summary>What one model heard in a video: how many stretches of speech it found (0: it listened and heard none) and the language it was read as.</summary>
+    public sealed record ModelHeard(string ModelId, int Segments, string Language);
+
     /// <summary>Where a video stands as far as its speech goes.</summary>
     public enum SpeechStatus
     {
@@ -31,11 +34,19 @@ namespace PhotoLiker.Video
     /// <param name="Language">The language the transcript was made for (what was asked, or what the model heard when it was left to hear it); empty if none.</param>
     /// <param name="Failure">Why the sound could not be heard, or the video read; null if nothing went wrong.</param>
     /// <param name="MomentTimesMs">The places (milliseconds) the pictures of the video were taken at: where its picture changes. Empty if it was not analyzed.</param>
+    /// <param name="HeardBy">Every model that has listened to the video without failing, whichever model the row's own status and text are of (null: not told).</param>
     public sealed record VideoSpeechRow(
-        VideoRecord Video, string FullPath, SpeechStatus Status, string Language, string? Failure, IReadOnlyList<SpeechSegment> Segments, IReadOnlyList<long> MomentTimesMs)
+        VideoRecord Video, string FullPath, SpeechStatus Status, string Language, string? Failure, IReadOnlyList<SpeechSegment> Segments, IReadOnlyList<long> MomentTimesMs,
+        IReadOnlyList<ModelHeard>? HeardBy = null)
     {
         /// <summary>What is said, as one line.</summary>
         public string Text => string.Join(' ', Segments.Select(s => s.Text.Trim()));
+
+        /// <summary>The models that have listened to the video (see <see cref="HeardBy"/>), as the catalog knows them.</summary>
+        public IReadOnlyList<ModelHeard> Models => HeardBy ?? [];
+
+        /// <summary>The model whose words are this video's captions when <paramref name="preferredModelId"/> is the one that is set, see <see cref="SpeechCaptions.ModelFor"/>.</summary>
+        public string? CaptionModel(string? preferredModelId) => SpeechCaptions.ModelFor(preferredModelId, Models);
     }
 
     public sealed partial class VideoCatalog
@@ -166,23 +177,43 @@ namespace PhotoLiker.Video
             }
         }
 
-        /// <summary>What is said in one video, for the line under the player: of the model that heard most in it, whichever it is. Empty if nothing is known.</summary>
-        public IReadOnlyList<SpeechSegment> SpeechOf(string fullPath)
+        /// <summary>
+        /// What is said in one video, for the line under the player and the captions of the slideshow: the words of <paramref name="preferredModelId"/> (the model that is set) if it heard
+        /// anything in the video, else of the model that heard the most (see <see cref="SpeechCaptions.ModelFor"/>). Empty if nothing is known.
+        /// </summary>
+        public IReadOnlyList<SpeechSegment> SpeechOf(string fullPath, string? preferredModelId = null)
         {
             lock (_gate)
             {
-                using var command = _db.CreateCommand();
-                command.CommandText = """
+                var path = RelativeOf(fullPath);
+                var heard = new List<ModelHeard>();
+                using (var command = _db.CreateCommand())
+                {
+                    command.CommandText = """
+                        SELECT t.model, t.segments, t.language FROM transcripts t JOIN videos v ON v.id = t.video_id
+                        WHERE v.path = $path AND t.failure IS NULL
+                        """;
+                    command.Parameters.AddWithValue("$path", path);
+                    using var reader = command.ExecuteReader();
+                    while (reader.Read())
+                        heard.Add(new ModelHeard(reader.GetString(0), reader.GetInt32(1), reader.GetString(2)));
+                }
+
+                if (SpeechCaptions.ModelFor(preferredModelId, heard) is not { } model)
+                    return [];
+
+                using var words = _db.CreateCommand();
+                words.CommandText = """
                     SELECT s.start_ms, s.end_ms, s.text FROM speech s JOIN videos v ON v.id = s.video_id
-                    WHERE v.path = $path AND s.model = (
-                        SELECT t.model FROM transcripts t WHERE t.video_id = v.id AND t.failure IS NULL ORDER BY t.segments DESC LIMIT 1)
+                    WHERE v.path = $path AND s.model = $m
                     ORDER BY s.start_ms
                     """;
-                command.Parameters.AddWithValue("$path", RelativeOf(fullPath));
-                using var reader = command.ExecuteReader();
+                words.Parameters.AddWithValue("$path", path);
+                words.Parameters.AddWithValue("$m", model);
+                using var rows = words.ExecuteReader();
                 var segments = new List<SpeechSegment>();
-                while (reader.Read())
-                    segments.Add(new SpeechSegment(reader.GetInt64(0), reader.GetInt64(1), reader.GetString(2)));
+                while (rows.Read())
+                    segments.Add(new SpeechSegment(rows.GetInt64(0), rows.GetInt64(1), rows.GetString(2)));
                 return segments;
             }
         }
@@ -232,6 +263,22 @@ namespace PhotoLiker.Video
                     }
                 }
 
+                // Every model that listened to each video, not only the one the table is of
+                var heardBy = new Dictionary<long, List<ModelHeard>>();
+                using (var command = _db.CreateCommand())
+                {
+                    command.CommandText = "SELECT video_id, model, segments, language FROM transcripts WHERE failure IS NULL AND version >= $version ORDER BY video_id, model";
+                    command.Parameters.AddWithValue("$version", TranscriptVersion);
+                    using var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        var id = reader.GetInt64(0);
+                        if (!heardBy.TryGetValue(id, out var list))
+                            heardBy[id] = list = [];
+                        list.Add(new ModelHeard(reader.GetString(1), reader.GetInt32(2), reader.GetString(3)));
+                    }
+                }
+
                 var rows = new List<VideoSpeechRow>(records.Count);
                 foreach (var record in records)
                 {
@@ -242,7 +289,8 @@ namespace PhotoLiker.Video
                     rows.Add(new VideoSpeechRow(
                         record, FullPathOf(record), status, language, failure,
                         status == SpeechStatus.Heard && segments.TryGetValue(record.Id, out var said) ? said : [],
-                        moments.TryGetValue(record.Id, out var times) ? times : []));
+                        moments.TryGetValue(record.Id, out var times) ? times : [],
+                        heardBy.TryGetValue(record.Id, out var models) ? models : []));
                 }
                 return rows;
             }

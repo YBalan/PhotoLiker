@@ -56,6 +56,42 @@ public class SpeechCaptionTests
         Assert.Equal("после", SpeechCaptions.At(segments, 4_500));
     }
 
+    // ── whose words are the captions ───────────────────────────────────
+
+    private static ModelHeard Heard(string model, int segments) => new(model, segments, "ru");
+
+    [Fact]
+    public void TheModelThatIsSet_IsTheOneWhoseWordsAreShown_EvenWhenAnotherHeardMore()
+    {
+        ModelHeard[] heard = [Heard("tiny", 30), Heard("base", 12), Heard("small", 3)];
+
+        Assert.Equal("small", SpeechCaptions.ModelFor("small", heard));
+        Assert.Equal("base", SpeechCaptions.ModelFor("base", heard));
+    }
+
+    [Fact]
+    public void WhenTheModelThatIsSetHeardNothing_TheOneThatHeardMostIsUsed()
+    {
+        Assert.Equal("base", SpeechCaptions.ModelFor("small", [Heard("tiny", 5), Heard("base", 9)]));
+        Assert.Equal("base", SpeechCaptions.ModelFor("small", [Heard("small", 0), Heard("tiny", 5), Heard("base", 9)])); // listened and heard none: it has no words to show
+        Assert.Equal("base", SpeechCaptions.ModelFor(null, [Heard("small", 3), Heard("base", 9)])); // nothing is set: the one that heard most
+    }
+
+    [Fact]
+    public void WhenTwoModelsHeardAsMuch_TheChoiceIsTheSameEveryTime()
+    {
+        Assert.Equal("base", SpeechCaptions.ModelFor("tiny", [Heard("small", 7), Heard("base", 7)]));
+        Assert.Equal("base", SpeechCaptions.ModelFor("tiny", [Heard("base", 7), Heard("small", 7)]));
+    }
+
+    [Fact]
+    public void WhenNoModelHeardAnything_ThereAreNoWords_AndTheIdIsMatchedWithoutCare()
+    {
+        Assert.Null(SpeechCaptions.ModelFor("small", []));
+        Assert.Null(SpeechCaptions.ModelFor("small", [Heard("small", 0), Heard("base", 0)]));
+        Assert.Equal("Small", SpeechCaptions.ModelFor("small", [Heard("Small", 2), Heard("base", 9)]));
+    }
+
     [Fact]
     public void WhereTwoSegmentsOverlap_TheEarlierOneWins()
     {

@@ -22,7 +22,8 @@ namespace PhotoLikerUI
         /// <param name="length">How long they are together, as text.</param>
         /// <param name="heardAs">What they were heard as, as text ("Russian (ru) 12, English (en) 3"); empty if nothing is known.</param>
         /// <param name="suggested">The code of the language to have selected.</param>
-        public SpeechLanguageDialog(string videos, string length, string heardAs, string suggested, bool dark)
+        /// <param name="modelTitle">The speech model they are heard with ("Whisper small"): only the text this model has for them is replaced.</param>
+        public SpeechLanguageDialog(string videos, string length, string heardAs, string suggested, string modelTitle, bool dark)
         {
             _dark = dark;
             Text = VideoSpeechStrings.LanguageTitle;
@@ -40,7 +41,7 @@ namespace PhotoLikerUI
                 _box.Items.Add(new Choice(language.Code, $"{language.Name} ({language.Code})"));
             _box.SelectedIndex = Math.Max(0, _box.Items.Cast<Choice>().ToList().FindIndex(c => string.Equals(c.Code, suggested, StringComparison.OrdinalIgnoreCase)));
 
-            var question = Wrapping(string.Format(VideoSpeechStrings.LanguageQuestionFormat, videos, length));
+            var question = Wrapping(string.Format(VideoSpeechStrings.LanguageQuestionFormat, videos, length, modelTitle));
             var hint = Wrapping(VideoSpeechStrings.LanguageHint);
             var label = new Label { Text = VideoSpeechStrings.LanguageLabel, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 0, 8, 0) };
 

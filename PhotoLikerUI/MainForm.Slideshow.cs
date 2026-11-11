@@ -125,6 +125,7 @@ namespace PhotoLikerUI
 
                 KeepTheEffectThatWasChosen(slideshow.Effect);
                 KeepThePeopleThatWereChosen(slideshow.ShowFaces, slideshow.ShowNames);
+                KeepTheCaptionsThatWereChosen(slideshow.ShowCaptions);
                 ShowWhereSlideshowEnded(slideshow.LastShownPath);
             }
         }
@@ -178,6 +179,16 @@ namespace PhotoLikerUI
             settingsPropertyGrid.Refresh();
         }
 
+        /// <summary>C turns the captions of the videos on and off while the slideshow runs; how it was left when it ended is the setting from then on. Null: the show had no videos, and the setting stays.</summary>
+        private void KeepTheCaptionsThatWereChosen(bool? captions)
+        {
+            if (captions is not { } shown || _currentConfig.SlideshowShowCaptions == shown)
+                return;
+
+            _currentConfig.SlideshowShowCaptions = shown;
+            settingsPropertyGrid.Refresh();
+        }
+
         /// <summary>
         /// How the videos of the show are played: the settings, and for each video what is known of it: the places the search that is shown found in it (none when the list is a
         /// folder), how long it is and when it was recorded (the catalog knows).
@@ -192,7 +203,8 @@ namespace PhotoLikerUI
             }
 
             var hits = _resultsActive ? _resultHits : new Dictionary<string, SearchHit>(StringComparer.Ordinal);
-            var captions = _currentConfig.SlideshowShowCaptions;
+            var speechModel = SpeechModel.Id;
+            var captions = _currentConfig.SlideshowShowCaptions; // the speech is given along with every video, also while this is off: the C key can turn captions on while a video plays
             return new SlideshowVideoOptions(
                 _currentConfig.SlideshowMuteVideo, _currentConfig.SlideshowVideoPart, _currentConfig.SlideshowLowerOtherAudio,
                 path =>
@@ -202,17 +214,17 @@ namespace PhotoLikerUI
                     long? length = record?.Info is { DurationSeconds: > 0 } info ? (long)(info.DurationSeconds * 1000) : null;
                     var taken = hit?.Taken ?? record?.Date.Taken;
                     // A search by date alone lists videos without having found anything inside them (its score is 0): those are played whole
-                    return new SlideshowVideoFacts(hit is { Score: > 0 } ? hit.Moments : null, length, taken, captions ? SpeechOfTheVideo(path) : null);
+                    return new SlideshowVideoFacts(hit is { Score: > 0 } ? hit.Moments : null, length, taken, SpeechOfTheVideo(path, speechModel));
                 },
                 ShowCaptions: captions);
         }
 
-        /// <summary>What is said in a video of the show, as the index read it (one query of the catalog when the video starts); none if it was not read, or the catalog is gone (another folder was opened).</summary>
-        private static IReadOnlyList<SpeechSegment>? SpeechOfTheVideo(string file)
+        /// <summary>What is said in a video of the show, as the index read it (one query of the catalog when the video starts), by the model that is set if it heard anything in it, else by the one that heard most; none if it was not read, or the catalog is gone (another folder was opened).</summary>
+        private static IReadOnlyList<SpeechSegment>? SpeechOfTheVideo(string file, string speechModelId)
         {
             try
             {
-                return VideoLibrary.Current?.SpeechOf(file);
+                return VideoLibrary.Current?.SpeechOf(file, speechModelId);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {

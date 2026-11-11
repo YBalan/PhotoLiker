@@ -49,8 +49,9 @@ public sealed class SlideshowCaptionTests : IDisposable
         }, seconds: 90);
     }
 
-    /// <summary>The caption that is on the screen, if one is (the date, the pause mark and the like are not there: the show has no watermark and is not paused).</summary>
-    private static Label? Caption(SlideshowScreen screen) => Ui.Controls<Label>(screen).FirstOrDefault(label => label.Visible && label.Text.Length > 0);
+    /// <summary>The caption that is on the screen, if one is (not the date, nor the "Paused" over a video that is held).</summary>
+    private static Label? Caption(SlideshowScreen screen) =>
+        Ui.Controls<Label>(screen).FirstOrDefault(label => label.Name == SlideshowScreen.CaptionName && label.Visible && label.Text.Length > 0);
 
     private static async Task<bool> NoCaptionFor(SlideshowScreen screen, int milliseconds)
     {
@@ -92,6 +93,100 @@ public sealed class SlideshowCaptionTests : IDisposable
         {
             Assert.True(await Ui.Until(() => screen.IsPlayingVideo, 20000));
             Assert.True(await NoCaptionFor(screen, 4500), "the first words were due after a second, and are not written");
+        });
+    }
+
+    /// <summary>A show of one video, run on the facts and the row given; the session is given to the body as well (the keys are its).</summary>
+    private void PlayWithKeys(IReadOnlyList<SpeechSegment>? speech, bool captions, Func<SlideshowSession, SlideshowScreen, Task> body)
+    {
+        using var _ = TestFfmpeg.Use();
+        var path = TestFfmpeg.MakeMp4(_folder.Path, "keys.mp4", "2003-01-31T15:06:00Z", seconds: 6);
+        var options = new SlideshowVideoOptions(
+            Mute: true, SlideshowVideoPart.FullVideo, LowerOtherAudio: 0,
+            FactsOf: _ => new SlideshowVideoFacts(Found: null, LengthMs: 6_000, Taken: null, speech), ShowCaptions: captions);
+        using var session = new SlideshowSession([new PhotoFile(path, string.Empty)], 0, SlideshowMode.OneByOne, 30, SlideshowWatermark.None, [ScreenBounds], 0, SlideshowEffect.None, options);
+
+        Ui.Run(() => new Form(), async host =>
+        {
+            host.BeginInvoke(() => session.Run(host));
+            Assert.True(await Ui.Until(() => session.Screens.Count == 1 && session.Screens[0].HasPhoto, 30000), "the video is on the screen");
+            try
+            {
+                await body(session, session.Screens[0]);
+            }
+            finally
+            {
+                session.HandleKey(Keys.Escape);
+            }
+        }, seconds: 90);
+    }
+
+    [Fact]
+    public void TheCKey_TurnsTheCaptionsOn_WhileTheVideoPlays_AndOffAgain()
+    {
+        if (!CanPlay) return;
+
+        SpeechSegment[] allTheTime = [new(300, 5_800, "said all the time")];
+        PlayWithKeys(allTheTime, captions: false, async (session, screen) =>
+        {
+            Assert.True(await Ui.Until(() => screen.IsPlayingVideo, 40000));
+            await Task.Delay(1500); // the words are being said, and are not written: the row is off
+            Assert.Null(Caption(screen));
+            Assert.False(session.ShowCaptions);
+
+            session.HandleKey(Keys.C);
+            Assert.True(session.ShowCaptions);
+            Assert.True(await Ui.Until(() => Caption(screen)?.Text == "said all the time", 5000), "the video that plays gets its caption (it is paused by the key, and says what is said where it stands)");
+
+            session.HandleKey(Keys.C);
+            Assert.False(session.ShowCaptions);
+            Assert.True(await Ui.Until(() => Caption(screen) is null, 5000), "and loses it");
+        });
+    }
+
+    [Fact]
+    public void TheCKey_TurnsTheCaptionsOff_WhileTheyAreOn_AndShiftCDoesTheSame()
+    {
+        if (!CanPlay) return;
+
+        SpeechSegment[] allTheTime = [new(300, 5_800, "said all the time")];
+        PlayWithKeys(allTheTime, captions: true, async (session, screen) =>
+        {
+            Assert.True(await Ui.Until(() => Caption(screen)?.Text == "said all the time", 40000));
+            Assert.True(session.ShowCaptions);
+
+            session.HandleKey(Keys.C | Keys.Shift); // Caps Lock
+            Assert.False(session.ShowCaptions);
+            Assert.True(await Ui.Until(() => Caption(screen) is null, 5000));
+            Assert.True(await NoCaptionFor(screen, 800), "they stay off");
+
+            session.HandleKey(Keys.C, repeat: true); // a held key counts once
+            Assert.False(session.ShowCaptions);
+        });
+    }
+
+    [Fact]
+    public void ForAShowWithoutVideos_TheCKeyChangesNothing_ShowCaptionsIsUnknown()
+    {
+        var path = _folder.File("photo.jpg");
+        using (var bitmap = new Bitmap(64, 48))
+            bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Jpeg);
+        using var session = new SlideshowSession([new PhotoFile(path, string.Empty)], 0, SlideshowMode.OneByOne, 30, SlideshowWatermark.None, [ScreenBounds], 0);
+
+        Ui.Run(() => new Form(), async host =>
+        {
+            host.BeginInvoke(() => session.Run(host));
+            Assert.True(await Ui.Until(() => session.Screens.Count == 1 && session.Screens[0].HasPhoto, 20000));
+            try
+            {
+                Assert.Null(session.ShowCaptions);
+                session.HandleKey(Keys.C);
+                Assert.Null(session.ShowCaptions); // there is nothing to caption: the setting is not touched by this show
+            }
+            finally
+            {
+                session.HandleKey(Keys.Escape);
+            }
         });
     }
 

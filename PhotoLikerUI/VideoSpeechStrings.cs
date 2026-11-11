@@ -28,6 +28,11 @@ namespace PhotoLikerUI
         public static string ColumnLength => T();
         public static string ColumnStatus => T();
         public static string ColumnLanguage => T();
+        public static string ColumnModels => T();
+        public static string ModelLabel => T();
+        public static string ModelTooltip => T();
+        public static string ModelChoiceFormat => T();
+        public static string MenuHearWith => T();
         public static string ColumnMoments => T();
         public static string ColumnSpeech => T();
         public static string ColumnRecorded => T();

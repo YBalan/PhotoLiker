@@ -48,7 +48,7 @@ internal static class TestFfmpeg
     }
 
     /// <summary>A one second MP4 (or one of <paramref name="seconds"/>) that says it was recorded at this time (UTC text, "2003-01-31T15:06:00Z"), made by ffmpeg; its file dates are as they come.</summary>
-    internal static string MakeMp4(string folder, string name, string recordedUtc, int seconds = 1)
+    internal static string MakeMp4(string folder, string name, string recordedUtc, int seconds = 1, bool sound = false)
     {
         var file = System.IO.Path.Combine(folder, name);
         var start = new ProcessStartInfo(Path!)
@@ -58,11 +58,14 @@ internal static class TestFfmpeg
             RedirectStandardError = true,
             RedirectStandardInput = true,
         };
-        foreach (var argument in new[]
+        var arguments = new List<string>
         {
             "-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=160x120:rate=10:duration=" + seconds,
-            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-metadata", "creation_time=" + recordedUtc, file,
-        })
+        };
+        if (sound)
+            arguments.AddRange(["-f", "lavfi", "-i", "sine=frequency=440:duration=" + seconds, "-c:a", "aac"]); // a sound track: the video can be heard
+        arguments.AddRange(["-c:v", "libx264", "-pix_fmt", "yuv420p", "-metadata", "creation_time=" + recordedUtc, file]);
+        foreach (var argument in arguments)
             start.ArgumentList.Add(argument);
 
         using var process = Process.Start(start)!;

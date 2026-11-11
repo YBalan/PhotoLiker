@@ -39,6 +39,7 @@ namespace PhotoLikerUI
         private const float CaptionHeightDivisor = 30f;   // the caption's letters are this much of the height of the screen
         private const float MinCaptionFontPixels = 16f;
         private const int CaptionMaxLines = 4;            // a longer caption is cut with "…"
+        internal const string CaptionName = "SlideshowCaption"; // the name of the label that writes it (the tests look for it)
 
         private readonly SlideshowSession _session;
         private readonly SlideshowWatermark _watermark;
@@ -65,6 +66,7 @@ namespace PhotoLikerUI
         private MediaPlayer? _videoPlayer;
         private LibVLC? _videoEngine;                      // the one the player was made with (it belongs to VideoPlayerPanel and is not disposed here)
         private Label? _videoMark;                         // the date of the video, in the corner, as a photo has it
+        private bool _captionsOn;                          // the words said in a video are written over it (the C key)
         private Label? _captionMark;                       // what is said in the video just now, at the bottom (see ShowVideo); hidden when nothing is said or captions are off
         private Font? _captionFont;
         private Label? _pausedMark;                        // "Paused" over the video (the window can not draw over a player, which is a window of its own)
@@ -397,7 +399,7 @@ namespace PhotoLikerUI
             _captionFont = new Font(_watermarkFont.FontFamily, Math.Max(MinCaptionFontPixels, Bounds.Height / CaptionHeightDivisor), FontStyle.Bold, GraphicsUnit.Pixel);
             _captionMark = new Label
             {
-                AutoSize = false, BackColor = Color.Black, ForeColor = Color.White, Font = _captionFont, Visible = false, UseMnemonic = false,
+                Name = CaptionName, AutoSize = false, BackColor = Color.Black, ForeColor = Color.White, Font = _captionFont, Visible = false, UseMnemonic = false,
                 TextAlign = ContentAlignment.MiddleCenter, AutoEllipsis = true,
                 Padding = new Padding(_captionFont.Height / 3, _captionFont.Height / 8, _captionFont.Height / 3, _captionFont.Height / 8),
             };
@@ -496,6 +498,42 @@ namespace PhotoLikerUI
             _indexingMark?.BringToFront();
         }
 
+        /// <summary>
+        /// Whether the words said in a video are written over it (the C key, and the setting the show began with). Turned off, the caption that is there goes; turned on, the words
+        /// of the place the video is at are written at once (a paused video does not move on to bring them).
+        /// </summary>
+        internal void SetCaptionsShown(bool shown)
+        {
+            if (_captionsOn == shown)
+                return;
+
+            _captionsOn = shown;
+            if (_video is { } run && _videoPlayer is { } player)
+                UpdateCaption(run, player, player.State);
+            else
+                ShowCaption(null);
+        }
+
+        /// <summary>
+        /// Writes the caption of the place the video is at, or takes it away: captions that are off, a video with no speech read, and the moments after a stretch has just begun (the player
+        /// still says the time of the one before, see <see cref="VideoSettleMs"/>) have none. A caption that is the same is left as it is.
+        /// </summary>
+        private void UpdateCaption(VideoRun run, MediaPlayer player, VLCState state)
+        {
+            if (!_captionsOn || run.Speech is null)
+            {
+                ShowCaption(null);
+                return;
+            }
+
+            if (run.StartedAt == 0)
+                return; // the first stretch has not been started yet (the engine is starting): the player is the last video's
+
+            var sinceStart = (Stopwatch.GetTimestamp() - run.StartedAt) * 1000.0 / Stopwatch.Frequency;
+            if (sinceStart > VideoSettleMs && state is VLCState.Playing or VLCState.Paused)
+                ShowCaption(PhotoLiker.Video.SpeechCaptions.At(run.Speech, player.Time));
+        }
+
         private void StartSegment(LibVLC engine)
         {
             if (_video is not { } run)
@@ -536,6 +574,7 @@ namespace PhotoLikerUI
             }
 
             var state = player.State;
+            UpdateCaption(run, player, state);
 
             // A paused show waits: the video is held (one that began while it is paused is held as soon as it plays), and nothing is judged over
             if (_paused)
@@ -553,9 +592,6 @@ namespace PhotoLikerUI
             var sinceStart = (Stopwatch.GetTimestamp() - run.StartedAt) * 1000.0 / Stopwatch.Frequency;
             var segment = run.Segments[run.Index];
             var settled = sinceStart > VideoSettleMs;
-            if (run.Speech is not null && settled && state == VLCState.Playing)
-                ShowCaption(PhotoLiker.Video.SpeechCaptions.At(run.Speech, player.Time));
-
             var over = state == VLCState.Error
                 || (settled && state == VLCState.Ended)
                 || (settled && state == VLCState.Stopped && run.SawPlaying)
