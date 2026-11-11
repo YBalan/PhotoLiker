@@ -136,9 +136,9 @@ public class PhotoBrowserServiceTests : IDisposable
         Directory.CreateDirectory(sub);
         File.WriteAllBytes(Path.Combine(sub, "deep.jpg"), [0xFF, 0xD8, 0xFF, 0xD9]);
 
-        var svc = CreateService();
-        svc.Settings.GoThroughSubFolders = false;
+        new Settings { CurrentFolder = _tempDir, GoThroughSubFolders = false }.Save(_tempDir); // it is on unless the folder says it is off
 
+        var svc = CreateService();
         svc.OpenFolder(_tempDir);
 
         Assert.Equal(3, svc.Settings.Files.Count);

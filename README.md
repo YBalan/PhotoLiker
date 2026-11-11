@@ -412,7 +412,7 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   - By name: as Explorer lists them, `IMG_2` before `IMG_10`.
   - Random: a new order for each video.
   - As listed.
-- **Resolution**, **Video codec** (H.264 / H.265) and **Quality (CRF)**.
+- **Resolution**, **Video codec** (H.264 / H.265: a folder that has no saved settings starts with **H.265**, which makes a smaller file that not every player reads; after that the codec of the last video of the folder is put back) and **Quality (CRF)**: lower is better and bigger, and the same look needs a higher number for H.265, so the window starts at **28** for H.265 and **23** for H.264 and moves the number when the codec is changed, as long as it is still the usual one of the codec it was on; a number you set yourself stays.
 - **Frame time range** gives the time of the first photo (*Start*) and of the last (*End*), the others in steps between them.
   **Use random** instead gives each photo a time of its own, picked at random between the two (it does not matter which of them is the larger).
   The times are drawn in the dialog, when you tick the box and whenever you pick another folder in *Photos from* (tick it off and on to
@@ -461,7 +461,7 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   - **Audio: Repeat** (the default) plays an audio that is shorter than the photos over and over until they end.
   - **Audio: Once** plays it once and the rest of the video is silent (the video is as long as the photos either way).
   - An audio whose length is not known (`Length: unknown`) is not repeated for.
-- **Motion: Depth parallax** (not ticked to begin with) makes every photo move a little while it is shown, as the Parallax effect does in the slideshow (see
+- **Motion: Depth parallax** (not ticked to begin with, and not kept: every window starts with it off, whatever the last video was made with) makes every photo move a little while it is shown, as the Parallax effect does in the slideshow (see
   [Depth parallax](#depth-parallax)): the near parts of a photo move against the far ones, and the cover stays still. Ticking it asks to download the depth model
   (99 MB, once) if it is not on this computer. The video is then drawn frame by frame here and given to ffmpeg (25 frames for every second of the video), instead of being cut
   from the photos by ffmpeg, so it takes about as long as the video plays and half a second more for every photo; everything else (the times, the cover, the audio and how it
@@ -536,7 +536,7 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 
 | Setting | Meaning |
 |---|---|
-| **GoThroughSubFolders** | Also list the photos in the subfolders. The Liked folder itself is left out. |
+| **GoThroughSubFolders** | Also list the photos in the subfolders (on by default). The Liked folder itself is left out. |
 | **Extensions** | The file extensions that count as photos, separated by `;` or `,`, each with its dot: `.jpg; .png`. Case does not matter. |
 | **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, `Random` in a random order, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
 
@@ -544,7 +544,7 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 
 | Setting | Meaning |
 |---|---|
-| **SupportVideo** | List the videos of the folder with its photos (off by default). See [Videos](#videos). |
+| **SupportVideo** | List the videos of the folder with its photos (on by default). See [Videos](#videos). |
 | **VideoExtensions** | The file extensions that count as videos when **SupportVideo** is on: `.mp4; .mov; .avi; .mkv ...` (the default list has the usual ones). |
 | **VideoSpeech** | Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See [Videos](#videos). |
 | **SpeechModel** | `tiny`, `base` or `small` (the one to use). |
@@ -857,8 +857,8 @@ a slideshow of what a search found in them). The photos go on exactly as they di
 
 ## Videos
 
-A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. Turn **SupportVideo** on in the
-[settings grid](#settings) (it is off by default, so a folder looks as it always did until you do) and the videos of the folder are listed with its photos,
+A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. **SupportVideo** is on
+in the [settings grid](#settings) by default (turn it off to have a folder look as it did before videos), and the videos of the folder are listed with its photos,
 in the same order, also in the subfolders if **GoThroughSubFolders** is on. Which files are videos is the **VideoExtensions** row; the player is VLC's, so it plays
 nearly every format there is. A folder that holds only videos works the same: open it as a folder of its own. Changing either row lists the folder again at once.
 
@@ -1223,7 +1223,7 @@ The **Colorize** button with no photo shown, or **Many photos...** on the bar, o
   ones at 4 to 16, so they were all found; the photos with colours came out at 2.2 to 15 for the spread, and the two lowest (a rocket and a muted sunset landscape, 2.2 and 2.5) would have been taken for black and white with a limit of 3, which is why it is 1.5. It is a rule of thumb, tested on those test photos and **not on real old scans**: look at the list before pressing Colorize, and
   use *This photo* for one that is left out.
 - **Strength of the colours** (20 to 200%, 100 to begin with) multiplies the colours the model gives: less is paler, more is stronger. **Warmth** (-100 to 100, 0 to begin with) moves them
-  towards blue or towards yellow and red, as on the bar; both start with the values the bar has.
+  towards blue or towards yellow and red, as on the bar; both start with the values the bar has. What you set here is kept when the window is closed (also when nothing was colorized), together with the bar's values, in `global-config.json`: the bar over the next photo and the window the next time start from it.
 - **The model** is DDColor tiny (Apache 2.0; "DDColor: Towards Photo-Realistic Image Colorization via Dual Decoders", ICCV 2023, by the DAMO Academy of Alibaba), exported to ONNX with float16 weights
   by the `edgetools` repository on Hugging Face from the authors' `ddcolor_paper_tiny` checkpoint. Its file (135 MB) is checked against its SHA-256 and kept in
   `%LocalAppData%\PhotoLiker\models\ddcolor-tiny`; it is downloaded after asking, when **Colorize** is first pressed. The model sees the photo as a grey picture of 512 × 512 and says what colour
@@ -1249,7 +1249,7 @@ progress bar registers itself with one line, and the main window asks them a few
 
 ## Dark and light theme
 
-The theme button of the toolbar switches between the two. The choice is stored in the settings file of the folder.
+The theme button of the toolbar switches between the two. A folder that is opened for the first time is **dark**; the choice is stored in the settings file of the folder.
 
 ![The light theme](docs/images/11-light-theme.png)
 

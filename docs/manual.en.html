@@ -433,7 +433,7 @@ description: select it and the pane under the table says what it is for.</p>
 <table class="wide-first">
   <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
   <tbody>
-    <tr><td><strong>GoThroughSubFolders</strong></td><td>Also list the photos in the subfolders. The Liked folder itself is left out.</td></tr>
+    <tr><td><strong>GoThroughSubFolders</strong></td><td>Also list the photos in the subfolders (on by default). The Liked folder itself is left out.</td></tr>
     <tr><td><strong>Extensions</strong></td><td>The kinds of file that count as photos, separated by <code>;</code> or <code>,</code>, each with its dot: <code>.jpg; .png</code>.</td></tr>
     <tr><td><strong>SortOrder</strong></td><td>The order of the photos, see <a href="#order">Order of the photos</a>.</td></tr>
   </tbody>
@@ -446,7 +446,7 @@ description: select it and the pane under the table says what it is for.</p>
 <table class="wide-first">
   <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
   <tbody>
-    <tr><td><strong>SupportVideo</strong></td><td>List the videos of the folder with its photos (off by default). See <a href="#videos">Videos in the folder</a>.</td></tr>
+    <tr><td><strong>SupportVideo</strong></td><td>List the videos of the folder with its photos (on by default). See <a href="#videos">Videos in the folder</a>.</td></tr>
     <tr><td><strong>VideoExtensions</strong></td><td>The kinds of file that count as videos when <strong>SupportVideo</strong> is on: <code>.mp4; .mov; .avi; .mkv</code> ... (the usual ones are listed already).</td></tr>
     <tr><td><strong>VideoSpeech</strong></td><td>Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See <a href="#videos">Videos in the folder</a>.</td></tr>
     <tr><td><strong>SpeechModel</strong></td><td><code>tiny</code>, <code>base</code> or <code>small</code> (the one to use).</td></tr>
@@ -652,7 +652,7 @@ download the model (135 MB, once).</p>
   <li><strong>This photo</strong> colorizes the photo that is shown, whatever it is like. <strong>The black and white photos of the list</strong> looks at every photo of the list
     (the folder, or the search results) and lists the ones that have no colour, or only one tint (a brown print, a blue one), all ticked: untick the ones that should stay as they are. A photo
     that has a copy already is listed but not ticked.</li>
-  <li><strong>Strength of the colours</strong>: 100 is as the model gives them, less is paler, more is stronger. <strong>Warmth</strong> moves them towards blue or towards yellow and red. Both start as they are on the bar.</li>
+  <li><strong>Strength of the colours</strong>: 100 is as the model gives them, less is paler, more is stronger. <strong>Warmth</strong> moves them towards blue or towards yellow and red. Both start as they are on the bar, and what you set here is kept when the window is closed: the bar and the next window start from it.</li>
   <li><strong>Colorize</strong> starts, <strong>Stop</strong> ends after the photo that is being done. A photo takes about two seconds. When you close the window the folder is listed again, and the copies are in it.</li>
 </ul>
 <div class="note"><p>The colours are the model's guess from what is in the picture: skin, sky, grass and wood come out as they usually are, a dress can be any colour.</p></div>
@@ -708,12 +708,12 @@ a title picture and with a song under it. Nothing else has to be installed.</p>
   </li>
   <li>
     <strong>Depth parallax (optional).</strong> Tick <strong>Depth parallax</strong> and every photo moves a little while it is shown, as in the <a href="#parallax">slideshow effect</a>; the cover
-    stays still. The first time, PhotoLiker asks to download the model that works out the depth (99 MB, once). The video is then drawn frame by frame, so it takes about as long to make as it
+    stays still. It is not kept: every window starts with it unticked. The first time, PhotoLiker asks to download the model that works out the depth (99 MB, once). The video is then drawn frame by frame, so it takes about as long to make as it
     plays, and half a second more for every photo. Everything else works as before.
   </li>
   <li>
     <strong>Size and quality.</strong> <strong>Resolution</strong> is the size of the video (1920 × 1080 is Full HD; <strong>Use first image</strong> takes the size of the first photo).
-    <strong>Video codec</strong>: <code>libx264</code> plays everywhere, <code>libx265</code> makes smaller files that not every player reads. <strong>Quality (CRF)</strong>: lower is better and bigger; 23 is a good start.
+    <strong>Video codec</strong>: <code>libx264</code> plays everywhere, <code>libx265</code> makes smaller files that not every player reads, and is what the window starts with in a folder that has no saved settings (after that it puts back the codec of the last video). <strong>Quality (CRF)</strong>: lower is better and bigger; the usual number is 28 for <code>libx265</code> and 23 for <code>libx264</code> (the same look), and the window moves it when you change the codec, unless you have set it yourself.
   </li>
   <li>
     <strong>Click Generate.</strong> The dialog grows to show a progress bar and the log. Photos that have gone from the disk since the folder was listed are left out, and
@@ -733,8 +733,8 @@ PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe<
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="videos">17. Videos in the folder</h2>
 
-<p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. Turn <strong>SupportVideo</strong> on in the settings
-table (it is off by default, so a folder looks as it always did until you do) and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
+<p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. <strong>SupportVideo</strong> is on in the settings
+table by default (turn it off to have a folder look as it did before videos), and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
 <strong>GoThroughSubFolders</strong> is on. Which files are videos is the <strong>VideoExtensions</strong> row; the player plays nearly every format there is. A folder that holds only
 videos works the same: open it as a folder of its own. Changing either row lists the folder again at once.</p>
 
@@ -831,7 +831,7 @@ the status bar, and it stays on your computer, in <code>%LocalAppData%\PhotoLike
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="theme">18. Dark and light theme</h2>
 
-<p>The theme button of the toolbar switches between the two. The choice is remembered for each folder. (The language of the program is chosen in the settings table,
+<p>The theme button of the toolbar switches between the two. A folder that is opened for the first time is dark; the choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
 
 <figure>

@@ -917,6 +917,7 @@ VideoStrings.LabelVideoLength = Тривалість відео:
 VideoStrings.LabelCodec = Відеокодек:
 VideoStrings.LabelQuality = Якість (CRF):
 VideoStrings.QualityHint = Менший CRF = краща якість і більший файл.
+VideoStrings.QualityTooltip = Звичайна якість — 23 для H.264 і 28 для H.265 (однаковий вигляд: для H.265 число більше). Коли змінюється кодек, якість переходить до звичайної для нього, якщо ви не задали її самі.
 VideoStrings.GenerateButton = Створити
 VideoStrings.PlayButton = Відтворити
 VideoStrings.CancelButton = Скасувати

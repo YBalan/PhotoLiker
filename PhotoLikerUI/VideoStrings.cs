@@ -44,6 +44,7 @@ namespace PhotoLikerUI
         public static string LabelCodec => T();
         public static string LabelQuality => T();
         public static string QualityHint => T();
+        public static string QualityTooltip => T();
         public static string GenerateButton => T();
         public static string PlayButton => T();
         public static string CancelButton => T();

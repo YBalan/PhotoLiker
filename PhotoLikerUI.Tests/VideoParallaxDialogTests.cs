@@ -41,6 +41,11 @@ public sealed class VideoParallaxDialogTests : IDisposable
 
     private static CheckBox ParallaxBox(Form dialog) => Ui.Controls<CheckBox>(dialog).Single(box => box.Text == VideoStrings.DepthParallax);
 
+    private static ComboBox CodecBox(Form dialog) => Ui.Controls<ComboBox>(dialog).Single(box => box.Items.Contains("libx265"));
+
+    /// <summary>The quality box (CRF, 0 to 51): a value that a saved file gave it shows that the saved settings have been put in.</summary>
+    private static NumericUpDown CrfBox(Form dialog) => Ui.Controls<NumericUpDown>(dialog).Single(box => box.Maximum == 51);
+
     private static async Task WaitUntilReady(Form dialog)
     {
         var generate = Ui.ButtonStartingWith(dialog, VideoStrings.GenerateButton);
@@ -132,23 +137,23 @@ public sealed class VideoParallaxDialogTests : IDisposable
     }
 
     [Fact]
-    public void WhatTheSavedSettingsPutIn_IsNotAskedAbout()
+    public void AParallaxThatAnOldFileSaved_IsNotPutBack_TheBoxAlwaysStartsUnticked_AndTheModelIsNotAskedFor()
     {
         MakePhotos();
-        File.WriteAllText(_liked.File("photo-liker-video.json"), "{ \"DepthParallax\": true }");
+        File.WriteAllText(_liked.File("photo-liker-video.json"), "{ \"DepthParallax\": true, \"Crf\": 31 }");
         var asked = 0;
 
         Ui.Run(() => Create([], () => { asked++; return Task.FromResult(true); }), async dialog =>
         {
-            var box = ParallaxBox(dialog);
-            Assert.True(await Ui.Until(() => box.Checked, 20000), "the box is put back as it was");
+            Assert.True(await Ui.Until(() => CrfBox(dialog).Value == 31, 20000), "the rest of the saved settings is put in");
             await Task.Delay(200);
+            Assert.False(ParallaxBox(dialog).Checked);
             Assert.Equal(0, asked); // the model is asked for when a video is made, or when the person ticks it, not when the window opens
         });
     }
 
     [Fact]
-    public void AVideoWithTheBoxTicked_IsHandedTheOriginalPhotos_AndTheChoiceIsKeptForNextTime()
+    public void AVideoWithTheBoxTicked_IsHandedTheOriginalPhotos_AndTheChoiceIsNotKeptForNextTime()
     {
         MakePhotos();
         var made = new List<Captured>();
@@ -156,6 +161,7 @@ public sealed class VideoParallaxDialogTests : IDisposable
         Ui.Run(() => Create(made, () => Task.FromResult(true)), async dialog =>
         {
             await WaitUntilReady(dialog);
+            CrfBox(dialog).Value = 31; // something that is kept, to know when the next window has what was saved
             Click(ParallaxBox(dialog));
             Ui.ButtonStartingWith(dialog, VideoStrings.GenerateButton).PerformClick();
             Assert.True(await Ui.Until(() => made.Count == 1, 30000), "the video is made");
@@ -165,12 +171,115 @@ public sealed class VideoParallaxDialogTests : IDisposable
         Assert.True(options.DepthParallax);
         Assert.Equal(3, sequence.Files.Count);
         Assert.All(sequence.Files, file => Assert.Equal(_liked.Path, Path.GetDirectoryName(file))); // the photos themselves: nothing was copied for ffmpeg
-        Assert.Contains("\"DepthParallax\": true", File.ReadAllText(_liked.File("photo-liker-video.json")));
+        var saved = File.ReadAllText(_liked.File("photo-liker-video.json"));
+        Assert.Contains("\"Crf\": 31", saved);
+        Assert.DoesNotContain("DepthParallax", saved);
 
-        // and the next window of the folder has it ticked
+        // and the next window of the folder has what was kept, but not this: it starts unticked
         Ui.Run(() => Create([], () => Task.FromResult(true)), async dialog =>
         {
-            Assert.True(await Ui.Until(() => ParallaxBox(dialog).Checked, 20000));
+            Assert.True(await Ui.Until(() => CrfBox(dialog).Value == 31, 20000), "the saved settings are put in");
+            await Task.Delay(200);
+            Assert.False(ParallaxBox(dialog).Checked);
+        });
+    }
+
+    // ── the codec ──────────────────────────────────────────────────────
+
+    [Fact]
+    public void TheCodec_IsLibx265_AtFirst_AndIsWhatAVideoIsMadeWith()
+    {
+        MakePhotos();
+        var made = new List<Captured>();
+
+        Ui.Run(() => Create(made, ensure: null), async dialog =>
+        {
+            Assert.Equal("libx265", CodecBox(dialog).SelectedItem);
+            Assert.Equal(["libx264", "libx265"], CodecBox(dialog).Items.Cast<string>().ToArray()); // the other one is still there
+            await WaitUntilReady(dialog);
+            Ui.ButtonStartingWith(dialog, VideoStrings.GenerateButton).PerformClick();
+            Assert.True(await Ui.Until(() => made.Count == 1, 30000));
+        });
+
+        Assert.Equal("libx265", made.Single().Options.VideoCodec);
+    }
+
+    [Fact]
+    public void TheQuality_StartsAtTheUsualOneOfTheCodec_AndFollowsTheCodecUntilItIsSetByHand()
+    {
+        MakePhotos();
+        var made = new List<Captured>();
+
+        Ui.Run(() => Create(made, ensure: null), async dialog =>
+        {
+            var codec = CodecBox(dialog);
+            var crf = CrfBox(dialog);
+            Assert.Equal(28m, crf.Value); // libx265 at first
+
+            codec.SelectedItem = "libx264";
+            Assert.Equal(23m, crf.Value);
+            codec.SelectedItem = "libx265";
+            Assert.Equal(28m, crf.Value);
+
+            crf.Value = 20; // set by hand: it stays when the codec changes
+            codec.SelectedItem = "libx264";
+            Assert.Equal(20m, crf.Value);
+            codec.SelectedItem = "libx265";
+            Assert.Equal(20m, crf.Value);
+
+            crf.Value = 28; // and a hand that sets it to the usual one of the codec it is on leaves it following
+            codec.SelectedItem = "libx264";
+            Assert.Equal(23m, crf.Value);
+
+            await WaitUntilReady(dialog);
+            Ui.ButtonStartingWith(dialog, VideoStrings.GenerateButton).PerformClick();
+            Assert.True(await Ui.Until(() => made.Count == 1, 30000));
+        });
+
+        Assert.Equal(("libx264", 23), (made.Single().Options.VideoCodec, made.Single().Options.Crf));
+    }
+
+    [Fact]
+    public void WhatAFolderSaved_IsPutBack_AndAQualityThatWasNeverSet_FollowsTheSavedCodec()
+    {
+        MakePhotos();
+
+        // A codec with no quality: the quality is the usual one of that codec
+        File.WriteAllText(_liked.File("photo-liker-video.json"), "{ \"Codec\": \"libx264\" }");
+        Ui.Run(() => Create([], ensure: null), async dialog =>
+        {
+            Assert.True(await Ui.Until(() => (string?)CodecBox(dialog).SelectedItem == "libx264", 20000));
+            Assert.Equal(23m, CrfBox(dialog).Value);
+        });
+
+        // Both saved: both come back as they were, also a quality that is not the usual one of the codec
+        File.WriteAllText(_liked.File("photo-liker-video.json"), "{ \"Codec\": \"libx265\", \"Crf\": 23 }");
+        Ui.Run(() => Create([], ensure: null), async dialog =>
+        {
+            Assert.True(await Ui.Until(() => CrfBox(dialog).Value == 23, 20000), "the saved quality");
+            Assert.Equal("libx265", CodecBox(dialog).SelectedItem);
+        });
+
+        // Saved as a quality that is the usual one of the saved codec (every video of the old version): it still follows, when the codec is changed in this window
+        File.WriteAllText(_liked.File("photo-liker-video.json"), "{ \"Codec\": \"libx264\", \"Crf\": 23 }");
+        Ui.Run(() => Create([], ensure: null), async dialog =>
+        {
+            Assert.True(await Ui.Until(() => (string?)CodecBox(dialog).SelectedItem == "libx264", 20000));
+            Assert.Equal(23m, CrfBox(dialog).Value);
+            CodecBox(dialog).SelectedItem = "libx265";
+            Assert.Equal(28m, CrfBox(dialog).Value);
+        });
+    }
+
+    [Fact]
+    public void TheCodecAFolderSaved_IsPutBack_ItIsOnlyTheFirstValue_ThatIsLibx265()
+    {
+        MakePhotos();
+        File.WriteAllText(_liked.File("photo-liker-video.json"), "{ \"Codec\": \"libx264\" }");
+
+        Ui.Run(() => Create([], ensure: null), async dialog =>
+        {
+            Assert.True(await Ui.Until(() => (string?)CodecBox(dialog).SelectedItem == "libx264", 20000), "the codec of the last video of the folder");
         });
     }
 

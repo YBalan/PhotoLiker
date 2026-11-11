@@ -931,6 +931,7 @@ VideoStrings.LabelVideoLength = Video length:
 VideoStrings.LabelCodec = Video codec:
 VideoStrings.LabelQuality = Quality (CRF):
 VideoStrings.QualityHint = Lower CRF = better quality and larger file size.
+VideoStrings.QualityTooltip = The usual quality is 23 for H.264 and 28 for H.265 (the same look: H.265 needs a higher number). The quality goes to the usual one of the codec when the codec is changed, unless you have set it yourself.
 VideoStrings.GenerateButton = Generate
 VideoStrings.PlayButton = Play
 VideoStrings.CancelButton = Cancel
