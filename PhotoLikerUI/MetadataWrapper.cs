@@ -1,10 +1,11 @@
 namespace PhotoLikerUI
 {
     using System.ComponentModel;
+    using PhotoLiker.Video;
 
     /// <summary>
     /// Shows the metadata of a photo in a PropertyGrid: what <see cref="MetadataViewModel"/> holds, one row per entry. The rows are read-only,
-    /// except the dates (see <see cref="DateRowEdit"/>) when the photo can be saved again: a new date is handed to <c>editDate</c>.
+    /// except the dates (see <see cref="DateRowEdit"/>) when the photo can be saved again, and the "Recorded" row of a video: a new date is handed to <c>editDate</c>.
     /// </summary>
     public class MetadataWrapper : ICustomTypeDescriptor
     {
@@ -28,7 +29,7 @@ namespace PhotoLikerUI
                 .Select(e =>
                 {
                     var category = ExifTagMap.GetCategory(e);
-                    var editable = _editDate is not null && DateRowEdit.IsEditable(e.TagId);
+                    var editable = _editDate is not null && (DateRowEdit.IsEditable(e.TagId) || e.TagId == VideoMetadata.RecordedTagId);
                     return new MetadataPropertyDescriptor(
                         e.Name, e.Value, category.Name, category.IsBrowsable, description: MetadataDescriptions.For(e),
                         extraAttributes: editable ? [new EditorAttribute(typeof(DateValueEditor), typeof(System.Drawing.Design.UITypeEditor))] : null,

@@ -339,6 +339,9 @@ because nobody touched the keyboard. Windows gets this back when the show ends.<
 They are two separate switches. Each press says <em>Faces: on</em>, <em>Names: off</em> and so on in the top left corner, and the show is paused, as with any other key. They need a folder that is indexed
 for search, with the people named. How they were left when the show ended is what the rows <strong>PeopleFaces</strong> and <strong>PeopleNames</strong> show afterwards.</p>
 
+<p><kbd>C</kbd> turns the <strong>captions</strong> of the videos on and off (the row <strong>ShowCaptions</strong>): the video that plays gets or loses its caption at once. Each press says <em>Captions: on</em> or
+<em>Captions: off</em> in the top left corner, and the show is paused, as with any other key. A show without videos says there is nothing to caption. How the key left them when the show ended is what the row shows afterwards.</p>
+
 <ul>
   <li><kbd>→</kbd> / <kbd>←</kbd> show the photo next to the one on the screen, <strong>also in the random mode</strong> (there only the timer
   picks at random), and that photo gets its full time again. After the last photo comes the first, and before the first the last.</li>
@@ -366,6 +369,7 @@ for search, with the people named. How they were left when the show ended is wha
     <tr><td><strong>MuteVideo</strong></td><td><code>True</code>: the videos play without their sound.</td></tr>
     <tr><td><strong>VideoPart</strong></td><td><code>OnlyFoundTimeFrames</code> (the default): only the places a search found in a video, 6 seconds around each (2 before, 4 after); a video of a folder, where nothing was searched for, is played whole. <code>FullVideo</code>: the whole video.</td></tr>
     <tr><td><strong>LowerOtherAudio</strong></td><td>While a video plays with its sound, the sound of the other programs is turned down by this many percent and put back after: 50 by default, 0 leaves it alone, 100 silences it. Not used with <strong>MuteVideo</strong>.</td></tr>
+    <tr><td><strong>ShowCaptions</strong></td><td><code>True</code>: what is said in a video (the speech the index read, see <strong>VideoSpeech</strong>) is written over the picture as captions while it plays, also with <strong>MuteVideo</strong>. <code>False</code> (the default). A video whose speech was not read has none. The <kbd>C</kbd> key turns it on and off while the show runs.</td></tr>
   </tbody>
 </table>
 </div>
@@ -381,7 +385,8 @@ It takes about half a second of work for each photo, done ahead of time, so the 
 <p>With <strong>UseVideo</strong> on, the videos of the list (the folder, or the results of a search) are part of the show. The photos go on as before and a video is played <strong>in between</strong>,
 on the screen PhotoLiker is on <strong>only</strong>: with several monitors the others keep their photos while it plays. One by one, a video plays where it lies in the list; at random, videos come as
 often as they are among the items. With <strong>OnlyFoundTimeFrames</strong> and search results shown, only the places the search found are played (2 seconds before to 4 after each). <kbd>Right</kbd> and
-<kbd>Left</kbd> skip a video. While a video plays with its sound the other programs' sound is turned down by <strong>LowerOtherAudio</strong> percent and put back after.</p>
+<kbd>Left</kbd> skip a video. While a video plays with its sound the other programs' sound is turned down by <strong>LowerOtherAudio</strong> percent and put back after. With <strong>ShowCaptions</strong> on, the words
+of the video are written at the bottom of the screen while they are said (white on black, up to four lines).</p>
 
 <figure><img src="images/40-slideshow-video.png" alt="A video playing over the whole screen in the slideshow, with the date it was recorded in the bottom right corner" width="1280" height="720"><figcaption>A video in the slideshow: it plays over the whole screen, and the date it was recorded is in the corner, as a photo's date is.</figcaption></figure>
 
@@ -428,7 +433,7 @@ description: select it and the pane under the table says what it is for.</p>
 <table class="wide-first">
   <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
   <tbody>
-    <tr><td><strong>GoThroughSubFolders</strong></td><td>Also list the photos in the subfolders. The Liked folder itself is left out.</td></tr>
+    <tr><td><strong>GoThroughSubFolders</strong></td><td>Also list the photos in the subfolders (on by default). The Liked folder itself is left out.</td></tr>
     <tr><td><strong>Extensions</strong></td><td>The kinds of file that count as photos, separated by <code>;</code> or <code>,</code>, each with its dot: <code>.jpg; .png</code>.</td></tr>
     <tr><td><strong>SortOrder</strong></td><td>The order of the photos, see <a href="#order">Order of the photos</a>.</td></tr>
   </tbody>
@@ -441,7 +446,7 @@ description: select it and the pane under the table says what it is for.</p>
 <table class="wide-first">
   <thead><tr><th>Setting</th><th>Meaning</th></tr></thead>
   <tbody>
-    <tr><td><strong>SupportVideo</strong></td><td>List the videos of the folder with its photos (off by default). See <a href="#videos">Videos in the folder</a>.</td></tr>
+    <tr><td><strong>SupportVideo</strong></td><td>List the videos of the folder with its photos (on by default). See <a href="#videos">Videos in the folder</a>.</td></tr>
     <tr><td><strong>VideoExtensions</strong></td><td>The kinds of file that count as videos when <strong>SupportVideo</strong> is on: <code>.mp4; .mov; .avi; .mkv</code> ... (the usual ones are listed already).</td></tr>
     <tr><td><strong>VideoSpeech</strong></td><td>Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See <a href="#videos">Videos in the folder</a>.</td></tr>
     <tr><td><strong>SpeechModel</strong></td><td><code>tiny</code>, <code>base</code> or <code>small</code> (the one to use).</td></tr>
@@ -453,7 +458,7 @@ description: select it and the pane under the table says what it is for.</p>
 
 <p><strong>CurrentIndex</strong> is the number of the shown photo, counted from 0: type another number into it to jump to that
 photo (a number outside the list goes to the nearest end). <strong>CurrentFile</strong>, <strong>TotalFiles</strong>, <strong>PhotoCount</strong> (how many of the files in the list are photos), <strong>VideoCount</strong> (how many are videos) and the other rows
-that show information cannot be changed. The group <strong>6. Slideshow</strong> has eleven rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
+that show information cannot be changed. The group <strong>6. Slideshow</strong> has twelve rows of its own, see <a href="#slideshow">Slideshow</a>.</p>
 
 <h3 id="language">Language</h3>
 <p>The <strong>Language</strong> row of the settings table chooses the language of the program: pick <strong>English</strong> or <strong>Українська</strong> (Ukrainian) in the list. The
@@ -647,7 +652,7 @@ download the model (135 MB, once).</p>
   <li><strong>This photo</strong> colorizes the photo that is shown, whatever it is like. <strong>The black and white photos of the list</strong> looks at every photo of the list
     (the folder, or the search results) and lists the ones that have no colour, or only one tint (a brown print, a blue one), all ticked: untick the ones that should stay as they are. A photo
     that has a copy already is listed but not ticked.</li>
-  <li><strong>Strength of the colours</strong>: 100 is as the model gives them, less is paler, more is stronger. <strong>Warmth</strong> moves them towards blue or towards yellow and red. Both start as they are on the bar.</li>
+  <li><strong>Strength of the colours</strong>: 100 is as the model gives them, less is paler, more is stronger. <strong>Warmth</strong> moves them towards blue or towards yellow and red. Both start as they are on the bar, and what you set here is kept when the window is closed: the bar and the next window start from it.</li>
   <li><strong>Colorize</strong> starts, <strong>Stop</strong> ends after the photo that is being done. A photo takes about two seconds. When you close the window the folder is listed again, and the copies are in it.</li>
 </ul>
 <div class="note"><p>The colours are the model's guess from what is in the picture: skin, sky, grass and wood come out as they usually are, a dress can be any colour.</p></div>
@@ -703,12 +708,12 @@ a title picture and with a song under it. Nothing else has to be installed.</p>
   </li>
   <li>
     <strong>Depth parallax (optional).</strong> Tick <strong>Depth parallax</strong> and every photo moves a little while it is shown, as in the <a href="#parallax">slideshow effect</a>; the cover
-    stays still. The first time, PhotoLiker asks to download the model that works out the depth (99 MB, once). The video is then drawn frame by frame, so it takes about as long to make as it
+    stays still. It is not kept: every window starts with it unticked. The first time, PhotoLiker asks to download the model that works out the depth (99 MB, once). The video is then drawn frame by frame, so it takes about as long to make as it
     plays, and half a second more for every photo. Everything else works as before.
   </li>
   <li>
     <strong>Size and quality.</strong> <strong>Resolution</strong> is the size of the video (1920 × 1080 is Full HD; <strong>Use first image</strong> takes the size of the first photo).
-    <strong>Video codec</strong>: <code>libx264</code> plays everywhere, <code>libx265</code> makes smaller files that not every player reads. <strong>Quality (CRF)</strong>: lower is better and bigger; 23 is a good start.
+    <strong>Video codec</strong>: <code>libx264</code> plays everywhere, <code>libx265</code> makes smaller files that not every player reads, and is what the window starts with in a folder that has no saved settings (after that it puts back the codec of the last video). <strong>Quality (CRF)</strong>: lower is better and bigger; the usual number is 28 for <code>libx265</code> and 23 for <code>libx264</code> (the same look), and the window moves it when you change the codec, unless you have set it yourself.
   </li>
   <li>
     <strong>Click Generate.</strong> The dialog grows to show a progress bar and the log. Photos that have gone from the disk since the folder was listed are left out, and
@@ -728,8 +733,8 @@ PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe<
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="videos">17. Videos in the folder</h2>
 
-<p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. Turn <strong>SupportVideo</strong> on in the settings
-table (it is off by default, so a folder looks as it always did until you do) and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
+<p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. <strong>SupportVideo</strong> is on in the settings
+table by default (turn it off to have a folder look as it did before videos), and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
 <strong>GoThroughSubFolders</strong> is on. Which files are videos is the <strong>VideoExtensions</strong> row; the player plays nearly every format there is. A folder that holds only
 videos works the same: open it as a folder of its own. Changing either row lists the folder again at once.</p>
 
@@ -739,6 +744,10 @@ Instead of EXIF the grid under the settings has a category <strong>0. Video</str
 <strong>Audio</strong>, <strong>Bitrate</strong>, <strong>File size</strong>, <strong>Recorded</strong>, <strong>Date from</strong> and <strong>File dates</strong>. <strong>Recorded</strong> is the date the camera or
 phone wrote into the video (else the date of the file); <strong>File dates</strong> shows the dates of the file next to it, and says <code>≠ Recorded</code> when they differ: a copied file is created when it is
 copied, so it is often days younger than the recording.</p>
+<p><strong>The Recorded row can be edited</strong>, like the date rows of a photo: type a date (<code>2015-05-01 14:30:00</code>, <code>01.05.2015 14:30</code>; a day alone is taken at noon) or press the
+<code>…</code> button of the row and pick one. The date is written into the video where it keeps it (MP4, MOV, M4V, 3GP, and the date chunk of an AVI from a camera; the size of the file and every picture and
+sound stay as they are), and the created and modified dates of the file become the same moment. The video keeps its moments and its speech. A video that has no place for a date (Matroska, MPEG, WMV)
+gets the dates of its file only, and the status line says so. There is no Undo for one edit: type the old date back (the Align dates tool can undo a whole run).</p>
 
 <figure><img src="images/34-video-poster.png" alt="A video in the window: its poster picture with the play mark, its thumbnail in the strip and the 0. Video category of the grid" width="1846" height="893"><figcaption>A video: the poster picture with the round play mark and the length in the corner, the thumbnail with a small play mark in the strip at the right, and the <strong>0. Video</strong> category in the grid at the left.</figcaption></figure>
 
@@ -781,11 +790,19 @@ reads only the videos not read yet, and a run that is stopped continues where it
 over it to read the words), and the status line says how many of the videos were found that way. In the viewer the places that were found in the speech have a speech bubble on the strip and a teal tick on the
 slider, while what the pictures found stays orange; hold the pointer over a moment of the strip, or a place on the slider, to read what is said there. The line under the player shows only while somebody is
 speaking, and only for videos whose speech has been read: <strong>Update index</strong> reads the rest, a folder after a folder.</p>
+<p><strong>More than one model.</strong> The text is kept for each speech model apart: changing <strong>SpeechModel</strong> never replaces what another model wrote. <strong>Update index</strong> with a new model reads
+every video again for it, and going back to the old model costs nothing, its text is still there. The line under the player and the captions of the slideshow show the words of the model set in
+<strong>SpeechModel</strong> if it heard anything in the video, else of the model that heard the most; the word search looks at the set model only.</p>
 
 <h3 id="speech-table">The table of what is said</h3>
 <p>The <strong>Video speech</strong> button of the toolbar (a video frame with a speech bubble; it is there while <strong>SupportVideo</strong> is on) opens a table of every video the program knows in the folder
-(also those in subfolders that the list does not show): its path below the folder, its length, where it stands (<strong>With speech</strong>, <strong>Nothing heard</strong>, <strong>Not read yet</strong>,
-<strong>No sound</strong>, or a failure), the language it was read as, how many moments it has, and what is said in it. A click on a column title sorts by it; the <strong>Find</strong> box keeps the videos
+(also those in subfolders that the list does not show): its path below the folder, its length, <strong>when it was recorded</strong> (date and time), where it stands (<strong>With speech</strong>, <strong>Nothing heard</strong>,
+<strong>Not read yet</strong>, <strong>No sound</strong>, or a failure), the language it was read as, how many moments it has, and what is said in it. A click on a column title sorts by it, a second click turns the order
+round (<strong>Recorded</strong>: oldest first, then newest first; a video with no date that can be believed is left blank and is always last). The <strong>Models</strong> column lists the models that have heard the
+video, each with how many stretches of speech it found (<em>base (2), small (1) ✓</em>); the tick marks the model whose words are the captions of the video: the one set in <strong>SpeechModel</strong> if it heard
+anything in the video, else the one that heard most. The <strong>Model</strong> box chooses the model the table is of (its text and status; what that model has not heard is <em>Not read yet</em>), and <strong>Hear again...</strong>
+uses it. The right-click item <strong>Hear again with the model</strong> turns the table over to the model you pick and asks for the language, so a single video can be tried with another model; only that
+model's text for it is replaced, the text of the other models is kept. The <strong>Find</strong> box keeps the videos
 whose path or words contain what you type, and the box next to it keeps one status.</p>
 <p>Select a video and under the table are its moments (small pictures, with a speech bubble on the ones where something is said; hold the pointer over one to read the words) and the words with their times.
 A click on a moment selects the words said there. <strong>A double click</strong> (or <kbd>Enter</kbd>) plays the video in the program Windows has for it. The <strong>right-click menu</strong> has
@@ -814,7 +831,7 @@ the status bar, and it stays on your computer, in <code>%LocalAppData%\PhotoLike
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="theme">18. Dark and light theme</h2>
 
-<p>The theme button of the toolbar switches between the two. The choice is remembered for each folder. (The language of the program is chosen in the settings table,
+<p>The theme button of the toolbar switches between the two. A folder that is opened for the first time is dark; the choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
 
 <figure>

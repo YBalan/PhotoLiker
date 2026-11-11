@@ -463,9 +463,10 @@ namespace PhotoLikerUI
         private async Task LoadSpeechAsync(string file, VideoCatalog catalog, int generation)
         {
             IReadOnlyList<SpeechSegment> speech;
+            var speechModel = SpeechModel.Id; // the words of the model that is set, when it heard anything in this video
             try
             {
-                speech = await Task.Run(() => catalog.SpeechOf(file));
+                speech = await Task.Run(() => catalog.SpeechOf(file, speechModel));
             }
             catch (Exception)
             {
@@ -495,8 +496,7 @@ namespace PhotoLikerUI
             if (_player is not { } player)
                 return;
 
-            var line = _speech.Count == 0 ? null : _speech.FirstOrDefault(s => timeMs >= s.StartMs - 300 && timeMs <= s.EndMs + 1200);
-            player.SetCaption(line?.Text);
+            player.SetCaption(SpeechCaptions.At(_speech, timeMs));
         }
 
         // The thumbnails of the model that is chosen; a video that was analyzed with another model only still shows its moments

@@ -24,9 +24,36 @@ public class SettingsTests : IDisposable
         Assert.Equal(string.Empty, settings.LikedFolder);
         Assert.Equal(20, settings.CacheSize);
         Assert.Equal(110, settings.ThumbnailSize);
-        Assert.False(settings.IsDarkTheme);
-        Assert.False(settings.GoThroughSubFolders);
+        Assert.True(settings.IsDarkTheme);
+        Assert.True(settings.GoThroughSubFolders);
+        Assert.True(settings.SupportVideo);
         Assert.NotEmpty(settings.Extensions);
+    }
+
+    [Fact]
+    public void WhatIsOnByDefault_IsKeptOff_WhenTheFolderWasSavedThatWay()
+    {
+        new Settings { CurrentFolder = _tempDir, IsDarkTheme = false, GoThroughSubFolders = false, SupportVideo = false }.Save(_tempDir);
+
+        var loaded = Settings.Load(_tempDir);
+
+        Assert.False(loaded.IsDarkTheme);
+        Assert.False(loaded.GoThroughSubFolders);
+        Assert.False(loaded.SupportVideo);
+    }
+
+    [Fact]
+    public void AFileThatDoesNotSayAnything_HasTheDefaults_AndAFileThatSaysSo_IsNotOverruledByThem()
+    {
+        File.WriteAllText(Settings.GetFilePath(_tempDir), "{ \"CacheSize\": 30 }");
+        var plain = Settings.Load(_tempDir);
+        Assert.True(plain.IsDarkTheme && plain.GoThroughSubFolders && plain.SupportVideo);
+
+        // Either spelling of the sub-folders setting, and a plain false, beat the default
+        File.WriteAllText(Settings.GetFilePath(_tempDir), "{ \"GoThroughSubFolders\": false, \"IsDarkTheme\": false }");
+        var off = Settings.Load(_tempDir);
+        Assert.False(off.GoThroughSubFolders);
+        Assert.False(off.IsDarkTheme);
     }
 
     [Fact]

@@ -88,6 +88,8 @@ namespace PhotoLikerUI
         private readonly ComboBox _playModeCombo = new();
         private readonly ComboBox _audioPlayModeCombo = new();
         private readonly CheckBox _beatCheckBox = new();
+        private string _lastCodec = VideoCodecs.Default; // the codec before the one that is selected: what the quality follows from (see CodecChanged)
+
         private readonly CheckBox _parallaxCheckBox = new();
         private readonly Func<Task<bool>>? _ensureDepthModelAsync;
         private readonly Label _beatStatusLabel = new();
@@ -317,12 +319,14 @@ namespace PhotoLikerUI
             toolTip.SetToolTip(_parallaxCheckBox, VideoStrings.DepthParallaxHint);
 
             _codecCombo.DropDownStyle = ComboBoxStyle.DropDownList;
-            _codecCombo.Items.AddRange(["libx264", "libx265"]);
-            _codecCombo.SelectedIndex = 0;
+            _codecCombo.Items.AddRange([VideoCodecs.H264, VideoCodecs.H265]);
+            _codecCombo.SelectedItem = VideoCodecs.Default; // the folder's saved settings put the codec of its last video back (see ApplySettings)
 
-            _crfNumeric.Minimum = 0;
-            _crfNumeric.Maximum = 51;
-            _crfNumeric.Value = 23;
+            _crfNumeric.Minimum = VideoCodecs.MinCrf;
+            _crfNumeric.Maximum = VideoCodecs.MaxCrf;
+            _crfNumeric.Value = VideoCodecs.DefaultCrf(VideoCodecs.Default); // the usual quality of the codec; it follows the codec until it is set by hand (see CodecChanged)
+            toolTip.SetToolTip(_crfNumeric, VideoStrings.QualityTooltip);
+            toolTip.SetToolTip(_codecCombo, VideoStrings.QualityTooltip);
 
             var browseButton = new Button { Text = VideoStrings.Browse, Dock = DockStyle.Fill };
             browseButton.Click += (_, _) => BrowseOutputFolder();
@@ -586,6 +590,8 @@ namespace PhotoLikerUI
             _playModeCombo.SelectedIndexChanged += (_, _) => UpdateVideoLength();
             _audioPlayModeCombo.SelectedIndexChanged += (_, _) => UpdateVideoLength();
             UpdatePlayModeCombo();
+
+            _codecCombo.SelectedIndexChanged += (_, _) => CodecChanged();
 
             // The experimental cut on the beat: ticking it finds the rhythm of the audio
             _beatCheckBox.CheckedChanged += (_, _) => StartRhythmAnalysis();
@@ -990,7 +996,7 @@ namespace PhotoLikerUI
                 (double)_frameTimeStartNumeric.Value,
                 (double)_frameTimeEndNumeric.Value,
                 _randomFrameTimesCheckBox.Checked,
-                _codecCombo.SelectedItem?.ToString() ?? "libx264",
+                _codecCombo.SelectedItem?.ToString() ?? VideoCodecs.Default,
                 (int)_crfNumeric.Value,
                 AudioPath,
                 UsedCoverPath,
@@ -999,6 +1005,19 @@ namespace PhotoLikerUI
                 RepeatPhotosSelected,
                 RepeatAudioSelected,
                 _parallaxCheckBox.Checked);
+        }
+
+        /// <summary>
+        /// The codec was changed (by the person, or by the saved settings being put in): the quality moves to the usual one of the new codec (23 for H.264, 28 for H.265) if it was still the
+        /// usual one of the old codec, that is if nobody had set it. A quality that was set by hand stays, and so does one that the saved settings put in after the codec.
+        /// </summary>
+        private void CodecChanged()
+        {
+            var codec = _codecCombo.SelectedItem?.ToString() ?? VideoCodecs.Default;
+            var crf = Math.Clamp(VideoCodecs.CrfAfterCodecChange(_lastCodec, codec, (int)_crfNumeric.Value), VideoCodecs.MinCrf, VideoCodecs.MaxCrf);
+            _lastCodec = codec;
+            if (crf != (int)_crfNumeric.Value)
+                _crfNumeric.Value = crf;
         }
 
         /// <summary>The parallax box was ticked by the person: its model has to be on this computer, so it is asked for (and downloaded) now, and the box stays unticked if it is not to be.</summary>
@@ -1477,7 +1496,7 @@ namespace PhotoLikerUI
             Crf = (int)_crfNumeric.Value,
             CutOnBeat = _beatCheckBox.Checked,
             TempoOctaves = _tempoOctaves,
-            DepthParallax = _parallaxCheckBox.Checked,
+            // The depth parallax is not kept: it costs minutes of work for a video and a model of 99 MB, so every window starts with it off and it is ticked for the video that is to have it
         };
 
         /// <summary>
@@ -1539,8 +1558,7 @@ namespace PhotoLikerUI
             SetNumeric(_frameTimeEndNumeric, settings.EndFrameTimeSeconds);
             if (settings.UseRandom is { } random)
                 _randomFrameTimesCheckBox.Checked = random;
-            if (settings.DepthParallax is { } parallax)
-                _parallaxCheckBox.Checked = parallax;
+            // (settings.DepthParallax of an old file is not read: the box always starts unticked)
 
             if (settings.Codec is { } codec && _codecCombo.Items.Contains(codec))
                 _codecCombo.SelectedItem = codec;

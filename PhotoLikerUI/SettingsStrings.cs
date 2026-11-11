@@ -50,5 +50,6 @@ namespace PhotoLikerUI
         public static string SlideshowMuteVideo => T();
         public static string SlideshowVideoPart => T();
         public static string SlideshowLowerOtherAudio => T();
+        public static string SlideshowShowCaptions => T();
     }
 }

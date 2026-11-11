@@ -94,6 +94,8 @@ namespace PhotoLikerUI
         public static string StatusDateSetFormat => T();
         public static string StatusDateAndFileSet => T();
         public static string StatusDateError => T();
+        public static string StatusDateSaving => T();
+        public static string StatusVideoDateNoPlace => T();
 
         // Zoom / fit
         public static string StatusImageFitted => T();

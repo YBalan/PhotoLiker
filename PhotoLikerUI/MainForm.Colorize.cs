@@ -28,6 +28,27 @@ namespace PhotoLikerUI
             _bar?.ApplyTexts();
         }
 
+        /// <summary>
+        /// The strength and the warmth chosen in the window are kept (in the config of the program, with the ones of the bar) and put on the bar too, so that the bar over the next
+        /// black and white photo, and the window the next time, start from them: they are a taste, not a choice for one run. Kept also when the window was closed without colorizing.
+        /// </summary>
+        private void RememberColorizeValues((int Strength, int Warmth) values)
+        {
+            if (_bar is { } bar)
+            {
+                var moved = bar.Values != values;
+                bar.Values = values;
+                if (moved && bar.ColoursShown)
+                    _ = RenderBarAsync(); // the photo that is shown with colours is painted again in the new ones
+            }
+
+            if (_globalConfig.ColorizeStrength == values.Strength && _globalConfig.ColorizeWarmth == values.Warmth)
+                return;
+
+            (_globalConfig.ColorizeStrength, _globalConfig.ColorizeWarmth) = values;
+            _globalConfig.Save();
+        }
+
         /// <summary>The window for many photos: this photo, or the black and white photos of the list (the bar over a photo that is shown works on that one photo; its "Many photos" button opens this).</summary>
         private void Colorize()
         {
@@ -49,6 +70,8 @@ namespace PhotoLikerUI
                 photos, current, _effects, () => EnsureToolModelAsync(ToolModels.Colorizer, ToolModelStrings.ColorizeFeature, askAgain: true), _currentConfig.IsDarkTheme,
                 _bar?.Tuning ?? new ColorTuning(_globalConfig.ColorizeStrength / 100f, _globalConfig.ColorizeWarmth / (float)ColorizeBar.MaxWarmth));
             dialog.ShowDialog(this);
+
+            RememberColorizeValues(dialog.Values);
 
             if (dialog.Saved == 0)
                 return;

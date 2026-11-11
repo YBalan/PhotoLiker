@@ -64,7 +64,10 @@ namespace PhotoLiker.GenerateVideo
         /// <summary>How many times ÷2 (negative) or ×2 (positive) was pressed for the beats found.</summary>
         public int? TempoOctaves { get; set; }
 
-        /// <summary>Every photo moves by its depth while it is shown (the Parallax of the slideshow): the video is drawn frame by frame.</summary>
+        /// <summary>
+        /// Every photo moves by its depth while it is shown (the Parallax of the slideshow): the video is drawn frame by frame. Written by an earlier version of the dialog and still read
+        /// from such a file, but the dialog no longer keeps it: the box starts unticked every time.
+        /// </summary>
         public bool? DepthParallax { get; set; }
 
         /// <summary>The sort order, if the file has one this version knows.</summary>

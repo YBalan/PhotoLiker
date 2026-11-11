@@ -412,7 +412,7 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   - By name: as Explorer lists them, `IMG_2` before `IMG_10`.
   - Random: a new order for each video.
   - As listed.
-- **Resolution**, **Video codec** (H.264 / H.265) and **Quality (CRF)**.
+- **Resolution**, **Video codec** (H.264 / H.265: a folder that has no saved settings starts with **H.265**, which makes a smaller file that not every player reads; after that the codec of the last video of the folder is put back) and **Quality (CRF)**: lower is better and bigger, and the same look needs a higher number for H.265, so the window starts at **28** for H.265 and **23** for H.264 and moves the number when the codec is changed, as long as it is still the usual one of the codec it was on; a number you set yourself stays.
 - **Frame time range** gives the time of the first photo (*Start*) and of the last (*End*), the others in steps between them.
   **Use random** instead gives each photo a time of its own, picked at random between the two (it does not matter which of them is the larger).
   The times are drawn in the dialog, when you tick the box and whenever you pick another folder in *Photos from* (tick it off and on to
@@ -461,7 +461,7 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   - **Audio: Repeat** (the default) plays an audio that is shorter than the photos over and over until they end.
   - **Audio: Once** plays it once and the rest of the video is silent (the video is as long as the photos either way).
   - An audio whose length is not known (`Length: unknown`) is not repeated for.
-- **Motion: Depth parallax** (not ticked to begin with) makes every photo move a little while it is shown, as the Parallax effect does in the slideshow (see
+- **Motion: Depth parallax** (not ticked to begin with, and not kept: every window starts with it off, whatever the last video was made with) makes every photo move a little while it is shown, as the Parallax effect does in the slideshow (see
   [Depth parallax](#depth-parallax)): the near parts of a photo move against the far ones, and the cover stays still. Ticking it asks to download the depth model
   (99 MB, once) if it is not on this computer. The video is then drawn frame by frame here and given to ffmpeg (25 frames for every second of the video), instead of being cut
   from the photos by ffmpeg, so it takes about as long as the video plays and half a second more for every photo; everything else (the times, the cover, the audio and how it
@@ -536,7 +536,7 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 
 | Setting | Meaning |
 |---|---|
-| **GoThroughSubFolders** | Also list the photos in the subfolders. The Liked folder itself is left out. |
+| **GoThroughSubFolders** | Also list the photos in the subfolders (on by default). The Liked folder itself is left out. |
 | **Extensions** | The file extensions that count as photos, separated by `;` or `,`, each with its dot: `.jpg; .png`. Case does not matter. |
 | **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, `Random` in a random order, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
 
@@ -544,14 +544,14 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 
 | Setting | Meaning |
 |---|---|
-| **SupportVideo** | List the videos of the folder with its photos (off by default). See [Videos](#videos). |
+| **SupportVideo** | List the videos of the folder with its photos (on by default). See [Videos](#videos). |
 | **VideoExtensions** | The file extensions that count as videos when **SupportVideo** is on: `.mp4; .mov; .avi; .mkv ...` (the default list has the usual ones). |
 | **VideoSpeech** | Also turn what is said in the videos into text when the index is updated, so that a spoken word finds the video (off by default; about a third of the length of the speech, and a model of 465 MB). See [Videos](#videos). |
 | **SpeechModel** | `tiny`, `base` or `small` (the one to use). |
 | **SpeechLanguage** | The language that is spoken: `ru`, `uk`, `en` ..., or `auto` (the model hears it for each video). |
 | **CpuCores** | How many cores of this computer the speech recognition may use, from 1 to all the cores it has (the default). With more cores several videos are heard at the same time. It can be changed while **Update index** runs: the next video that is started follows it. |
 
-The group **6. Slideshow** has its own eleven rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **UseVideo**, **MuteVideo**, **VideoPart** and **LowerOtherAudio**; see [Slideshow](#slideshow).
+The group **6. Slideshow** has its own twelve rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **UseVideo**, **MuteVideo**, **VideoPart**, **LowerOtherAudio** and **ShowCaptions**; see [Slideshow](#slideshow).
 
 The rows of **Current File** (except **LikedFolder**) and **TotalFiles** are read-only, and so are **PhotoCount** and **VideoCount**, which say how many of the files in the list now are photos and how many are
 videos (together they are **TotalFiles**; there are no videos unless **SupportVideo** is on). **CurrentIndex** is the number of the shown photo, counted
@@ -739,6 +739,10 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   a moment; a held key counts once. They show the people the search found, so the folder has to be indexed and the people named: without an index the corner says
   `No people to show: index the folder and name the people first`. The rows **PeopleFaces** and **PeopleNames** of the grid are how the show begins, and how the keys left them when it ended
   is the setting from then on (as with the effect). The boxes follow the photo through every effect.
+- <kbd>C</kbd> turns the **captions** of the videos on and off (the row **ShowCaptions**, see [below](#videos-in-the-slideshow)): the video that plays gets or loses its caption at once, and so do
+  the videos after it. Like every key it pauses the show (<kbd>Space</kbd> continues; a paused video shows the words of the place it stands at). Each press writes `Captions: on` /
+  `Captions: off` in the top left corner for a moment; a held key counts once. A show without videos has nothing to caption: the corner says `No videos to caption: turn UseVideo on (and SupportVideo)`
+  and the setting is left as it is. How the key left the captions when the show ended is the setting from then on.
 - <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one **in the list, also in the random mode** (where only the timer picks
   at random), and give that photo its full time again (when the show is not paused). After the last photo comes the first, and before the first the last. A key that is held
   down keeps scrolling.
@@ -746,7 +750,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   `Fade`, `Slide`, `Zoom`, `KenBurns`, `Parallax`, `Random`) while the show runs (`Parallax` is left out while the depth model is not on this computer). The name is written in the top left corner of every monitor for about two seconds
   (`Effect: Slide`), the next change of photo is made by that effect, and with `KenBurns` the photo that is on the screen begins to move at once. The effect
   the show ended with becomes the setting: the **Effect** row shows it afterwards, and it is saved with the other settings of the folder.
-- The settings are the eleven rows of the **6. Slideshow** group of the settings grid (the last four are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
+- The settings are the twelve rows of the **6. Slideshow** group of the settings grid (the last five are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
   folder can have its own.
 
 | Setting | Meaning |
@@ -762,6 +766,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 | **MuteVideo** | `True`: the videos of the slideshow play without their sound. `False` (the default). |
 | **VideoPart** | How much of a video is played. `OnlyFoundTimeFrames` (the default): only the places a search found in it, 6 seconds around each (2 before, 4 after; places that touch are one stretch); a video of a folder, where nothing was searched for, has none and is played whole. `FullVideo`: the whole video. |
 | **LowerOtherAudio** | While a video plays with its sound, the sound of the other programs (a player in the background, a browser) is turned down by this many percent, and put back when the video ends: 50 by default, 0 leaves them as they are, 100 silences them. Not used when **MuteVideo** is `True`. |
+| **ShowCaptions** | `True`: what is said in a video is written over the picture as captions while it plays. `False` (the default). The <kbd>C</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. The words are the speech the index read (**VideoSpeech**, see [Videos](#videos)); a video whose speech was not read has no captions. See [below](#videos-in-the-slideshow). |
 
 **How the effects stay smooth.** GDI+, which draws everything else in the program, needs 13 ms (plus 7 ms for the black around it) to draw a full HD photo that is only partly there and 23 to 43 ms
 to draw one that is magnified (four times that on a 4K monitor: 50 ms, and 85 to 190 ms): that is a slide show of slides. So while an effect lasts, the photos are put together by a small compositor of our
@@ -842,13 +847,18 @@ a slideshow of what a search found in them). The photos go on exactly as they di
 - **Keys.** <kbd>Right</kbd> / <kbd>Left</kbd> skip a video that plays (and in a list of videos only go to the next / the previous one); any other key but <kbd>Esc</kbd> pauses the video (and the show), <kbd>Space</kbd> plays it on; <kbd>Esc</kbd> and <kbd>Alt</kbd>+<kbd>Enter</kbd> go back.
 - **Sound.** The other programs' sound is turned down by **LowerOtherAudio** percent through the Windows mixer (every program has a volume of its own there) and put back when the videos are over
   or the show ends; a volume you changed meanwhile is left as you set it. With **MuteVideo** nothing is touched.
+- **Captions.** With **ShowCaptions** on, the words that are said in the video are written at the bottom of the screen, centred, white on black, above the date: the line of the speech that covers
+  the playing time, from 0.3 s before the voice starts to 1.2 s after it stops (the same lines as under the player of the viewer), up to four lines on two thirds of the screen's width, the rest
+  cut with `…`. They come from the speech the index read, so **VideoSpeech** has to have been on while the folder was indexed; a video without it, or with no sound, shows none. They are written
+  also when **MuteVideo** is on (the show is read, not heard), and in a part found by a search they appear while that part plays. The box is a plain black one, not see-through: the picture of
+  a video is a window of its own, over which the program can only draw whole controls.
 - **The player.** Videos are played by the same engine as in the viewer; if it has to be [downloaded](#videos), you are asked before the show starts. It is started before the first video so that
   the screen does not wait for it (the first start can take seconds).
 
 ## Videos
 
-A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. Turn **SupportVideo** on in the
-[settings grid](#settings) (it is off by default, so a folder looks as it always did until you do) and the videos of the folder are listed with its photos,
+A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. **SupportVideo** is on
+in the [settings grid](#settings) by default (turn it off to have a folder look as it did before videos), and the videos of the folder are listed with its photos,
 in the same order, also in the subfolders if **GoThroughSubFolders** is on. Which files are videos is the **VideoExtensions** row; the player is VLC's, so it plays
 nearly every format there is. A folder that holds only videos works the same: open it as a folder of its own. Changing either row lists the folder again at once.
 
@@ -858,6 +868,13 @@ video held upright is stored sideways, and the row says so), **Frame rate**, **V
 (and **Location** and **Encoder** where the video has them). **Recorded** is the date the camera or phone wrote into the video, by the same rules as for photos
 (see [Photo search](#photo-search)); a Canon camera writes its own clock, a phone writes UTC, which is shown as local time. **File dates** shows the dates of the file next to it:
 a copied file is created when it is copied, so it is often days younger than the recording (`≠ Recorded`).
+
+**Changing the date a video was recorded.** The **Recorded** row can be edited, like the date rows of a photo: type a date (`2015-05-01 14:30:00`, `01.05.2015 14:30`, a day alone is
+taken at noon) or press the `...` button of the row and pick one. The date is written into the video where it keeps it (MP4, MOV, M4V, 3GP: the creation time in the movie and track headers;
+AVI: the `IDIT` chunk a camera writes; the size of the file and every picture and sound stay as they are) and **the created and modified dates of the file become the same moment**.
+The catalog of the videos is told, so the video keeps its moments and its speech. A video that has no place for a date (Matroska, MPEG, WMV, an AVI with no `IDIT` chunk) gets the dates of its file
+only, and the status line says so; a date such a video already says inside is not touched, and the program still goes by it. The copies in the Liked and group folders get the new dates and names,
+as for a photo. A video that is playing is let go of first. There is no Undo for a single edit (type the old date back); the **Align dates** tool does the same for many videos at once, keeps a log and can undo.
 
 ![A video in the viewer: its poster picture with the round play mark and the length in the corner, the video's thumbnail with a small play mark in the strip, and the 0. Video category in the grid](docs/images/34-video-poster.png)
 
@@ -899,11 +916,22 @@ shown in a line under the player while the video plays. The text is the model's 
 status line says how many of the videos were found that way. In the viewer the places found in the speech have a speech bubble on the strip and a teal tick on the slider, while what the pictures found stays
 orange; hold the pointer over a moment of the strip, or a place on the slider, to read what is said there. The line under the player shows only while somebody is speaking, and only for videos whose speech
 has been read: **Update index** reads the rest, a folder after a folder (it goes by path, so a library is read in that order, and a video not read yet is found by its pictures only).
+
+**More than one model.** The text is kept for each speech model apart (`tiny`, `base`, `small`): changing **SpeechModel** never replaces what another model wrote. **Update index** with a new model reads
+every video again for it (the whole library, with the model downloaded first), and going back to the old model costs nothing, its text is still there. The words the viewer shows under the player
+and the slideshow writes as captions (**ShowCaptions**) are those of the model set in **SpeechModel** if it heard anything in the video, else of the model that heard the most (a tie goes to the smaller
+name). So a weaker model that was tried on a video does not take its captions over from the one that is set. The word search and the table (below) look at the set model only.
 (The words are searched in the text whichever search model is chosen; for a query in Russian or Ukrainian the pictures are best searched with the XLM-R model of the [photo search](#photo-search).)
 
 **The table of what is said.** The **Video speech** button of the toolbar (a video frame with a speech bubble; it is there while **SupportVideo** is on) opens a table of every video the catalog
-knows (all the videos below the folder, whether the list shows the subfolders or not): its path below the folder, its length, where it stands (**With speech**, **Nothing heard**, **Not read yet**,
-**No sound**, or a failure), the language it was read as, how many moments it has, and what is said in it. A click on a column title sorts by it; the **Find** box keeps the videos whose path or words
+knows (all the videos below the folder, whether the list shows the subfolders or not): its path below the folder, its length, **when it was recorded** (the date and time, as dates are written everywhere in
+the program), where it stands (**With speech**, **Nothing heard**, **Not read yet**, **No sound**, or a failure), the language it was read as, how many moments it has, and what is said in it. A click on a column
+title sorts by it (a second click turns the order round; **Recorded** goes oldest first, then newest first, and a video with no date that can be believed is left blank and is always last, so it is never
+mistaken for the oldest or the newest). The **Models** column lists the models that have heard the video, each with how many stretches of speech it found (`base (2), small (1) ✓`); the tick marks the
+model whose words are the captions of the video (see above). The **Model** box next to the status box chooses the model the table is *of*: its text, its status (what that model has not heard is
+"Not read yet") and its language; each model in the box is followed by how many videos it has speech for, and the tick does not move with it, it follows the **SpeechModel** setting. **Hear again...**
+uses the model that is chosen, and the question names it; so does the right-click item **Hear again with the model**, which lists the three models: it turns the table over to the one you pick and asks
+for the language, so one video (or a few) can be tried with another model without a run over the whole library, and only that model's text for them is replaced. The **Find** box keeps the videos whose path or words
 contain what you type, and the box next to it keeps one status. Select a video and under the table are its moments (the small pictures, a speech bubble on the ones where something is said; hold the
 pointer over a picture to read the words) and the words with their times; a click on a moment selects the words said there. A double click (or <kbd>Enter</kbd>) plays the video in the program Windows
 has for it, and the right-click menu has **Open**, **Show in File Explorer** and **Hear again in another language...**. That asks for the language (one of the 99 the model knows, or `auto`; the
@@ -1195,7 +1223,7 @@ The **Colorize** button with no photo shown, or **Many photos...** on the bar, o
   ones at 4 to 16, so they were all found; the photos with colours came out at 2.2 to 15 for the spread, and the two lowest (a rocket and a muted sunset landscape, 2.2 and 2.5) would have been taken for black and white with a limit of 3, which is why it is 1.5. It is a rule of thumb, tested on those test photos and **not on real old scans**: look at the list before pressing Colorize, and
   use *This photo* for one that is left out.
 - **Strength of the colours** (20 to 200%, 100 to begin with) multiplies the colours the model gives: less is paler, more is stronger. **Warmth** (-100 to 100, 0 to begin with) moves them
-  towards blue or towards yellow and red, as on the bar; both start with the values the bar has.
+  towards blue or towards yellow and red, as on the bar; both start with the values the bar has. What you set here is kept when the window is closed (also when nothing was colorized), together with the bar's values, in `global-config.json`: the bar over the next photo and the window the next time start from it.
 - **The model** is DDColor tiny (Apache 2.0; "DDColor: Towards Photo-Realistic Image Colorization via Dual Decoders", ICCV 2023, by the DAMO Academy of Alibaba), exported to ONNX with float16 weights
   by the `edgetools` repository on Hugging Face from the authors' `ddcolor_paper_tiny` checkpoint. Its file (135 MB) is checked against its SHA-256 and kept in
   `%LocalAppData%\PhotoLiker\models\ddcolor-tiny`; it is downloaded after asking, when **Colorize** is first pressed. The model sees the photo as a grey picture of 512 × 512 and says what colour
@@ -1221,7 +1249,7 @@ progress bar registers itself with one line, and the main window asks them a few
 
 ## Dark and light theme
 
-The theme button of the toolbar switches between the two. The choice is stored in the settings file of the folder.
+The theme button of the toolbar switches between the two. A folder that is opened for the first time is **dark**; the choice is stored in the settings file of the folder.
 
 ![The light theme](docs/images/11-light-theme.png)
 

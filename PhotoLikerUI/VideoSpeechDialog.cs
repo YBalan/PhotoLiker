@@ -25,26 +25,37 @@ namespace PhotoLikerUI
             public override string ToString() => Text;
         }
 
-        /// <summary>A video as the list shows it: the catalog's row, and the text of each cell made once.</summary>
-        private sealed record Entry(VideoSpeechRow Row, string Path, string Length, string Status, string Language, string Moments, string Speech, string Search);
+        /// <summary>A speech model as the Model box lists it: with how many videos it has speech for.</summary>
+        private sealed record ModelChoice(SpeechModelInfo Model, int Videos)
+        {
+            public override string ToString() => string.Format(VideoSpeechStrings.ModelChoiceFormat, Model.Title, Videos);
+        }
 
-        private const int PathColumn = 0, LengthColumn = 1, StatusColumn = 2, LanguageColumn = 3, MomentsColumn = 4, SpeechColumn = 5;
+        /// <summary>A video as the list shows it: the catalog's row, and the text of each cell made once.</summary>
+        private sealed record Entry(VideoSpeechRow Row, string Path, string Length, string Recorded, string Status, string Language, string Models, string Moments, string Speech, string Search);
+
+        private const int PathColumn = 0, LengthColumn = 1, RecordedColumn = 2, StatusColumn = 3, LanguageColumn = 4, ModelsColumn = 5, MomentsColumn = 6, SpeechColumn = 7;
         private const int SpeechPreviewLength = 400;
 
         private readonly string _folder;
         private readonly VideoCatalog _catalog;
         private readonly string _clipModelId;
-        private readonly SpeechModelInfo _model;
+        private readonly SpeechModelInfo _settingsModel; // the model of the SpeechModel setting: the one whose words are the captions (when it heard the video)
+        private SpeechModelInfo _model;                  // the model the table shows the text of, and the one videos are heard again with: the Model box chooses it
         private readonly string _modelsFolder;
         private readonly string _defaultLanguage;
         private readonly Func<int> _cores;
         private readonly Func<bool> _indexing;
         private readonly bool _dark;
 
-        private readonly Label _intro = new() { Text = VideoSpeechStrings.Intro, Dock = DockStyle.Fill, Height = 44 };
+        private readonly Label _intro = new() { Text = VideoSpeechStrings.Intro, AutoSize = false, Dock = DockStyle.Fill };
+        private readonly RowStyle _introRow = new(SizeType.Absolute, 44); // its height follows the text of the intro (see FitIntro)
+        private TableLayoutPanel _root = null!;
         private readonly Label _findLabel = new() { Text = VideoSpeechStrings.FindLabel, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(0, 6, 4, 0) };
         private readonly TextBox _findBox = new() { Width = 280, PlaceholderText = VideoSpeechStrings.FindHint };
         private readonly ComboBox _statusBox = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 190 };
+        private readonly Label _modelLabel = new() { Text = VideoSpeechStrings.ModelLabel, AutoSize = true, Anchor = AnchorStyles.Left, Margin = new Padding(14, 6, 4, 0) };
+        private readonly ComboBox _modelBox = new() { Name = "modelBox", DropDownStyle = ComboBoxStyle.DropDownList, Width = 190 };
         private readonly Label _summary = new() { AutoSize = true, Margin = new Padding(16, 6, 0, 0) };
         private readonly BufferedListView _list = new();
         private readonly SplitContainer _split = new() { Orientation = Orientation.Horizontal, Dock = DockStyle.Fill };
@@ -64,6 +75,7 @@ namespace PhotoLikerUI
         private Font? _openFont;
         private readonly ToolStripMenuItem _showItem = new(ShellOpen.ShowMenu);
         private readonly ToolStripMenuItem _hearItem = new(VideoSpeechStrings.MenuHearAgain);
+        private readonly ToolStripMenuItem _hearWithItem = new(VideoSpeechStrings.MenuHearWith);
         private readonly System.Windows.Forms.Timer _selecting = new() { Interval = 150 };
 
         private IReadOnlyList<VideoSpeechRow> _all = [];
@@ -72,6 +84,7 @@ namespace PhotoLikerUI
         private int _sortColumn = PathColumn;
         private bool _sortDescending;
         private bool _rebuilding;
+        private bool _settingModel;                      // the Model box is being filled or set from the code: its change is not a person's choice
         private int _detailGeneration;
         private IReadOnlyList<SpeechSegment> _shownSegments = [];
         private int[] _lineStarts = [];
@@ -91,7 +104,7 @@ namespace PhotoLikerUI
             _folder = folder;
             _catalog = catalog;
             _clipModelId = clipModelId;
-            _model = model;
+            _settingsModel = _model = model;
             _modelsFolder = modelsFolder;
             _defaultLanguage = defaultLanguage;
             _cores = cores;
@@ -132,8 +145,12 @@ namespace PhotoLikerUI
             ]);
             _statusBox.SelectedIndex = 0;
 
-            var find = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = false, Margin = new Padding(0, 0, 0, 6) };
-            find.Controls.AddRange([_findLabel, _findBox, _statusBox, _summary]);
+            _modelBox.Items.AddRange([.. SpeechModels.All.Select(m => (object)new ModelChoice(m, 0))]);
+            _modelBox.SelectedIndex = Math.Max(0, SpeechModels.All.ToList().FindIndex(m => m.Id == _model.Id));
+
+            // The summary is the long one: it goes to the next line when the window is narrow
+            var find = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, WrapContents = true, Margin = new Padding(0, 0, 0, 6) };
+            find.Controls.AddRange([_findLabel, _findBox, _statusBox, _modelLabel, _modelBox, _summary]);
 
             _list.View = View.Details;
             _list.VirtualMode = true;
@@ -143,12 +160,16 @@ namespace PhotoLikerUI
             _list.Dock = DockStyle.Fill;
             _list.Columns.Add(VideoSpeechStrings.ColumnVideo, 330);
             _list.Columns.Add(VideoSpeechStrings.ColumnLength, 70);
+            _list.Columns.Add(VideoSpeechStrings.ColumnRecorded, 150);
             _list.Columns.Add(VideoSpeechStrings.ColumnStatus, 120);
             _list.Columns.Add(VideoSpeechStrings.ColumnLanguage, 150);
+            _list.Columns.Add(VideoSpeechStrings.ColumnModels, 170);
             _list.Columns.Add(VideoSpeechStrings.ColumnMoments, 75);
             _list.Columns.Add(VideoSpeechStrings.ColumnSpeech, 400);
             _list.ContextMenuStrip = _menu;
-            _menu.Items.AddRange([_openItem, _showItem, new ToolStripSeparator(), _hearItem]);
+            _menu.Items.AddRange([_openItem, _showItem, new ToolStripSeparator(), _hearItem, _hearWithItem]);
+            foreach (var model in SpeechModels.All)
+                _hearWithItem.DropDownItems.Add(new ToolStripMenuItem(model.Title) { Tag = model });
             _openItem.Font = _openFont = new Font(_menu.Font, FontStyle.Bold); // what a double click does
             ShowSortArrow();
 
@@ -161,6 +182,8 @@ namespace PhotoLikerUI
             _tips.SetToolTip(_hearSelected, VideoSpeechStrings.HearSelectedTooltip);
             _tips.SetToolTip(_hearAll, VideoSpeechStrings.HearAllTooltip);
             _tips.SetToolTip(_export, VideoSpeechStrings.ExportTooltip);
+            _tips.SetToolTip(_modelBox, VideoSpeechStrings.ModelTooltip);
+            _tips.SetToolTip(_modelLabel, VideoSpeechStrings.ModelTooltip);
 
             var left = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Left, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
             left.Controls.AddRange([_hearSelected, _hearAll, _export]);
@@ -177,9 +200,9 @@ namespace PhotoLikerUI
             bottom.Controls.Add(_status, 0, 1);
             bottom.Controls.Add(buttons, 0, 2);
 
-            var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Padding = new Padding(12, 10, 12, 8) };
+            var root = _root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, Padding = new Padding(12, 10, 12, 8) };
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            root.RowStyles.Add(_introRow); // the height of the intro is its text's at the width there is (see FitIntro)
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -193,8 +216,24 @@ namespace PhotoLikerUI
             Load += (_, _) => _split.SplitterDistance = Math.Max(120, (int)(_split.Height * 0.62));
         }
 
+        /// <summary>The intro is as high as its text needs at the width it has (in a narrow window it takes a line more, which is not cut off).</summary>
+        private void FitIntro()
+        {
+            // Asked from the resizing of the window, not from the label's own change, which comes in the middle of a layout that would not take the new row height
+            var width = _root.ClientSize.Width - _root.Padding.Horizontal;
+            if (width <= 0)
+                return;
+
+            var text = TextRenderer.MeasureText(_intro.Text, _intro.Font, new Size(width, int.MaxValue), TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
+            var height = text.Height + 8;
+            if ((int)_introRow.Height != height)
+                _introRow.Height = height;
+        }
+
         private void Wire()
         {
+            Resize += (_, _) => FitIntro();
+            Load += (_, _) => FitIntro();
             _list.RetrieveVirtualItem += (_, e) => e.Item = BuildItem(e.ItemIndex);
             _list.ColumnClick += (_, e) => SortBy(e.Column);
             _list.SelectedIndexChanged += (_, _) =>
@@ -234,7 +273,9 @@ namespace PhotoLikerUI
                 if (_list.SelectedIndices.Count == 0)
                     e.Cancel = true;
                 _openItem.Enabled = _showItem.Enabled = _list.SelectedIndices.Count == 1;
-                _hearItem.Enabled = !_busy && SelectedEntries().Any(CanBeHeard);
+                _hearItem.Enabled = _hearWithItem.Enabled = !_busy && SelectedEntries().Any(CanBeHeard);
+                foreach (ToolStripMenuItem item in _hearWithItem.DropDownItems)
+                    item.Checked = ((SpeechModelInfo)item.Tag!).Id == _model.Id; // the model the table is of now
                 _menu.Renderer = _dark ? new DarkToolStripRenderer() : new ToolStripProfessionalRenderer();
                 _menu.BackColor = _dark ? ThemeManager.DarkBackAlt : ThemeManager.LightBack;
                 _menu.ForeColor = _dark ? ThemeManager.DarkFore : ThemeManager.LightFore;
@@ -242,6 +283,13 @@ namespace PhotoLikerUI
             _openItem.Click += (_, _) => { if (SelectedEntries().FirstOrDefault() is { } entry) Open(entry, show: false); };
             _showItem.Click += (_, _) => { if (SelectedEntries().FirstOrDefault() is { } entry) Open(entry, show: true); };
             _hearItem.Click += async (_, _) => await HearAsync([.. SelectedEntries().Select(e => e.Row)]);
+            foreach (ToolStripMenuItem item in _hearWithItem.DropDownItems)
+                item.Click += async (_, _) => await HearWithAsync((SpeechModelInfo)item.Tag!);
+            _modelBox.SelectedIndexChanged += async (_, _) =>
+            {
+                if (!_settingModel && _modelBox.SelectedItem is ModelChoice choice)
+                    await SetModelAsync(choice.Model);
+            };
             _hearSelected.Click += async (_, _) => await HearAsync([.. SelectedEntries().Select(e => e.Row)]);
             _hearAll.Click += async (_, _) => await HearAsync(_all);
             _export.Click += async (_, _) => await ExportAsync();
@@ -265,7 +313,7 @@ namespace PhotoLikerUI
         private void ApplyTheme()
         {
             ThemeManager.Apply(this, _dark);
-            foreach (Control control in new Control[] { _intro, _findLabel, _summary, _status })
+            foreach (Control control in new Control[] { _intro, _findLabel, _modelLabel, _summary, _status })
                 control.BackColor = Color.Transparent; // the theme paints a label like a control; here it sits on a panel
             _list.BackColor = _dark ? ThemeManager.DarkBackAlt : ThemeManager.LightBackAlt;
             _words.BackColor = _dark ? ThemeManager.DarkBackAlt : ThemeManager.LightBackAlt;
@@ -299,6 +347,7 @@ namespace PhotoLikerUI
                 _all = rows;
                 _entries = [.. rows.Select(MakeEntry)];
                 _status.Text = string.Empty;
+                ShowModels();
                 Refilter();
             }
             catch (Exception ex) when (!IsDisposed)
@@ -314,11 +363,72 @@ namespace PhotoLikerUI
             return new Entry(
                 row, path,
                 row.Video.Info is { } info ? VideoTime.Format(info.Duration) : string.Empty,
+                row.Video.Date.Taken is { } recorded ? PhotoLiker.Core.DateText.Display(recorded) : string.Empty,
                 StatusText(row.Status),
                 SpeechLanguages.Describe(row.Language),
+                ModelsText(row),
                 row.MomentTimesMs.Count > 0 ? row.MomentTimesMs.Count.ToString("N0") : string.Empty,
                 OneLine(text, SpeechPreviewLength),
                 path + " " + text);
+        }
+
+        /// <summary>
+        /// The models that have listened to the video, the smaller first, each with how many stretches of speech it found: <c>tiny (3), small (12) ✓</c>. The tick is on the model whose words are
+        /// the captions of the video (and what the viewer shows): the one that is set in SpeechModel if it heard anything, else the one that heard most.
+        /// </summary>
+        private string ModelsText(VideoSpeechRow row)
+        {
+            if (row.Models.Count == 0)
+                return string.Empty;
+
+            var captions = row.CaptionModel(_settingsModel.Id);
+            var order = SpeechModels.All.Select(m => m.Id).ToList();
+            return string.Join(
+                ", ",
+                row.Models
+                    .OrderBy(h => order.IndexOf(h.ModelId) is var at && at >= 0 ? at : int.MaxValue).ThenBy(h => h.ModelId, StringComparer.Ordinal)
+                    .Select(h => $"{h.ModelId} ({h.Segments:N0})" + (string.Equals(h.ModelId, captions, StringComparison.OrdinalIgnoreCase) ? " ✓" : string.Empty)));
+        }
+
+        /// <summary>The Model box lists each model with how many videos it has speech for (after a load: the numbers change when videos were heard again), and shows the one the table is of.</summary>
+        private void ShowModels()
+        {
+            _settingModel = true;
+            try
+            {
+                for (var i = 0; i < SpeechModels.All.Count; i++)
+                {
+                    var model = SpeechModels.All[i];
+                    var videos = _all.Count(r => r.Models.Any(h => h.ModelId == model.Id && h.Segments > 0));
+                    _modelBox.Items[i] = new ModelChoice(model, videos);
+                }
+                _modelBox.SelectedIndex = Math.Max(0, SpeechModels.All.ToList().FindIndex(m => m.Id == _model.Id));
+            }
+            finally
+            {
+                _settingModel = false;
+            }
+        }
+
+        /// <summary>The table is of another model from now on (its text, and the videos it has not heard are "not read yet"), and videos are heard again with it. The selected videos stay selected.</summary>
+        private async Task SetModelAsync(SpeechModelInfo model)
+        {
+            if (_busy || string.Equals(_model.Id, model.Id, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            _model = model;
+            ShowModels();
+            await LoadAsync();
+        }
+
+        /// <summary>The menu item "Hear again with the model": the table goes over to that model, then the language is asked for and the selected videos are heard.</summary>
+        private async Task HearWithAsync(SpeechModelInfo model)
+        {
+            if (_busy)
+                return;
+
+            await SetModelAsync(model);
+            await HearAsync([.. SelectedEntries().Select(e => e.Row)]);
         }
 
         private static string StatusText(SpeechStatus status) => status switch
@@ -350,8 +460,10 @@ namespace PhotoLikerUI
             kept = _sortColumn switch
             {
                 LengthColumn => Order(kept, e => e.Row.Video.Info?.DurationSeconds ?? 0),
+                RecordedColumn => OrderByRecorded(kept),
                 StatusColumn => Order(kept, e => (int)e.Row.Status),
                 LanguageColumn => Order(kept, e => e.Language, StringComparer.CurrentCultureIgnoreCase),
+                ModelsColumn => Order(kept, e => e.Models, StringComparer.CurrentCultureIgnoreCase),
                 MomentsColumn => Order(kept, e => e.Row.MomentTimesMs.Count),
                 SpeechColumn => Order(kept, e => e.Speech, StringComparer.CurrentCultureIgnoreCase),
                 _ => Order(kept, e => e.Path, StringComparer.OrdinalIgnoreCase),
@@ -386,6 +498,20 @@ namespace PhotoLikerUI
                 ? entries.OrderByDescending(key, comparer).ThenBy(e => e.Path, StringComparer.OrdinalIgnoreCase)
                 : entries.OrderBy(key, comparer).ThenBy(e => e.Path, StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// By the date the video was recorded, oldest first (or newest first when the column is clicked again), and by path when the dates are the same. A video with no date that can be
+        /// believed has nothing to be put in order by: those come last whichever way the column is sorted, so that they are not mistaken for the oldest or the newest.
+        /// </summary>
+        private IEnumerable<Entry> OrderByRecorded(IEnumerable<Entry> entries)
+        {
+            var list = entries.ToList();
+            var dated = list.Where(e => e.Row.Video.Date.Taken is not null);
+            var ordered = _sortDescending
+                ? dated.OrderByDescending(e => e.Row.Video.Date.Taken).ThenBy(e => e.Path, StringComparer.OrdinalIgnoreCase)
+                : dated.OrderBy(e => e.Row.Video.Date.Taken).ThenBy(e => e.Path, StringComparer.OrdinalIgnoreCase);
+            return ordered.Concat(list.Where(e => e.Row.Video.Date.Taken is null).OrderBy(e => e.Path, StringComparer.OrdinalIgnoreCase));
+        }
+
         private static bool Matches(Entry entry, Filter filter) => filter switch
         {
             Filter.All => true,
@@ -408,8 +534,8 @@ namespace PhotoLikerUI
         {
             string[] names =
             [
-                VideoSpeechStrings.ColumnVideo, VideoSpeechStrings.ColumnLength, VideoSpeechStrings.ColumnStatus,
-                VideoSpeechStrings.ColumnLanguage, VideoSpeechStrings.ColumnMoments, VideoSpeechStrings.ColumnSpeech,
+                VideoSpeechStrings.ColumnVideo, VideoSpeechStrings.ColumnLength, VideoSpeechStrings.ColumnRecorded, VideoSpeechStrings.ColumnStatus,
+                VideoSpeechStrings.ColumnLanguage, VideoSpeechStrings.ColumnModels, VideoSpeechStrings.ColumnMoments, VideoSpeechStrings.ColumnSpeech,
             ];
             for (var i = 0; i < names.Length; i++)
                 _list.Columns[i].Text = i == _sortColumn ? names[i] + (_sortDescending ? "  ▼" : "  ▲") : names[i];
@@ -431,7 +557,7 @@ namespace PhotoLikerUI
             var entry = index >= 0 && index < _view.Length ? _view[index] : null;
             return entry is null
                 ? new ListViewItem(string.Empty)
-                : new ListViewItem([entry.Path, entry.Length, entry.Status, entry.Language, entry.Moments, entry.Speech]);
+                : new ListViewItem([entry.Path, entry.Length, entry.Recorded, entry.Status, entry.Language, entry.Models, entry.Moments, entry.Speech]);
         }
 
         private void FitLastColumn()
@@ -628,7 +754,7 @@ namespace PhotoLikerUI
             var heardAs = hearable.Where(r => r.Language.Length > 0).GroupBy(r => r.Language).OrderByDescending(g => g.Count()).Take(4)
                 .Select(g => $"{SpeechLanguages.Describe(g.Key)} - {g.Count():N0}");
             using var chooser = new SpeechLanguageDialog(
-                Plural.Count(hearable.Count, VideoSpeechStrings.Video), MainForm.FormatDuration(length), string.Join(", ", heardAs), Suggest(hearable), _dark);
+                Plural.Count(hearable.Count, VideoSpeechStrings.Video), MainForm.FormatDuration(length), string.Join(", ", heardAs), Suggest(hearable), _model.Title, _dark);
             if (chooser.ShowDialog(this) != DialogResult.OK)
                 return;
 
@@ -783,7 +909,7 @@ namespace PhotoLikerUI
         private void SetBusy(bool busy)
         {
             _busy = busy;
-            _findBox.Enabled = _statusBox.Enabled = !busy;
+            _findBox.Enabled = _statusBox.Enabled = _modelBox.Enabled = !busy;
             UpdateButtons();
         }
 

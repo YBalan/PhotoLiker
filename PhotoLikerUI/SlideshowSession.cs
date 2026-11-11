@@ -69,6 +69,7 @@ namespace PhotoLikerUI
         private readonly SlideshowDepthOptions? _depth;        // how to work out how near the parts of a photo are (the Parallax effect); null when the depth model is not on this computer
         private bool _showFaces;                               // the boxes with the names on the faces are on (F)
         private bool _showNames;                               // the line of names in the corner is on (N)
+        private bool _showCaptions;                            // the words said in a video are written over it (C)
         private bool _cursorHidden;
 
         // Videos
@@ -170,12 +171,14 @@ namespace PhotoLikerUI
             _hasPeople = people is not null;
             _showFaces = people?.ShowFaces ?? false;
             _showNames = people?.ShowNames ?? false;
+            _showCaptions = _videoOptions?.ShowCaptions ?? false;
             foreach (var screen in _screens)
             {
                 screen.Frames.Loaded += (_, _) => Advance();
                 screen.Frames.LoadFailed += (_, _) => Advance();
                 screen.VideoFinished += OnVideoFinished;
                 screen.SetPeopleShown(_showFaces, _showNames);
+                screen.SetCaptionsShown(_showCaptions);
             }
 
             _effect = effect;
@@ -195,6 +198,9 @@ namespace PhotoLikerUI
 
         /// <summary>Whether the line of names in the corner is on now: as the show began, or as the N key left it.</summary>
         public bool ShowNames => _showNames;
+
+        /// <summary>Whether the words said in a video are written over it now: as the show began, or as the C key left it. Null when the show has no videos (there is nothing to caption, and the setting is not touched).</summary>
+        public bool? ShowCaptions => _videoOptions is null ? null : _showCaptions;
 
         /// <summary>The file of the photo (or video) that was on the screen of the main window last; null if none was shown.</summary>
         public string? LastShownPath =>
@@ -363,6 +369,11 @@ namespace PhotoLikerUI
                     if (!repeat)
                         TogglePeople(faces: false);
                     return true;
+                case Keys.C:
+                case Keys.C | Keys.Shift:
+                    if (!repeat)
+                        ToggleCaptions();
+                    return true;
                 default:
                     return false;
             }
@@ -439,6 +450,28 @@ namespace PhotoLikerUI
             foreach (var screen in _screens)
             {
                 screen.SetPeopleShown(_showFaces, _showNames);
+                screen.ShowNotice(text);
+            }
+        }
+
+        /// <summary>
+        /// C: the words said in a video are written over it if they were not, and not if they were, on every screen (the video that plays gets or loses its caption at once), and the person is
+        /// told which. A show without videos has nothing to caption, and the person is told so.
+        /// </summary>
+        private void ToggleCaptions()
+        {
+            if (_videoOptions is null)
+            {
+                foreach (var screen in _screens)
+                    screen.ShowNotice(SlideshowStrings.NoCaptionsToShow);
+                return;
+            }
+
+            _showCaptions = !_showCaptions;
+            var text = _showCaptions ? SlideshowStrings.CaptionsOn : SlideshowStrings.CaptionsOff;
+            foreach (var screen in _screens)
+            {
+                screen.SetCaptionsShown(_showCaptions);
                 screen.ShowNotice(text);
             }
         }
@@ -932,7 +965,7 @@ namespace PhotoLikerUI
             }
 
             _videoStartedAt = Stopwatch.GetTimestamp();
-            _screens[_primary].ShowVideo(file, segments, options.Mute, facts.Taken);
+            _screens[_primary].ShowVideo(file, segments, options.Mute, facts.Taken, facts.Speech); // the screen writes the words when captions are on (C turns them on and off while the video plays)
         }
 
         private void OnVideoFinished(SlideshowScreen screen)

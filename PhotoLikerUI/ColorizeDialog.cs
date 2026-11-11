@@ -88,6 +88,9 @@ namespace PhotoLikerUI
         /// <summary>How many copies were made: the list of the main window has to be made again if there were any.</summary>
         public int Saved => _saved;
 
+        /// <summary>The strength (percent) and the warmth (-100 to 100) the boxes say now, as the bar and the settings keep them: what the person chose here is what the next colorizing starts from.</summary>
+        public (int Strength, int Warmth) Values => ((int)_strength.Value, (int)_warmth.Value);
+
         private static IEnumerable<Control> Descendants(Control root)
         {
             foreach (Control child in root.Controls)

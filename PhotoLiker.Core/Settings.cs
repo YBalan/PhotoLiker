@@ -15,17 +15,18 @@ namespace PhotoLiker.Core
 
         // The WinForms app has always written this setting as "GoThroughtSubFolders", so that stays the name in the
         // file (apps of different versions can open the same folder). Files of the MAUI app have the other spelling.
+        // On by default: a folder is looked at with everything below it. A folder that has been opened before keeps what its file says.
         [JsonPropertyName("GoThroughtSubFolders")]
-        public bool   GoThroughSubFolders { get; set; } = false;
+        public bool   GoThroughSubFolders { get; set; } = true;
         [JsonPropertyName("GoThroughSubFolders")]
         public bool   GoThroughSubFoldersAlternateSpelling { set => GoThroughSubFolders = value; }
 
         public string[] Extensions   { get; set; } = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"];
         /// <summary>
         /// Whether the videos of the folder are listed with its photos (see <see cref="VideoExtensions"/>): they are shown, played, liked, sorted into groups and
-        /// deleted like photos. Off by default, so a folder that holds videos looks as it always did until this is turned on.
+        /// deleted like photos. On by default (a folder that has been opened before keeps what its file says); the player's engine is fetched, after asking, the first time a video is played.
         /// </summary>
-        public bool   SupportVideo   { get; set; } = false;
+        public bool   SupportVideo   { get; set; } = true;
 
         /// <summary>The file extensions that count as videos when <see cref="SupportVideo"/> is on, see <see cref="MediaKinds.DefaultVideoExtensions"/>.</summary>
         public string[] VideoExtensions { get; set; } = [.. MediaKinds.DefaultVideoExtensions];
@@ -67,7 +68,7 @@ namespace PhotoLiker.Core
         public PhotoSortOrder SortOrder { get; set; } = PhotoSortOrder.OldestFirst;
         public int    CacheSize      { get; set; } = 20;
         public int    ThumbnailSize  { get; set; } = 110;
-        public bool   IsDarkTheme    { get; set; } = false;
+        public bool   IsDarkTheme    { get; set; } = true;
 
         /// <summary>
         /// The language of the program ("en", "ua"), for the settings grid. It is the language that is on (<see cref="Loc.Language"/>) and is
@@ -149,6 +150,9 @@ namespace PhotoLiker.Core
 
         /// <summary>By how many percent the sound of the other programs is turned down while a video plays with its sound (50: to half of what it was; 0: left alone), see <see cref="SlideshowVideo.LowerOtherAudioOf"/>.</summary>
         public int SlideshowLowerOtherAudio { get; set; } = SlideshowVideo.DefaultLowerOtherAudioPercent;
+
+        /// <summary>Whether the slideshow writes what is said in a video (the speech the index read, see <see cref="VideoSpeech"/>) over the picture as captions while the video plays. Off by default.</summary>
+        public bool SlideshowShowCaptions { get; set; } = false;
 
         // Main window of the WinForms app
         public int    WindowLeft     { get; set; } = 100;

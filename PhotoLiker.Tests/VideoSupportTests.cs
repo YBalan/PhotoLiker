@@ -97,11 +97,14 @@ public class VideoSupportTests : IDisposable
     // ── the setting ────────────────────────────────────────────────────
 
     [Fact]
-    public void Videos_AreOffUnlessTurnedOn()
+    public void Videos_AreOnByDefault_AndLeftOutWhenTurnedOff()
     {
         var settings = new Settings();
 
-        Assert.False(settings.SupportVideo);
+        Assert.True(settings.SupportVideo);
+        Assert.Contains(".mp4", settings.ListedExtensions);
+
+        settings.SupportVideo = false;
         Assert.Equal(settings.Extensions, settings.ListedExtensions);
         Assert.DoesNotContain(".mp4", settings.ListedExtensions);
     }
@@ -128,15 +131,23 @@ public class VideoSupportTests : IDisposable
     }
 
     [Fact]
-    public void AFolderSavedBeforeVideos_HasThemOff_WithTheDefaultList()
+    public void AFolderSavedBeforeVideos_HasThemOn_WithTheDefaultList()
     {
         File.WriteAllText(Settings.GetFilePath(_root), """{ "CacheSize": 33, "Extensions": [".jpg"] }""");
 
         var loaded = Settings.Load(_root);
 
         Assert.Equal(33, loaded.CacheSize);
-        Assert.False(loaded.SupportVideo);
+        Assert.True(loaded.SupportVideo); // the file does not say: the default
         Assert.Equal(MediaKinds.DefaultVideoExtensions, loaded.VideoExtensions);
+    }
+
+    [Fact]
+    public void AFolderThatHasVideosTurnedOff_KeepsThemOff()
+    {
+        new Settings { CurrentFolder = _root, SupportVideo = false }.Save(_root);
+
+        Assert.False(Settings.Load(_root).SupportVideo);
     }
 
     [Fact]
@@ -325,7 +336,7 @@ public class VideoSupportTests : IDisposable
         Touch("clip.mp4");
         Touch(@"sub\MVI_0001.AVI");
         Touch(@"sub\b.png");
-        var off = new Settings();
+        var off = new Settings { SupportVideo = false };
         var on = new Settings { SupportVideo = true };
 
         var photosOnly = PhotoScanner.Scan(_root, recursive: true, off.ListedExtensions, null).Select(p => Path.GetFileName(p.OriginalFilePath)).Order();
@@ -339,7 +350,7 @@ public class VideoSupportTests : IDisposable
     [Fact]
     public void TheSavedListing_IsAnotherOne_WhenVideosAreTurnedOn()
     {
-        var off = new ListingKey(_root, true, new Settings().ListedExtensions, null);
+        var off = new ListingKey(_root, true, new Settings { SupportVideo = false }.ListedExtensions, null);
         var on = new ListingKey(_root, true, new Settings { SupportVideo = true }.ListedExtensions, null);
 
         Assert.NotEqual(off.CacheFile, on.CacheFile); // the list made without videos is not shown with them on

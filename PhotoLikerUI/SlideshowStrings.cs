@@ -15,6 +15,9 @@ namespace PhotoLikerUI
         public static string NamesOn => T();
         public static string NamesOff => T();
         public static string NoPeopleToShow => T();
+        public static string CaptionsOn => T();
+        public static string CaptionsOff => T();
+        public static string NoCaptionsToShow => T();
 
         // The indexing that runs behind the show (see SlideshowIndexing)
         public static string IndexingPreparing => T();

@@ -21,6 +21,9 @@ namespace PhotoLiker.Video
         public const string FileSizeName = "File size";
         public const string FileDatesName = "File dates";
 
+        /// <summary>The id of the "Recorded" row: the one row of a video that can be edited in the grid (see <c>VideoDateSave</c>).</summary>
+        public const int RecordedTagId = Base + 6;
+
         /// <summary>The rows of a video that could be read. The names of the rows are English, like those of the EXIF rows; what each means is in the language that is on.</summary>
         /// <param name="file">The file, for its dates: next to the date of recording they show whether the file is as old as the recording (a copy is not).</param>
         public static IReadOnlyList<MetadataEntry> Entries(VideoRecord record, FileInfo? file = null)
@@ -34,7 +37,7 @@ namespace PhotoLiker.Video
                 Row(3, VideoCodecName, info.VideoCodec, VideoLibStrings.DescVideoCodec),
                 Row(4, AudioName, info.Audio ?? VideoLibStrings.NoAudio, VideoLibStrings.DescAudio),
                 Row(5, BitrateName, BitrateText(info.BitsPerSecond), VideoLibStrings.DescBitrate),
-                Row(6, RecordedName, record.Date.Taken is { } taken ? taken.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) : VideoLibStrings.DateNone, VideoLibStrings.DescRecorded),
+                Row(RecordedTagId - Base, RecordedName, record.Date.Taken is { } taken ? taken.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) : VideoLibStrings.DateNone, VideoLibStrings.DescRecorded),
                 Row(7, DateFromName, record.Date.Source switch { DateSource.Exif => VideoLibStrings.DateFromVideo, DateSource.File => VideoLibStrings.DateFromFile, _ => VideoLibStrings.DateNone }, VideoLibStrings.DescDateFrom),
                 Row(10, FileSizeName, SizeOfFile(record.Length), VideoLibStrings.DescFileSize),
             };
