@@ -33,6 +33,9 @@ namespace PhotoLikerUI
         private readonly ToolTip _tips = new() { ShowAlways = true };
         private readonly System.Windows.Forms.Timer _tick = new() { Interval = 200 };
 
+        private readonly Font _buttonFont = new("Segoe UI Symbol", 11f); // the fonts are this panel's: they are let go of with it
+        private readonly Font _captionFont;
+
         private MediaPlayer? _player;
         private int _generation;
         private bool _stopping;
@@ -42,10 +45,11 @@ namespace PhotoLikerUI
         {
             _play.FlatAppearance.BorderSize = 0;
             _mute.FlatAppearance.BorderSize = 0;
-            _play.Font = _mute.Font = new Font("Segoe UI Symbol", 11f);
+            _play.Font = _mute.Font = _buttonFont;
 
             _bar.Controls.AddRange([_play, _time, _seek, _goLabel, _go, _mute, _volumeBar]);
-            _caption.Font = new Font(Font.FontFamily, 11f);
+            _captionFont = new Font(Font.FontFamily, 11f);
+            _caption.Font = _captionFont;
             Controls.Add(_view);
             Controls.Add(_caption); // above the bar: what is said just now
             Controls.Add(_bar);
@@ -416,11 +420,18 @@ namespace PhotoLikerUI
                     // Stopping waits for the engine's threads: not here, and the player is let go of when they are done
                     _ = Task.Run(() =>
                     {
-                        try { player.Stop(); player.Dispose(); } catch { /* the program is closing */ }
+                        // A stop that fails must not leave the player (native memory, the picture's window) undisposed
+                        try { player.Stop(); } catch { /* the program is closing */ }
+                        try { player.Dispose(); } catch { /* the program is closing */ }
                     });
                 }
             }
             base.Dispose(disposing);
+            if (disposing)
+            {
+                _buttonFont.Dispose();
+                _captionFont.Dispose();
+            }
         }
     }
 }

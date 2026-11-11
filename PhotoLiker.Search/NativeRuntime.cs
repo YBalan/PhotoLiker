@@ -19,6 +19,11 @@ namespace PhotoLiker.Search
         private const string StlLibrary = "MSVCP140.dll";
         private static readonly string[] RuntimeFiles = ["VCRUNTIME140.dll", "VCRUNTIME140_1.dll", StlLibrary, "MSVCP140_1.dll"];
 
+        /// <summary>The files of the C++ runtime that ONNX Runtime imports; if one is not to be found the models can not even be opened.</summary>
+        private static readonly string[] RequiredFiles = ["VCRUNTIME140.dll", "VCRUNTIME140_1.dll", StlLibrary];
+
+        private const string DownloadAddress = "https://aka.ms/vs/17/release/vc_redist.x64.exe";
+
         private static bool _verified;
 
         /// <summary>
@@ -41,7 +46,18 @@ namespace PhotoLiker.Search
             if (_verified)
                 return;
 
-            if (FindOldRuntime(LoadedRuntimeModules()) is { } old)
+            Verify(LoadedRuntimeModules(), file => NativeLibrary.TryLoad(file, out _));
+            _verified = true;
+        }
+
+        /// <summary>
+        /// The decision of <see cref="EnsureOnnxRuntimeCanLoad"/> for the C++ runtime modules that are loaded and a way to try to load a library by its name: throws if the copy that would be
+        /// used is too old, or if the runtime is not on this computer at all (ONNX Runtime then fails when the first model is made, with a message about a library that nobody can read).
+        /// </summary>
+        internal static void Verify(IEnumerable<(string Name, string Path, Version? Version)> loaded, Func<string, bool> canLoad)
+        {
+            var modules = loaded.ToList();
+            if (FindOldRuntime(modules) is { } old)
             {
                 throw new InvalidOperationException(
                     $"The search models cannot run in this window: an old copy of the Visual C++ runtime ({StlLibrary} {old.Version}, {old.Path}) " +
@@ -50,7 +66,17 @@ namespace PhotoLiker.Search
                     "which makes this go away for good.");
             }
 
-            _verified = true;
+            // A copy that is loaded is there; else Windows is asked for each file the way ONNX Runtime will ask
+            foreach (var file in RequiredFiles)
+            {
+                var loadedAlready = modules.Any(module => string.Equals(module.Name, file, StringComparison.OrdinalIgnoreCase));
+                if (!loadedAlready && !canLoad(file))
+                {
+                    throw new InvalidOperationException(
+                        $"The search and effect models need the Microsoft Visual C++ Redistributable (x64), and {file} was not found on this computer. " +
+                        $"Install it from {DownloadAddress} and start PhotoLiker again.");
+                }
+            }
         }
 
         /// <summary>

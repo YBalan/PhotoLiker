@@ -41,7 +41,9 @@ namespace PhotoLikerUI
             if (groups.Count > 0 && label.Name is { } likely && !label.Confirmed)
             {
                 var first = PersonItem(likely);
-                first.Font = new Font(menu.Font, FontStyle.Bold);
+                var likelyFont = new Font(menu.Font, FontStyle.Bold);
+                menu.Disposed += (_, _) => likelyFont.Dispose(); // the menu does not own the font of its items: it goes with the menu
+                first.Font = likelyFont;
                 menu.Items.Add(first);
                 menu.Items.Add(new ToolStripSeparator());
             }

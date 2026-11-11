@@ -85,6 +85,16 @@ namespace PhotoLikerUI
         private int _quickFinishes;                            // videos in a row that ended at once: a show of videos only gives up when none of them can be played
         private long _videoStartedAt;
         private IDisposable? _ducking;                         // what puts the other programs' sound back
+        private int _changes;                                  // sets of photos shown so far, and videos played, for the memory log (read on another thread)
+        private int _videosPlayed;
+
+        /// <summary>How the show is set up, and what it has done so far, as a few words for <see cref="SlideshowMemoryLog"/>. Safe to call from any thread.</summary>
+        internal string Facts() => $"changes={Volatile.Read(ref _changes)} videos={Volatile.Read(ref _videosPlayed)}";
+
+        /// <summary>The settings of the show as a few words, for <see cref="SlideshowMemoryLog"/>.</summary>
+        internal string Describe() =>
+            $"{_photos.Length} photos, {_videos.Length} videos, {_screens.Length} screen(s), mode {(_shuffle is null ? "OneByOne" : "Random")}, timeout {_timeoutSeconds} s, effect {_effect}, " +
+            $"depth {(_depth is null ? "no" : "yes")}, video {(_videoOptions is null ? "off" : _videoOptions.Mute ? "muted" : "with sound")}, captions {(_showCaptions ? "on" : "off")}, names {(_showNames ? "on" : "off")}, faces {(_showFaces ? "on" : "off")}";
 
         /// <summary>A video, and the place it has among the photos: it follows the photo <paramref name="AfterPhoto"/> of the list of photos (-1: it comes before the first).</summary>
         private readonly record struct VideoSlot(PhotoFile File, int AfterPhoto);
@@ -786,6 +796,7 @@ namespace PhotoLikerUI
                 _shown[screen] = photos[screen];
                 _screens[screen].ShowFrame(frames[screen], plan);
             }
+            Interlocked.Increment(ref _changes);
 
             Prefetch(); // the photos that were shown before can go now
             RestartTimer();
@@ -975,6 +986,7 @@ namespace PhotoLikerUI
 
             // A video that was over at once could not be played; when that is all that happens (a show of videos only) it ends
             var seconds = (Stopwatch.GetTimestamp() - _videoStartedAt) / (double)Stopwatch.Frequency;
+            Interlocked.Increment(ref _videosPlayed);
             _quickFinishes = seconds < 1 ? _quickFinishes + 1 : 0;
             _videoNow = -1;
 

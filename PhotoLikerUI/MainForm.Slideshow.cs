@@ -114,6 +114,7 @@ namespace PhotoLikerUI
             {
                 _slideshow = slideshow;
                 slideshow.ShowIndexing(_indexingForSlideshow); // an indexing that was running when the show began is on the screen from the start
+                using var memoryLog = SlideshowMemoryLog.Start(slideshow.Describe(), slideshow.Facts); // a line a minute about the memory, for a show that runs for hours
                 try
                 {
                     slideshow.Run(this);

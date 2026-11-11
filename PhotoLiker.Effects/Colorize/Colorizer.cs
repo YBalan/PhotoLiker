@@ -31,6 +31,13 @@ namespace PhotoLiker.Effects.Colorize
                 options.IntraOpNumThreads = threads;
             options.AddSessionConfigEntry("session.intra_op.allow_spinning", "0");
 
+            // No memory arena: with it (the default) the session keeps everything its runs have used for as long as it lives, 2.1 GB after the first run and 4.6 GB after the second (the memory
+            // pattern it plans from the first run is put beside the first run's blocks), and nothing gives it back, so a model that is kept open for a person who colours photos one after the other
+            // sits on 4.6 GB. Without it the runs take their memory from Windows and give it back when they end: measured on the DDColor tiny model, 0.33 GB open or running idle (as the
+            // 270 MB of this class's description says), 2.4 s a run instead of 1.8 s. (The pattern is off with it: it needs the arena.)
+            options.EnableCpuMemArena = false;
+            options.EnableMemoryPattern = false;
+
             _session = new InferenceSession(modelPath, options);
             _input = _session.InputMetadata.Keys.First();
             _guard = new RunGuard(_session.Dispose, nameof(Colorizer));
