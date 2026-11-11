@@ -185,6 +185,11 @@ above the viewer) and then answer questions about them. Nothing is uploaded: the
    first): all their faces are the faces of the one who was there, with that spelling, and in the groups they are there once. That is
    also how to fix a name that was typed two ways. A name that differs only in case is another spelling of the same name.
 
+   **Delete person...** (also the <kbd>Delete</kbd> key in the list) deletes the selected people, one or many, after asking (the default
+   answer is No). Every face named so loses its name, in this folder and in the other folders (each folder follows when you open it, see
+   below), and the people leave all the groups; the groups themselves stay. Only the names go: the photos and the faces found in them are
+   not touched, and a person comes back by naming the faces again (an **Import...** of an older `.plpeople` file brings them back too).
+
    **Export...** and **Import...** (at the bottom of the window) take the people and the groups to another computer, or into a backup,
    through one `.plpeople` file. **Export...** writes every person with the faces you named (this folder's and, from the shared file,
    the other folders') and every group. **Import...** first tells what the file holds, and after you agree it **adds** it: a face that
@@ -294,7 +299,8 @@ What is kept where:
   gone from the shared file the next time the folder is opened), the shared one is a copy that can be deleted any time.
   It also remembers the last 100 renames of people (**Rename person...**): a folder you open later that still has a person under the
   old name gets the new one in its own file, unless the person was named in it after the folder last agreed with the shared file
-  (a new person who has the old name is somebody else and is left alone).
+  (a new person who has the old name is somebody else and is left alone). Deleted people (**Delete person...**) are remembered the same
+  way and by the same rule, in order with the renames (the last 2,000 names); a folder that the shared file has never heard of keeps its people.
   Folders you named people in before this existed join it when you open them once (no indexing needed).
   The **groups** of people are one set for all folders, kept in `%LocalAppData%\PhotoLiker\people-groups.json` and also in
   `photo-liker-groups.json` in every photo folder that has people named in it, so that the groups travel with the photos (to
