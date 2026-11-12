@@ -123,6 +123,9 @@ namespace PhotoLikerUI
             ApplyColorizeLanguage();
             ApplyRotateLanguage();
             ApplySearchLanguage();
+
+            // Last: the rail is as wide as its longest name, and the names are all written by now
+            ApplyLayoutTexts();
         }
 
         /// <summary>The entry the context menu of the folders has is written into the registry in the language that was on then: write it again.</summary>

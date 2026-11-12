@@ -22,6 +22,8 @@ namespace SmokeTour;
 ///                          place in a video, and the slideshow (the pictures 34-40). Needs the models like --only-search. A few minutes.
 ///   --only-people          instead of the tour: the People window with 28 invented people in groups (the picture 28), written to the tour's
 ///                          own data folder. No models needed, a few seconds.
+///   --only-layout          instead of the tour: the toolbar at the left edge with the names of its buttons, the panel with the grids docked at the bottom and
+///                          floating over the window (the pictures 41-43). No models needed, a few seconds.
 ///
 /// The window takes the screen for about a minute (it is photographed as it is on screen, and one step clicks and types
 /// for real): leave the mouse and the keyboard alone.
@@ -38,6 +40,7 @@ internal static class Program
         var onlySearch = args.Contains("--only-search");
         var onlyVideo = args.Contains("--only-video");
         var onlyPeople = args.Contains("--only-people");
+        var onlyLayout = args.Contains("--only-layout");
         var demoFolder = Path.GetFullPath(ValueOf(args, "--demo-folder") ?? DefaultDemoFolder());
 
         // Keep the real %LocalAppData%\PhotoLiker (last folder, crash log) out of this. Has to happen before anything reads AppPaths.
@@ -82,7 +85,7 @@ internal static class Program
         {
             try
             {
-                await (onlyDialogs ? tour.RunDialogs() : onlyLanguage ? tour.RunLanguage() : onlySearch ? tour.RunSearch() : onlyVideo ? tour.RunVideo() : onlyPeople ? tour.RunPeople() : tour.Run());
+                await (onlyDialogs ? tour.RunDialogs() : onlyLanguage ? tour.RunLanguage() : onlySearch ? tour.RunSearch() : onlyVideo ? tour.RunVideo() : onlyPeople ? tour.RunPeople() : onlyLayout ? tour.RunLayout() : tour.Run());
             }
             catch (Exception ex)
             {
@@ -97,7 +100,7 @@ internal static class Program
 
         Application.Run(form);
 
-        if (!onlyDialogs && !onlyLanguage && !onlySearch && !onlyVideo && !onlyPeople)
+        if (!onlyDialogs && !onlyLanguage && !onlySearch && !onlyVideo && !onlyPeople && !onlyLayout)
         {
             try
             {

@@ -192,10 +192,14 @@ photo again.</p></div>
 <h2 id="window">4. The window</h2>
 
 <ul>
-  <li><strong>Toolbar</strong> (top left): the buttons described in <a href="#toolbar">The toolbar</a>.</li>
-  <li><strong>Settings table</strong> (left): how far you are (<code>CurrentIndex</code>, <code>TotalFiles</code>), the current file,
-  and the settings of the folder. Select a row and the pane under the table explains it.</li>
-  <li><strong>Photo information</strong> (lower left): the data the camera wrote into the photo, see <a href="#exif">EXIF and GPS</a>.</li>
+  <li><strong>Toolbar</strong> (a column of icons at the left edge): the buttons described in <a href="#toolbar">The toolbar</a>.</li>
+  <li><strong>Properties panel</strong> (left of the photo, unless you moved it): the two tables below, with a title bar. Dock it to another edge, float it in a window
+  of its own, or fold it away, see <a href="#toolbar">The toolbar</a>.
+    <ul>
+      <li><strong>Settings table</strong> (upper): how far you are (<code>CurrentIndex</code>, <code>TotalFiles</code>), the current file,
+      and the settings of the folder. Select a row and the pane under the table explains it.</li>
+      <li><strong>Photo information</strong> (lower): the data the camera wrote into the photo, see <a href="#exif">EXIF and GPS</a>.</li>
+    </ul></li>
   <li><strong>Search strip</strong> (above the photo): indexing and searching, see <a href="#search">Searching the photos</a>.</li>
   <li><strong>The photo</strong> (centre). A green check in its top-left corner means it is liked or in a group, and the folders it is
   saved in are listed next to the check. The bottom-left corner lists your groups.</li>
@@ -247,7 +251,17 @@ photo again.</p></div>
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="toolbar">6. The toolbar</h2>
 
+<p>The toolbar is a column of icons at the left edge of the window. The <strong>three bars</strong> at its top show the names of the buttons next to the icons,
+and hide them again; that is kept for the next start. If the window is too low for all the buttons, the last ones are behind the arrow at the bottom of the column.</p>
+
+<figure>
+  <img src="images/41-toolbar-names.png" alt="The toolbar with the names of its buttons shown, and the Properties panel next to it" width="1486" height="893">
+  <figcaption>The toolbar with the names of its buttons shown (the three bars on top), and the Properties panel next to it.</figcaption>
+</figure>
+
 <ul>
+  <li><strong>Three bars</strong> (top): show or hide the names of the buttons.</li>
+  <li><strong>Properties</strong> (a small window with a title bar): fold the panel with the two tables into a thin tab at its edge, and bring it back. The button is lit while the panel is shown.</li>
   <li><strong>Open</strong>: pick a folder of photos.</li>
   <li><strong>Copy</strong>: copy the shown photo to the clipboard (the same as <kbd>Ctrl</kbd>+<kbd>C</kbd>).</li>
   <li><strong>Dark / Light</strong>: switch the theme, see <a href="#theme">Dark and light theme</a>.</li>
@@ -260,6 +274,31 @@ photo again.</p></div>
   <li><strong>Register Context Menu</strong> / <strong>Unregister Context Menu</strong>: add or remove <em>Open in Photo Liker</em> in the right-click menu of folders.</li>
   <li><strong>Help</strong> (the question mark): the About box, with the keys and this manual.</li>
 </ul>
+
+<h3>The Properties panel</h3>
+
+<p>The two tables (the settings above, the photo's properties below) are in one panel, and the panel can be put where it suits you:</p>
+
+<ul>
+  <li>The <strong>⋮</strong> menu in its title bar docks it to the <strong>left</strong> (where it starts), the <strong>right</strong> or the <strong>bottom</strong> edge of the window
+  (at the bottom the two tables stand side by side). Drag the thin bar between the panel and the photo to make it wider or higher.</li>
+  <li><strong>Float in a window of its own</strong> takes it out of the window, to put anywhere, also on another screen. The close button of that window, or a double click on the bar
+  under its title, docks the panel back to where it came from. A double click on the title of a docked panel floats it.</li>
+  <li>The <strong>‹</strong> button of the title bar (or <strong>Collapse to the edge</strong> in the menu) folds the panel into a thin tab with its name, and the photo gets the room.
+  Click the tab, or the <strong>Properties</strong> button of the toolbar, to open it again.</li>
+</ul>
+
+<figure>
+  <img src="images/42-panel-bottom.png" alt="The panel docked at the bottom: the two grids side by side" width="1486" height="893">
+  <figcaption>The panel docked at the bottom: the two tables stand side by side, and the toolbar keeps the whole height.</figcaption>
+</figure>
+
+<figure>
+  <img src="images/43-panel-float.png" alt="The panel floating in a window of its own over the main window" width="1486" height="893">
+  <figcaption>The panel in a window of its own (here over the photo; it can be put anywhere, also on another screen).</figcaption>
+</figure>
+
+<p>Where the panel is, how big it is, and whether it is folded is remembered, with the names of the toolbar buttons.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="groups">7. Likes and groups</h2>
@@ -400,7 +439,7 @@ of the video are written at the bottom of the screen while they are said (white 
 description: select it and the pane under the table says what it is for.</p>
 
 <figure>
-  <img src="images/06-settings.png" alt="The settings table, LikedFolder selected with its ... button" width="424" height="575">
+  <img src="images/06-settings.png" alt="The settings table, LikedFolder selected with its ... button" width="430" height="575">
   <figcaption>The settings table, with the <strong>LikedFolder</strong> row selected.</figcaption>
 </figure>
 
@@ -672,8 +711,8 @@ a title picture and with a song under it. Nothing else has to be installed.</p>
     <kbd>Space</kbd> (or sort them into groups, and make one video per group), then open the dialog.
   </li>
   <li>
-    <strong>Click Generate Video</strong>, the button with the film icon in the toolbar. The dialog opens at once.
-    <figure><img src="images/12-generate-video-button.png" alt="The Generate Video button in the toolbar" width="416" height="25"></figure>
+    <strong>Click Generate Video</strong>, the button with the film icon in the toolbar (the column of icons at the left edge of the window; the three bars on top of it show the names, as in the picture). The dialog opens at once.
+    <figure><img src="images/12-generate-video-button.png" alt="The Generate Video button in the toolbar, with the names of the buttons shown" width="193" height="551"></figure>
   </li>
   <li>
     <strong>Choose the photos and the order.</strong> <strong>Photos from</strong> lists <strong>Current</strong> (what the window shows now: the folder, or the search

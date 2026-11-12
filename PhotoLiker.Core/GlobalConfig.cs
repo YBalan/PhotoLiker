@@ -23,6 +23,27 @@ namespace PhotoLiker.Core
         /// <summary>The warmth of the colours on the bar, from -100 (cooler) to 100 (warmer).</summary>
         public int ColorizeWarmth { get; set; }
 
+        /// <summary>Whether the toolbar at the left edge shows the names of its buttons next to the icons (the hamburger button on top turns it on and off).</summary>
+        public bool RailExpanded { get; set; }
+
+        /// <summary>Where the panel with the two property grids is: "Left", "Right", "Bottom" or "Float" (its own window). Anything else reads as Left; see <see cref="PanelPlace"/>.</summary>
+        public string PropertiesPlace { get; set; } = PanelPlace.Left;
+
+        /// <summary>The panel is folded into a thin tab at its edge (the Properties button of the toolbar, or the tab itself, opens it again). Ignored while it floats.</summary>
+        public bool PropertiesCollapsed { get; set; }
+
+        /// <summary>The width of the panel when it is docked left or right, in pixels at 96 dpi.</summary>
+        public int PropertiesWidth { get; set; } = PanelPlace.DefaultWidth;
+
+        /// <summary>The height of the panel when it is docked at the bottom, in pixels at 96 dpi.</summary>
+        public int PropertiesHeight { get; set; } = PanelPlace.DefaultHeight;
+
+        /// <summary>Where the window of the panel was when it floated last (left, top, width, height); 0 wide means never.</summary>
+        public int FloatLeft { get; set; }
+        public int FloatTop { get; set; }
+        public int FloatWidth { get; set; }
+        public int FloatHeight { get; set; }
+
         public static GlobalConfig Load()
         {
             if (!File.Exists(FilePath)) return new GlobalConfig();

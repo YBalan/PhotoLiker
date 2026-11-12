@@ -23,7 +23,8 @@ A video of every photo of the folder you have open needs no liking at all: pick 
 
 ## 2. Open the dialog
 
-Click **Generate Video**, the button with the film icon in the toolbar at the top left of the window:
+Click **Generate Video**, the button with the film icon in the toolbar, the column of icons at the left edge of the window (the three bars on top of it show the
+names of the buttons, as in the picture):
 
 ![The Generate Video button in the toolbar](images/12-generate-video-button.png)
 

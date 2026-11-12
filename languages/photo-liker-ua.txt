@@ -1204,6 +1204,22 @@ ToolbarStrings.LoadLiked = Завантажити папку вподобани�
 ToolbarStrings.LoadLikedTooltip = Вибрати й завантажити папку вподобаних
 ToolbarStrings.GpsTooltip = Відкрити місце в Google Maps
 
+# ──────────── LayoutStrings ────────────
+LayoutStrings.RailShowNames = Показати назви кнопок
+LayoutStrings.RailHideNames = Сховати назви кнопок
+LayoutStrings.PropertiesButton = Властивості
+LayoutStrings.PropertiesButtonTooltip = Показати або сховати панель з налаштуваннями та властивостями фото
+LayoutStrings.PanelTitle = Властивості
+LayoutStrings.PanelMenuTooltip = Де панель: зліва, справа, знизу чи в окремому вікні
+LayoutStrings.PanelDockLeft = Закріпити зліва
+LayoutStrings.PanelDockRight = Закріпити справа
+LayoutStrings.PanelDockBottom = Закріпити знизу
+LayoutStrings.PanelFloat = Окреме вікно
+LayoutStrings.PanelCollapse = Згорнути до краю
+LayoutStrings.PanelCollapseTooltip = Згорнути панель у вкладку на краю вікна
+LayoutStrings.PanelExpandTooltip = Показати панель знову
+LayoutStrings.PanelTitleTooltip = Подвійне клацання: винести панель в окреме вікно або повернути на місце
+
 # ──────────── ToolModelStrings ────────────
 ToolModelStrings.ParallaxFeature = Ефект «Паралакс»
 ToolModelStrings.ColorizeFeature = Розфарбування

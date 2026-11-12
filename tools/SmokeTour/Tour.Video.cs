@@ -22,7 +22,7 @@ internal sealed partial class Tour
         var total = DemoFolder.CountTopLevel(".jpg") + DemoFolder.VideoCount;
         checks.That(await Until(() => form.Config.Files.Count == total && PhotoShown()), $"{total} items listed (photos and videos) and the first one shown");
 
-        form.Find<SplitContainer>("splitContainer1").SplitterDistance = SidePanelWidth;
+        form.SetSidePanelWidth(SidePanelWidth);
         form.Find<SplitContainer>("splitContainer2").SplitterDistance = SettingsGridHeight;
         await Settle();
 

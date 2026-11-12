@@ -18,7 +18,7 @@ internal sealed partial class Tour
         var jpegs = DemoFolder.CountTopLevel(".jpg");
         checks.Step("1. English at the start");
         checks.That(await Until(() => form.Config.Files.Count == jpegs && PhotoShown()), $"{jpegs} photos listed and the first one shown");
-        form.Find<SplitContainer>("splitContainer1").SplitterDistance = SidePanelWidth;
+        form.SetSidePanelWidth(SidePanelWidth);
         form.Find<SplitContainer>("splitContainer2").SplitterDistance = SettingsGridHeight;
         await Settle();
 

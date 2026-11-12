@@ -1218,6 +1218,22 @@ ToolbarStrings.LoadLiked = Load Liked Folder
 ToolbarStrings.LoadLikedTooltip = Select and load a liked folder
 ToolbarStrings.GpsTooltip = Open location in Google Maps
 
+# ──────────── LayoutStrings ────────────
+LayoutStrings.RailShowNames = Show the names of the buttons
+LayoutStrings.RailHideNames = Hide the names of the buttons
+LayoutStrings.PropertiesButton = Properties
+LayoutStrings.PropertiesButtonTooltip = Show or hide the panel with the settings and the properties of the photo
+LayoutStrings.PanelTitle = Properties
+LayoutStrings.PanelMenuTooltip = Where the panel is: left, right, bottom, or a window of its own
+LayoutStrings.PanelDockLeft = Dock to the left
+LayoutStrings.PanelDockRight = Dock to the right
+LayoutStrings.PanelDockBottom = Dock at the bottom
+LayoutStrings.PanelFloat = Float in a window of its own
+LayoutStrings.PanelCollapse = Collapse to the edge
+LayoutStrings.PanelCollapseTooltip = Fold the panel into a tab at the edge of the window
+LayoutStrings.PanelExpandTooltip = Show the panel again
+LayoutStrings.PanelTitleTooltip = Double-click to float the panel in a window of its own, or to dock it back
+
 # ──────────── ToolModelStrings ────────────
 ToolModelStrings.ParallaxFeature = The Parallax effect
 ToolModelStrings.ColorizeFeature = Colorize

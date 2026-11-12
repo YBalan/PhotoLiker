@@ -367,11 +367,19 @@ work on the photo again.
 
 ### Toolbar
 
+The toolbar is a column of icons at the left edge of the window, from the top of it to the bottom (like the side bar of Home Assistant). The **three bars** at its top
+show the names of the buttons next to their icons, and hide them again; the choice is kept for the next start. In a window that is too low for all the buttons the last
+ones are behind the arrow at the bottom of the column.
+
+![The toolbar with the names of its buttons shown, and the Properties panel next to it](docs/images/41-toolbar-names.png)
+
 | Button | What it does |
 |---|---|
+| **three bars** (top) | Show or hide the names of the buttons. |
+| **Properties** (a small window with a title bar) | Fold the panel with the two grids into a thin tab at the edge, and bring it back; it is lit while the panel is shown. See [The Properties panel](#the-properties-panel). |
 | **Open** | Open a photo folder. |
 | **Copy** | Copy the shown photo to the clipboard (the same as <kbd>Ctrl</kbd>+<kbd>C</kbd>). |
-| **Dark** / **Light** | Switch the theme, see [Dark and light theme](#dark-and-light-theme). |
+| **Dark** / **Light** (a moon / a sun) | Switch the theme, see [Dark and light theme](#dark-and-light-theme). |
 | **Open Source Folder**, **Open Liked Folder** | Show the photo folder, or the Liked folder, in File Explorer. |
 | **Load Liked Folder** | Load the Liked folder as a photo folder of its own. |
 | **Generate Video** | Turn photos into a video with ffmpeg, see [Generate Video](#generate-video). |
@@ -382,6 +390,23 @@ work on the photo again.
 | **Colorize** (a photo that is grey in its lower left and in colour in its upper right) | Give colours to the black and white photo that is shown (the bar over it: the colours change as you move its sliders, and **Save a copy** writes them), or to many photos at once, as copies next to them, see [Colorizing black and white photos](#colorizing-black-and-white-photos). |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
+
+#### The Properties panel
+
+The two grids, the settings (above) and the properties of the photo (below), are in one panel with a title bar, and the panel can be put where it suits you:
+
+- the **⋮** menu of its title bar docks it to the **left** (where it starts), the **right** or the **bottom** edge of the window (at the bottom the two grids stand side by side);
+  drag the thin bar between the panel and the photo to give it the width or height you want;
+- **Float in a window of its own** takes it out of the window: a tool window you can put anywhere, also on another screen. The close button of that window, or a double click on
+  the bar under its title, docks the panel back to the edge it came from (a double click on the title of a docked panel floats it);
+- the **‹** button of the title bar, or **Collapse to the edge** in the menu, folds the panel into a thin tab with its name at that edge, and the photo gets the room. A click on the
+  tab, or on the **Properties** button of the toolbar, opens it again.
+
+![The panel docked at the bottom: the two grids side by side](docs/images/42-panel-bottom.png)
+
+![The panel floating in a window of its own over the main window](docs/images/43-panel-float.png)
+
+Where the panel is, how big it is and whether it is folded is kept for the next start (in `global-config.json`, with the names of the buttons).
 
 The window that a button opens carries the icon of that button: in its title bar, and in Alt+Tab. Generate Video, Align dates (also the window that gives
 photos a date), Remove empty folders, Find duplicates, Colorize, Video speech and the About box (the question mark) have theirs; the People window, the windows that
@@ -520,8 +545,8 @@ When a newer version is found the box says so and offers it (a stand-in for GitH
 
 ## Settings
 
-The settings grid at the top left shows the progress, the current file and the settings of the folder. It scrolls back to
-the top whenever another photo is shown:
+The settings grid (the upper one of the two in the [Properties panel](#the-properties-panel), at the left of the photo unless you moved it) shows the progress, the current
+file and the settings of the folder. It scrolls back to the top whenever another photo is shown:
 
 ![The settings grid, LikedFolder selected with its "..." button](docs/images/06-settings.png)
 
@@ -1516,7 +1541,7 @@ dotnet run -c Release --project tools\SmokeTour -- --screenshots docs\images # a
 ```
 
 `--only-dialogs` runs another, shorter tour instead (on a fresh demo folder, about a minute): it likes four photos, takes a picture of the
-toolbar button, makes a video in the real Generate Video dialog with a cover (a title card it draws) and a song (a tone that ffmpeg makes)
+toolbar (with the names of its buttons shown, a red ring round the Generate Video button), makes a video in the real Generate Video dialog with a cover (a title card it draws) and a song (a tone that ffmpeg makes)
 and photographs the dialog empty, filled in and done, then opens the About box and checks that it lists the keys and that both pages of the
 [user manual](#user-manual) are beside the program, and that <kbd>F1</kbd> opens the box and <kbd>F2</kbd> / <kbd>F3</kbd> hand the Ukrainian / English page
 to the browser (the tour takes that call instead, so no browser is launched). It ends with the [update button](#updating) of the About box, pressed
@@ -1554,6 +1579,14 @@ two of them and photographs it: `28-people-groups`. It takes a few seconds:
 
 ```powershell
 dotnet run -c Release --project tools\SmokeTour -- --only-people --screenshots docs\images
+```
+
+`--only-layout` does the frame of the window: it presses the three bars of the toolbar (`41-toolbar-names`), docks the panel with the grids at the bottom
+(`42-panel-bottom`), floats it over the main window (`43-panel-float`; only the area of the main window is photographed, so nothing of the desktop is in the picture), and
+checks the places of the toolbar, the panel, its splitter and its window as it goes, then lets the close button of the floating window dock the panel back. No model is needed, a few seconds:
+
+```powershell
+dotnet run -c Release --project tools\SmokeTour -- --only-layout --screenshots docs\images
 ```
 
 The mouse pointer is parked in the corner of the screen before each picture, so that no tip of a button it rests on is in it. The tour without a flag makes the pictures `01-home` to
