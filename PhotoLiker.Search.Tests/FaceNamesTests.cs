@@ -26,11 +26,11 @@ public class FaceNamesTests
     }
 
     [Fact]
-    public void ALookAlike_HasAQuestionMark_ANamedFaceHasNot()
+    public void ALookAlike_IsWrittenLikeANamedFace_WithoutAQuestionMark()
     {
         var caption = FaceNames.Caption([Label("Anna", 0.2f), Label("Oleh", 0.5f, confirmed: false)]);
 
-        Assert.Equal("Anna, Oleh?", caption);
+        Assert.Equal("Anna, Oleh", caption);
     }
 
     [Fact]
@@ -50,9 +50,8 @@ public class FaceNamesTests
     }
 
     [Fact]
-    public void APersonIsSure_IfAnyOfTheirFacesIsNamed()
+    public void ANamedFaceAndALookAlike_OfTheSamePerson_AreWrittenOnce()
     {
-        // One face is named Anna, another only looks like her: it is Anna all the same, there is no doubt about her being there
         var caption = FaceNames.Caption([Label("Anna", 0.2f, confirmed: false), Label("Anna", 0.7f, confirmed: true)]);
 
         Assert.Equal("Anna", caption);
