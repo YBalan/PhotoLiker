@@ -284,7 +284,8 @@ What is kept where:
   To use it on another computer (or to index on the faster one), choose **I/E > Export index...** (the first button of the
   strip: import / export), bring the `.plindex` file over, open the same photos there (whatever the drive letter) and choose
   **I/E > Import index...**. When videos have been analyzed the same file carries them (their moments, faces and the speech that was read): the question of the import says so, and the videos analyzed
-  for that folder are replaced by them; a file made without videos leaves the folder's videos as they are.
+  for that folder are replaced by them; a file made without videos leaves the folder's videos as they are. The index of a big library is hundreds of megabytes, so a bar appears next to the **I/E** button
+  while the file is written, read or put in place, with the percent in the status bar; the button of the program on the taskbar fills with it.
   **Update index** then brings it up to date: photos whose size and date are the same are not analyzed again. The models
   are downloaded there on first use, or copy the `models` folder (below) along. A search by description needs the search
   model's files, so **Update index** asks to download them also when every photo is in the imported index already (only the
@@ -400,7 +401,9 @@ The two grids, the settings (above) and the properties of the photo (below), are
 - **Float in a window of its own** takes it out of the window: a tool window you can put anywhere, also on another screen. The close button of that window, or a double click on
   the bar under its title, docks the panel back to the edge it came from (a double click on the title of a docked panel floats it);
 - the **‹** button of the title bar, or **Collapse to the edge** in the menu, folds the panel into a thin tab with its name at that edge, and the photo gets the room. A click on the
-  tab, or on the **Properties** button of the toolbar, opens it again.
+  tab, or on the **Properties** button of the toolbar, opens it again. While the panel is folded away there is no grid to read the date in, so the date the photo was taken
+  (for a video the date it was recorded, below its length) is written in the bottom right corner of the viewer, white on a dark band as in the [slideshow](#slideshow), by the same rules as the slideshow's
+  date. It goes when the panel is back. It is not written over a video while it plays.
 
 ![The panel docked at the bottom: the two grids side by side](docs/images/42-panel-bottom.png)
 

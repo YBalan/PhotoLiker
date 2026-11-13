@@ -56,6 +56,7 @@ namespace PhotoLikerUI
             previewFlowPanel.MouseWheel += PreviewFlowPanel_MouseWheel;
 
             pictureBox1.Paint += PictureBox1_Paint;
+            scrollPanel.Scroll += (_, _) => pictureBox1.Invalidate(); // an enlarged photo that was scrolled: the date in the corner follows the part that is seen
             scrollPanel.MouseDown += (_, _) => FocusViewer();
             previewFlowPanel.MouseDown += (_, _) => FocusViewer();
             pictureBox1.MouseDown += PictureBox1_MouseDown;
@@ -124,6 +125,7 @@ namespace PhotoLikerUI
             }
 
             DrawVideoMark(e.Graphics);
+            DrawDateMark(e.Graphics);
             DrawGroupLegend(e.Graphics);
             DrawFaces(e.Graphics);
         }
@@ -1107,6 +1109,7 @@ namespace PhotoLikerUI
             {
                 _panning = false;
                 pictureBox1.Cursor = Cursors.Default;
+                pictureBox1.Invalidate(); // the date in the corner (if there is one) goes to the corner of what is seen now
             }
         }
 

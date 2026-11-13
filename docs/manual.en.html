@@ -157,7 +157,7 @@ them. Nothing is uploaded: the analysis runs on this computer, and your photos a
   <li><strong>Dates of the photos.</strong> The date comes from the camera (EXIF). If it is missing or cannot be believed (before 1900, in the future, or a camera that
   lost its clock), the date the file was created is used, and the status bar says how many results are dated that way.</li>
   <li><strong>Another computer.</strong> Use <strong>I/E &gt; Export index…</strong> (the first button of the strip) to save the index in a file, and <strong>I/E &gt; Import index…</strong> on the other computer. When videos have been analyzed the same file carries them too (their moments, faces and the speech that was read), and the
-  import replaces the videos analyzed for that folder; a file made without videos leaves them as they are. Then press <strong>Update index</strong>: it asks to download the search model there (also when every photo is in the imported index already), because searching by description needs it.</li>
+  import replaces the videos analyzed for that folder; a file made without videos leaves them as they are. The index of a big library is hundreds of megabytes: a bar next to the <strong>I/E</strong> button shows how far the export or the import is (the percent is in the status bar, and the program's button on the taskbar fills with it). Then press <strong>Update index</strong>: it asks to download the search model there (also when every photo is in the imported index already), because searching by description needs it.</li>
   <li><strong>Visual C++ runtime.</strong> The AI models need the current Microsoft Visual C++ runtime. It comes with Windows updates, or install the
   <em>Visual C++ Redistributable (x64)</em> if loading the models stops with a message that says so.</li>
 </ul>
@@ -286,6 +286,8 @@ and hide them again; that is kept for the next start. If the window is too low f
   under its title, docks the panel back to where it came from. A double click on the title of a docked panel floats it.</li>
   <li>The <strong>‹</strong> button of the title bar (or <strong>Collapse to the edge</strong> in the menu) folds the panel into a thin tab with its name, and the photo gets the room.
   Click the tab, or the <strong>Properties</strong> button of the toolbar, to open it again.</li>
+  <li>While the panel is folded away there is no table to read the date in, so the date the photo was taken (for a video, when it was recorded, above its length) is written in the bottom right corner of the photo,
+  white on a dark band as in the slideshow. It goes when the panel is back. It is not written over a video while it plays.</li>
 </ul>
 
 <figure>

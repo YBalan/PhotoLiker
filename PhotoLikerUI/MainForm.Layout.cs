@@ -294,6 +294,7 @@ namespace PhotoLikerUI
                 }
 
                 _propertiesButton.Checked = !_collapsed;
+                pictureBox1.Invalidate(); // with the panel put away the viewer writes the date taken in its corner (see DrawDateMark)
             }
             finally
             {
