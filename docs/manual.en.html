@@ -157,7 +157,7 @@ them. Nothing is uploaded: the analysis runs on this computer, and your photos a
   <li><strong>Dates of the photos.</strong> The date comes from the camera (EXIF). If it is missing or cannot be believed (before 1900, in the future, or a camera that
   lost its clock), the date the file was created is used, and the status bar says how many results are dated that way.</li>
   <li><strong>Another computer.</strong> Use <strong>I/E &gt; Export index…</strong> (the first button of the strip) to save the index in a file, and <strong>I/E &gt; Import index…</strong> on the other computer. When videos have been analyzed the same file carries them too (their moments, faces and the speech that was read), and the
-  import replaces the videos analyzed for that folder; a file made without videos leaves them as they are. Then press <strong>Update index</strong>: it asks to download the search model there (also when every photo is in the imported index already), because searching by description needs it.</li>
+  import replaces the videos analyzed for that folder; a file made without videos leaves them as they are. The index of a big library is hundreds of megabytes: a bar next to the <strong>I/E</strong> button shows how far the export or the import is (the percent is in the status bar, and the program's button on the taskbar fills with it). Then press <strong>Update index</strong>: it asks to download the search model there (also when every photo is in the imported index already), because searching by description needs it.</li>
   <li><strong>Visual C++ runtime.</strong> The AI models need the current Microsoft Visual C++ runtime. It comes with Windows updates, or install the
   <em>Visual C++ Redistributable (x64)</em> if loading the models stops with a message that says so.</li>
 </ul>
@@ -192,10 +192,14 @@ photo again.</p></div>
 <h2 id="window">4. The window</h2>
 
 <ul>
-  <li><strong>Toolbar</strong> (top left): the buttons described in <a href="#toolbar">The toolbar</a>.</li>
-  <li><strong>Settings table</strong> (left): how far you are (<code>CurrentIndex</code>, <code>TotalFiles</code>), the current file,
-  and the settings of the folder. Select a row and the pane under the table explains it.</li>
-  <li><strong>Photo information</strong> (lower left): the data the camera wrote into the photo, see <a href="#exif">EXIF and GPS</a>.</li>
+  <li><strong>Toolbar</strong> (a column of icons at the left edge): the buttons described in <a href="#toolbar">The toolbar</a>.</li>
+  <li><strong>Properties panel</strong> (left of the photo, unless you moved it): the two tables below, with a title bar. Dock it to another edge, float it in a window
+  of its own, or fold it away, see <a href="#toolbar">The toolbar</a>.
+    <ul>
+      <li><strong>Settings table</strong> (upper): how far you are (<code>CurrentIndex</code>, <code>TotalFiles</code>), the current file,
+      and the settings of the folder. Select a row and the pane under the table explains it.</li>
+      <li><strong>Photo information</strong> (lower): the data the camera wrote into the photo, see <a href="#exif">EXIF and GPS</a>.</li>
+    </ul></li>
   <li><strong>Search strip</strong> (above the photo): indexing and searching, see <a href="#search">Searching the photos</a>.</li>
   <li><strong>The photo</strong> (centre). A green check in its top-left corner means it is liked or in a group, and the folders it is
   saved in are listed next to the check. The bottom-left corner lists your groups.</li>
@@ -247,7 +251,17 @@ photo again.</p></div>
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="toolbar">6. The toolbar</h2>
 
+<p>The toolbar is a column of icons at the left edge of the window. The <strong>three bars</strong> at its top show the names of the buttons next to the icons,
+and hide them again; that is kept for the next start. If the window is too low for all the buttons, the last ones are behind the arrow at the bottom of the column.</p>
+
+<figure>
+  <img src="images/41-toolbar-names.png" alt="The toolbar with the names of its buttons shown, and the Properties panel next to it" width="1486" height="893">
+  <figcaption>The toolbar with the names of its buttons shown (the three bars on top), and the Properties panel next to it.</figcaption>
+</figure>
+
 <ul>
+  <li><strong>Three bars</strong> (top): show or hide the names of the buttons.</li>
+  <li><strong>Properties</strong> (a small window with a title bar): fold the panel with the two tables into a thin tab at its edge, and bring it back. The button is lit while the panel is shown.</li>
   <li><strong>Open</strong>: pick a folder of photos.</li>
   <li><strong>Copy</strong>: copy the shown photo to the clipboard (the same as <kbd>Ctrl</kbd>+<kbd>C</kbd>).</li>
   <li><strong>Dark / Light</strong>: switch the theme, see <a href="#theme">Dark and light theme</a>.</li>
@@ -260,6 +274,33 @@ photo again.</p></div>
   <li><strong>Register Context Menu</strong> / <strong>Unregister Context Menu</strong>: add or remove <em>Open in Photo Liker</em> in the right-click menu of folders.</li>
   <li><strong>Help</strong> (the question mark): the About box, with the keys and this manual.</li>
 </ul>
+
+<h3>The Properties panel</h3>
+
+<p>The two tables (the settings above, the photo's properties below) are in one panel, and the panel can be put where it suits you:</p>
+
+<ul>
+  <li>The <strong>⋮</strong> menu in its title bar docks it to the <strong>left</strong> (where it starts), the <strong>right</strong> or the <strong>bottom</strong> edge of the window
+  (at the bottom the two tables stand side by side). Drag the thin bar between the panel and the photo to make it wider or higher.</li>
+  <li><strong>Float in a window of its own</strong> takes it out of the window, to put anywhere, also on another screen. The close button of that window, or a double click on the bar
+  under its title, docks the panel back to where it came from. A double click on the title of a docked panel floats it.</li>
+  <li>The <strong>‹</strong> button of the title bar (or <strong>Collapse to the edge</strong> in the menu) folds the panel into a thin tab with its name, and the photo gets the room.
+  Click the tab, or the <strong>Properties</strong> button of the toolbar, to open it again.</li>
+  <li>While the panel is folded away there is no table to read the date in, so the date the photo was taken (for a video, when it was recorded, above its length) is written in the bottom right corner of the photo,
+  white on a dark band as in the slideshow. It goes when the panel is back. It is not written over a video while it plays.</li>
+</ul>
+
+<figure>
+  <img src="images/42-panel-bottom.png" alt="The panel docked at the bottom: the two grids side by side" width="1486" height="893">
+  <figcaption>The panel docked at the bottom: the two tables stand side by side, and the toolbar keeps the whole height.</figcaption>
+</figure>
+
+<figure>
+  <img src="images/43-panel-float.png" alt="The panel floating in a window of its own over the main window" width="1486" height="893">
+  <figcaption>The panel in a window of its own (here over the photo; it can be put anywhere, also on another screen).</figcaption>
+</figure>
+
+<p>Where the panel is, how big it is, and whether it is folded is remembered, with the names of the toolbar buttons.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="groups">7. Likes and groups</h2>
@@ -365,8 +406,8 @@ for search, with the people named. How they were left when the show ended is wha
     <tr><td><strong>Monitors</strong></td><td><code>Current</code> (the default): the screen PhotoLiker is on. <code>All</code>: every connected monitor, each with a photo of its own, never the same photo on two monitors, and they all change together. With <code>Random</code> every monitor takes the next photo of the random order; with <code>OneByOne</code> the monitors, from left to right, show photos that follow each other (the photo you were looking at stays on the monitor of the window), and the next set begins where this one ends. <kbd>→</kbd> / <kbd>←</kbd> move every monitor to its neighbouring photo. With more monitors than photos the farthest from the window are left out.</td></tr>
     <tr><td><strong>Timeout</strong></td><td>How many seconds a photo stays: 2 by default, not less than 0.2. It counts from the moment the photo is on the screen.</td></tr>
     <tr><td><strong>Watermark</strong></td><td>What is written in the bottom right corner: <code>DateTime</code> (the default), the day and the time the photo was taken, <code>Year</code>, or <code>None</code>. It is the date the camera wrote in the photo, when that can be believed, else the date of the file. A photo with no date gets no text.</td></tr>
-    <tr><td><strong>PeopleFaces</strong></td><td><code>False</code> (the default): no boxes. <code>True</code>: <strong>a box round the face of every known person, with the name above it</strong>, as the window shows the faces: green for a face you named yourself, dashed gold with a <code>?</code> after the name for a face that only looks like that person. A face nobody is known by gets no box. It uses the faces the search found, so the folder has to be indexed and the people named (the <strong>Faces</strong> button). The <kbd>F</kbd> key turns it on and off while the show runs. The boxes go with the photo through every effect and cost the show next to nothing.</td></tr>
-    <tr><td><strong>PeopleNames</strong></td><td><code>False</code> (the default): no names. <code>True</code>: the names of the people in one line in the bottom left corner, left to right as they stand (<code>Anna, Oleh?, Mom</code>). The <kbd>N</kbd> key turns it on and off while the show runs. It does not depend on <strong>PeopleFaces</strong>.</td></tr>
+    <tr><td><strong>PeopleFaces</strong></td><td><code>False</code> (the default): no boxes. <code>True</code>: <strong>a box round the face of every known person, with the name above it</strong>, as the window shows the faces: green for a face you named yourself, dashed gold for a face that only looks like that person (the name is written the same, without a <code>?</code>). A face nobody is known by gets no box. It uses the faces the search found, so the folder has to be indexed and the people named (the <strong>Faces</strong> button). The <kbd>F</kbd> key turns it on and off while the show runs. The boxes go with the photo through every effect and cost the show next to nothing.</td></tr>
+    <tr><td><strong>PeopleNames</strong></td><td><code>False</code> (the default): no names. <code>True</code>: the names of the people in one line in the bottom left corner, left to right as they stand (<code>Anna, Oleh, Mom</code>). The <kbd>N</kbd> key turns it on and off while the show runs. It does not depend on <strong>PeopleFaces</strong>.</td></tr>
     <tr><td><strong>Effect</strong></td><td>How one photo takes the place of the last. <code>Fade</code> (the default): the old photo dissolves into the new one. <code>Slide</code>: the new photo pushes the old one out to the left. <code>Zoom</code>: the new photo grows from a smaller size as it fades in. <code>KenBurns</code>: every photo drifts and zooms slowly all the time it is on the screen, and dissolves into the next. <code>Parallax</code>: every photo is a little scene in depth, and while it is shown the camera goes sideways across it, so the near parts move against the far ones, see <a href="#parallax">Depth parallax</a>. <code>Random</code>: one of the first four for every change (not <code>Parallax</code>), never the same twice in a row. <code>None</code>: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the <strong>Timeout</strong>. <kbd>→</kbd> / <kbd>←</kbd> put the next photo there at once, with no change (with <code>KenBurns</code> and <code>Parallax</code> it still moves).</td></tr>
     <tr><td><strong>UseVideo</strong></td><td><code>False</code> (the default): photos only. <code>True</code>: the videos of the list are played too, between the photos (there are videos in the list while <strong>SupportVideo</strong> is on).</td></tr>
     <tr><td><strong>MuteVideo</strong></td><td><code>True</code>: the videos play without their sound.</td></tr>
@@ -400,7 +441,7 @@ of the video are written at the bottom of the screen while they are said (white 
 description: select it and the pane under the table says what it is for.</p>
 
 <figure>
-  <img src="images/06-settings.png" alt="The settings table, LikedFolder selected with its ... button" width="424" height="575">
+  <img src="images/06-settings.png" alt="The settings table, LikedFolder selected with its ... button" width="430" height="575">
   <figcaption>The settings table, with the <strong>LikedFolder</strong> row selected.</figcaption>
 </figure>
 
@@ -672,8 +713,8 @@ a title picture and with a song under it. Nothing else has to be installed.</p>
     <kbd>Space</kbd> (or sort them into groups, and make one video per group), then open the dialog.
   </li>
   <li>
-    <strong>Click Generate Video</strong>, the button with the film icon in the toolbar. The dialog opens at once.
-    <figure><img src="images/12-generate-video-button.png" alt="The Generate Video button in the toolbar" width="416" height="25"></figure>
+    <strong>Click Generate Video</strong>, the button with the film icon in the toolbar (the column of icons at the left edge of the window; the three bars on top of it show the names, as in the picture). The dialog opens at once.
+    <figure><img src="images/12-generate-video-button.png" alt="The Generate Video button in the toolbar, with the names of the buttons shown" width="193" height="551"></figure>
   </li>
   <li>
     <strong>Choose the photos and the order.</strong> <strong>Photos from</strong> lists <strong>Current</strong> (what the window shows now: the folder, or the search

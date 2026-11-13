@@ -292,7 +292,8 @@ namespace PhotoLiker.Search
         /// Writes a copy of the index to one file (SQLite's online backup, so it is consistent even while photos are being
         /// indexed). Such a file can be brought to another machine and loaded there with <see cref="Import"/>.
         /// </summary>
-        public void ExportTo(string file)
+        /// <param name="progress">Told how much of the copying is done, 0 to 1 (it is the copying that takes the time).</param>
+        public void ExportTo(string file, IProgress<double>? progress = null)
         {
             var temporary = file + ".tmp";
             File.Delete(temporary);
@@ -302,7 +303,7 @@ namespace PhotoLiker.Search
                 using (var copy = new SqliteConnection($"Data Source={temporary};Pooling=False"))
                 {
                     copy.Open();
-                    _db.BackupDatabase(copy);
+                    SqliteBackup.Copy(_db, copy, progress);
 
                     // One plain file, no write-ahead log next to it; and a note of where it comes from
                     using var finish = copy.CreateCommand();
@@ -355,7 +356,8 @@ namespace PhotoLiker.Search
         /// it does not matter that the folder is at another place (another drive letter or share) than where it was made.
         /// The folder's index must not be open.
         /// </summary>
-        public static void Import(string photoFolder, string file)
+        /// <param name="progress">Told how much of the copying is done, 0 to 1.</param>
+        public static void Import(string photoFolder, string file, IProgress<double>? progress = null)
         {
             Inspect(file);
 
@@ -363,7 +365,7 @@ namespace PhotoLiker.Search
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
 
             var temporary = target + ".import";
-            File.Copy(file, temporary, overwrite: true);
+            ProgressCopy.CopyFile(file, temporary, overwrite: true, progress);
             File.Delete(target + "-wal");
             File.Delete(target + "-shm");
             File.Move(temporary, target, overwrite: true);

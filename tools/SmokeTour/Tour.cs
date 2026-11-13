@@ -57,7 +57,7 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         checks.That(form.Config.CurrentFolder == folder, "the settings were read from the folder's own file");
         checks.That(form.Status.Contains($"Loaded {jpegs} photos"), $"status: {form.Status}");
 
-        form.Find<SplitContainer>("splitContainer1").SplitterDistance = SidePanelWidth;
+        form.SetSidePanelWidth(SidePanelWidth);
         form.Find<SplitContainer>("splitContainer2").SplitterDistance = SettingsGridHeight;
         await Settle();
 

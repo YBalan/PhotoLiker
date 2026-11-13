@@ -394,6 +394,66 @@ namespace PhotoLikerUI
             g.FillEllipse(dot, 6.95f, 10.8f, 2.1f, 2.1f);
         });
 
+        // ── Hamburger ─────────────────────────────────────────────────────
+        /// <summary>Three bars: the button on top of the toolbar that shows and hides the names of the buttons. Drawn in <paramref name="bars"/>, the text colour of the theme.</summary>
+        public static Bitmap Hamburger(Color bars) => DrawOnBitmap(g =>
+        {
+            using var pen = new Pen(bars, 1.8f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            foreach (var y in new[] { 3.5f, 8f, 12.5f })
+                g.DrawLine(pen, 2.5f, y, 13.5f, y);
+        });
+
+        // ── Properties ────────────────────────────────────────────────────
+        // A small window with a title bar and two rows of a grid (the panel of the property grids)
+        public static Bitmap Properties() => DrawOnBitmap(g =>
+        {
+            using var body = new LinearGradientBrush(new RectangleF(1, 1.5f, 14, 13), Color.FromArgb(235, 244, 255), Color.FromArgb(190, 212, 245), 90f);
+            g.FillRoundedRectangle(body, 1, 1.5f, 14, 13, 1.8f);
+            using var bar = new SolidBrush(Color.FromArgb(40, 105, 215));
+            g.FillRoundedRectangle(bar, 1, 1.5f, 14, 3.6f, 1.8f);
+            g.FillRectangle(bar, 1, 3f, 14, 2.1f);
+
+            using var rim = new Pen(Color.FromArgb(40, 105, 215), 0.9f);
+            g.DrawRoundedRectangle(rim, 1, 1.5f, 14, 13, 1.8f);
+
+            using var rows = new Pen(Color.FromArgb(70, 95, 140), 1.1f);
+            foreach (var y in new[] { 7.6f, 10.2f, 12.6f })
+            {
+                g.DrawLine(rows, 3f, y, 6.2f, y);
+                g.DrawLine(rows, 8f, y, 12.6f, y);
+            }
+        });
+
+        // ── Dark / light theme ────────────────────────────────────────────
+        // A crescent: what the button turns on while the theme is light
+        public static Bitmap ThemeDark() => DrawOnBitmap(g =>
+        {
+            using var moon = new GraphicsPath();
+            moon.AddEllipse(2f, 1.5f, 12f, 12f);
+            using var bite = new GraphicsPath();
+            bite.AddEllipse(6.6f, -0.4f, 10f, 10f);
+            using var region = new Region(moon);
+            region.Exclude(bite);
+
+            using var fill = new LinearGradientBrush(new RectangleF(2, 1.5f, 12, 12), Color.FromArgb(255, 232, 140), Color.FromArgb(235, 175, 50), 60f);
+            g.FillRegion(fill, region);
+        });
+
+        // A sun with rays: what the button turns on while the theme is dark
+        public static Bitmap ThemeLight() => DrawOnBitmap(g =>
+        {
+            using var rays = new Pen(Color.FromArgb(240, 160, 30), 1.4f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            for (var i = 0; i < 8; i++)
+            {
+                var angle = i * Math.PI / 4;
+                g.DrawLine(rays, 8f + (float)Math.Cos(angle) * 5.2f, 8f + (float)Math.Sin(angle) * 5.2f,
+                    8f + (float)Math.Cos(angle) * 7.2f, 8f + (float)Math.Sin(angle) * 7.2f);
+            }
+
+            using var disc = new LinearGradientBrush(new RectangleF(4, 4, 8, 8), Color.FromArgb(255, 225, 110), Color.FromArgb(245, 165, 40), 90f);
+            g.FillEllipse(disc, 4f, 4f, 8f, 8f);
+        });
+
         /// <summary>
         /// One of the pictures of this class drawn at <paramref name="size"/> px instead of 16 (the drawings are in the units of 16, so they are scaled and stay sharp): for a button
         /// that is bigger than one of the toolbar. The caller disposes the bitmap.
@@ -603,13 +663,25 @@ namespace PhotoLikerUI
     {
         public static void FillRoundedRectangle(this Graphics g, Brush brush, float x, float y, float width, float height, float radius)
         {
-            using var path = new GraphicsPath();
+            using var path = RoundedRectangle(x, y, width, height, radius);
+            g.FillPath(brush, path);
+        }
+
+        public static void DrawRoundedRectangle(this Graphics g, Pen pen, float x, float y, float width, float height, float radius)
+        {
+            using var path = RoundedRectangle(x, y, width, height, radius);
+            g.DrawPath(pen, path);
+        }
+
+        private static GraphicsPath RoundedRectangle(float x, float y, float width, float height, float radius)
+        {
+            var path = new GraphicsPath();
             path.AddArc(x, y, radius * 2, radius * 2, 180, 90);
             path.AddArc(x + width - radius * 2, y, radius * 2, radius * 2, 270, 90);
             path.AddArc(x + width - radius * 2, y + height - radius * 2, radius * 2, radius * 2, 0, 90);
             path.AddArc(x, y + height - radius * 2, radius * 2, radius * 2, 90, 90);
             path.CloseFigure();
-            g.FillPath(brush, path);
+            return path;
         }
     }
 

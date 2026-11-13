@@ -14,7 +14,7 @@ namespace PhotoLikerUI
 
     /// <summary>
     /// Puts a box round every face of a known person on the screen, with the name on it, as the faces mode of the main window does: green and solid for a face the user
-    /// named, gold and dashed with a question mark after the name for one that only looks like somebody. Faces nobody is known by are left alone.
+    /// named, gold and dashed for one that only looks like somebody (the name is the same, without a question mark). Faces nobody is known by are left alone.
     ///
     /// It is drawn on the window after the photo, at the place the photo has at that moment (see <see cref="SlidePlace"/>), so the boxes go with the photo through every effect
     /// (a Ken Burns drift, a slide, a zoom) and fade with it while one photo takes the place of another; lines and letters keep the size they have on the screen, so they stay sharp
@@ -59,7 +59,7 @@ namespace PhotoLikerUI
                 using (var pen = new Pen(colour, lineWidth) { DashStyle = label.Confirmed ? DashStyle.Solid : DashStyle.Dash })
                     g.DrawRectangle(pen, box.X, box.Y, box.Width, box.Height);
 
-                var text = label.Confirmed ? label.Name! : label.Name + "?";
+                var text = label.Name!;
                 var size = g.MeasureString(text, font, PointF.Empty, format);
                 var bandSize = new SizeF(size.Width + pad * 2, size.Height + pad * 2);
                 var at = SlideFaceMarks.LabelPlace(box, bandSize, room);

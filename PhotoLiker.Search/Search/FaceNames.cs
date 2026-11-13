@@ -4,13 +4,13 @@ namespace PhotoLiker.Search
     public static class FaceNames
     {
         /// <summary>
-        /// The people who are in the photo, left to right, separated by commas: "Anna, Oleh?, Mom". A person the user named on the face is written as the name is; one the
-        /// face only looks like (nobody said so) has a question mark after the name, as the main window writes it. A person with several faces is written once, as sure
-        /// as the surest of the faces, at the place of the left-most one. Faces nobody is known by add nothing. Null when there is nothing to write.
+        /// The people who are in the photo, left to right, separated by commas: "Anna, Oleh, Mom". A person the face only looks like (nobody said so) is written the same
+        /// as one the user named: no question mark. A person with several faces is written once, at the place of the left-most one. Faces nobody is known by add nothing.
+        /// Null when there is nothing to write.
         /// </summary>
         public static string? Caption(IReadOnlyList<FaceLabel> labels)
         {
-            var people = new List<(string Name, bool Confirmed, float Left)>();
+            var people = new List<(string Name, float Left)>();
             foreach (var label in labels)
             {
                 if (label.Name is not { Length: > 0 } name)
@@ -20,12 +20,12 @@ namespace PhotoLiker.Search
                 var place = people.FindIndex(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
                 if (place < 0)
                 {
-                    people.Add((name, label.Confirmed, left));
+                    people.Add((name, left));
                 }
                 else
                 {
                     var known = people[place];
-                    people[place] = (known.Name, known.Confirmed || label.Confirmed, Math.Min(known.Left, left));
+                    people[place] = (known.Name, Math.Min(known.Left, left));
                 }
             }
 
@@ -33,7 +33,7 @@ namespace PhotoLiker.Search
                 return null;
 
             // OrderBy is stable: faces at the same place keep the order the detector found them in
-            return string.Join(", ", people.OrderBy(p => p.Left).Select(p => p.Confirmed ? p.Name : p.Name + "?"));
+            return string.Join(", ", people.OrderBy(p => p.Left).Select(p => p.Name));
         }
     }
 }

@@ -175,9 +175,18 @@ namespace PhotoLikerUI
 
         protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
         {
-            int x = e.Item.Width / 2;
             using var pen = new Pen(ThemeManager.DarkBorder);
-            e.Graphics.DrawLine(pen, x, 4, x, e.Item.Height - 4);
+            if (e.Vertical)
+            {
+                int x = e.Item.Width / 2;
+                e.Graphics.DrawLine(pen, x, 4, x, e.Item.Height - 4);
+            }
+            else
+            {
+                // A toolbar standing at the edge (the rail) has the buttons in a column, so its separators lie across it
+                int y = e.Item.Height / 2;
+                e.Graphics.DrawLine(pen, 8, y, e.Item.Width - 8, y);
+            }
         }
     }
 

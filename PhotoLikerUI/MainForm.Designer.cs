@@ -29,7 +29,6 @@
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
-            splitContainer1 = new SplitContainer();
             toolStrip1 = new ToolStrip();
             newToolStripButton = new ToolStripButton();
             openToolStripButton = new ToolStripButton();
@@ -58,10 +57,6 @@
             toolStripStatusLabelGpsLink = new ToolStripStatusLabel();
             toolStripStatusLabel1 = new ToolStripStatusLabel();
             previewFlowPanel = new FlowLayoutPanel();
-            ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
-            splitContainer1.Panel1.SuspendLayout();
-            splitContainer1.Panel2.SuspendLayout();
-            splitContainer1.SuspendLayout();
             toolStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer2).BeginInit();
             splitContainer2.Panel1.SuspendLayout();
@@ -75,31 +70,19 @@
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             statusStrip1.SuspendLayout();
             SuspendLayout();
-            // 
-            // splitContainer1
-            // 
-            splitContainer1.Dock = DockStyle.Fill;
-            splitContainer1.Location = new Point(0, 0);
-            splitContainer1.Name = "splitContainer1";
-            // 
-            // splitContainer1.Panel1
-            // 
-            splitContainer1.Panel1.Controls.Add(toolStrip1);
-            splitContainer1.Panel1.Controls.Add(splitContainer2);
-            // 
-            // splitContainer1.Panel2
-            // 
-            splitContainer1.Panel2.Controls.Add(splitContainer3);
-            splitContainer1.Size = new Size(1121, 940);
-            splitContainer1.SplitterDistance = 187;
-            splitContainer1.TabIndex = 0;
-            // 
+            //
             // toolStrip1
-            // 
+            //
+            toolStrip1.AutoSize = false;
+            toolStrip1.Dock = DockStyle.Left;
+            toolStrip1.GripStyle = ToolStripGripStyle.Hidden;
+            toolStrip1.ImageScalingSize = new Size(16, 16);
+            toolStrip1.LayoutStyle = ToolStripLayoutStyle.VerticalStackWithOverflow;
             toolStrip1.Items.AddRange(new ToolStripItem[] { newToolStripButton, openToolStripButton, saveToolStripButton, toolStripSeparator, copyToolStripButton, pasteToolStripButton, toolStripSeparator1, themeToggleToolStripButton, toolStripSeparator4, openSourceFolderToolStripButton, openLikedFolderToolStripButton, loadLikedFolderToolStripButton, generateVideoToolStripButton, toolStripSeparator2, contextMenuToolStripButton, toolStripSeparator3, helpToolStripButton });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
-            toolStrip1.Size = new Size(187, 25);
+            toolStrip1.Padding = new Padding(0, 4, 0, 4);
+            toolStrip1.Size = new Size(44, 940);
             toolStrip1.TabIndex = 1;
             toolStrip1.Text = "toolStrip1";
             // 
@@ -164,7 +147,7 @@
             // 
             // themeToggleToolStripButton
             // 
-            themeToggleToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            themeToggleToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image; // the sun or the moon, set when the theme is applied
             themeToggleToolStripButton.Name = "themeToggleToolStripButton";
             themeToggleToolStripButton.Size = new Size(50, 22);
             themeToggleToolStripButton.Text = "🌙 Dark";
@@ -248,8 +231,8 @@
             // 
             // splitContainer2
             // 
-            splitContainer2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            splitContainer2.Location = new Point(3, 28);
+            splitContainer2.Dock = DockStyle.Left;
+            splitContainer2.Location = new Point(44, 0);
             splitContainer2.Name = "splitContainer2";
             splitContainer2.Orientation = Orientation.Horizontal;
             // 
@@ -260,7 +243,7 @@
             // splitContainer2.Panel2
             // 
             splitContainer2.Panel2.Controls.Add(imageMetaPropertyGrid);
-            splitContainer2.Size = new Size(181, 909);
+            splitContainer2.Size = new Size(320, 940);
             splitContainer2.SplitterDistance = 379;
             splitContainer2.TabIndex = 2;
             // 
@@ -270,7 +253,7 @@
             settingsPropertyGrid.Dock = DockStyle.Fill;
             settingsPropertyGrid.Location = new Point(0, 0);
             settingsPropertyGrid.Name = "settingsPropertyGrid";
-            settingsPropertyGrid.Size = new Size(181, 379);
+            settingsPropertyGrid.Size = new Size(320, 379);
             settingsPropertyGrid.TabIndex = 0;
             // 
             // imageMetaPropertyGrid
@@ -279,13 +262,13 @@
             imageMetaPropertyGrid.Dock = DockStyle.Fill;
             imageMetaPropertyGrid.Location = new Point(0, 0);
             imageMetaPropertyGrid.Name = "imageMetaPropertyGrid";
-            imageMetaPropertyGrid.Size = new Size(181, 526);
+            imageMetaPropertyGrid.Size = new Size(320, 557);
             imageMetaPropertyGrid.TabIndex = 0;
             // 
             // splitContainer3
             // 
             splitContainer3.Dock = DockStyle.Fill;
-            splitContainer3.Location = new Point(0, 0);
+            splitContainer3.Location = new Point(364, 0);
             splitContainer3.Name = "splitContainer3";
             // 
             // splitContainer3.Panel1
@@ -295,7 +278,7 @@
             // splitContainer3.Panel2
             // 
             splitContainer3.Panel2.Controls.Add(previewFlowPanel);
-            splitContainer3.Size = new Size(930, 940);
+            splitContainer3.Size = new Size(757, 940);
             splitContainer3.SplitterDistance = 734;
             splitContainer3.TabIndex = 0;
             // 
@@ -361,14 +344,11 @@
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1121, 940);
-            Controls.Add(splitContainer1);
+            Controls.Add(splitContainer3);
+            Controls.Add(splitContainer2);
+            Controls.Add(toolStrip1);
             Name = "MainForm";
             Text = "PhotoLiker";
-            splitContainer1.Panel1.ResumeLayout(false);
-            splitContainer1.Panel1.PerformLayout();
-            splitContainer1.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)splitContainer1).EndInit();
-            splitContainer1.ResumeLayout(false);
             toolStrip1.ResumeLayout(false);
             toolStrip1.PerformLayout();
             splitContainer2.Panel1.ResumeLayout(false);
@@ -389,7 +369,6 @@
 
         #endregion
 
-        private SplitContainer splitContainer1;
         private PropertyGrid settingsPropertyGrid;
         private ToolStrip toolStrip1;
         private ToolStripButton newToolStripButton;

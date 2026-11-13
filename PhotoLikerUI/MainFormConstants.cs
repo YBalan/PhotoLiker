@@ -149,6 +149,11 @@ namespace PhotoLikerUI
         public const float  GroupLegendMargin            = 6f;
         public const float  GroupLegendColumnGap         = 14f;
 
+        // The date taken in the bottom-right corner, while the panel of properties is folded away
+        public const float  DateMarkFontSize             = 12f;
+        public const float  DateMarkMargin               = 8f;
+        public const float  DateMarkGap                  = 6f;    // above the length of a video, which has the corner on its poster
+
         // Face boxes drawn on the photo
         public const float  FaceNameFontSize             = 10f;
         public const float  MinMarkedFaceSize            = 12f;   // a face marked by hand must be at least this many pixels wide and high

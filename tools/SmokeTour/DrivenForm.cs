@@ -19,6 +19,9 @@ internal sealed class DrivenForm(string folder) : MainForm(folder)
 
     public T Find<T>(string name) where T : Control => (T)Controls.Find(name, searchAllChildren: true).Single();
 
+    /// <summary>The width of the panel with the two grids (docked at the left, where it starts).</summary>
+    public void SetSidePanelWidth(int width) => Find<Control>("propertiesDock").Width = width;
+
     public PropertyGrid SettingsGrid => Find<PropertyGrid>("settingsPropertyGrid");
     public PropertyGrid MetadataGrid => Find<PropertyGrid>("imageMetaPropertyGrid");
     public PictureBox Viewer => Find<PictureBox>("pictureBox1");

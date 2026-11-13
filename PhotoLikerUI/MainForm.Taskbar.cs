@@ -8,16 +8,19 @@ namespace PhotoLikerUI
     {
         private TaskbarProgress? _taskbarProgress;
         private IDisposable? _indexProgressWatch;
+        private IDisposable? _transferProgressWatch;
 
         private void InitializeTaskbarProgress()
         {
             _indexProgressWatch = TaskbarProgress.Watch(() => TaskbarProgress.Read(_indexProgress));
+            _transferProgressWatch = TaskbarProgress.Watch(() => TaskbarProgress.Read(_transferProgress)); // after the indexing: an index file that is moved while photos are indexed is what the button shows
             _taskbarProgress = new TaskbarProgress(this);
         }
 
         private void DisposeTaskbarProgress()
         {
             _indexProgressWatch?.Dispose();
+            _transferProgressWatch?.Dispose();
             _taskbarProgress?.Dispose(); // takes the bar off the button
             _taskbarProgress = null;
         }

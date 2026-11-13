@@ -75,7 +75,7 @@ public sealed class VideoDateEditTests : IDisposable
             // As a person types it into the row: the grid hands the text to the row
             Row(form, VideoMetadata.RecordedName)!.SetValue(GridOf(form).SelectedObject, DateText.Display(Typed));
 
-            Assert.True(await Ui.Until(() => RecordedText(form)?.StartsWith("2012-07-14 09:30:15") == true), "the grid shows the new date: " + RecordedText(form));
+            Assert.True(await Ui.Until(() => RecordedText(form) == DateText.Display(Typed)), "the grid shows the new date: " + RecordedText(form));
             Assert.Contains("Recorded", StatusOf(form));
             Assert.Contains("dates of the file", StatusOf(form));
 

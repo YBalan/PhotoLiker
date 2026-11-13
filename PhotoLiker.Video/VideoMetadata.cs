@@ -37,7 +37,7 @@ namespace PhotoLiker.Video
                 Row(3, VideoCodecName, info.VideoCodec, VideoLibStrings.DescVideoCodec),
                 Row(4, AudioName, info.Audio ?? VideoLibStrings.NoAudio, VideoLibStrings.DescAudio),
                 Row(5, BitrateName, BitrateText(info.BitsPerSecond), VideoLibStrings.DescBitrate),
-                Row(RecordedTagId - Base, RecordedName, record.Date.Taken is { } taken ? taken.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) : VideoLibStrings.DateNone, VideoLibStrings.DescRecorded),
+                Row(RecordedTagId - Base, RecordedName, record.Date.Taken is { } taken ? DateText.Display(taken) : VideoLibStrings.DateNone, VideoLibStrings.DescRecorded), // written as the dates of a photo are
                 Row(7, DateFromName, record.Date.Source switch { DateSource.Exif => VideoLibStrings.DateFromVideo, DateSource.File => VideoLibStrings.DateFromFile, _ => VideoLibStrings.DateNone }, VideoLibStrings.DescDateFrom),
                 Row(10, FileSizeName, SizeOfFile(record.Length), VideoLibStrings.DescFileSize),
             };

@@ -162,7 +162,7 @@ public sealed class DateShortcutTests : IDisposable
             picker.Value = Typed;
             Ui.ButtonStartingWith(dialog, "OK").PerformClick();
 
-            Assert.True(await Ui.Until(() => RowText(form, VideoMetadata.RecordedName)?.StartsWith("2012-07-14 09:30:15") == true), "the grid shows the new date: " + RowText(form, VideoMetadata.RecordedName));
+            Assert.True(await Ui.Until(() => RowText(form, VideoMetadata.RecordedName) == DateText.Display(Typed)), "the grid shows the new date: " + RowText(form, VideoMetadata.RecordedName));
             var typedUtc = DateAlignment.ToUtc(Typed);
             Assert.True(Same(File.GetCreationTimeUtc(path), typedUtc) && Same(File.GetLastWriteTimeUtc(path), typedUtc), "the dates of the file are that moment too");
             Assert.True(Same((await VideoProbe.ReadAsync(path)).Recorded!.Value, Typed), "the video itself says it now");

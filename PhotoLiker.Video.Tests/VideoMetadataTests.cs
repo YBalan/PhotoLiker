@@ -44,7 +44,7 @@ public class VideoMetadataTests
         Assert.Equal("mjpeg", rows[VideoMetadata.VideoCodecName]);
         Assert.Equal("pcm_s16le, 44100 Hz, mono", rows[VideoMetadata.AudioName]);
         Assert.Equal("14.9 Mb/s", rows[VideoMetadata.BitrateName]);
-        Assert.Equal("2010-05-01 16:49:25", rows[VideoMetadata.RecordedName]);
+        Assert.Equal("01 May 2010 16:49:25", rows[VideoMetadata.RecordedName]); // the way the date taken of a photo is shown
         Assert.Equal("84.7 MB", rows[VideoMetadata.FileSizeName]);
         Assert.False(rows.ContainsKey(VideoMetadata.LocationName)); // it has none
         Assert.False(rows.ContainsKey(VideoMetadata.EncoderName));

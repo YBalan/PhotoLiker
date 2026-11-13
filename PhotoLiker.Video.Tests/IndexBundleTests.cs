@@ -193,6 +193,90 @@ public sealed class IndexBundleTests : IDisposable
         Assert.Empty(Directory.GetFiles(_carried, "*.part"));
     }
 
+    /// <summary>Takes the reports where they are made (Progress&lt;T&gt; would post them to another thread).</summary>
+    private sealed class Reports : IProgress<double>
+    {
+        public List<double> Values { get; } = [];
+
+        public void Report(double value) => Values.Add(value);
+
+        public void AssertWholeRun()
+        {
+            Assert.NotEmpty(Values);
+            Assert.Equal(Values.Order().ToList(), Values); // the bar only goes forward
+            Assert.Equal(1.0, Values[^1]);
+            Assert.All(Values, value => Assert.InRange(value, 0.0, 1.0));
+        }
+    }
+
+    [Fact]
+    public async Task ExportingBothIndexes_AndImportingThem_SayHowFarTheyAre_FromNothingToDone()
+    {
+        if (RealFfmpeg.Path is null) return;
+        using var _ = RealFfmpeg.Use(RealFfmpeg.Path);
+        await MakeVideoCatalog();
+
+        var exporting = new Reports();
+        using (var photos = MakePhotoIndex())
+            IndexBundle.Export(photos, Exported, exporting);
+        exporting.AssertWholeRun();
+        Assert.True(IndexBundle.IsBundle(Exported));
+
+        var looking = new Reports();
+        Assert.NotNull(IndexBundle.Inspect(Exported, looking).Videos);
+        looking.AssertWholeRun();
+
+        var importing = new Reports();
+        Assert.True(IndexBundle.Import(_target, Exported, importing));
+        importing.AssertWholeRun();
+        using var imported = PhotoIndex.Open(_target);
+        Assert.Equal(1, imported.PhotoCount); // the progress did not cost the work
+    }
+
+    [Fact]
+    public void ThePhotoIndexAlone_SaysHowFarItIs_Too()
+    {
+        var exporting = new Reports();
+        using (var photos = MakePhotoIndex())
+            Assert.Null(IndexBundle.Export(photos, Exported, exporting));
+        exporting.AssertWholeRun();
+
+        var looking = new Reports();
+        Assert.Null(IndexBundle.Inspect(Exported, looking).Videos);
+        looking.AssertWholeRun();
+
+        var importing = new Reports();
+        Assert.False(IndexBundle.Import(_target, Exported, importing));
+        importing.AssertWholeRun();
+    }
+
+    [Fact]
+    public void ABigIndex_ReportsOnTheWay_NotOnlyAtTheEnd()
+    {
+        // Enough photos for the copies to take several steps: a bar that jumps from 0 to 100 is no bar
+        var vector = new float[ClipModels.Default.Dimensions];
+        using (var index = PhotoIndex.Open(_source))
+        {
+            var photos = new List<IndexedPhoto>();
+            for (var i = 0; i < 4000; i++)
+            {
+                vector[i % vector.Length] = 1;
+                photos.Add(new IndexedPhoto($"p/{i}.jpg", length: 1000, modifiedTicks: 5000 + i) { Clips = new Dictionary<string, ClipVector> { [Clip] = new((float[])vector.Clone(), IndexingJob.ClipVersion) } });
+            }
+            index.Save(photos);
+
+            var exporting = new Reports();
+            IndexBundle.Export(index, Exported, exporting);
+            exporting.AssertWholeRun();
+            Assert.Contains(exporting.Values, value => value is > 0 and < 1);
+        }
+
+        var importing = new Reports();
+        IndexBundle.Import(_target, Exported, importing);
+        importing.AssertWholeRun();
+        Assert.True(importing.Values.Count > 1, "more than the last report: " + importing.Values.Count);
+    }
+
     [Fact]
     public void AMissingFile_IsNotFound()
     {

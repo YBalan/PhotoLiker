@@ -33,6 +33,7 @@ namespace PhotoLikerUI
         public MainForm(string? initialFolder = null)
         {
             InitializeComponent();
+            InitializeLayout();
             InitializeSearch();
             InitializeDateAlignment();
             InitializeEmptyFolders();
@@ -55,6 +56,7 @@ namespace PhotoLikerUI
             previewFlowPanel.MouseWheel += PreviewFlowPanel_MouseWheel;
 
             pictureBox1.Paint += PictureBox1_Paint;
+            scrollPanel.Scroll += (_, _) => pictureBox1.Invalidate(); // an enlarged photo that was scrolled: the date in the corner follows the part that is seen
             scrollPanel.MouseDown += (_, _) => FocusViewer();
             previewFlowPanel.MouseDown += (_, _) => FocusViewer();
             pictureBox1.MouseDown += PictureBox1_MouseDown;
@@ -123,6 +125,7 @@ namespace PhotoLikerUI
             }
 
             DrawVideoMark(e.Graphics);
+            DrawDateMark(e.Graphics);
             DrawGroupLegend(e.Graphics);
             DrawFaces(e.Graphics);
         }
@@ -247,7 +250,7 @@ namespace PhotoLikerUI
         {
             ThemeManager.Apply(this, dark);
             _bar?.Restyle();
-            themeToggleToolStripButton.Text = dark ? MainFormStrings.ThemeLightLabel : MainFormStrings.ThemeDarkLabel;
+            ApplyRailTheme(dark);
         }
 
         private void LoadSettingsFromJson(string? folder = null)
@@ -1106,6 +1109,7 @@ namespace PhotoLikerUI
             {
                 _panning = false;
                 pictureBox1.Cursor = Cursors.Default;
+                pictureBox1.Invalidate(); // the date in the corner (if there is one) goes to the corner of what is seen now
             }
         }
 
@@ -1613,12 +1617,18 @@ namespace PhotoLikerUI
 
         private void AdjustRulerWidth()
         {
+            // A minimized window is a title bar a few pixels wide, and a window dragged very narrow (with the toolbar and the panel of the grids taking their share at the left)
+            // leaves no room for the photo and the thumbnails side by side: there is no distance to set, and the container throws if it is asked to. The next resize sets it.
+            var room = splitContainer3.Width - splitContainer3.Panel2MinSize - splitContainer3.SplitterWidth;
+            if (WindowState == FormWindowState.Minimized || room < splitContainer3.Panel1MinSize)
+                return;
+
             int panelWidth = PreviewThumbSize
                 + previewFlowPanel.Padding.Horizontal
                 + SystemInformation.VerticalScrollBarWidth
                 + MainFormConstants.PreviewPanelBorderWidth;
             int splitterDist = splitContainer3.Width - panelWidth - splitContainer3.SplitterWidth;
-            splitContainer3.SplitterDistance = Math.Max(splitContainer3.Panel1MinSize, splitterDist);
+            splitContainer3.SplitterDistance = Math.Clamp(splitterDist, splitContainer3.Panel1MinSize, room);
         }
 
         private void UpdateSiblingPreviews(string currentFile)
@@ -1776,6 +1786,7 @@ namespace PhotoLikerUI
             contextMenuToolStripButton.ToolTipText = registered
                 ? MainFormStrings.ContextMenuUnregisterTooltip
                 : MainFormStrings.ContextMenuRegisterTooltip;
+            LayoutRail(); // the rail is as wide as the longest name, and "Register" / "Unregister" differ
         }
 
         private void contextMenuToolStripButton_Click(object sender, EventArgs e)

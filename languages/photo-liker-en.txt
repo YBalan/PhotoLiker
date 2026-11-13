@@ -763,7 +763,9 @@ SearchStrings.ImportIndexMenu = Import index...
 SearchStrings.IndexFileFilter = PhotoLiker index (*.plindex)|*.plindex|All files (*.*)|*.*
 SearchStrings.ExportIndexTitle = Export the index
 SearchStrings.ImportIndexTitle = Import an index
-SearchStrings.StatusExporting = Exporting the index...
+SearchStrings.StatusExportingFormat = Exporting the index... {0} %
+SearchStrings.StatusReadingIndexFormat = Reading the index file... {0} %
+SearchStrings.StatusImportingFormat = Importing the index... {0} %
 SearchStrings.StatusExported = Index exported to {0}: {1:N0} photos, {2:N0} faces ({3:0.#} MB).
 SearchStrings.StatusExportError = Export failed: {0}
 SearchStrings.ImportQuestionFormat = Use this index for the folder\n{0}\n\nThe file holds {1:N0} photos with {2:N0} faces.{3}{4}
@@ -873,8 +875,8 @@ SettingsStrings.SlideshowMode = Which photo the slideshow (Alt+Enter) shows afte
 SettingsStrings.SlideshowMonitors = Which screens the slideshow covers. Current: the screen PhotoLiker is on. All: every connected screen, each with a photo of its own and never the same photo on two screens; they change together. In the Random mode every screen takes the next photo of the random order; in OneByOne the screens, from left to right, show photos that follow each other (the photo that was shown stays on the screen the window is on) and the next set begins where this one ends. Left and Right move every screen to its neighbouring photo. With more screens than photos the farthest from the window are left out.
 SettingsStrings.SlideshowTimeout = How many seconds the slideshow keeps a photo on the screen; 2 by default, not less than 0.2. The time counts from the moment the photo appears, and Left or Right start it again.
 SettingsStrings.SlideshowWatermark = What the slideshow writes in the bottom right corner of the screen: Year or DateTime (the day and the time) the photo was taken, or None. The date is the one the search and PageUp / PageDown use: the date the camera wrote into the photo, else the date of the file; a photo without a date gets no text.
-SettingsStrings.SlideshowPeopleFaces = True: the slideshow (Alt+Enter) puts a box round the face of every known person in the photo with the name above it, as the main window shows the faces: green and solid when you named the face yourself, gold and dashed with a question mark after the name when the face only looks like that person; a face nobody is known by gets no box. It uses the faces the search found, so the folder has to be indexed and the people named (the Faces button). The F key turns it on and off while the show runs, and what the show ended with is kept here. False: no boxes.
-SettingsStrings.SlideshowPeopleNames = True: the slideshow writes the names of the people in the photo in one line in the bottom left corner, left to right as they stand, for example Anna, Oleh?, Mom (a question mark: the face only looks like that person). It uses the faces the search found, so the folder has to be indexed and the people named (the Faces button). The N key turns it on and off while the show runs, and what the show ended with is kept here. False: no names. It does not depend on PeopleFaces: with both on the names are written twice.
+SettingsStrings.SlideshowPeopleFaces = True: the slideshow (Alt+Enter) puts a box round the face of every known person in the photo with the name above it, as the main window shows the faces: green and solid when you named the face yourself, gold and dashed when the face only looks like that person (the name is written the same, without a question mark); a face nobody is known by gets no box. It uses the faces the search found, so the folder has to be indexed and the people named (the Faces button). The F key turns it on and off while the show runs, and what the show ended with is kept here. False: no boxes.
+SettingsStrings.SlideshowPeopleNames = True: the slideshow writes the names of the people in the photo in one line in the bottom left corner, left to right as they stand, for example Anna, Oleh, Mom. It uses the faces the search found, so the folder has to be indexed and the people named (the Faces button). The N key turns it on and off while the show runs, and what the show ended with is kept here. False: no names. It does not depend on PeopleFaces: with both on the names are written twice.
 SettingsStrings.SlideshowEffect = How the slideshow changes from one photo to the next. None: at once. Fade: the old photo dissolves into the new one. Slide: the new photo pushes the old one out to the left. Zoom: the new photo grows from a smaller size as it fades in. KenBurns: every photo drifts and zooms slowly all the time it is shown, and dissolves into the next. Parallax: every photo is a little scene in depth, and while it is shown the camera moves sideways, so the near parts (a face, a flower) move against the far ones (the hills, the wall); it needs the depth model (Depth Anything V2 Small, 99 MB, which the program offers to download the first time), takes about half a second of work for every photo (done ahead, along with the frame), and without the model moves like KenBurns. Random: one of Fade, Slide, Zoom and KenBurns for every change, never the same twice in a row (not Parallax). A change takes 0.8 seconds at most and never more than 40% of the Timeout. Left and Right put the next photo there at once (with KenBurns and Parallax it still moves).
 SettingsStrings.SlideshowUseVideo = True: the slideshow (Alt+Enter) plays the videos of the list as well, between the photos (there are videos in the list while SupportVideo is on). False: it shows photos only. With several screens a video plays on the screen PhotoLiker is on only; the others go on with photos.
 SettingsStrings.SlideshowMuteVideo = True: the videos of the slideshow play without their sound.
@@ -1217,6 +1219,22 @@ ToolbarStrings.OpenLikedTooltip = Open liked folder in File Explorer
 ToolbarStrings.LoadLiked = Load Liked Folder
 ToolbarStrings.LoadLikedTooltip = Select and load a liked folder
 ToolbarStrings.GpsTooltip = Open location in Google Maps
+
+# ──────────── LayoutStrings ────────────
+LayoutStrings.RailShowNames = Show the names of the buttons
+LayoutStrings.RailHideNames = Hide the names of the buttons
+LayoutStrings.PropertiesButton = Properties
+LayoutStrings.PropertiesButtonTooltip = Show or hide the panel with the settings and the properties of the photo
+LayoutStrings.PanelTitle = Properties
+LayoutStrings.PanelMenuTooltip = Where the panel is: left, right, bottom, or a window of its own
+LayoutStrings.PanelDockLeft = Dock to the left
+LayoutStrings.PanelDockRight = Dock to the right
+LayoutStrings.PanelDockBottom = Dock at the bottom
+LayoutStrings.PanelFloat = Float in a window of its own
+LayoutStrings.PanelCollapse = Collapse to the edge
+LayoutStrings.PanelCollapseTooltip = Fold the panel into a tab at the edge of the window
+LayoutStrings.PanelExpandTooltip = Show the panel again
+LayoutStrings.PanelTitleTooltip = Double-click to float the panel in a window of its own, or to dock it back
 
 # ──────────── ToolModelStrings ────────────
 ToolModelStrings.ParallaxFeature = The Parallax effect

@@ -11,9 +11,15 @@ namespace PhotoLiker.Core
         /// <summary>The id of the "Date Taken (Original)" row, the one Ctrl+D asks a date for.</summary>
         public const int DateTakenTagId = 0x9003;
 
+        /// <summary>The id of the "Date Digitized" row.</summary>
+        public const int DigitizedTagId = 0x9004;
+
+        /// <summary>The id of the "Date Last Saved" row (the date a program last wrote the photo).</summary>
+        public const int LastSavedTagId = 0x0132;
+
         private const int DateTakenTag = DateTakenTagId;
-        private const int DigitizedTag = 0x9004;
-        private const int LastSavedTag = 0x0132;
+        private const int DigitizedTag = DigitizedTagId;
+        private const int LastSavedTag = LastSavedTagId;
 
         /// <summary>Whether the row with this tag id can be edited.</summary>
         public static bool IsEditable(int tagId) => tagId is DateTakenTag or DigitizedTag or LastSavedTag or ExifTagMap.FileDateTagId;

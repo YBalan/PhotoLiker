@@ -108,7 +108,9 @@ namespace PhotoLikerUI
         public const string IndexFileExtension           = "plindex";
         public static string ExportIndexTitle => T();
         public static string ImportIndexTitle => T();
-        public static string StatusExporting => T();
+        public static string StatusExportingFormat => T();
+        public static string StatusReadingIndexFormat => T();
+        public static string StatusImportingFormat => T();
         public static string StatusExported => T();
         public static string StatusExportError => T();
         public static string ImportQuestionFormat => T();

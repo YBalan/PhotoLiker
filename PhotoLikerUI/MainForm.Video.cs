@@ -576,13 +576,21 @@ namespace PhotoLikerUI
             if (pictureBox1.Tag is string file && _photoCache.TryGet(file, out var entry) && entry.VideoDuration is { } duration)
             {
                 var text = VideoTime.Format(duration);
-                using var font = new Font(Font.FontFamily, 14f, FontStyle.Bold);
-                var size = TextRenderer.MeasureText(g, text, font);
-                var box = new Rectangle(area.Right - size.Width - 18, area.Bottom - size.Height - 14, size.Width + 12, size.Height + 4);
+                using var font = new Font(Font.FontFamily, VideoLengthFontSize, FontStyle.Bold);
+                var box = VideoLengthBox(g, area, font, text);
                 using var back = new SolidBrush(Color.FromArgb(170, 0, 0, 0));
                 g.FillRectangle(back, box);
                 TextRenderer.DrawText(g, text, font, box, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             }
+        }
+
+        private const float VideoLengthFontSize = 14f;
+
+        /// <summary>Where the length of the video is written on its poster: a box in the bottom right corner of <paramref name="area"/>.</summary>
+        private static Rectangle VideoLengthBox(Graphics g, Rectangle area, Font font, string text)
+        {
+            var size = TextRenderer.MeasureText(g, text, font);
+            return new Rectangle(area.Right - size.Width - 18, area.Bottom - size.Height - 14, size.Width + 12, size.Height + 4);
         }
 
         private static void DrawPlayMark(Graphics g, Rectangle circle)

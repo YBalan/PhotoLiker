@@ -91,7 +91,7 @@ internal sealed partial class Tour
     {
         checks.Step("2. The model box of the strip, with its list open");
 
-        form.Find<SplitContainer>("splitContainer1").SplitterDistance = 40;
+        form.SetSidePanelWidth(40);
         await Settle(800);
 
         var box = (ToolStripComboBox)strip.Items["searchModelToolStripComboBox"]!;

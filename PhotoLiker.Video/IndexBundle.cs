@@ -15,6 +15,7 @@ namespace PhotoLiker.Video
     /// <see cref="VideoPaths.CatalogFile"/>); when the folder has analyzed videos the exported file is a zip of the two (no compression: the vectors and the
     /// thumbnails do not shrink), and when it has none it is the photo index alone, exactly as <see cref="PhotoIndex.ExportTo"/> writes it, so an index
     /// of photos is still a plain file that an older version reads. Importing takes either. Paths in both are relative, so the folder may be anywhere on the other computer.
+    /// Each of the three jobs can say how far it is (an index of a big library is hundreds of megabytes, a minute or more over a network share).
     /// </summary>
     public static class IndexBundle
     {
@@ -25,28 +26,37 @@ namespace PhotoLiker.Video
         /// Writes the index of the folder to <paramref name="file"/>: the photo index, with the video catalog of the folder if any video was analyzed or any speech read.
         /// Returns what was added of the videos, or null if the file holds the photos alone.
         /// </summary>
-        public static VideoIndexFileInfo? Export(PhotoIndex photos, string file)
+        /// <param name="progress">Told how much of the work is done, 0 to 1: the copies of the two indexes, then the packing of them into one file.</param>
+        public static VideoIndexFileInfo? Export(PhotoIndex photos, string file, IProgress<double>? progress = null)
         {
             var photosPart = file + ".photos.tmp";
             var videosPart = file + ".videos.tmp";
             var bundle = file + ".tmp";
             DeleteAll(photosPart, videosPart, bundle);
+
+            // The weights are the sizes of the files: the copy of each index, and then both are written once more into one file
+            var photoBytes = SizeOf(SearchPaths.IndexFile(photos.Root));
+            var videoBytes = SizeOf(VideoPaths.CatalogFile(photos.Root));
+            var stages = new StagedProgress(progress, photoBytes, videoBytes, photoBytes + videoBytes);
             try
             {
-                photos.ExportTo(photosPart);
-                var videos = VideoIndexFile.CopyOf(photos.Root, videosPart);
+                photos.ExportTo(photosPart, stages.Stage(0));
+                var videos = VideoIndexFile.CopyOf(photos.Root, videosPart, stages.Stage(1));
                 if (videos is null)
                 {
                     File.Move(photosPart, file, overwrite: true);
+                    stages.Complete();
                     return null;
                 }
 
+                var packing = new StagedProgress(stages.Stage(2), SizeOf(photosPart), SizeOf(videosPart));
                 using (var zip = ZipFile.Open(bundle, ZipArchiveMode.Create))
                 {
-                    zip.CreateEntryFromFile(photosPart, PhotosEntry, CompressionLevel.NoCompression);
-                    zip.CreateEntryFromFile(videosPart, VideosEntry, CompressionLevel.NoCompression);
+                    AddFile(zip, photosPart, PhotosEntry, packing.Stage(0));
+                    AddFile(zip, videosPart, VideosEntry, packing.Stage(1));
                 }
                 File.Move(bundle, file, overwrite: true);
+                stages.Complete();
                 return videos;
             }
             finally
@@ -59,14 +69,19 @@ namespace PhotoLiker.Video
         /// What is in an exported index file, to show before it replaces anything. Throws <see cref="InvalidDataException"/> if the file is not a usable index
         /// (or a part of it is not).
         /// </summary>
-        public static IndexBundleInfo Inspect(string file)
+        /// <param name="progress">Told how much of the work is done, 0 to 1: a file of both indexes is taken apart to look inside, which is what takes the time.</param>
+        public static IndexBundleInfo Inspect(string file, IProgress<double>? progress = null)
         {
             if (!File.Exists(file))
                 throw new FileNotFoundException("The index file was not found.", file);
             if (!IsBundle(file))
-                return new IndexBundleInfo(PhotoIndex.Inspect(file), null);
+            {
+                var plain = new IndexBundleInfo(PhotoIndex.Inspect(file), null);
+                progress?.Report(1);
+                return plain;
+            }
 
-            var parts = Unpack(file);
+            var parts = Unpack(file, progress);
             try
             {
                 return new IndexBundleInfo(PhotoIndex.Inspect(parts.Photos), VideoIndexFile.Inspect(parts.Videos));
@@ -81,24 +96,31 @@ namespace PhotoLiker.Video
         /// Makes an exported index the index of a folder, replacing the one it has: the photo index, and the video catalog if the file has one (a file of photos alone
         /// leaves the videos of the folder as they are). Both parts are checked before either replaces anything. Neither may be open.
         /// </summary>
+        /// <param name="progress">Told how much of the work is done, 0 to 1: the file taken apart, then the two indexes put in place.</param>
         /// <returns>Whether the video catalog was replaced.</returns>
-        public static bool Import(string folder, string file)
+        public static bool Import(string folder, string file, IProgress<double>? progress = null)
         {
             if (!File.Exists(file))
                 throw new FileNotFoundException("The index file was not found.", file);
             if (!IsBundle(file))
             {
-                PhotoIndex.Import(folder, file);
+                PhotoIndex.Import(folder, file, progress);
+                progress?.Report(1);
                 return false;
             }
 
-            var parts = Unpack(file);
+            // Taking the file apart and putting the parts in place move the same bytes
+            var stages = new StagedProgress(progress, 1, 1);
+            var parts = Unpack(file, stages.Stage(0));
             try
             {
                 PhotoIndex.Inspect(parts.Photos);
                 VideoIndexFile.Inspect(parts.Videos);
-                PhotoIndex.Import(folder, parts.Photos);
-                VideoIndexFile.Import(folder, parts.Videos);
+
+                var installing = new StagedProgress(stages.Stage(1), SizeOf(parts.Photos), SizeOf(parts.Videos));
+                PhotoIndex.Import(folder, parts.Photos, installing.Stage(0));
+                VideoIndexFile.Import(folder, parts.Videos, installing.Stage(1));
+                stages.Complete();
                 return true;
             }
             finally
@@ -116,18 +138,26 @@ namespace PhotoLiker.Video
         }
 
         // The two parts as files next to the bundle (SQLite opens files, not streams)
-        private static (string Photos, string Videos) Unpack(string file)
+        private static (string Photos, string Videos) Unpack(string file, IProgress<double>? progress = null)
         {
             var photos = file + ".photos.part";
             var videos = file + ".videos.part";
             try
             {
                 using var zip = ZipFile.OpenRead(file);
-                foreach (var (entry, target) in new[] { (PhotosEntry, photos), (VideosEntry, videos) })
+                var parts = new[] { (Name: PhotosEntry, Target: photos), (Name: VideosEntry, Target: videos) }
+                    .Select(part => (part.Target, Entry: zip.GetEntry(part.Name) ?? throw new InvalidDataException("This is not a PhotoLiker index file: " + part.Name + " is missing.")))
+                    .ToArray();
+
+                var stages = new StagedProgress(progress, parts.Select(part => (double)part.Entry.Length).ToArray());
+                for (var i = 0; i < parts.Length; i++)
                 {
-                    var found = zip.GetEntry(entry) ?? throw new InvalidDataException("This is not a PhotoLiker index file: " + entry + " is missing.");
-                    found.ExtractToFile(target, overwrite: true);
+                    using var from = parts[i].Entry.Open();
+                    using var to = new FileStream(parts[i].Target, FileMode.Create, FileAccess.Write, FileShare.None);
+                    ProgressCopy.CopyStream(from, to, parts[i].Entry.Length, stages.Stage(i));
                 }
+
+                stages.Complete();
                 return (photos, videos);
             }
             catch (InvalidDataException)
@@ -135,6 +165,35 @@ namespace PhotoLiker.Video
                 DeleteAll(photos, videos);
                 throw;
             }
+        }
+
+        // One file into a zip, without compression (the vectors and the thumbnails do not shrink), saying how far it is
+        private static void AddFile(ZipArchive zip, string path, string entryName, IProgress<double> progress)
+        {
+            var entry = zip.CreateEntry(entryName, CompressionLevel.NoCompression);
+            using var from = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var to = entry.Open();
+            ProgressCopy.CopyStream(from, to, from.Length, progress);
+        }
+
+        // The size of a database file with what SQLite keeps beside it that is not in it yet; 0 if there is no such file. It only decides how much of a bar a stage takes.
+        private static long SizeOf(string file)
+        {
+            long total = 0;
+            foreach (var path in new[] { file, file + "-wal" })
+            {
+                try
+                {
+                    var info = new FileInfo(path);
+                    if (info.Exists)
+                        total += info.Length;
+                }
+                catch (IOException)
+                {
+                    // a file that can not be measured counts for nothing
+                }
+            }
+            return total;
         }
 
         private static void DeleteAll(params string[] files)
@@ -153,7 +212,7 @@ namespace PhotoLiker.Video
         /// A consistent copy of the catalog of the folder in one plain file (SQLite's online backup, so it is whole even while videos are being analyzed). Null, and no
         /// file, if the folder has no video analyzed and no speech read: what is left is only what the headers said, which is quickly read again.
         /// </summary>
-        public static VideoIndexFileInfo? CopyOf(string folder, string destination)
+        public static VideoIndexFileInfo? CopyOf(string folder, string destination, IProgress<double>? progress = null)
         {
             var source = VideoPaths.CatalogFile(folder);
             if (!File.Exists(source))
@@ -167,7 +226,7 @@ namespace PhotoLiker.Video
                 {
                     from.Open();
                     to.Open();
-                    from.BackupDatabase(to);
+                    SqliteBackup.Copy(from, to, progress);
 
                     using var plain = to.CreateCommand(); // one file, no write-ahead log next to it
                     plain.CommandText = "PRAGMA journal_mode = DELETE";
@@ -216,7 +275,7 @@ namespace PhotoLiker.Video
         }
 
         /// <summary>Makes the catalog file the video catalog of the folder, replacing the one it has. The catalog of the folder must not be open.</summary>
-        public static void Import(string folder, string file)
+        public static void Import(string folder, string file, IProgress<double>? progress = null)
         {
             Inspect(file);
 
@@ -224,7 +283,7 @@ namespace PhotoLiker.Video
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
 
             var temporary = target + ".import";
-            File.Copy(file, temporary, overwrite: true);
+            ProgressCopy.CopyFile(file, temporary, overwrite: true, progress);
             try
             {
                 // Opened once the way the program opens it: a catalog of an older layout is brought up to date before it is used

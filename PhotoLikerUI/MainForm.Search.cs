@@ -60,6 +60,10 @@ namespace PhotoLikerUI
         private ToolStripMenuItem _exportItem = null!;
         private ToolStripMenuItem _importItem = null!;
         private bool _transferBusy; // an index is being exported or imported
+        private ToolStripProgressBar _transferProgress = null!; // beside the I/E button: how far the export or the import is
+        private bool _transferWorking;  // a stage of it is running, which the bar shows (not while the person is asked)
+        private int _transferStage;     // counts the stages: a report that comes after its stage is over is dropped
+        private int _transferPercent = -1;
 
         private bool FacesMode => _facesButton.Checked && _folderSearch is not null;
 
@@ -207,6 +211,7 @@ namespace PhotoLikerUI
             };
             _transferButton.DropDownItems.AddRange([_exportItem, _importItem]);
             _transferButton.DropDownOpening += (_, _) => ApplyMenuTheme(_transferButton.DropDown);
+            _transferProgress = new ToolStripProgressBar { Name = "indexTransferToolStripProgressBar", Width = 90, Minimum = 0, Maximum = 100, Visible = false };
 
             _precisionWideLabel = new ToolStripLabel(SearchStrings.PrecisionWide) { Name = "precisionWideToolStripLabel" };
             _precisionPreciseLabel = new ToolStripLabel(SearchStrings.PrecisionPrecise) { Name = "precisionPreciseToolStripLabel" };
@@ -214,7 +219,7 @@ namespace PhotoLikerUI
 
             var strip = new ToolStrip { Name = "searchToolStrip", GripStyle = ToolStripGripStyle.Hidden, Dock = DockStyle.Top };
             strip.Items.AddRange([
-                _transferButton,
+                _transferButton, _transferProgress,
                 new ToolStripSeparator(),
                 _indexButton, _indexProgress, _indexLabel,
                 new ToolStripSeparator(),
@@ -311,6 +316,7 @@ namespace PhotoLikerUI
             _indexButton.Text = indexing ? SearchStrings.StopIndexButton : photoCount > 0 || videoCount > 0 ? SearchStrings.UpdateIndexButton : SearchStrings.IndexButton;
             _indexButton.ToolTipText = indexing ? SearchStrings.StopIndexTooltip : SearchStrings.IndexTooltip;
             _indexProgress.Visible = indexing;
+            _transferProgress.Visible = _transferWorking;
 
             if (!indexing)
             {
@@ -1449,14 +1455,23 @@ namespace PhotoLikerUI
             if (dialog.ShowDialog(this) != DialogResult.OK)
                 return;
 
-            var file = dialog.FileName;
+            await ExportIndexToAsync(search, dialog.FileName);
+        }
+
+        /// <summary>Writes the index of the folder to a file the person has chosen, with the bar beside the I/E button showing how far it is.</summary>
+        internal async Task ExportIndexToAsync(FolderIndex search, string file)
+        {
+            if (_transferBusy)
+                return;
+
             _transferBusy = true;
             UpdateSearchControls();
-            SetStatus(SearchStrings.StatusExporting);
+            var progress = BeginTransferStage(SearchStrings.StatusExportingFormat);
             try
             {
                 // The photo index, and with it the catalog of the videos when any video has been analyzed: one file carries both
-                var videos = await Task.Run(() => IndexBundle.Export(search.Index, file));
+                var videos = await Task.Run(() => IndexBundle.Export(search.Index, file, progress));
+                EndTransferStage();
                 SetStatus(string.Format(SearchStrings.StatusExported, file, search.Index.PhotoCount, search.Index.FaceCount, new FileInfo(file).Length / 1048576.0)
                     + (videos is null ? string.Empty : string.Format(VideoSearchStrings.StatusExportedVideosFormat, videos.Videos, videos.Moments, videos.Speech)));
             }
@@ -1464,13 +1479,66 @@ namespace PhotoLikerUI
             {
                 var message = string.Format(SearchStrings.StatusExportError, ex.Message);
                 SetStatus(message);
-                MessageBox.Show(this, message, SearchStrings.ExportIndexTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ShowTransferError(SearchStrings.ExportIndexTitle, message);
             }
             finally
             {
+                EndTransferStage();
                 _transferBusy = false;
                 UpdateSearchControls();
             }
+        }
+
+        // ── how far an export or an import is ──────────────────────────────
+
+        /// <summary>
+        /// Shows the bar beside the I/E button at 0 and gives back what the work reports to (0 to 1, from any thread): the bar fills, the taskbar button follows it (it is one of the
+        /// bars the window watches), and the status line says the percent in words (<paramref name="statusFormat"/> takes it as {0}).
+        /// </summary>
+        private IProgress<double> BeginTransferStage(string statusFormat)
+        {
+            var stage = ++_transferStage;
+            _transferPercent = -1;
+            _transferWorking = true;
+            _transferProgress.Style = ProgressBarStyle.Continuous;
+            _transferProgress.Visible = true;
+            ShowTransferPercent(0, statusFormat);
+
+            // Created here, on the window's thread, so the reports are handed to it
+            return new Progress<double>(fraction =>
+            {
+                if (stage == _transferStage && !IsDisposed)
+                    ShowTransferPercent(fraction, statusFormat);
+            });
+        }
+
+        private void ShowTransferPercent(double fraction, string statusFormat)
+        {
+            var percent = (int)Math.Floor(Math.Clamp(fraction, 0, 1) * 100);
+            if (percent == _transferPercent)
+                return;
+
+            _transferPercent = percent;
+            _transferProgress.Value = percent;
+            SetStatus(string.Format(statusFormat, percent));
+        }
+
+        /// <summary>The bar for work that has no end to tell: the imported index is being opened.</summary>
+        private void ShowTransferWaiting()
+        {
+            _transferStage++;
+            _transferWorking = true;
+            _transferProgress.Style = ProgressBarStyle.Marquee;
+            _transferProgress.MarqueeAnimationSpeed = 30;
+            _transferProgress.Visible = true;
+        }
+
+        /// <summary>Takes the bar away (also while the person is asked something), and drops what the stage may still report.</summary>
+        private void EndTransferStage()
+        {
+            _transferStage++;
+            _transferWorking = false;
+            _transferProgress.Visible = false;
         }
 
         /// <summary>Makes an exported index the index of the open folder (after asking), and opens it.</summary>
@@ -1494,14 +1562,33 @@ namespace PhotoLikerUI
             if (dialog.ShowDialog(this) != DialogResult.OK)
                 return;
 
-            var file = dialog.FileName;
+            await ImportIndexFromAsync(folder, dialog.FileName);
+        }
+
+        /// <summary>Says that an export or an import failed. A test takes it (a message box would wait for a person).</summary>
+        protected virtual void ShowTransferError(string title, string message) =>
+            MessageBox.Show(this, message, title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+        /// <summary>Asked after the file was looked into, before it replaces the index of the folder. A test answers it (a message box would wait for a person).</summary>
+        protected virtual bool ConfirmImport(string question) =>
+            MessageBox.Show(this, question, SearchStrings.ImportIndexTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+
+        /// <summary>Looks into an index file the person has chosen, asks, and makes it the index of the folder, with the bar beside the I/E button showing how far each step is.</summary>
+        internal async Task ImportIndexFromAsync(string folder, string file)
+        {
+            if (_transferBusy)
+                return;
+
             _transferBusy = true;
             UpdateSearchControls();
             var closed = false;
             var closedVideos = false;
             try
             {
-                var contents = await Task.Run(() => IndexBundle.Inspect(file));
+                // A file of both indexes is taken apart to look inside: that is what the first bar is for
+                var reading = BeginTransferStage(SearchStrings.StatusReadingIndexFormat);
+                var contents = await Task.Run(() => IndexBundle.Inspect(file, reading));
+                EndTransferStage();
                 var info = contents.Photos;
 
                 var madeFor = info.Root is null ? string.Empty
@@ -1510,8 +1597,11 @@ namespace PhotoLikerUI
                 var current = _folderSearch?.Index.PhotoCount ?? 0;
                 var replaces = current > 0 ? string.Format(SearchStrings.ImportReplaceNoteFormat, current) : string.Empty;
                 var question = string.Format(SearchStrings.ImportQuestionFormat, folder, info.Photos, info.Faces, madeFor + videoNote, replaces);
-                if (MessageBox.Show(this, question, SearchStrings.ImportIndexTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                if (!ConfirmImport(question))
+                {
+                    SetStatus(string.Empty); // the "reading" that was said is over, and nothing else was done
                     return;
+                }
 
                 // A file that is open can not be replaced
                 ShowIndex(null);
@@ -1521,7 +1611,9 @@ namespace PhotoLikerUI
                     VideoLibrary.Close();
                     closedVideos = true;
                 }
-                await Task.Run(() => IndexBundle.Import(folder, file));
+                var importing = BeginTransferStage(SearchStrings.StatusImportingFormat);
+                await Task.Run(() => IndexBundle.Import(folder, file, importing));
+                EndTransferStage();
                 SetStatus(string.Format(SearchStrings.StatusImported, info.Photos, info.Faces)
                     + (contents.Videos is not { } added ? string.Empty
                         : string.Format(VideoSearchStrings.StatusImportedVideosFormat, added.Videos, added.Moments, added.Speech)
@@ -1531,16 +1623,21 @@ namespace PhotoLikerUI
             {
                 var message = string.Format(SearchStrings.StatusImportError, ex.Message);
                 SetStatus(message);
-                MessageBox.Show(this, message, SearchStrings.ImportIndexTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ShowTransferError(SearchStrings.ImportIndexTitle, message);
             }
             finally
             {
-                // The imported index is opened; if the import failed this is the one the folder had before
+                // The imported index is opened (a big one takes a few seconds: the bar runs to and fro); if the import failed this is the one the folder had before
+                EndTransferStage();
                 if (closed)
+                {
+                    ShowTransferWaiting();
                     await ReopenIndexAsync(folder);
+                }
                 if (closedVideos)
                     PrepareVideoCatalog();
 
+                EndTransferStage();
                 _transferBusy = false;
                 UpdateSearchControls();
             }

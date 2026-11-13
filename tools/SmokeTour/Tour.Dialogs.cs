@@ -26,7 +26,7 @@ internal sealed partial class Tour
         checks.That(await Until(() => form.Config.Files.Count == jpegs && PhotoShown()), $"{jpegs} photos listed and the first one shown");
 
         // As the tour sets them: wide enough for the whole toolbar
-        form.Find<SplitContainer>("splitContainer1").SplitterDistance = SidePanelWidth;
+        form.SetSidePanelWidth(SidePanelWidth);
         form.Find<SplitContainer>("splitContainer2").SplitterDistance = SettingsGridHeight;
         await Settle();
 
@@ -187,24 +187,33 @@ internal sealed partial class Tour
         Save(picture, name);
     }
 
-    /// <summary>The toolbar of the window with a red ring round one button, so that a how-to can say "this one".</summary>
+    /// <summary>
+    /// The toolbar of the window (the column at its left edge, with the names of the buttons shown) down to a little below one button, which has a red ring round it, so that a how-to
+    /// can say "this one".
+    /// </summary>
     private async Task ShotOfToolbar(ToolStrip toolbar, ToolStripItem button, string name)
     {
+        var hamburger = (ToolStripButton)form.ToolbarItem("railToggleToolStripButton");
+        hamburger.PerformClick(); // the names, so that the picture says which button it is
+        await Settle(500);
+
         using var window = await Shot(null);
         var area = AreaOf(toolbar);
-        var right = toolbar.Items.Cast<ToolStripItem>().Where(item => item.Visible).Max(item => item.Bounds.Right) + 8;
-        using var strip = window.Clone(new Rectangle(area.X, area.Y, Math.Min(right, area.Width), area.Height), window.PixelFormat);
+        var bottom = Math.Min(area.Height, button.Bounds.Bottom + 2 * button.Bounds.Height + 8);
+        using var strip = window.Clone(new Rectangle(area.X, area.Y, area.Width, bottom), window.PixelFormat);
 
         using (var graphics = Graphics.FromImage(strip))
         using (var pen = new Pen(Color.FromArgb(235, 60, 60), 3))
         {
             graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            var ring = Rectangle.Inflate(button.Bounds, 3, 2);
+            var ring = Rectangle.Inflate(button.Bounds, 1, 1);
             using var path = RoundedRectangle(ring, 6);
             graphics.DrawPath(pen, path);
         }
 
         Save(strip, name);
+        hamburger.PerformClick(); // icons only again, as the window is for the rest of the run
+        await Settle();
     }
 
     private static GraphicsPath RoundedRectangle(Rectangle bounds, int radius)

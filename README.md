@@ -284,7 +284,8 @@ What is kept where:
   To use it on another computer (or to index on the faster one), choose **I/E > Export index...** (the first button of the
   strip: import / export), bring the `.plindex` file over, open the same photos there (whatever the drive letter) and choose
   **I/E > Import index...**. When videos have been analyzed the same file carries them (their moments, faces and the speech that was read): the question of the import says so, and the videos analyzed
-  for that folder are replaced by them; a file made without videos leaves the folder's videos as they are.
+  for that folder are replaced by them; a file made without videos leaves the folder's videos as they are. The index of a big library is hundreds of megabytes, so a bar appears next to the **I/E** button
+  while the file is written, read or put in place, with the percent in the status bar; the button of the program on the taskbar fills with it.
   **Update index** then brings it up to date: photos whose size and date are the same are not analyzed again. The models
   are downloaded there on first use, or copy the `models` folder (below) along. A search by description needs the search
   model's files, so **Update index** asks to download them also when every photo is in the imported index already (only the
@@ -367,11 +368,19 @@ work on the photo again.
 
 ### Toolbar
 
+The toolbar is a column of icons at the left edge of the window, from the top of it to the bottom (like the side bar of Home Assistant). The **three bars** at its top
+show the names of the buttons next to their icons, and hide them again; the choice is kept for the next start. In a window that is too low for all the buttons the last
+ones are behind the arrow at the bottom of the column.
+
+![The toolbar with the names of its buttons shown, and the Properties panel next to it](docs/images/41-toolbar-names.png)
+
 | Button | What it does |
 |---|---|
+| **three bars** (top) | Show or hide the names of the buttons. |
+| **Properties** (a small window with a title bar) | Fold the panel with the two grids into a thin tab at the edge, and bring it back; it is lit while the panel is shown. See [The Properties panel](#the-properties-panel). |
 | **Open** | Open a photo folder. |
 | **Copy** | Copy the shown photo to the clipboard (the same as <kbd>Ctrl</kbd>+<kbd>C</kbd>). |
-| **Dark** / **Light** | Switch the theme, see [Dark and light theme](#dark-and-light-theme). |
+| **Dark** / **Light** (a moon / a sun) | Switch the theme, see [Dark and light theme](#dark-and-light-theme). |
 | **Open Source Folder**, **Open Liked Folder** | Show the photo folder, or the Liked folder, in File Explorer. |
 | **Load Liked Folder** | Load the Liked folder as a photo folder of its own. |
 | **Generate Video** | Turn photos into a video with ffmpeg, see [Generate Video](#generate-video). |
@@ -382,6 +391,25 @@ work on the photo again.
 | **Colorize** (a photo that is grey in its lower left and in colour in its upper right) | Give colours to the black and white photo that is shown (the bar over it: the colours change as you move its sliders, and **Save a copy** writes them), or to many photos at once, as copies next to them, see [Colorizing black and white photos](#colorizing-black-and-white-photos). |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
+
+#### The Properties panel
+
+The two grids, the settings (above) and the properties of the photo (below), are in one panel with a title bar, and the panel can be put where it suits you:
+
+- the **⋮** menu of its title bar docks it to the **left** (where it starts), the **right** or the **bottom** edge of the window (at the bottom the two grids stand side by side);
+  drag the thin bar between the panel and the photo to give it the width or height you want;
+- **Float in a window of its own** takes it out of the window: a tool window you can put anywhere, also on another screen. The close button of that window, or a double click on
+  the bar under its title, docks the panel back to the edge it came from (a double click on the title of a docked panel floats it);
+- the **‹** button of the title bar, or **Collapse to the edge** in the menu, folds the panel into a thin tab with its name at that edge, and the photo gets the room. A click on the
+  tab, or on the **Properties** button of the toolbar, opens it again. While the panel is folded away there is no grid to read the date in, so the date the photo was taken
+  (for a video the date it was recorded, below its length) is written in the bottom right corner of the viewer, white on a dark band as in the [slideshow](#slideshow), by the same rules as the slideshow's
+  date. It goes when the panel is back. It is not written over a video while it plays.
+
+![The panel docked at the bottom: the two grids side by side](docs/images/42-panel-bottom.png)
+
+![The panel floating in a window of its own over the main window](docs/images/43-panel-float.png)
+
+Where the panel is, how big it is and whether it is folded is kept for the next start (in `global-config.json`, with the names of the buttons).
 
 The window that a button opens carries the icon of that button: in its title bar, and in Alt+Tab. Generate Video, Align dates (also the window that gives
 photos a date), Remove empty folders, Find duplicates, Colorize, Video speech and the About box (the question mark) have theirs; the People window, the windows that
@@ -520,8 +548,8 @@ When a newer version is found the box says so and offers it (a stand-in for GitH
 
 ## Settings
 
-The settings grid at the top left shows the progress, the current file and the settings of the folder. It scrolls back to
-the top whenever another photo is shown:
+The settings grid (the upper one of the two in the [Properties panel](#the-properties-panel), at the left of the photo unless you moved it) shows the progress, the current
+file and the settings of the folder. It scrolls back to the top whenever another photo is shown:
 
 ![The settings grid, LikedFolder selected with its "..." button](docs/images/06-settings.png)
 
@@ -743,7 +771,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   and `Indexing is over` is written in the top left corner for a moment. (The show is of the photos that were listed when it began; it does not take the photos that are indexed meanwhile.)
 - <kbd>F</kbd> turns **the faces of the people** on and off, and <kbd>N</kbd> **their names**: <kbd>F</kbd> puts a box round the face of every known person with the name above it (green
   and solid for a face you named, gold and dashed with a `?` for a look-alike, as the main window shows the faces), <kbd>N</kbd> writes the names in one line in the bottom left corner
-  (`Anna, Oleh?, Mom`). They are two switches that do not depend on each other, on every monitor, and the photo that is shown gets (or loses) them at once and so do the photos after it.
+  (`Anna, Oleh, Mom`). They are two switches that do not depend on each other, on every monitor, and the photo that is shown gets (or loses) them at once and so do the photos after it.
   Like every key they also pause the show (<kbd>Space</kbd> continues; the people stay on). Each press writes `Faces: on` / `Faces: off` / `Names: on` / `Names: off` in the top left corner for
   a moment; a held key counts once. They show the people the search found, so the folder has to be indexed and the people named: without an index the corner says
   `No people to show: index the folder and name the people first`. The rows **PeopleFaces** and **PeopleNames** of the grid are how the show begins, and how the keys left them when it ended
@@ -768,8 +796,8 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 | **Monitors** | `Current` (the default): the screen PhotoLiker is on. `All`: every connected monitor, each with a photo of its own: **never the same photo on two monitors**, and all of them change together (a new set is shown once the photos of all are ready). In `Random` every monitor takes the next photo of the random order. In `OneByOne` the monitors, from left to right as Windows places them, show photos that follow each other (the shown photo stays on the monitor the window is on, the one before it is on the monitor to its left) and the next set begins where this one ends. <kbd>Right</kbd> / <kbd>Left</kbd> move every monitor to its neighbouring photo, so the row of photos moves a place. With more monitors than photos the ones farthest from the window are left out. |
 | **Timeout** | How many seconds a photo stays on the screen: 2 by default, not less than 0.2. The time counts from the moment the photo is on the screen, so a photo that is slow to come (a network share) is not shortened. |
 | **Watermark** | What is written in the bottom right corner, white on a dark band: `DateTime` (the default), the day and the time the photo was taken (`14 Aug 2025 09:12:07`, as everywhere in the program), `Year`, or `None`. The date is the one the search and <kbd>PageUp</kbd> / <kbd>PageDown</kbd> use: the date the camera wrote into the photo if it can be believed, else the date of the file (see [Aligning file dates](#aligning-file-dates)). A photo with no date at all gets no text. |
-| **PeopleFaces** | `False` (the default): no boxes. `True`: **a box round the face of every known person with the name above it**, as the main window shows the faces: green and solid for a face you named yourself, gold and dashed with a `?` after the name for a face that only looks like that person; a face nobody is known by gets no box. The faces are the ones the [search](#photo-search) found, so the folder has to be indexed and the people named (the **Faces** button); a photo that is not in the index yet, or has no known person, is shown as it is, and videos have no boxes. The <kbd>F</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. The boxes are drawn on the window after the photo, at the place the photo has at that moment, so they go with it through every effect (Ken Burns, Slide, Zoom) and fade with it while it dissolves into the next; the lines and the letters keep their size on the screen, so they stay sharp when the photo is magnified. The name goes under the box, or inside it, or to the left, where there is no room above it or at the right. **What it costs.** Drawing the boxes takes about a millisecond for each picture put on the screen (0.6 ms for 3 faces at 720p, about 1 ms for 6 faces at full HD) and nothing while they are off. Working out who is who takes about 0.6 microseconds for every face and every named example (7 ms for a photo with 6 faces against 2,000 named faces, 38 ms against 10,000): it is done once for a photo, in the background, along with the making of its frame, and only while the boxes or the names are on (with both off the index is not asked at all; turning one on during the show works out the photos that are ready already, two at a time, and a photo that is painted before its turn comes is worked out at once). A frame of a 12 MP JPEG at full HD took about 65 ms on this PC, so the lookup adds 5 to 11 ms with 2,000 named faces and 37 ms with 10,000: the show goes on as fast as it did, only the photos that are made ahead come a little later. |
-| **PeopleNames** | `False` (the default): no names. `True`: the names of the people in the photo in one line in the bottom left corner, in the same band as the date has on the other side, left to right as the people stand (`Anna, Oleh?, Mom`; the `?` is a face that only looks like that person). They come from the same faces as **PeopleFaces**, and a person with several faces is written once (without the `?` if any of the faces is named). A long list is wrapped over more lines upwards and leaves room for the date, and while a change is under way the names fade like the date. The <kbd>N</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. It does not depend on **PeopleFaces** (with both on the names are written twice). |
+| **PeopleFaces** | `False` (the default): no boxes. `True`: **a box round the face of every known person with the name above it**, as the main window shows the faces: green and solid for a face you named yourself, gold and dashed for a face that only looks like that person (the name is written the same, without a `?`); a face nobody is known by gets no box. The faces are the ones the [search](#photo-search) found, so the folder has to be indexed and the people named (the **Faces** button); a photo that is not in the index yet, or has no known person, is shown as it is, and videos have no boxes. The <kbd>F</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. The boxes are drawn on the window after the photo, at the place the photo has at that moment, so they go with it through every effect (Ken Burns, Slide, Zoom) and fade with it while it dissolves into the next; the lines and the letters keep their size on the screen, so they stay sharp when the photo is magnified. The name goes under the box, or inside it, or to the left, where there is no room above it or at the right. **What it costs.** Drawing the boxes takes about a millisecond for each picture put on the screen (0.6 ms for 3 faces at 720p, about 1 ms for 6 faces at full HD) and nothing while they are off. Working out who is who takes about 0.6 microseconds for every face and every named example (7 ms for a photo with 6 faces against 2,000 named faces, 38 ms against 10,000): it is done once for a photo, in the background, along with the making of its frame, and only while the boxes or the names are on (with both off the index is not asked at all; turning one on during the show works out the photos that are ready already, two at a time, and a photo that is painted before its turn comes is worked out at once). A frame of a 12 MP JPEG at full HD took about 65 ms on this PC, so the lookup adds 5 to 11 ms with 2,000 named faces and 37 ms with 10,000: the show goes on as fast as it did, only the photos that are made ahead come a little later. |
+| **PeopleNames** | `False` (the default): no names. `True`: the names of the people in the photo in one line in the bottom left corner, in the same band as the date has on the other side, left to right as the people stand (`Anna, Oleh, Mom`). They come from the same faces as **PeopleFaces**, and a person with several faces is written once. A long list is wrapped over more lines upwards and leaves room for the date, and while a change is under way the names fade like the date. The <kbd>N</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. It does not depend on **PeopleFaces** (with both on the names are written twice). |
 | **Effect** | How one photo takes the place of the last. `Fade` (the default): the old photo dissolves into the new one. `Slide`: the new photo pushes the old one out to the left (the date in the corner stays where it is). `Zoom`: the new photo grows from 80% of its size while it fades in over the old one. `KenBurns`: every photo drifts and zooms slowly all the time it is on the screen (in or out, by 8 to 16%, around a point of the picture chosen at random, and never so that part of the screen it covered at the start is left bare), and dissolves into the next. `Parallax`: every photo is a little scene in depth: while it is on the screen the camera goes sideways across it, so the near parts of the photo move against the far ones (see [Depth parallax](#depth-parallax)); it needs the depth model, and without it moves like `KenBurns`. `Random`: one of the first four for every change (not `Parallax`, which costs half a second of work for every photo), never the same twice in a row. `None`: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the **Timeout** (so a short timeout still leaves the photo on the screen for most of it); it begins when the timer ends, and the time of the new photo counts from then. While a change is under way the date fades out in the first half and the new one fades in in the second, so two dates are never written over each other. <kbd>Right</kbd> / <kbd>Left</kbd> put the next photo there at once, with no change (whoever holds a key wants to get on), but with `KenBurns` and `Parallax` it still moves. <kbd>Down</kbd> / <kbd>Up</kbd> change the effect while the show runs (see above). With **Monitors** `All` all the monitors change at the same moment, each by the same effect. |
 | **UseVideo** | `False` (the default): the slideshow shows photos only. `True`: it plays the videos of the list as well, between the photos (there are videos in the list while **SupportVideo** is on). See [below](#videos-in-the-slideshow). |
 | **MuteVideo** | `True`: the videos of the slideshow play without their sound. `False` (the default). |
@@ -1516,7 +1544,7 @@ dotnet run -c Release --project tools\SmokeTour -- --screenshots docs\images # a
 ```
 
 `--only-dialogs` runs another, shorter tour instead (on a fresh demo folder, about a minute): it likes four photos, takes a picture of the
-toolbar button, makes a video in the real Generate Video dialog with a cover (a title card it draws) and a song (a tone that ffmpeg makes)
+toolbar (with the names of its buttons shown, a red ring round the Generate Video button), makes a video in the real Generate Video dialog with a cover (a title card it draws) and a song (a tone that ffmpeg makes)
 and photographs the dialog empty, filled in and done, then opens the About box and checks that it lists the keys and that both pages of the
 [user manual](#user-manual) are beside the program, and that <kbd>F1</kbd> opens the box and <kbd>F2</kbd> / <kbd>F3</kbd> hand the Ukrainian / English page
 to the browser (the tour takes that call instead, so no browser is launched). It ends with the [update button](#updating) of the About box, pressed
@@ -1554,6 +1582,14 @@ two of them and photographs it: `28-people-groups`. It takes a few seconds:
 
 ```powershell
 dotnet run -c Release --project tools\SmokeTour -- --only-people --screenshots docs\images
+```
+
+`--only-layout` does the frame of the window: it presses the three bars of the toolbar (`41-toolbar-names`), docks the panel with the grids at the bottom
+(`42-panel-bottom`), floats it over the main window (`43-panel-float`; only the area of the main window is photographed, so nothing of the desktop is in the picture), and
+checks the places of the toolbar, the panel, its splitter and its window as it goes, then lets the close button of the floating window dock the panel back. No model is needed, a few seconds:
+
+```powershell
+dotnet run -c Release --project tools\SmokeTour -- --only-layout --screenshots docs\images
 ```
 
 The mouse pointer is parked in the corner of the screen before each picture, so that no tip of a button it rests on is in it. The tour without a flag makes the pictures `01-home` to
