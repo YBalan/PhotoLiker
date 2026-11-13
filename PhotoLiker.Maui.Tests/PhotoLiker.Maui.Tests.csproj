@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
+  </ItemGroup>
+
+  <!-- A net10.0 project can't reference the multi-targeted MAUI app, so the MAUI-free source under test is compiled in
+       (the same way PhotoLiker.Tests compiles in the WinForms-free sources of PhotoLikerUI). -->
+  <ItemGroup>
+    <Compile Include="..\PhotoLiker.Maui\Services\PhotoCacheService.cs" Link="PhotoLiker.Maui\Services\PhotoCacheService.cs" />
+    <Compile Include="..\PhotoLiker.Maui\Services\ViewerDates.cs" Link="PhotoLiker.Maui\Services\ViewerDates.cs" />
+    <Compile Include="..\PhotoLiker.Maui\Services\ViewerKey.cs" Link="PhotoLiker.Maui\Services\ViewerKey.cs" />
+    <Compile Include="..\PhotoLiker.Maui\Services\ViewerWindowPlanner.cs" Link="PhotoLiker.Maui\Services\ViewerWindowPlanner.cs" />
+    <Compile Include="..\PhotoLiker.Maui\SmokeTour\SmokeChecks.cs" Link="PhotoLiker.Maui\SmokeTour\SmokeChecks.cs" />
+    <Compile Include="..\PhotoLiker.Maui\SmokeTour\SmokeDemoFolder.cs" Link="PhotoLiker.Maui\SmokeTour\SmokeDemoFolder.cs" />
+    <Compile Include="..\PhotoLiker.Maui\SmokeTour\SmokeTourOptions.cs" Link="PhotoLiker.Maui\SmokeTour\SmokeTourOptions.cs" />
+  </ItemGroup>
+
+</Project>

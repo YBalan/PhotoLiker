@@ -7,6 +7,9 @@ public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
 	{
+		// A smoke tour must never touch the real %LocalAppData%\PhotoLiker: redirect before anything reads AppPaths
+		SmokeTour.SmokeTourOptions.RedirectAppData(Environment.GetCommandLineArgs());
+
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()

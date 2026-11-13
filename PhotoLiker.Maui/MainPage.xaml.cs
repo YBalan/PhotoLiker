@@ -1,44 +1,113 @@
-﻿using System.Collections.Concurrent;
-using CommunityToolkit.Maui.Storage;
+﻿using CommunityToolkit.Maui.Storage;
 using PhotoLiker.Core;
+using PhotoLiker.Maui.Services;
+using PhotoLiker.Maui.SmokeTour;
 
 namespace PhotoLiker.Maui;
 
 public partial class MainPage : ContentPage
 {
     private const int PreviewSiblingCount = 6;
+    private const int ThumbnailPixels = 144;              // twice the 72-pixel strip, for crisp thumbnails on high-DPI screens
+    private const long CacheBudgetBytes = 256L * 1024 * 1024;
 
     private readonly PhotoBrowserService _service;
+    private readonly PhotoCacheService _cache;
     private readonly List<string> _metadataLines = [];
-    private readonly ConcurrentDictionary<string, byte[]> _imageCache = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, Task<byte[]?>> _cacheLoadTasks = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Image> _visibleThumbnailImages = new(StringComparer.Ordinal);
+    private readonly SmokeTourOptions? _tourOptions;
 
-    private CancellationTokenSource _cacheCts = new();
-    private CancellationTokenSource _thumbnailCts = new();
     private string? _currentMapLink;
     private string? _currentMainImagePath;
+    private bool _tourStarted;
 
     public MainPage()
     {
         InitializeComponent();
         _service = new PhotoBrowserService();
+        _cache = new PhotoCacheService(CacheBudgetBytes, thumbResizer: ThumbnailResizer.ResizeAsync);
+        _cache.SetThumbSize(ThumbnailPixels);
 
         _service.StatusChanged += OnStatusChanged;
         _service.ImageLoaded += OnImageLoaded;
         _service.FolderLoaded += OnFolderLoaded;
+        _cache.Loaded += OnCacheEntryLoaded;
+        _cache.ThumbReady += OnCacheThumbReady;
 
         MetadataCollection.ItemsSource = _metadataLines;
         PermissionHelpLabel.Text = GetPermissionHelpText();
 
+        _tourOptions = SmokeTourOptions.Parse(Environment.GetCommandLineArgs());
+        Loaded += OnPageLoadedForTour;
+
 #if WINDOWS
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
-        _service.RestoreLastSession();
+        if (_tourOptions is null)
+            _service.RestoreLastSession();
 #endif
 
         UpdateNavigationButtons();
     }
+
+    // ── the viewer's keyboard, shared by every platform (and pressed by the smoke tour) ─────────
+
+    /// <summary>One key of the viewer: the platform key handlers map their own codes onto <see cref="ViewerKey"/> and call this.</summary>
+    internal bool HandleViewerKey(ViewerKey key)
+    {
+        var files = _service.Settings.Files;
+        if (files.Count == 0)
+            return false;
+
+        switch (key)
+        {
+            case ViewerKey.Previous:
+                _service.GoPrevious();
+                break;
+            case ViewerKey.Next:
+                _service.GoNext();
+                break;
+            case ViewerKey.First:
+                _service.LoadImage(files[0].OriginalFilePath);
+                break;
+            case ViewerKey.Last:
+                _service.LoadImage(files[^1].OriginalFilePath);
+                break;
+            case ViewerKey.ToggleLike:
+                _service.ToggleLike();
+                UpdateLikeUi();
+                break;
+            case ViewerKey.PreviousMonth:
+                JumpMonth(forward: false);
+                break;
+            case ViewerKey.NextMonth:
+                JumpMonth(forward: true);
+                break;
+            default:
+                return false;
+        }
+
+        UpdateNavigationButtons();
+        return true;
+    }
+
+    /// <summary>PageUp / PageDown: the first photo of the previous / the next month, by the dates of the files.</summary>
+    private void JumpMonth(bool forward)
+    {
+        var files = _service.Settings.Files;
+        var now = DateTime.Now;
+        var target = MonthNavigation.FindMonthStart(files, _service.Settings.CurrentIndex, f => ViewerDates.MonthOf(f, now), forward);
+        if (target < 0)
+        {
+            SetStatus(forward ? "This is already the last month." : "This is already the first month.");
+            return;
+        }
+
+        _service.LoadImage(files[target].OriginalFilePath);
+        SetStatus($"{MonthNavigation.Describe(ViewerDates.MonthOf(files[target], now))} — photo {target + 1} of {files.Count}");
+    }
+
+    // ── buttons ─────────────────────────────────────────────────────────────────────────────────
 
     private async void OnOpenFolderClicked(object? sender, EventArgs e)
     {
@@ -47,8 +116,7 @@ public partial class MainPage : ContentPage
             var folder = await PickFolderAsync();
             if (!string.IsNullOrWhiteSpace(folder))
             {
-                ResetImageState();
-                _service.OpenFolder(folder);
+                OpenFolderCore(folder);
                 return;
             }
 
@@ -75,7 +143,7 @@ public partial class MainPage : ContentPage
     private void OnLikeClicked(object? sender, EventArgs e)
     {
         _service.ToggleLike();
-        UpdateLikeButton();
+        UpdateLikeUi();
     }
 
     private async void OnOpenMapClicked(object? sender, EventArgs e)
@@ -93,10 +161,15 @@ public partial class MainPage : ContentPage
         }
     }
 
-    private void OnStatusChanged(string message)
+    private void OpenFolderCore(string folder)
     {
-        MainThread.BeginInvokeOnMainThread(() => CurrentFileLabel.Text = message);
+        ResetImageState();
+        _service.OpenFolder(folder);
     }
+
+    // ── the service speaks ──────────────────────────────────────────────────────────────────────
+
+    private void OnStatusChanged(string message) => SetStatus(message);
 
     private void OnFolderLoaded()
     {
@@ -107,32 +180,78 @@ public partial class MainPage : ContentPage
         });
     }
 
-    private async void OnImageLoaded(PhotoFile? photoFile, MetadataViewModel? metadata)
+    private void OnImageLoaded(PhotoFile? photoFile, MetadataViewModel? metadata)
     {
         if (photoFile is null)
+        {
+            // A like / unlike of a photo that is not in the list: only the indicator can change
+            MainThread.BeginInvokeOnMainThread(UpdateLikeUi);
             return;
+        }
 
         var filePath = photoFile.OriginalFilePath;
+        // Like / unlike re-announces the shown photo without metadata: the viewer only refreshes its indicators then
+        var isLikeRefresh = metadata is null && string.Equals(filePath, _currentMainImagePath, StringComparison.Ordinal);
         _currentMainImagePath = filePath;
+
+        if (!isLikeRefresh)
+            _cache.SetWindow(ViewerWindowPlanner.NearestFirst(_service.Settings.Files, _service.Settings.CurrentIndex, PreviewSiblingCount));
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            UpdateCurrentFileLabel();
+            RenderThumbnails();
+            if (!isLikeRefresh)
+                RenderMetadata(metadata);
+            UpdateLikeUi();
+            UpdateNavigationButtons();
+
+            // The last shown photo stays on screen until the new one is ready: no blank flash while it loads
+            if (_cache.TryGet(filePath, out var entry))
+                MainImage.Source = CreateImageSource(entry.Full);
+        });
+
+        if (!isLikeRefresh)
+            _ = ShowMainImageAsync(filePath);
+    }
+
+    private async Task ShowMainImageAsync(string filePath)
+    {
+        var entry = await _cache.GetOrLoadAsync(filePath, CancellationToken.None).ConfigureAwait(false);
+        if (entry is null)
+            return;
 
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
-            CurrentFileLabel.Text = Path.GetFileName(filePath);
-
-            if (_imageCache.TryGetValue(filePath, out var cachedBytes))
-                MainImage.Source = CreateImageSource(cachedBytes);
-            else
-                MainImage.Source = null;
-
-            RenderThumbnails();
-            RenderMetadata(metadata);
-            UpdateLikeButton();
-            UpdateNavigationButtons();
+            if (string.Equals(_currentMainImagePath, filePath, StringComparison.Ordinal))
+                MainImage.Source = CreateImageSource(entry.Full);
         });
-
-        _ = LoadMainImageAsync(filePath);
-        StartCacheWarmup(filePath);
     }
+
+    // ── the cache speaks (on pool threads) ──────────────────────────────────────────────────────
+
+    private void OnCacheEntryLoaded(string path, PhotoCacheEntry entry)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (string.Equals(path, _currentMainImagePath, StringComparison.Ordinal) && MainImage.Source is null)
+                MainImage.Source = CreateImageSource(entry.Full);
+
+            if (_visibleThumbnailImages.TryGetValue(path, out var image) && image.Source is null)
+                image.Source = CreateImageSource(entry.ThumbOrFull);
+        });
+    }
+
+    private void OnCacheThumbReady(string path, PhotoCacheEntry entry)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (_visibleThumbnailImages.TryGetValue(path, out var image))
+                image.Source = CreateImageSource(entry.ThumbOrFull);
+        });
+    }
+
+    // ── rendering ───────────────────────────────────────────────────────────────────────────────
 
     private void RenderMetadata(MetadataViewModel? metadata)
     {
@@ -161,7 +280,6 @@ public partial class MainPage : ContentPage
 
     private void RenderThumbnails()
     {
-        CancelThumbnailLoads();
         _visibleThumbnailImages.Clear();
         ThumbnailContainer.Children.Clear();
 
@@ -169,17 +287,13 @@ public partial class MainPage : ContentPage
         if (files.Count == 0)
             return;
 
-        var currentIndex = _service.Settings.CurrentIndex;
-        if (currentIndex < 0)
-            currentIndex = 0;
-
-        var from = Math.Max(0, currentIndex - PreviewSiblingCount);
-        var to = Math.Min(files.Count - 1, currentIndex + PreviewSiblingCount);
-        var token = _thumbnailCts.Token;
+        var currentIndex = Math.Clamp(_service.Settings.CurrentIndex, 0, files.Count - 1);
+        var (from, to) = ViewerWindowPlanner.StripRange(files.Count, currentIndex, PreviewSiblingCount);
 
         for (var i = from; i <= to; i++)
         {
-            var filePath = files[i].OriginalFilePath;
+            var photo = files[i];
+            var filePath = photo.OriginalFilePath;
             var image = new Image
             {
                 WidthRequest = 72,
@@ -187,8 +301,23 @@ public partial class MainPage : ContentPage
                 Aspect = Aspect.AspectFill
             };
 
-            if (_imageCache.TryGetValue(filePath, out var cachedBytes))
-                image.Source = CreateImageSource(cachedBytes);
+            if (_cache.TryGet(filePath, out var entry))
+                image.Source = CreateImageSource(entry.ThumbOrFull);
+
+            var content = new Grid();
+            content.Children.Add(image);
+            if (!string.IsNullOrEmpty(photo.LikedFilePath))
+            {
+                content.Children.Add(new Label
+                {
+                    Text = "♥",
+                    TextColor = Colors.Crimson,
+                    FontSize = 14,
+                    HorizontalOptions = LayoutOptions.End,
+                    VerticalOptions = LayoutOptions.Start,
+                    Margin = new Thickness(0, 0, 3, 0),
+                });
+            }
 
             var frame = new Border
             {
@@ -197,7 +326,7 @@ public partial class MainPage : ContentPage
                 Padding = 1,
                 WidthRequest = 74,
                 HeightRequest = 74,
-                Content = image
+                Content = content
             };
 
             var tap = new TapGestureRecognizer();
@@ -206,15 +335,23 @@ public partial class MainPage : ContentPage
 
             _visibleThumbnailImages[filePath] = image;
             ThumbnailContainer.Children.Add(frame);
-
-            if (image.Source is null)
-                _ = LoadThumbnailAsync(filePath, token);
         }
     }
 
-    private void UpdateLikeButton()
+    private void UpdateCurrentFileLabel()
     {
-        LikeButton.Text = _service.IsCurrentLiked ? "Unlike" : "Like";
+        var files = _service.Settings.Files;
+        var index = _service.Settings.CurrentIndex;
+        CurrentFileLabel.Text = index >= 0 && index < files.Count
+            ? $"{Path.GetFileName(files[index].OriginalFilePath)} — {index + 1} / {files.Count}"
+            : string.Empty;
+    }
+
+    private void UpdateLikeUi()
+    {
+        var liked = _service.IsCurrentLiked;
+        LikeButton.Text = liked ? "Unlike" : "Like";
+        LikedBadge.IsVisible = liked;
     }
 
     private void UpdateNavigationButtons()
@@ -227,143 +364,47 @@ public partial class MainPage : ContentPage
         NextOverlayButton.IsVisible = hasFiles && currentIndex >= 0 && currentIndex < files.Count - 1;
     }
 
+    private void SetStatus(string message) =>
+        MainThread.BeginInvokeOnMainThread(() => StatusLabel.Text = message);
+
     private void ResetImageState()
     {
         _currentMainImagePath = null;
         MainImage.Source = null;
-        CancelCacheWarmup();
-        CancelThumbnailLoads();
-        _imageCache.Clear();
-        _cacheLoadTasks.Clear();
+        LikedBadge.IsVisible = false;
+        _cache.Clear();
         _visibleThumbnailImages.Clear();
         ThumbnailContainer.Children.Clear();
-    }
-
-    private void StartCacheWarmup(string currentFile)
-    {
-        CancelCacheWarmup();
-        var token = _cacheCts.Token;
-        _ = Task.Run(() => WarmVisibleImageCacheAsync(currentFile, token), token);
-    }
-
-    private void CancelCacheWarmup()
-    {
-        _cacheCts.Cancel();
-        _cacheCts.Dispose();
-        _cacheCts = new CancellationTokenSource();
-    }
-
-    private void CancelThumbnailLoads()
-    {
-        _thumbnailCts.Cancel();
-        _thumbnailCts.Dispose();
-        _thumbnailCts = new CancellationTokenSource();
-    }
-
-    private async Task WarmVisibleImageCacheAsync(string currentFile, CancellationToken cancellationToken)
-    {
-        var files = _service.Settings.Files;
-        if (files.Count == 0)
-            return;
-
-        var currentIndex = _service.Settings.CurrentIndex;
-        if (currentIndex < 0)
-            currentIndex = files.FindIndex(f => string.Equals(f.OriginalFilePath, currentFile, StringComparison.Ordinal));
-        if (currentIndex < 0)
-            return;
-
-        var from = Math.Max(0, currentIndex - PreviewSiblingCount);
-        var to = Math.Min(files.Count - 1, currentIndex + PreviewSiblingCount);
-        var keepPaths = new HashSet<string>(StringComparer.Ordinal);
-
-        for (var i = from; i <= to; i++)
-            keepPaths.Add(files[i].OriginalFilePath);
-
-        keepPaths.Add(currentFile);
-
-        foreach (var cachedPath in _imageCache.Keys)
-        {
-            if (!keepPaths.Contains(cachedPath))
-                _imageCache.TryRemove(cachedPath, out _);
-        }
-
-        for (var i = from; i <= to; i++)
-        {
-            if (cancellationToken.IsCancellationRequested)
-                return;
-
-            var filePath = files[i].OriginalFilePath;
-            await GetOrLoadImageBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
-        }
-    }
-
-    private async Task LoadMainImageAsync(string filePath)
-    {
-        var bytes = await GetOrLoadImageBytesAsync(filePath, CancellationToken.None).ConfigureAwait(false);
-        if (bytes is null)
-            return;
-
-        await MainThread.InvokeOnMainThreadAsync(() =>
-        {
-            if (!string.Equals(_currentMainImagePath, filePath, StringComparison.Ordinal))
-                return;
-
-            MainImage.Source = CreateImageSource(bytes);
-        });
-    }
-
-    private async Task LoadThumbnailAsync(string filePath, CancellationToken cancellationToken)
-    {
-        var bytes = await GetOrLoadImageBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
-        if (bytes is null || cancellationToken.IsCancellationRequested)
-            return;
-
-        await MainThread.InvokeOnMainThreadAsync(() =>
-        {
-            if (!_visibleThumbnailImages.TryGetValue(filePath, out var image))
-                return;
-
-            image.Source = CreateImageSource(bytes);
-        });
-    }
-
-    private async Task<byte[]?> GetOrLoadImageBytesAsync(string filePath, CancellationToken cancellationToken)
-    {
-        if (_imageCache.TryGetValue(filePath, out var cachedBytes))
-            return cachedBytes;
-
-        var loadTask = _cacheLoadTasks.GetOrAdd(filePath, path => LoadImageBytesCoreAsync(path, cancellationToken));
-
-        try
-        {
-            var bytes = await loadTask.ConfigureAwait(false);
-            if (bytes is not null)
-                _imageCache[filePath] = bytes;
-
-            return bytes;
-        }
-        finally
-        {
-            _cacheLoadTasks.TryRemove(filePath, out _);
-        }
-    }
-
-    private static async Task<byte[]?> LoadImageBytesCoreAsync(string filePath, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await File.ReadAllBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     private static ImageSource CreateImageSource(byte[] bytes)
     {
         return ImageSource.FromStream(() => new MemoryStream(bytes, writable: false));
     }
+
+    // ── the smoke tour (see tools\maui-smoke-tour.ps1): drives this very page like a person would ─
+
+    internal PhotoBrowserService Service => _service;
+    internal string StatusText => StatusLabel.Text ?? string.Empty;
+    internal string CurrentFileText => CurrentFileLabel.Text ?? string.Empty;
+    internal bool IsMainImageShown => MainImage.Source is not null;
+    internal bool IsLikedBadgeVisible => LikedBadge.IsVisible;
+    internal int VisibleThumbnailCount => ThumbnailContainer.Children.Count;
+    internal bool IsPreviousArrowVisible => PreviousOverlayButton.IsVisible;
+    internal bool IsNextArrowVisible => NextOverlayButton.IsVisible;
+
+    internal void OpenFolderForTour(string folder) => OpenFolderCore(folder);
+
+    private void OnPageLoadedForTour(object? sender, EventArgs e)
+    {
+        if (_tourOptions is null || _tourStarted)
+            return;
+
+        _tourStarted = true;
+        _ = new MauiSmokeTour(this, _tourOptions).RunAsync();
+    }
+
+    // ── texts ───────────────────────────────────────────────────────────────────────────────────
 
     private static string GetPermissionHelpText()
     {
@@ -372,7 +413,7 @@ public partial class MainPage : ContentPage
 #elif IOS || MACCATALYST
         return "Apple platforms: choose a folder and allow PhotoLiker to access it when the system prompt appears. Some folders may remain restricted by the OS.";
 #elif WINDOWS
-        return "Windows: choose any local photo folder. Use the keyboard Left and Right arrow keys to move between photos.";
+        return "Windows: choose any local photo folder. Keys: Left / Right photo, Home / End first / last, PageUp / PageDown month, Space like.";
 #else
         return "Choose a photo folder and allow access if your device asks for permission.";
 #endif
@@ -419,6 +460,16 @@ public partial class MainPage : ContentPage
             nativeWindow.Content.KeyDown -= OnWindowsKeyDown;
             nativeWindow.Content.KeyDown += OnWindowsKeyDown;
         }
+
+        // The buttons must not swallow the keyboard: Space likes the photo, it never re-clicks the last-used button
+        foreach (var button in new[] { LikeButton, MapButton, PreviousOverlayButton, NextOverlayButton })
+        {
+            if (button.Handler?.PlatformView is Microsoft.UI.Xaml.Controls.Button native)
+            {
+                native.IsTabStop = false;
+                native.AllowFocusOnInteraction = false;
+            }
+        }
     }
 
     private void OnUnloaded(object? sender, EventArgs e)
@@ -429,18 +480,20 @@ public partial class MainPage : ContentPage
 
     private void OnWindowsKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
     {
-        if (e.Key == Windows.System.VirtualKey.Left)
+        var key = e.Key switch
         {
-            _service.GoPrevious();
-            UpdateNavigationButtons();
+            Windows.System.VirtualKey.Left => ViewerKey.Previous,
+            Windows.System.VirtualKey.Right => ViewerKey.Next,
+            Windows.System.VirtualKey.Home => ViewerKey.First,
+            Windows.System.VirtualKey.End => ViewerKey.Last,
+            Windows.System.VirtualKey.Space => ViewerKey.ToggleLike,
+            Windows.System.VirtualKey.PageUp => ViewerKey.PreviousMonth,
+            Windows.System.VirtualKey.PageDown => ViewerKey.NextMonth,
+            _ => (ViewerKey?)null,
+        };
+
+        if (key is { } viewerKey && HandleViewerKey(viewerKey))
             e.Handled = true;
-        }
-        else if (e.Key == Windows.System.VirtualKey.Right)
-        {
-            _service.GoNext();
-            UpdateNavigationButtons();
-            e.Handled = true;
-        }
     }
 
     private static async Task<string?> PickFolderOnWindowsAsync()
