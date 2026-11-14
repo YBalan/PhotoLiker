@@ -96,9 +96,11 @@ namespace PhotoLikerUI
                 }
             }
 
-            // The Parallax effect needs the depth model (it is asked for once; without it the show moves its photos like Ken Burns does)
-            if (SlideshowEffects.UsesDepth(_currentConfig.SlideshowEffect) && !await EnsureToolModelAsync(ToolModels.Depth, ToolModelStrings.ParallaxFeature, askAgain: false))
-                SetStatus(ToolModelStrings.StatusParallaxWithoutModel);
+            // The Parallax and Portrait effects need the depth model (it is asked for once; without it the show moves its photos like Ken Burns does)
+            var depthEffect = _currentConfig.SlideshowEffect;
+            if (SlideshowEffects.UsesDepth(depthEffect)
+                && !await EnsureToolModelAsync(ToolModels.Depth, SlideshowEffects.BlursByDepth(depthEffect) ? ToolModelStrings.PortraitFeature : ToolModelStrings.ParallaxFeature, askAgain: false))
+                SetStatus(SlideshowEffects.BlursByDepth(depthEffect) ? ToolModelStrings.StatusPortraitWithoutModel : ToolModelStrings.StatusParallaxWithoutModel);
 
             // The depth model is given to the show when its file is the one that was tested, also when the show starts with another effect (Down can change to Parallax while it runs): the file is looked
             // at once a run (see IsTestedFileAsync), so this costs nothing after the first show
@@ -125,6 +127,7 @@ namespace PhotoLikerUI
                 }
 
                 KeepTheEffectThatWasChosen(slideshow.Effect);
+                KeepTheLookThatWasChosen(slideshow.Look, slideshow.Border, slideshow.Collage);
                 KeepThePeopleThatWereChosen(slideshow.ShowFaces, slideshow.ShowNames);
                 KeepTheCaptionsThatWereChosen(slideshow.ShowCaptions);
                 ShowWhereSlideshowEnded(slideshow.LastShownPath);
@@ -156,7 +159,52 @@ namespace PhotoLikerUI
             return new SlideshowSession(
                 files, start, _currentConfig.SlideshowMode, _currentConfig.SlideshowTimeout, _currentConfig.SlideshowWatermark, screens, primary,
                 _currentConfig.SlideshowEffect, useVideo ? SlideshowVideoSettings() : null, SlideshowPeopleOptionsOfTheFolder(),
-                depthTested ? SlideshowDepthOptions.Of(_effects) : null);
+                depthTested ? SlideshowDepthOptions.Of(_effects) : null, SlideshowStyleOptionsOfTheSettings());
+        }
+
+        /// <summary>
+        /// The look of the show (the Look row) and the table of the Lut look (the file of the LookFile row, read now: a 65 point cube is read in a fraction of a second). A file that can not be used is told
+        /// in the status bar and the show goes on without a table (a Lut look then grades nothing, and the L key leaves it out). Null when there is no look and no table.
+        /// </summary>
+        private SlideshowStyleOptions? SlideshowStyleOptionsOfTheSettings()
+        {
+            CubeLut? table = null;
+            var file = _currentConfig.SlideshowLookFile;
+            if (!string.IsNullOrWhiteSpace(file))
+            {
+                try
+                {
+                    table = CubeLut.Load(file);
+                }
+                catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+                {
+                    SetStatus(string.Format(SlideshowStrings.StatusLookFileFailedFormat, Path.GetFileName(file), ex.Message));
+                }
+            }
+
+            // The look stays what the person chose even when there is no table to grade by (the frames then are not graded): the show must not end by changing the setting to None
+            var look = _currentConfig.SlideshowLook;
+            var border = _currentConfig.SlideshowBorder;
+            var collage = _currentConfig.SlideshowCollage;
+            if (look == SlideshowLook.None && table is null && border == SlideshowBorder.None && collage == SlideshowCollage.None)
+                return null;
+
+            // When a photo was taken, for the events of the collage: what the index knows (the folder is indexed, or it is not and the photos of a page are only those that follow each other)
+            var index = _folderSearch;
+            Func<string, DateTime?>? takenOf = index is null ? null : path => index.Index.FindFullPath(path)?.Date.Taken;
+            return new SlideshowStyleOptions(look, table, border, collage, takenOf);
+        }
+
+        /// <summary>L chooses the next look, B turns the card on and off and 1, 2, 3, 4 and M choose the collage while the slideshow runs; what it ended with is the setting from then on (like the effect).</summary>
+        private void KeepTheLookThatWasChosen(SlideshowLook look, SlideshowBorder border, SlideshowCollage collage)
+        {
+            if (_currentConfig.SlideshowLook == look && _currentConfig.SlideshowBorder == border && _currentConfig.SlideshowCollage == collage)
+                return;
+
+            _currentConfig.SlideshowLook = look;
+            _currentConfig.SlideshowBorder = border;
+            _currentConfig.SlideshowCollage = collage;
+            settingsPropertyGrid.Refresh();
         }
 
         /// <summary>

@@ -18,6 +18,7 @@ public class SlideshowEffectsTests
     [InlineData(SlideshowEffect.Zoom)]
     [InlineData(SlideshowEffect.KenBurns)]
     [InlineData(SlideshowEffect.Parallax)]
+    [InlineData(SlideshowEffect.Portrait)]
     public void AnEffectThatIsNotRandom_IsItself(SlideshowEffect effect) =>
         Assert.Equal(effect, SlideshowEffects.Resolve(effect, SlideshowEffect.Fade, _ => 0));
 
@@ -34,8 +35,9 @@ public class SlideshowEffectsTests
             Assert.DoesNotContain(SlideshowEffect.None, seen);
             Assert.DoesNotContain(SlideshowEffect.Random, seen);
             Assert.DoesNotContain(SlideshowEffect.Parallax, seen); // it costs half a second a photo: only when it is asked for
+            Assert.DoesNotContain(SlideshowEffect.Portrait, seen); // as the depth model is for Parallax
             Assert.All(seen, effect => Assert.Contains(effect, Concrete));
-            Assert.Equal(previous is SlideshowEffect.None or SlideshowEffect.Random or SlideshowEffect.Parallax ? 4 : 3, seen.Count); // every other one can come
+            Assert.Equal(previous is SlideshowEffect.None or SlideshowEffect.Random or SlideshowEffect.Parallax or SlideshowEffect.Portrait ? 4 : 3, seen.Count); // every other one can come
         }
     }
 
@@ -49,7 +51,7 @@ public class SlideshowEffectsTests
     [Fact]
     public void TheNextEffect_GoesDownTheDropDown_AndRoundAtTheEnd()
     {
-        var order = new[] { SlideshowEffect.None, SlideshowEffect.Fade, SlideshowEffect.Slide, SlideshowEffect.Zoom, SlideshowEffect.KenBurns, SlideshowEffect.Parallax, SlideshowEffect.Random };
+        var order = new[] { SlideshowEffect.None, SlideshowEffect.Fade, SlideshowEffect.Slide, SlideshowEffect.Zoom, SlideshowEffect.KenBurns, SlideshowEffect.Parallax, SlideshowEffect.Portrait, SlideshowEffect.Random };
 
         for (var i = 0; i < order.Length; i++)
         {
@@ -75,11 +77,29 @@ public class SlideshowEffectsTests
     [InlineData(SlideshowEffect.Zoom, SlideshowTransition.Zoom, false)]
     [InlineData(SlideshowEffect.KenBurns, SlideshowTransition.Fade, true)]
     [InlineData(SlideshowEffect.Parallax, SlideshowTransition.Fade, true)]
+    [InlineData(SlideshowEffect.Portrait, SlideshowTransition.Fade, true)]
     [InlineData(SlideshowEffect.Random, SlideshowTransition.None, false)] // resolved to another before it is asked
-    public void EachEffect_HasItsTransition_AndOnlyKenBurnsAndParallaxMoveThePhoto(SlideshowEffect effect, SlideshowTransition transition, bool motion)
+    public void EachEffect_HasItsTransition_AndOnlyTheDriftingOnesMoveThePhoto(SlideshowEffect effect, SlideshowTransition transition, bool motion)
     {
         Assert.Equal(transition, SlideshowEffects.TransitionOf(effect));
         Assert.Equal(motion, SlideshowEffects.HasMotion(effect));
+    }
+
+    [Theory]
+    [InlineData(SlideshowEffect.KenBurns, false, false, true)]
+    [InlineData(SlideshowEffect.Parallax, true, false, true)]
+    [InlineData(SlideshowEffect.Portrait, false, true, true)]
+    [InlineData(SlideshowEffect.Random, false, false, true)]   // it may choose Ken Burns
+    [InlineData(SlideshowEffect.Fade, false, false, false)]
+    [InlineData(SlideshowEffect.Slide, false, false, false)]
+    [InlineData(SlideshowEffect.Zoom, false, false, false)]
+    [InlineData(SlideshowEffect.None, false, false, false)]
+    public void TheEffects_SayWhatTheyNeed_TheDepthTheBlurAndTheFaces(SlideshowEffect effect, bool movesByDepth, bool blursByDepth, bool aimsAtFaces)
+    {
+        Assert.Equal(movesByDepth, SlideshowEffects.MovesByDepth(effect));
+        Assert.Equal(blursByDepth, SlideshowEffects.BlursByDepth(effect));
+        Assert.Equal(movesByDepth || blursByDepth, SlideshowEffects.UsesDepth(effect));
+        Assert.Equal(aimsAtFaces, SlideshowEffects.AimsAtFaces(effect));
     }
 
     // ── how long ────────────────────────────────────────────────────────────

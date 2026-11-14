@@ -30,12 +30,10 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             toolStrip1 = new ToolStrip();
-            newToolStripButton = new ToolStripButton();
             openToolStripButton = new ToolStripButton();
             saveToolStripButton = new ToolStripButton();
             toolStripSeparator = new ToolStripSeparator();
             copyToolStripButton = new ToolStripButton();
-            pasteToolStripButton = new ToolStripButton();
             toolStripSeparator1 = new ToolStripSeparator();
             themeToggleToolStripButton = new ToolStripButton();
             toolStripSeparator4 = new ToolStripSeparator();
@@ -78,23 +76,13 @@
             toolStrip1.GripStyle = ToolStripGripStyle.Hidden;
             toolStrip1.ImageScalingSize = new Size(16, 16);
             toolStrip1.LayoutStyle = ToolStripLayoutStyle.VerticalStackWithOverflow;
-            toolStrip1.Items.AddRange(new ToolStripItem[] { newToolStripButton, openToolStripButton, saveToolStripButton, toolStripSeparator, copyToolStripButton, pasteToolStripButton, toolStripSeparator1, themeToggleToolStripButton, toolStripSeparator4, openSourceFolderToolStripButton, openLikedFolderToolStripButton, loadLikedFolderToolStripButton, generateVideoToolStripButton, toolStripSeparator2, contextMenuToolStripButton, toolStripSeparator3, helpToolStripButton });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { openToolStripButton, saveToolStripButton, toolStripSeparator, copyToolStripButton, toolStripSeparator1, themeToggleToolStripButton, toolStripSeparator4, openSourceFolderToolStripButton, openLikedFolderToolStripButton, loadLikedFolderToolStripButton, generateVideoToolStripButton, toolStripSeparator2, contextMenuToolStripButton, toolStripSeparator3, helpToolStripButton });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
             toolStrip1.Padding = new Padding(0, 4, 0, 4);
             toolStrip1.Size = new Size(44, 940);
             toolStrip1.TabIndex = 1;
             toolStrip1.Text = "toolStrip1";
-            // 
-            // newToolStripButton
-            // 
-            newToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            newToolStripButton.Image = (Image)resources.GetObject("newToolStripButton.Image");
-            newToolStripButton.ImageTransparentColor = Color.Magenta;
-            newToolStripButton.Name = "newToolStripButton";
-            newToolStripButton.Size = new Size(23, 22);
-            newToolStripButton.Text = "&New";
-            newToolStripButton.Click += newToolStripButton_Click;
             // 
             // openToolStripButton
             // 
@@ -130,15 +118,6 @@
             copyToolStripButton.Size = new Size(23, 22);
             copyToolStripButton.Text = "&Copy";
             copyToolStripButton.Click += CopyToolStripButton_Click;
-            // 
-            // pasteToolStripButton
-            // 
-            pasteToolStripButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            pasteToolStripButton.Image = (Image)resources.GetObject("pasteToolStripButton.Image");
-            pasteToolStripButton.ImageTransparentColor = Color.Magenta;
-            pasteToolStripButton.Name = "pasteToolStripButton";
-            pasteToolStripButton.Size = new Size(23, 22);
-            pasteToolStripButton.Text = "&Paste";
             // 
             // toolStripSeparator1
             // 
@@ -371,12 +350,10 @@
 
         private PropertyGrid settingsPropertyGrid;
         private ToolStrip toolStrip1;
-        private ToolStripButton newToolStripButton;
         private ToolStripButton openToolStripButton;
         private ToolStripButton saveToolStripButton;
         private ToolStripSeparator toolStripSeparator;
         private ToolStripButton copyToolStripButton;
-        private ToolStripButton pasteToolStripButton;
         private ToolStripSeparator toolStripSeparator1;
         private ToolStripButton helpToolStripButton;
         private ToolStripSeparator toolStripSeparator2;

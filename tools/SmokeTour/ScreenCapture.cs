@@ -114,12 +114,42 @@ internal static class ScreenCapture
     /// </summary>
     public static bool BringToFront(IntPtr window)
     {
+        if (TryForeground(window))
+            return true;
+
+        // SetForegroundWindow can say "true" and the window still be drawn inactive (grey title bar in the pictures): ask again,
+        // then with the other ways Windows lets a program take the foreground
+        SwitchToThisWindow(window, true);
+        if (GetForegroundWindow() == window)
+            return true;
+
+        keybd_event(VkMenu, 0, 0, UIntPtr.Zero); // a tapped Alt counts as "the user pressed a key", which opens the foreground lock
+        keybd_event(VkMenu, 0, KeyUp, UIntPtr.Zero);
+        return TryForeground(window);
+    }
+
+    public static bool IsForeground(IntPtr window) => GetForegroundWindow() == window;
+
+    /// <summary>Title of the window that is the foreground one now (for the log when it is not ours).</summary>
+    public static string ForegroundTitle()
+    {
+        var buffer = new System.Text.StringBuilder(256);
+        GetWindowText(GetForegroundWindow(), buffer, buffer.Capacity);
+        return buffer.ToString();
+    }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowText(IntPtr window, System.Text.StringBuilder text, int maxCount);
+
+    private static bool TryForeground(IntPtr window)
+    {
         var foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), out _);
         var thisThread = GetCurrentThreadId();
         var attached = foregroundThread != 0 && foregroundThread != thisThread && AttachThreadInput(thisThread, foregroundThread, true);
         try
         {
-            return SetForegroundWindow(window);
+            SetForegroundWindow(window);
+            return GetForegroundWindow() == window;
         }
         finally
         {
@@ -127,6 +157,15 @@ internal static class ScreenCapture
                 AttachThreadInput(thisThread, foregroundThread, false);
         }
     }
+
+    private const byte VkMenu = 0x12;
+    private const uint KeyUp = 0x0002;
+
+    [DllImport("user32.dll")]
+    private static extern void SwitchToThisWindow(IntPtr window, bool altTab);
+
+    [DllImport("user32.dll")]
+    private static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Rect

@@ -7,11 +7,16 @@ namespace PhotoLikerUI
     {
         private static string T([CallerMemberName] string key = "") => Loc.Get(nameof(ToolbarStrings), key);
 
-        public static string New => T();
         public static string Open => T();
         public static string Save => T();
+        public static string SaveTooltip => T();
+        public static string SaveAsTitleFormat => T();
+        public static string SaveAsFilterAll => T();
+        public static string StatusNothingToSave => T();
+        public static string StatusSaveAsSavedFormat => T();
+        public static string StatusSaveAsFailedFormat => T();
+        public static string StatusSaveAsSameFile => T();
         public static string Copy => T();
-        public static string Paste => T();
         public static string Help => T();
         public static string ThemeTooltip => T();
         public static string OpenSource => T();

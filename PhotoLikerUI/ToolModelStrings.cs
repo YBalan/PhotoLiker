@@ -9,6 +9,8 @@ namespace PhotoLikerUI
 
         // What the question is about
         public static string ParallaxFeature => T();
+        public static string PortraitFeature => T();
+        public static string FocusFeature => T();
         public static string ColorizeFeature => T();
 
         // The question
@@ -21,5 +23,6 @@ namespace PhotoLikerUI
         public static string StatusFailedFormat => T();
         public static string StatusDeclinedFormat => T();
         public static string StatusParallaxWithoutModel => T();
+        public static string StatusPortraitWithoutModel => T();
     }
 }

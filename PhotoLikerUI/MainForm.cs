@@ -39,6 +39,7 @@ namespace PhotoLikerUI
             InitializeEmptyFolders();
             InitializeDuplicates();
             InitializeColorize();
+            InitializeRefocus();
             InitializeVideoSpeech();
             InitializeRotate();
             InitializeTaskbarProgress();
@@ -91,6 +92,7 @@ namespace PhotoLikerUI
             LoadFolder();
 
             settingsPropertyGrid.SelectedObject = _currentConfig;
+            _gridTips = new GridValueTips(settingsPropertyGrid, SettingsRowTip); // the whole path of a row that shows only a name
             UpdateContextMenuButton();
 
             // Recalculate ruler width once the form layout is finalised
@@ -128,6 +130,7 @@ namespace PhotoLikerUI
             DrawDateMark(e.Graphics);
             DrawGroupLegend(e.Graphics);
             DrawFaces(e.Graphics);
+            DrawRefocusMarker(e.Graphics);
         }
 
         /// <summary>
@@ -231,6 +234,8 @@ namespace PhotoLikerUI
             DisposeTaskbarProgress();
             ShutDownSearch();
             DisposeColorizeBar();
+            DisposeRefocusBar();
+            _gridTips?.Dispose();
             _effects.Dispose();
             SaveWindowPosition();
             SaveSettingsToJson();
@@ -558,6 +563,7 @@ namespace PhotoLikerUI
             _folderGeneration++;
 
             ColorizeBarCleared();
+            RefocusBarCleared();
             HidePlayer(); // a video that is playing belongs to the list that is being replaced
             UpdateMomentStrip(null);
 
@@ -1073,6 +1079,8 @@ namespace PhotoLikerUI
             if (HandleFaceMouseDown(e))
                 return;
 
+            RefocusMouseDown(e); // with the Refocus bar working a click on the photo puts the focus there (when the button comes up)
+
             if (e.Button == MouseButtons.Left && IsEnlarged)
             {
                 _panning = true;
@@ -1104,6 +1112,8 @@ namespace PhotoLikerUI
         {
             if (HandleFaceMouseUp(e))
                 return;
+
+            RefocusMouseUp(e);
 
             if (_panning)
             {
@@ -1480,6 +1490,7 @@ namespace PhotoLikerUI
                 var index = _currentConfig.Files.IndexOf(file);
                 pictureBox1.Tag = file; // Store the file path in the Tag property
                 ColorizeBarPhotoChosen(file);
+                RefocusBarPhotoChosen(file);
                 _currentConfig.CurrentFilePath = file;
                 _currentConfig.CurrentFileName = Path.GetFileName(file);
                 _currentConfig.CurrentIndex = index;
@@ -1510,6 +1521,7 @@ namespace PhotoLikerUI
             pictureBox1.Image = entry.Full;
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; // Set the size mode to zoom
             ColorizeBarPhotoShown(); // the colours that were put on this photo stay over it
+            RefocusBarPhotoShown();  // and so does the refocused picture
 
             // The dates of a JPEG can be edited in the grid: the photo is saved again with the new date. So can the Recorded row of a video
             var metadataWrapper = new MetadataWrapper(
@@ -1812,14 +1824,6 @@ namespace PhotoLikerUI
             }
         }
 
-        private void newToolStripButton_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void saveToolStripButton_Click(object sender, EventArgs e)
-        {
-
-        }
+        private void saveToolStripButton_Click(object sender, EventArgs e) => SaveAsButtonClicked();
     }
 }

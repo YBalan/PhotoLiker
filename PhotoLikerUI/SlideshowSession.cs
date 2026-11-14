@@ -45,13 +45,23 @@ namespace PhotoLikerUI
         private const int PrefetchRandom = 3;                  // the next sets of photos of the random order
         private const int MaxQueuedSteps = 3;                  // keys kept while their photos are being made
 
-        private readonly PhotoFile[] _photos;                  // the photos only: the videos are played in between (see below)
+        private PhotoFile[] _photos;                           // what the show goes through, one step each: the photos, or the pages of the collage that are made of them (the videos are played in between, see below)
         private readonly SlideshowScreen[] _screens;           // left to right
         private readonly int _primary;                         // the place of the screen the main window is on: it has the photo that was shown there
-        private readonly int[] _first;                         // the photos to begin with, one for each screen
-        private readonly SlideshowShuffle? _shuffle;           // in the random mode
+        private int[] _first;                                  // the photos to begin with, one for each screen
+        private SlideshowShuffle? _shuffle;                    // in the random mode (made again when the collage is changed)
         private readonly System.Windows.Forms.Timer _timer = new();
         private SlideshowEffect _effect;
+        private SlideshowLook _look;                           // how the colours of the photos are graded now: the one the show began with, or the one L chose last
+        private readonly CubeLut? _lut;                        // the table of the Lut look, when there is one
+        private readonly PhotoFile[] _singles;                 // the photos one by one, in the order of the list: what the pages of the collage are made of
+        private readonly int[] _videoAfterSingle;              // for each video, the photo (of _singles) it follows, -1 when it comes before the first
+        private readonly Func<string, DateTime?>? _takenOf;    // when a photo was taken, for the events of the collage
+        private DateTime?[]? _taken;                           // when each of _singles was taken: asked once, when a collage is first wanted
+        private readonly SlideshowMode _mode;
+        private SlideshowCollage _collage;                     // how many photos of one event are on a screen at once now: as the show began, or as the keys left it
+        private IReadOnlyList<int[]> _pageGroups = [];         // for each of _photos, the photos of _singles it is made of
+        private SlideshowBorder _border;                       // what the photos are put in now: as the show began, or as the B key left it
         private readonly double _timeoutSeconds;
 
         private readonly int[] _shown;                         // the place in the list of the photo on each screen, -1 before the first
@@ -74,8 +84,8 @@ namespace PhotoLikerUI
 
         // Videos
         private readonly SlideshowVideoOptions? _videoOptions;
-        private readonly VideoSlot[] _videos;                  // in the order of the list
-        private readonly List<int>[] _videosAfter;             // for each photo: the videos that follow it in the list (those before the first photo follow the last one, as the list goes round)
+        private VideoSlot[] _videos;                           // in the order of the list
+        private List<int>[] _videosAfter;                      // for each photo: the videos that follow it in the list (those before the first photo follow the last one, as the list goes round)
         private readonly SlideshowShuffle? _videoShuffle;      // the random order of the videos
         private readonly int _startVideo;                      // the video the show begins with (the one the window shows), -1 if none
         private readonly Queue<int> _videoQueue = new();       // videos to play now, one after the other
@@ -106,10 +116,11 @@ namespace PhotoLikerUI
         /// <param name="video">How the videos are played; null leaves them out of the show.</param>
         /// <param name="people">Who is in a photo, and whether the boxes with the names on the faces (F) and the line of names (N) are on when the show begins; null when there is nobody to ask (the folder has no index), and then the two keys say so.</param>
         /// <param name="depth">How to work out the depth of a photo, for <see cref="SlideshowEffect.Parallax"/>; null when the depth model is not here, and then that effect is a Ken Burns one and the Down and Up keys skip it.</param>
+        /// <param name="look">How the colours of the photos are graded, and the table of the Lut look (see <see cref="SlideshowLook"/>); null for the photos as they are, and no table.</param>
         public SlideshowSession(
             IReadOnlyList<PhotoFile> items, int start, SlideshowMode mode, double timeoutSeconds, SlideshowWatermark watermark,
             IReadOnlyList<Rectangle> screens, int primary, SlideshowEffect effect = SlideshowEffect.None, SlideshowVideoOptions? video = null,
-            SlideshowPeopleOptions? people = null, SlideshowDepthOptions? depth = null)
+            SlideshowPeopleOptions? people = null, SlideshowDepthOptions? depth = null, SlideshowStyleOptions? look = null)
         {
             ArgumentOutOfRangeException.ThrowIfZero(items.Count);
             ArgumentOutOfRangeException.ThrowIfZero(screens.Count);
@@ -141,28 +152,26 @@ namespace PhotoLikerUI
             }
             ArgumentOutOfRangeException.ThrowIfZero(photos.Count + videos.Count);
 
-            _photos = [.. photos];
-            _videos = [.. videos];
+            // The collage: photos of one event that follow each other in the list are shown together, one page at a time; what is counted from here on (the order, the random order, the photos a key moves
+            // by, where a video comes) is pages. A video follows the page of the photo it followed, and the show begins with the page of the photo that was shown. The photos themselves are kept (they are
+            // what pages are made of), so that the collage can be changed while the show runs (see ChangeCollage).
+            _singles = [.. photos];
+            _videoAfterSingle = [.. videos.Select(slot => slot.AfterPhoto)];
+            _takenOf = look?.TakenOf;
+            _mode = mode;
+            _collage = look?.Collage ?? SlideshowCollage.None;
+            var (pages, pageOf, groups) = Paginate(_collage);
+            _photos = pages;
+            _pageGroups = groups;
+            _videos = [.. videos.Select(slot => slot with { AfterPhoto = slot.AfterPhoto >= 0 ? pageOf[slot.AfterPhoto] : -1 })];
+            if (startPhoto >= 0 && startPhoto < photos.Count)
+                startPhoto = pageOf[startPhoto];
+
             _videoOptions = _videos.Length > 0 ? video : null;
             startPhoto = _photos.Length == 0 ? 0 : startPhoto < 0 || startPhoto >= _photos.Length ? 0 : startPhoto;
             primary = Math.Clamp(primary, 0, screens.Count - 1);
 
-            _videosAfter = new List<int>[Math.Max(1, _photos.Length)];
-            for (var i = 0; i < _videosAfter.Length; i++)
-                _videosAfter[i] = [];
-            if (_photos.Length > 0)
-            {
-                for (var v = 0; v < _videos.Length; v++)
-                {
-                    if (_videos[v].AfterPhoto >= 0)
-                        _videosAfter[_videos[v].AfterPhoto].Add(v);
-                }
-                for (var v = 0; v < _videos.Length; v++)
-                {
-                    if (_videos[v].AfterPhoto < 0)
-                        _videosAfter[^1].Add(v); // the list goes round: what is before the first photo is after the last
-                }
-            }
+            _videosAfter = VideosAfterEachPhoto();
 
             var chosen = Slideshow.ChooseScreens(screens.Count, primary, Math.Max(1, _photos.Length)); // videos alone: the screen of the window only
             _primary = Array.IndexOf(chosen, primary);
@@ -192,7 +201,17 @@ namespace PhotoLikerUI
             }
 
             _effect = effect;
+            _look = look?.Look ?? SlideshowLook.None;
+            _lut = look?.Lut;
+            _border = look?.Border ?? SlideshowBorder.None;
+            foreach (var screen in _screens)
+            {
+                screen.Frames.SetLook(_look, _lut);
+                screen.Frames.SetBorder(_border);
+            }
             WantDepthIfNeeded();
+            WantPortraitIfNeeded();
+            WantFacesIfNeeded();
             _timeoutSeconds = Slideshow.TimeoutOf(timeoutSeconds);
             _timer.Interval = (int)Math.Round(_timeoutSeconds * 1000);
             _timer.Tick += (_, _) => AdvanceByTimer();
@@ -202,6 +221,12 @@ namespace PhotoLikerUI
 
         /// <summary>The effect the show has now: the one it began with, or the one Down and Up chose last.</summary>
         public SlideshowEffect Effect => _effect;
+
+        /// <summary>The look the photos are graded with now: the one the show began with, or the one the L key chose last.</summary>
+        public SlideshowLook Look => _look;
+
+        /// <summary>What the photos are put in now: as the show began, or as the B key left it.</summary>
+        public SlideshowBorder Border => _border;
 
         /// <summary>Whether the boxes with the names on the faces are on now: as the show began, or as the F key left them.</summary>
         public bool ShowFaces => _showFaces;
@@ -224,6 +249,9 @@ namespace PhotoLikerUI
         internal IReadOnlyList<SlideshowScreen> Screens => _screens;
 
         private string? PathOf(int index) => index >= 0 ? _photos[index].OriginalFilePath : null;
+
+        /// <summary>The key the frame of a photo or a page is kept under (see <see cref="FrameKeys"/>); null for none.</summary>
+        private string? KeyOf(int index) => index >= 0 ? FrameKeys.Of(_photos[index]) : null;
 
         /// <summary>Shows the windows and waits until they are closed: the one on the screen of the main window is the dialog, the others are shown first, owned by the main window.</summary>
         public void Run(Form owner)
@@ -353,7 +381,10 @@ namespace PhotoLikerUI
                 return true;
             }
 
-            Pause(); // any other key: the show stands still, and then does what the key says (Right and Left browse, with the show paused)
+            // Any other key: the show stands still, and then does what the key says (Right and Left browse, with the show paused). The keys that only change how the show looks leave it as it is: it goes on, or
+            // stays paused if it was
+            if (!KeepsTheShowGoing(keyData))
+                Pause();
 
             switch (keyData)
             {
@@ -384,9 +415,59 @@ namespace PhotoLikerUI
                     if (!repeat)
                         ToggleCaptions();
                     return true;
+                case Keys.L:
+                case Keys.L | Keys.Shift:
+                    if (!repeat)
+                        ChangeLook();
+                    return true;
+                case Keys.B:
+                case Keys.B | Keys.Shift:
+                    if (!repeat)
+                        ToggleBorder();
+                    return true;
+                case Keys.D1:
+                case Keys.NumPad1:
+                    if (!repeat)
+                        ChangeCollage(SlideshowCollage.None, toggle: false);
+                    return true;
+                case Keys.D2:
+                case Keys.NumPad2:
+                    if (!repeat)
+                        ChangeCollage(SlideshowCollage.Two);
+                    return true;
+                case Keys.D3:
+                case Keys.NumPad3:
+                    if (!repeat)
+                        ChangeCollage(SlideshowCollage.Three);
+                    return true;
+                case Keys.D4:
+                case Keys.NumPad4:
+                    if (!repeat)
+                        ChangeCollage(SlideshowCollage.Four);
+                    return true;
+                case Keys.M:
+                case Keys.M | Keys.Shift:
+                    if (!repeat)
+                        ChangeCollage(SlideshowCollage.Mixed);
+                    return true;
                 default:
                     return false;
             }
+        }
+
+        /// <summary>
+        /// The keys that change how the show looks and do not stop it: Down and Up (the effect), F and N (the faces and the names), C (the captions), L (the look), B (the card), and 1, 2, 3, 4 (also on the number pad)
+        /// and M (the collage). The letters may come with Shift (a Caps Lock, or a finger that slipped), the others come alone. Every other key pauses the show.
+        /// </summary>
+        internal static bool KeepsTheShowGoing(Keys keyData)
+        {
+            var modifiers = keyData & Keys.Modifiers;
+            return (keyData & Keys.KeyCode) switch
+            {
+                Keys.Down or Keys.Up or Keys.D1 or Keys.D2 or Keys.D3 or Keys.D4 or Keys.NumPad1 or Keys.NumPad2 or Keys.NumPad3 or Keys.NumPad4 => modifiers == Keys.None,
+                Keys.F or Keys.N or Keys.C or Keys.L or Keys.B or Keys.M => modifiers is Keys.None or Keys.Shift,
+                _ => false,
+            };
         }
 
         /// <summary>
@@ -604,10 +685,12 @@ namespace PhotoLikerUI
         internal void ChangeEffect(int direction)
         {
             var next = SlideshowEffects.Next(_effect, direction);
-            if (SlideshowEffects.UsesDepth(next) && _depth is null)
-                next = SlideshowEffects.Next(next, direction); // there is no depth model: that one is not offered
+            while (SlideshowEffects.UsesDepth(next) && _depth is null && next != _effect)
+                next = SlideshowEffects.Next(next, direction); // there is no depth model: those are not offered
             _effect = next;
             WantDepthIfNeeded();
+            WantPortraitIfNeeded();
+            WantFacesIfNeeded();
 
             var text = string.Format(SlideshowStrings.EffectFormat, _effect);
             foreach (var screen in _screens)
@@ -630,6 +713,154 @@ namespace PhotoLikerUI
 
             foreach (var screen in _screens)
                 screen.Frames.SetDepthWanted(true);
+        }
+
+        /// <summary>
+        /// L: the next look (see <see cref="LookGrade.Next"/>), from now on; the person is told which, on every screen. The photos that are made already are made again with it (not the ones on the screen:
+        /// they change to it with the next change of photo).
+        /// </summary>
+        internal void ChangeLook()
+        {
+            _look = LookGrade.Next(_look, _lut is not null);
+            foreach (var screen in _screens)
+            {
+                screen.Frames.SetLook(_look, _lut);
+                screen.ShowNotice(string.Format(SlideshowStrings.LookFormat, _look));
+            }
+        }
+
+        /// <summary>B: the card of <see cref="SlideshowBorder.Polaroid"/> is put round the photos if it was not, and taken away if it was, from now on; the person is told which, on every screen.</summary>
+        internal void ToggleBorder()
+        {
+            _border = _border == SlideshowBorder.None ? SlideshowBorder.Polaroid : SlideshowBorder.None;
+            foreach (var screen in _screens)
+            {
+                screen.Frames.SetBorder(_border);
+                screen.ShowNotice(string.Format(SlideshowStrings.BorderFormat, _border));
+            }
+        }
+
+        /// <summary>
+        /// Divides the photos into the pages of <paramref name="collage"/> (see <see cref="CollagePlan"/>): the pages the show goes through (a page of one photo is that photo), which page each photo is on,
+        /// and the photos of each page. With no collage, or fewer than two photos, every photo is a page.
+        /// </summary>
+        private (PhotoFile[] Pages, int[] PageOf, IReadOnlyList<int[]> Groups) Paginate(SlideshowCollage collage)
+        {
+            if (collage == SlideshowCollage.None || _singles.Length < 2)
+            {
+                var own = new int[_singles.Length];
+                var alone = new int[_singles.Length][];
+                for (var i = 0; i < own.Length; i++)
+                {
+                    own[i] = i;
+                    alone[i] = [i];
+                }
+                return ([.. _singles], own, alone);
+            }
+
+            _taken ??= [.. _singles.Select(photo => _takenOf?.Invoke(photo.OriginalFilePath))];
+            var groups = CollagePlan.Pages(_taken, collage);
+            var pageOf = new int[_singles.Length];
+            var pages = new PhotoFile[groups.Count];
+            for (var page = 0; page < groups.Count; page++)
+            {
+                foreach (var index in groups[page])
+                    pageOf[index] = page;
+                pages[page] = groups[page].Length == 1 ? _singles[groups[page][0]] : new CollagePage([.. groups[page].Select(index => _singles[index])]);
+            }
+            return (pages, pageOf, groups);
+        }
+
+        /// <summary>For each page: the videos that follow it in the list (those before the first photo follow the last page, as the list goes round).</summary>
+        private List<int>[] VideosAfterEachPhoto()
+        {
+            var after = new List<int>[Math.Max(1, _photos.Length)];
+            for (var i = 0; i < after.Length; i++)
+                after[i] = [];
+            if (_photos.Length == 0)
+                return after;
+
+            for (var v = 0; v < _videos.Length; v++)
+            {
+                if (_videos[v].AfterPhoto >= 0)
+                    after[_videos[v].AfterPhoto].Add(v);
+            }
+            for (var v = 0; v < _videos.Length; v++)
+            {
+                if (_videos[v].AfterPhoto < 0)
+                    after[^1].Add(v); // the list goes round: what is before the first photo is after the last
+            }
+            return after;
+        }
+
+        /// <summary>How many photos of one event are on a screen at once now: as the show began, or as the 1, 2, 3, 4 and M keys left it.</summary>
+        public SlideshowCollage Collage => _collage;
+
+        /// <summary>
+        /// 2, 3, 4 and M: the collage is changed from now on (two, three, four, or three, two and four in turn), and the key of the collage that is on takes it away; 1 takes it away at once. The photos are divided
+        /// into pages again and the show goes on from the page that holds the photo the person is looking at, the other screens following it as at the start; the new pages come with the effect, as soon as they
+        /// are ready (the frames of the old ones stay until then). The person is told which collage it is. A show that can not have it (fewer than two photos, or fewer pages than screens) says so and is left as it is.
+        /// </summary>
+        /// <param name="toggle">The key of the collage that is on takes it away (false: the collage asked for is the one that comes, also if it is on).</param>
+        internal void ChangeCollage(SlideshowCollage requested, bool toggle = true)
+        {
+            var target = toggle && requested == _collage ? SlideshowCollage.None : requested;
+            var (pages, pageOf, groups) = Paginate(target);
+            if (_photos.Length == 0 || _singles.Length < 2 || pages.Length < _screens.Length)
+            {
+                foreach (var screen in _screens)
+                    screen.ShowNotice(SlideshowStrings.CollageNotPossible);
+                return;
+            }
+
+            // What the screens show now, in the numbers of the new pages (taken before the old pages are let go of): the page that holds the first photo of what is shown
+            var onScreen = _shown[_primary] >= 0 ? _shown[_primary] : _first[_primary];
+            var anchor = pageOf[_pageGroups[onScreen][0]];
+            var shown = _shown.Select(place => place >= 0 ? pageOf[_pageGroups[place][0]] : -1).ToArray();
+
+            _collage = target;
+            _photos = pages;
+            _pageGroups = groups;
+            for (var v = 0; v < _videos.Length; v++)
+                _videos[v] = _videos[v] with { AfterPhoto = _videoAfterSingle[v] >= 0 ? pageOf[_videoAfterSingle[v]] : -1 };
+            _videosAfter = VideosAfterEachPhoto();
+            _shuffle = _mode == SlideshowMode.Random ? new SlideshowShuffle(_photos.Length, shown: anchor) : null;
+            _first = FirstPhotos(anchor, _screens.Length);
+            Array.Copy(shown, _shown, shown.Length);
+
+            // What is wanted now: the pages that stand where the shown photos are, by the effect (the change is the timer's kind: it dissolves). The timer starts again when they are there.
+            _timer.Stop();
+            _steps = 0;
+            _scrolling = false;
+            _direction = 1;
+            _jump = (int[])_first.Clone();
+            _jumpByTimer = true;
+
+            var text = string.Format(SlideshowStrings.CollageFormat, _collage);
+            foreach (var screen in _screens)
+                screen.ShowNotice(text);
+
+            Prefetch();
+            Advance();
+        }
+
+        /// <summary>
+        /// The effect is the portrait one (see <see cref="SlideshowEffect.Portrait"/>), or it is not any more: the frames are made with the blur or without it, and the frames that are here are made again the other
+        /// way (a photo that was blurred keeps no original). Said every time the effect may have changed, it does something only when it did.
+        /// </summary>
+        private void WantPortraitIfNeeded()
+        {
+            var wanted = _depth is not null && SlideshowEffects.BlursByDepth(_effect);
+            foreach (var screen in _screens)
+                screen.Frames.SetPortraitWanted(wanted);
+        }
+
+        /// <summary>The effect drifts the photos with their faces in view: the frames work the faces out as they are made (the effect can be changed while the show runs, so it is said every time).</summary>
+        private void WantFacesIfNeeded()
+        {
+            var wanted = _hasPeople && SlideshowEffects.AimsAtFaces(_effect);
+            foreach (var screen in _screens)
+                screen.SetFacesWantedForMotion(wanted);
         }
 
         // ── what comes next ────────────────────────────────────────────────
@@ -762,7 +993,7 @@ namespace PhotoLikerUI
             frames = new SlideshowFrame[photos.Length];
             for (var screen = 0; screen < photos.Length; screen++)
             {
-                if (!_screens[screen].Frames.TryGet(_photos[photos[screen]].OriginalFilePath, out var frame))
+                if (!_screens[screen].Frames.TryGet(FrameKeys.Of(_photos[photos[screen]]), out var frame))
                     return false;
                 frames[screen] = frame;
             }
@@ -770,7 +1001,7 @@ namespace PhotoLikerUI
         }
 
         /// <summary>A photo that one screen could not read is not tried by the others: it is the same file.</summary>
-        private bool IsUnreadable(int index) => _screens.Any(screen => screen.Frames.HasFailed(_photos[index].OriginalFilePath));
+        private bool IsUnreadable(int index) => _screens.Any(screen => screen.Frames.HasFailed(FrameKeys.Of(_photos[index])));
 
         /// <summary>No photos can be had: say so if the screens are empty, otherwise stay on the ones that are there.</summary>
         private void GiveUp()
@@ -818,7 +1049,7 @@ namespace PhotoLikerUI
             return new SlideshowShowPlan(
                 transition, transition == SlideshowTransition.None ? 0 : seconds,
                 SlideshowEffects.HasMotion(effect), SlideshowEffects.MotionSeconds(_timeoutSeconds, seconds),
-                Stopwatch.GetTimestamp(), SlideshowEffects.UsesDepth(effect));
+                Stopwatch.GetTimestamp(), SlideshowEffects.MovesByDepth(effect));
         }
 
         private void RestartTimer()
@@ -892,7 +1123,8 @@ namespace PhotoLikerUI
                 }
 
                 // The photo that is leaving while an effect lasts is still being painted: it stays as well
-                _screens[screen].Frames.SetWindow([.. order.Select(index => _photos[index])], PathOf(_shown[screen]), _screens[screen].OutgoingPath);
+                // (what the screen has on it is kept by what it says it has: after the collage was changed the numbers of the show are those of the new pages, and the screen still shows an old one)
+                _screens[screen].Frames.SetWindow([.. order.Select(index => _photos[index])], _screens[screen].CurrentPath ?? KeyOf(_shown[screen]), _screens[screen].OutgoingPath);
             }
         }
 
