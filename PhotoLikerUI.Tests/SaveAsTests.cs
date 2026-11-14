@@ -94,6 +94,13 @@ public sealed class SaveAsTests : IDisposable
 
     private static string Status(Form form) => Field<ToolStripStatusLabel>(form, "toolStripStatusLabel1").Text ?? string.Empty;
 
+    /// <summary>
+    /// The program says "saved" when the file is written, its dates are set and the folder was looked at again: that is the moment to look at the file. A file that merely exists may be half written or
+    /// still open (the length of a file that is being copied is there at once), and its dates are set a moment after the copy: a slow machine (the release run on GitHub) found both.
+    /// </summary>
+    private static Task<bool> SaidSaved(Form form, string path) =>
+        Ui.Until(() => Status(form) == string.Format(ToolbarStrings.StatusSaveAsSavedFormat, Path.GetFileName(path)), 20000);
+
     // ── a photo or a video ──────────────────────────────────────────────────
 
     [Fact]
@@ -123,7 +130,7 @@ public sealed class SaveAsTests : IDisposable
             Assert.True(await PhotoShown(form, photo));
 
             Button(form, "saveToolStripButton").PerformClick();
-            Assert.True(await Ui.Until(() => File.Exists(destination), 10000), "the copy is there");
+            Assert.True(await SaidSaved(form, destination), "the copy is there, and the program says so");
 
             var test = (TestMainForm)form;
             var asked = Assert.Single(test.Asked);
@@ -153,7 +160,7 @@ public sealed class SaveAsTests : IDisposable
             Viewer(form).Tag = video; // what is shown: the file of a video (the poster and the player are no business of this test)
 
             Button(form, "saveToolStripButton").PerformClick();
-            Assert.True(await Ui.Until(() => File.Exists(destination), 10000));
+            Assert.True(await SaidSaved(form, destination));
 
             var asked = Assert.Single(((TestMainForm)form).Asked);
             Assert.Equal("holiday.mp4", asked.Name);
@@ -202,7 +209,7 @@ public sealed class SaveAsTests : IDisposable
             Assert.True(await PhotoShown(form, photo));
 
             Button(form, "saveToolStripButton").PerformClick();
-            Assert.True(await Ui.Until(() => File.Exists(destination) && new FileInfo(destination).Length == new FileInfo(photo).Length, 10000));
+            Assert.True(await SaidSaved(form, destination));
             Assert.Equal(File.ReadAllBytes(photo), File.ReadAllBytes(destination));
         }, seconds: 60);
     }
@@ -227,7 +234,7 @@ public sealed class SaveAsTests : IDisposable
             Button(form, "saveToolStripButton").PerformClick();
 
             var saved = destination + ".jpg";
-            Assert.True(await Ui.Until(() => File.Exists(saved), 15000), "a PNG name gets .jpg: the file is a JPEG, so it says so");
+            Assert.True(await SaidSaved(form, saved), "a PNG name gets .jpg: the file is a JPEG, so it says so");
             var asked = Assert.Single(((TestMainForm)form).Asked);
             Assert.Equal("granny (portrait).jpg", asked.Name);                 // the name the bar's own Save a copy would give
             Assert.StartsWith("JPEG (*.jpg;*.jpeg)|", asked.Filter);
@@ -260,7 +267,7 @@ public sealed class SaveAsTests : IDisposable
             Assert.True(await Ui.Until(() => Status(form) == RefocusStrings.StatusNoModel, 10000));
 
             Button(form, "saveToolStripButton").PerformClick();
-            Assert.True(await Ui.Until(() => File.Exists(destination), 10000));
+            Assert.True(await SaidSaved(form, destination));
             Assert.Equal(File.ReadAllBytes(photo), File.ReadAllBytes(destination));
             Assert.Equal("granny.jpg", Assert.Single(((TestMainForm)form).Asked).Name);
         }, seconds: 90);

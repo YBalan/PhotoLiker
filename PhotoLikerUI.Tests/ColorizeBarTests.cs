@@ -483,7 +483,7 @@ public sealed class ColorizeBarTests : IDisposable
             var grey = _folder.File(@"saved\just a copy.jpg");
             ((TestMainForm)form).SaveAsAnswer = grey;
             save.PerformClick();
-            Assert.True(await Ui.Until(() => File.Exists(grey), 10000));
+            Assert.True(await Ui.FileIsWritten(grey, 10000));
             Assert.Equal(File.ReadAllBytes(photo), File.ReadAllBytes(grey));
             Assert.Equal("a_first.jpg", ((TestMainForm)form).SaveAsAsked[0].Name);
 
@@ -493,7 +493,7 @@ public sealed class ColorizeBarTests : IDisposable
             Assert.True(await Ui.Until(() => bar.ColoursShown && bar.Ready && bar.Status == ColorizeStrings.BarStatusShown, 60000), $"coloured ({bar.Status})");
             save.PerformClick();
 
-            Assert.True(await Ui.Until(() => File.Exists(destination), 30000), "the coloured picture is saved");
+            Assert.True(await Ui.FileIsWritten(destination, 30000), "the coloured picture is saved");
             Assert.Equal("a_first (colorized).jpg", ((TestMainForm)form).SaveAsAsked[1].Name);
             using (var picture = new Bitmap(destination))
                 Assert.True(Colourfulness(picture) > 4, "it has the colours of the picture on the screen");
