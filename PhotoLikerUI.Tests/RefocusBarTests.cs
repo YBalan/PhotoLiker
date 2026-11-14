@@ -3,6 +3,7 @@ using System.Reflection;
 using PhotoLiker.Core;
 using PhotoLiker.Effects.Depth;
 using PhotoLiker.Effects.Focus;
+using PhotoLiker.Effects.Models;
 using PhotoLiker.Search;
 
 namespace PhotoLikerUI.Tests;
@@ -34,8 +35,6 @@ public sealed class RefocusBarTests : IDisposable
     {
         public int Opens;
         public readonly List<string> Opened = [];
-        public readonly List<(string Title, string Filter, string Folder, string Name)> Asked = [];
-        public string? Answer;
         public bool NoModel;
 
         protected override Task<FocusPreview?> OpenRefocusAsync(string file)
@@ -45,11 +44,11 @@ public sealed class RefocusBarTests : IDisposable
             return Task.FromResult(NoModel ? null : MakePreview(file));
         }
 
-        protected override string? AskSaveAsPath(string title, string filter, string folder, string fileName)
-        {
-            Asked.Add((title, filter, folder, fileName));
-            return Answer;
-        }
+        /// <summary>No test here saves through the toolbar (SaveAsTests do): a window that opened would wait for a person, so the answer is "cancelled".</summary>
+        protected override string? AskSaveAsPath(string title, string filter, string folder, string fileName) => null;
+
+        /// <summary>The Colorize button of a test asks about downloading the model when the machine has none (a CI machine has none): the answer is "no", at once, so that no window waits for a person and nothing is downloaded.</summary>
+        protected override bool ConfirmToolModelDownload(string feature, ToolModel model) => false;
     }
 
     private static FocusPreview MakePreview(string path)
@@ -95,9 +94,6 @@ public sealed class RefocusBarTests : IDisposable
 
     private static ToolStripButton ButtonOf(Form form) =>
         Ui.Controls<ToolStrip>(form).SelectMany(strip => strip.Items.Cast<ToolStripItem>()).OfType<ToolStripButton>().Single(button => button.Name == "refocusToolStripButton");
-
-    private static ToolStripButton SaveButtonOf(Form form) =>
-        Ui.Controls<ToolStrip>(form).SelectMany(strip => strip.Items.Cast<ToolStripItem>()).OfType<ToolStripButton>().Single(button => button.Name == "saveToolStripButton");
 
     private static int FileCount(Form form)
     {
