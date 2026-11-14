@@ -46,6 +46,10 @@ namespace PhotoLikerUI
         public static string SlideshowPeopleFaces => T();
         public static string SlideshowPeopleNames => T();
         public static string SlideshowEffect => T();
+        public static string SlideshowLook => T();
+        public static string SlideshowLookFile => T();
+        public static string SlideshowBorder => T();
+        public static string SlideshowCollage => T();
         public static string SlideshowUseVideo => T();
         public static string SlideshowMuteVideo => T();
         public static string SlideshowVideoPart => T();

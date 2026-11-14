@@ -25,6 +25,16 @@ public sealed class ColorizeBarTests : IDisposable
         public int Asked;
         public bool Throws;
 
+        /// <summary>What the Save As window is told to answer (null: the person cancelled), and what it was asked.</summary>
+        public string? SaveAsAnswer;
+        public readonly List<(string Filter, string Name)> SaveAsAsked = [];
+
+        protected override string? AskSaveAsPath(string title, string filter, string folder, string fileName)
+        {
+            SaveAsAsked.Add((filter, fileName));
+            return SaveAsAnswer;
+        }
+
         /// <summary>Done while the question is open: a message box lets the window go on working, and a click or a key can come in that asks for the same model again.</summary>
         public Action? WhileAsking;
 
@@ -449,6 +459,45 @@ public sealed class ColorizeBarTests : IDisposable
             File.SetLastWriteTimeUtc(photo, DateTime.UtcNow.AddHours(-5)); // the file is not what the colours were made of any more
             again.Invoke(form, [photo]);
             Assert.True(await Ui.Until(() => Colourfulness(viewer.Image) < 3 || !bar.ColoursShown, 10000), "a changed file is shown as it is");
+        }, seconds: 120);
+    }
+
+    [Fact]
+    public void WithTheColoursShown_TheSaveButtonOfTheToolbarSavesThePictureThatIsOnTheScreen_NotTheGreyFile()
+    {
+        if (!ModelAvailable()) return;
+        var photo = GreyPhoto("a_first.jpg");
+        var destination = _folder.File(@"saved\in colour.jpg");
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+
+        Ui.Run(() => new TestMainForm(_folder.Path) { SaveAsAnswer = destination }, async form =>
+        {
+            Assert.True(await Ui.Until(() => FileCount(form) == 1, 20000));
+            Show(form, photo);
+            Assert.True(await PhotoShown(form, photo));
+            Assert.True(await Ui.Until(() => BarOf(form) is { Visible: true }, 10000));
+            var bar = BarOf(form)!;
+            var save = Ui.Controls<ToolStrip>(form).SelectMany(strip => strip.Items.Cast<ToolStripItem>()).OfType<ToolStripButton>().Single(button => button.Name == "saveToolStripButton");
+
+            // With the grey photo shown, Save As is the file: a copy of the grey photo
+            var grey = _folder.File(@"saved\just a copy.jpg");
+            ((TestMainForm)form).SaveAsAnswer = grey;
+            save.PerformClick();
+            Assert.True(await Ui.Until(() => File.Exists(grey), 10000));
+            Assert.Equal(File.ReadAllBytes(photo), File.ReadAllBytes(grey));
+            Assert.Equal("a_first.jpg", ((TestMainForm)form).SaveAsAsked[0].Name);
+
+            // With the colours on, it is the picture the person sees
+            ((TestMainForm)form).SaveAsAnswer = destination;
+            Press(In<Button>(bar, ColorizeStrings.BarColorize));
+            Assert.True(await Ui.Until(() => bar.ColoursShown && bar.Ready && bar.Status == ColorizeStrings.BarStatusShown, 60000), $"coloured ({bar.Status})");
+            save.PerformClick();
+
+            Assert.True(await Ui.Until(() => File.Exists(destination), 30000), "the coloured picture is saved");
+            Assert.Equal("a_first (colorized).jpg", ((TestMainForm)form).SaveAsAsked[1].Name);
+            using (var picture = new Bitmap(destination))
+                Assert.True(Colourfulness(picture) > 4, "it has the colours of the picture on the screen");
+            Assert.True(File.Exists(photo));
         }, seconds: 120);
     }
 

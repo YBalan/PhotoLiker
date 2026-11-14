@@ -35,6 +35,8 @@
     <li><a href="#big-folders">Big folders</a></li>
     <li><a href="#exif">EXIF and GPS</a></li>
     <li><a href="#tools">Tidying up: dates, empty folders, duplicates</a></li>
+    <li><a href="#colorize">Colorizing black and white photos</a></li>
+    <li><a href="#refocus">Refocusing a photo</a></li>
     <li><a href="#video">Making a video</a></li>
     <li><a href="#videos">Videos in the folder</a></li>
     <li><a href="#theme">Dark and light theme</a></li>
@@ -226,7 +228,7 @@ photo again.</p></div>
     <tr><td><kbd>1</kbd>–<kbd>9</kbd>, <kbd>A</kbd>–<kbd>Z</kbd></td><td>Save the photo in a group, or take it out again (see <a href="#groups">Likes and groups</a>).</td></tr>
     <tr><td><kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>9</kbd>, <kbd>Alt</kbd>+<kbd>A</kbd>–<kbd>Z</kbd></td><td>While search results are shown: save <em>all</em> of them in the group, after telling you how many photos that is and asking.</td></tr>
     <tr><td><kbd>0</kbd></td><td>Fit the photo to the viewer (after zooming in).</td></tr>
-    <tr><td><kbd>Alt</kbd>+<kbd>Enter</kbd></td><td>Show the photos of the list as a <a href="#slideshow">slideshow</a> on the whole screen, beginning with the shown photo. In it any key but <kbd>Esc</kbd> pauses the show and <kbd>Space</kbd> continues it, <kbd>F</kbd> / <kbd>N</kbd> turn the faces / the names of the people on and off, <kbd>→</kbd> / <kbd>←</kbd> show the photo next to the shown one, <kbd>↓</kbd> / <kbd>↑</kbd> choose the next / previous effect, and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back.</td></tr>
+    <tr><td><kbd>Alt</kbd>+<kbd>Enter</kbd></td><td>Show the photos of the list as a <a href="#slideshow">slideshow</a> on the whole screen, beginning with the shown photo. In it <kbd>→</kbd> / <kbd>←</kbd> show the photo next to the shown one and pause the show (so does any other key but <kbd>Esc</kbd>; <kbd>Space</kbd> continues it), while the keys that change how it looks do not pause it: <kbd>F</kbd> / <kbd>N</kbd> turn the faces / the names of the people on and off, <kbd>↓</kbd> / <kbd>↑</kbd> choose the next / previous effect, <kbd>L</kbd> the look, <kbd>B</kbd> the card, <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> <kbd>M</kbd> the collage; and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back.</td></tr>
     <tr><td><kbd>F1</kbd></td><td>Open the About box (see <a href="#about">About box and this manual</a>).</td></tr>
     <tr><td><kbd>F2</kbd> / <kbd>F3</kbd></td><td>Open this manual in Ukrainian / in English.</td></tr>
     <tr><td><kbd>F5</kbd></td><td>List the folder again from scratch (see <a href="#big-folders">Big folders</a>).</td></tr>
@@ -263,6 +265,7 @@ and hide them again; that is kept for the next start. If the window is too low f
   <li><strong>Three bars</strong> (top): show or hide the names of the buttons.</li>
   <li><strong>Properties</strong> (a small window with a title bar): fold the panel with the two tables into a thin tab at its edge, and bring it back. The button is lit while the panel is shown.</li>
   <li><strong>Open</strong>: pick a folder of photos.</li>
+  <li><strong>Save</strong> (a floppy disk): <strong>Save As</strong>. It asks where, and saves a copy of the shown photo or video under the name and in the place you choose (with the dates of the file). With the Colorize bar showing colours, or the Refocus bar working, it saves the picture as it looks on the screen, as a JPEG. The photo that is shown is never changed.</li>
   <li><strong>Copy</strong>: copy the shown photo to the clipboard (the same as <kbd>Ctrl</kbd>+<kbd>C</kbd>).</li>
   <li><strong>Dark / Light</strong>: switch the theme, see <a href="#theme">Dark and light theme</a>.</li>
   <li><strong>Open Source Folder</strong> and <strong>Open Liked Folder</strong>: show the photo folder or the Liked folder in Windows Explorer.</li>
@@ -271,6 +274,7 @@ and hide them again; that is kept for the next start. If the window is too low f
   <li><strong>Align dates</strong>, <strong>Remove empty folders</strong>, <strong>Find duplicates</strong>: see <a href="#tools">Tidying up</a>.</li>
   <li><strong>Video speech</strong> (a video frame with a speech bubble; it is there while <strong>SupportVideo</strong> is on): a table of what is said in the videos of the folder, see <a href="#speech-table">The table of what is said</a>.</li>
   <li><strong>Colorize</strong> (a photo that is grey in one corner and coloured in the other): give colours to black and white photos, see <a href="#colorize">Colorize</a>.</li>
+  <li><strong>Refocus</strong> (a photo with a sharp ring and soft lights): take the shown photo in portrait mode with a floating bar, see <a href="#refocus">Refocusing a photo</a>.</li>
   <li><strong>Register Context Menu</strong> / <strong>Unregister Context Menu</strong>: add or remove <em>Open in Photo Liker</em> in the right-click menu of folders.</li>
   <li><strong>Help</strong> (the question mark): the About box, with the keys and this manual.</li>
 </ul>
@@ -370,7 +374,9 @@ file the status bar says so and nothing is written.</p>
 
 <p><strong>Any other key pauses the show</strong>, and <kbd>Space</kbd> continues it. While it is paused nothing changes by itself (a video that plays is held), and
 <em>Paused (Space to continue)</em> is written in the top right corner. <kbd>→</kbd> / <kbd>←</kbd> still show the next / previous photo, and the show stays paused.
-<kbd>Shift</kbd>, <kbd>Ctrl</kbd> and <kbd>Alt</kbd> alone do not pause.</p>
+<kbd>Shift</kbd>, <kbd>Ctrl</kbd> and <kbd>Alt</kbd> alone do not pause. <strong>The keys that only change how the show looks do not pause it either</strong>: <kbd>↓</kbd> / <kbd>↑</kbd> (the effect),
+<kbd>F</kbd> / <kbd>N</kbd> (faces and names), <kbd>C</kbd> (captions), <kbd>L</kbd> (the look), <kbd>B</kbd> (the Polaroid card) and <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> <kbd>M</kbd> (the collage:
+none, two, three, four photos, or mixed; the key of the collage that is on takes it away): a show that runs goes on, one that was paused stays paused.</p>
 <p><strong>Media keys and remote controls.</strong> On a keyboard with media keys, or a remote such as that of Windows Media Center, <em>Play</em> continues a paused show (a show that runs is left as it is),
 <em>Pause</em> pauses it, and a single <em>Play/Pause</em> button does what <kbd>Space</kbd> does. <em>Volume up</em>, <em>Volume down</em> and <em>Mute</em> do not pause the show:
 they are left to Windows, so the sound changes and the photos go on.</p>
@@ -409,6 +415,10 @@ for search, with the people named. How they were left when the show ended is wha
     <tr><td><strong>PeopleFaces</strong></td><td><code>False</code> (the default): no boxes. <code>True</code>: <strong>a box round the face of every known person, with the name above it</strong>, as the window shows the faces: green for a face you named yourself, dashed gold for a face that only looks like that person (the name is written the same, without a <code>?</code>). A face nobody is known by gets no box. It uses the faces the search found, so the folder has to be indexed and the people named (the <strong>Faces</strong> button). The <kbd>F</kbd> key turns it on and off while the show runs. The boxes go with the photo through every effect and cost the show next to nothing.</td></tr>
     <tr><td><strong>PeopleNames</strong></td><td><code>False</code> (the default): no names. <code>True</code>: the names of the people in one line in the bottom left corner, left to right as they stand (<code>Anna, Oleh, Mom</code>). The <kbd>N</kbd> key turns it on and off while the show runs. It does not depend on <strong>PeopleFaces</strong>.</td></tr>
     <tr><td><strong>Effect</strong></td><td>How one photo takes the place of the last. <code>Fade</code> (the default): the old photo dissolves into the new one. <code>Slide</code>: the new photo pushes the old one out to the left. <code>Zoom</code>: the new photo grows from a smaller size as it fades in. <code>KenBurns</code>: every photo drifts and zooms slowly all the time it is on the screen, and dissolves into the next. <code>Parallax</code>: every photo is a little scene in depth, and while it is shown the camera goes sideways across it, so the near parts move against the far ones, see <a href="#parallax">Depth parallax</a>. <code>Random</code>: one of the first four for every change (not <code>Parallax</code>), never the same twice in a row. <code>None</code>: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the <strong>Timeout</strong>. <kbd>→</kbd> / <kbd>←</kbd> put the next photo there at once, with no change (with <code>KenBurns</code> and <code>Parallax</code> it still moves).</td></tr>
+    <tr><td><strong>Look</strong></td><td>How the colours of the photos are graded: <code>None</code> (the default), <code>Vintage</code>, <code>Film</code>, <code>Sepia</code>, <code>BlackAndWhite</code>, <code>Cinema</code>, or <code>Lut</code> (the table of the <strong>LookFile</strong> row). The photos on the disk are not touched. The <kbd>L</kbd> key chooses the next look while the show runs.</td></tr>
+    <tr><td><strong>LookFile</strong></td><td>A colour lookup table in the <code>.cube</code> format (a 3D LUT, as colour grading programs write them), used when <strong>Look</strong> is <code>Lut</code>. The <strong>...</strong> button opens the file dialog in the folder <code>Luts</code> beside the program, where <strong>twelve looks come with it</strong> (teal and orange, warm vintage, matte fade, soft portrait, cool green film, bleach bypass, cross process, golden hour, cold night, vivid pop and two black and white ones). A file that can not be used is told in the status bar, and the show goes on without it.</td></tr>
+    <tr><td><strong>Border</strong></td><td><code>None</code> (the default), or <code>Polaroid</code>: every photo on a white card like an instant print, with the date it was taken written in the margin by hand. The <kbd>B</kbd> key turns it on and off while the show runs.</td></tr>
+    <tr><td><strong>Collage</strong></td><td><code>None</code> (the default): one photo at a time. <code>Two</code>, <code>Three</code> (one large, two small), <code>Four</code>: that many photos of one event on the screen at once; <code>Mixed</code>: three, two and four in turn. Photos that follow each other in the list and were taken within six hours of each other make a page. The keys <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> and <kbd>M</kbd> choose it while the show runs, without pausing it (<kbd>1</kbd> takes it away).</td></tr>
     <tr><td><strong>UseVideo</strong></td><td><code>False</code> (the default): photos only. <code>True</code>: the videos of the list are played too, between the photos (there are videos in the list while <strong>SupportVideo</strong> is on).</td></tr>
     <tr><td><strong>MuteVideo</strong></td><td><code>True</code>: the videos play without their sound.</td></tr>
     <tr><td><strong>VideoPart</strong></td><td><code>OnlyFoundTimeFrames</code> (the default): only the places a search found in a video, 6 seconds around each (2 before, 4 after); a video of a folder, where nothing was searched for, is played whole. <code>FullVideo</code>: the whole video.</td></tr>
@@ -424,6 +434,19 @@ the far ones (the hills, the wall), as if the photo were real space. A model tha
 whether to download it (99 MB, once); until it is there the photos move the plain way (like <code>KenBurns</code>), and the <kbd>↓</kbd> / <kbd>↑</kbd> keys skip this effect.
 It takes about half a second of work for each photo, done ahead of time, so the show does not wait. <code>Random</code> never picks it. The <strong>Depth parallax</strong> box of
 <a href="#video">Making a video</a> does the same for a video.</p>
+
+<p>With <code>KenBurns</code> (and <code>Parallax</code> and <code>Portrait</code>) the drift keeps the faces the search found in view: the photo zooms about a point on the faces and no more than they allow,
+so it never slices through a head. Photos with no known face drift at random as before.</p>
+
+<h3 id="portrait">The Portrait effect</h3>
+<p>The depth model also lets a photo be <strong>refocused after it was taken</strong>, as a phone does in portrait mode: what is at the depth of the focus stays sharp, what is nearer or farther is blurred.
+With <strong>Effect</strong> set to <code>Portrait</code> every photo of the slideshow is taken that way, the focus on the largest face (else on the middle of the photo). It uses the same depth model as
+<code>Parallax</code>, and <code>Random</code> never picks it either. To refocus a photo yourself, and keep a copy of it, see <a href="#refocus">Refocusing a photo</a>.</p>
+
+<h3 id="dress">Looks, the card and the collage</h3>
+<p><strong>Look</strong> grades the colours of the photos (a vintage print, film, sepia, black and white, a cinema look, or your own <code>.cube</code> table), <strong>Border</strong> <code>Polaroid</code>
+puts every photo on a card with its date written by hand, and <strong>Collage</strong> shows two to four photos of one event at once. The <kbd>L</kbd> and <kbd>B</kbd> keys change the look and the card while
+the show runs. With a collage the faces and the names (<kbd>F</kbd>, <kbd>N</kbd>) are not shown.</p>
 
 <h3>Videos in the slideshow</h3>
 <p>With <strong>UseVideo</strong> on, the videos of the list (the folder, or the results of a search) are part of the show. The photos go on as before and a video is played <strong>in between</strong>,
@@ -678,11 +701,15 @@ photos that show <em>exactly the same picture</em> in different folders, keeps o
 
 <div class="note"><p>Do not tidy a folder while it is being indexed for search: stop the indexing first.</p></div>
 
-<h3 id="colorize">Colorize</h3>
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="colorize">16. Colorizing black and white photos</h2>
+
 <p>PhotoLiker gives colours to black and white photos with an AI model that runs on your computer. <strong>Your photos are not changed</strong>: every result is
 saved next to its photo as <code>name (colorized).jpg</code>, with the date taken and the other details of the photo, and never over another file. The first time, PhotoLiker asks whether to
 download the model (135 MB, once).</p>
-<p><strong>The bar over a photo.</strong> When the photo you look at is black and white, a small bar floats at the bottom of the picture. Its buttons show pictures, not words: point at one to see its name and what it does.</p>
+
+<h3>The bar over a photo</h3>
+<p>When the photo you look at is black and white, a small bar floats at the bottom of the picture. Its buttons show pictures, not words: point at one to see its name and what it does.</p>
 <ul>
   <li><strong>Colorize</strong> (the photo that is half grey, half in colour) shows the photo with colours (about two seconds). The button then shows a grey photo and is called <strong>Show original</strong>: it brings the grey photo back at once.</li>
   <li><strong>Strength</strong> and <strong>Warmth</strong> (cooler, bluer, to warmer, yellower) change the colours <em>while you drag</em> the slider; a double click puts a slider back. With the strength at 0 the
@@ -691,7 +718,19 @@ download the model (135 MB, once).</p>
   <li><strong>Many photos...</strong> (the stack of photos) opens the window below. <strong>✕</strong> closes the bar; the <strong>Colorize</strong> button of the toolbar brings it back, to any photo. Drag the dotted handle to move the bar.</li>
 </ul>
 <p>The colours go on to the next black and white photo you look at, until you press <strong>Show original</strong>. The bar is not shown for photos that have colours.</p>
-<p><strong>Many photos at once.</strong> The <strong>Colorize</strong> button with no photo shown, or <strong>Many photos...</strong>, opens a window:</p>
+
+<figure>
+  <img src="images/44-colorize-bar.png" alt="A black and white photo with the Colorize bar floating over it at the bottom, ready" width="1486" height="893">
+  <figcaption>A black and white photo, and the Colorize bar over it: the strength and the warmth sliders, and the buttons for the colours, a copy and many photos. (A drawn demo photo, made grey.)</figcaption>
+</figure>
+
+<figure>
+  <img src="images/45-colorized.png" alt="The same photo with the colours the model gave it, and the sliders moved" width="1486" height="893">
+  <figcaption>The same photo with the colours the model gave it, a little stronger and warmer: the picture follows the sliders as you drag them.</figcaption>
+</figure>
+
+<h3>Many photos at once</h3>
+<p>The <strong>Colorize</strong> button with no photo shown, or <strong>Many photos...</strong>, opens a window:</p>
 <ul>
   <li><strong>This photo</strong> colorizes the photo that is shown, whatever it is like. <strong>The black and white photos of the list</strong> looks at every photo of the list
     (the folder, or the search results) and lists the ones that have no colour, or only one tint (a brown print, a blue one), all ticked: untick the ones that should stay as they are. A photo
@@ -702,7 +741,43 @@ download the model (135 MB, once).</p>
 <div class="note"><p>The colours are the model's guess from what is in the picture: skin, sky, grass and wood come out as they usually are, a dress can be any colour.</p></div>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="video">16. Making a video</h2>
+<h2 id="refocus">17. Refocusing a photo</h2>
+
+<p>PhotoLiker can <strong>refocus a photo after it was taken</strong>, as a phone does in portrait mode: you say where the focus is, what is at that depth stays sharp, what is nearer or farther is blurred
+(the farther from the focus, the more), and what is far can be lost in haze. An AI model that runs on your computer works out how near each part of the photo is: the one the
+<a href="#parallax">Parallax</a> effect uses (99 MB; the first time PhotoLiker asks whether to download it, once). <strong>Your photos are not changed</strong>: a result is saved next to its photo
+as <code>name (portrait).jpg</code>, with the date taken and the other details of the photo, and never over another file.</p>
+
+<h3>The bar over a photo</h3>
+<p>The <strong>Refocus</strong> button of the toolbar (after Colorize) opens a <strong>floating bar</strong> over the photo that is shown, at the top of the viewer, as the Colorize bar floats at the bottom, so that the two
+can be there together. About half a second after the photo is shown the model has worked out its depth, and the viewer shows the photo in portrait mode:</p>
+<ul>
+  <li><strong>Click the photo where the focus should be.</strong> A ring marks the place. (A click is a press and a release at about the same place, so a photo that is enlarged can still be pulled about.)
+    The focus begins on the largest face of the photo, else on its middle.</li>
+  <li><strong>Blur</strong> is how strong the blur is where it is strongest, <strong>Sharp zone</strong> is how deep the zone round the focus is that stays sharp, and <strong>Haze</strong> is mist over what is far.
+    The picture changes <em>while you drag</em> a slider; a double click puts it back. <strong>The values are kept</strong> for the next photo and the next time.</li>
+  <li><strong>Save a copy</strong> (the floppy disk) writes what you see as <code>name (portrait).jpg</code> next to the photo, upright, with its details and the dates of its file; you can save more copies with other settings.
+    The <strong>Save</strong> button of the toolbar (<strong>Save As</strong>) saves the same picture where you say, as a JPEG.</li>
+  <li><strong>✕</strong> closes the bar (the <strong>Refocus</strong> button opens it again, and closes it). Drag the dotted handle to move the bar.</li>
+</ul>
+<p>The bar stays open and goes on to the next photos until you close it; a video has no bar. It never takes the keyboard, and the photo itself is not touched: closing the bar gives it back. Opening Colorize
+closes the Refocus bar and the other way round, since both change the picture.</p>
+
+<figure>
+  <img src="images/46-refocus-bar.png" alt="The Refocus bar at the top of the photo, with the focus where the depth model put it" width="1486" height="893">
+  <figcaption>The Refocus bar at the top of the photo (the Colorize bar is at the bottom), with the focus where the depth model put it: the middle of the picture. (A drawn demo photo.)</figcaption>
+</figure>
+
+<figure>
+  <img src="images/47-refocus-click.png" alt="The same photo with the focus put on the nearest hills by a click, the blur turned up and some haze added" width="1486" height="893">
+  <figcaption>A click on the nearest hills (the ring) puts the focus there; the blur is turned up and some haze is added: what is far is soft and misty.</figcaption>
+</figure>
+
+<div class="note"><p>The depth is a model's guess from one picture: a thin thing (a wire, a hair, the leaves of a tree) in front of the focus can be blurred with what is behind it, and the edge round a sharp person is soft,
+not cut out. A photo whose middle is far (a landscape) begins with the far parts sharp and the near parts blurred: click what should be sharp.</p></div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="video">18. Making a video</h2>
 
 <p>The <strong>Generate Video</strong> button turns photos into a video: each photo is shown for a moment, one after the other, optionally behind
 a title picture and with a song under it. Nothing else has to be installed.</p>
@@ -714,7 +789,7 @@ a title picture and with a song under it. Nothing else has to be installed.</p>
   </li>
   <li>
     <strong>Click Generate Video</strong>, the button with the film icon in the toolbar (the column of icons at the left edge of the window; the three bars on top of it show the names, as in the picture). The dialog opens at once.
-    <figure><img src="images/12-generate-video-button.png" alt="The Generate Video button in the toolbar, with the names of the buttons shown" width="193" height="551"></figure>
+    <figure><img src="images/12-generate-video-button.png" alt="The Generate Video button in the toolbar, with the names of the buttons shown" width="193" height="479"></figure>
   </li>
   <li>
     <strong>Choose the photos and the order.</strong> <strong>Photos from</strong> lists <strong>Current</strong> (what the window shows now: the folder, or the search
@@ -775,7 +850,7 @@ when it is what you want.</p></div>
 PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe</code> on your <code>PATH</code>.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="videos">17. Videos in the folder</h2>
+<h2 id="videos">19. Videos in the folder</h2>
 
 <p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. <strong>SupportVideo</strong> is on in the settings
 table by default (turn it off to have a folder look as it did before videos), and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
@@ -873,7 +948,7 @@ the first time <strong>SupportVideo</strong> is turned on, or a video is played,
 the status bar, and it stays on your computer, in <code>%LocalAppData%\PhotoLiker\libvlc</code>; nothing else is changed. If you say no, videos open in the program Windows plays them with, and you are asked again when you turn
 <strong>SupportVideo</strong> off and on. When it was turning <strong>SupportVideo</strong> on that started the download, the folder is listed again once the player is there (as <kbd>F5</kbd> does). Its licence and the place to get its source are in the <code>libvlc</code> folder next to the program.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="theme">18. Dark and light theme</h2>
+<h2 id="theme">20. Dark and light theme</h2>
 
 <p>The theme button of the toolbar switches between the two. A folder that is opened for the first time is dark; the choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
@@ -884,7 +959,7 @@ see <a href="#language">Language</a>.)</p>
 </figure>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="files">19. What PhotoLiker keeps, and where</h2>
+<h2 id="files">21. What PhotoLiker keeps, and where</h2>
 
 <ul>
   <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
@@ -899,14 +974,14 @@ see <a href="#language">Language</a>.)</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="about">20. About box and this manual</h2>
+<h2 id="about">22. About box and this manual</h2>
 
 <p>The <strong>Help</strong> button (the question mark) at the end of the toolbar, or the <kbd>F1</kbd> key, opens the About box: the version and build date of the program, the
 keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and two buttons that open this manual, in English or in Ukrainian.
 You do not need the box for that: <kbd>F3</kbd> opens the English manual and <kbd>F2</kbd> the Ukrainian one, from the main window.</p>
 
 <figure>
-  <img src="images/16-about.png" alt="The About box with the keys and the manual buttons" width="818" height="746">
+  <img src="images/16-about.png" alt="The About box with the keys and the manual buttons" width="818" height="791">
   <figcaption>The About box.</figcaption>
 </figure>
 
@@ -918,7 +993,7 @@ A copy that was unpacked from the zip, or run from the source, cannot be replace
 case where <strong>Install</strong> asks first. The copy you ran it from stays where it is.</p>
 
 <figure>
-  <img src="images/27-about-update.png" alt="The About box after Check for updates found a newer version" width="818" height="746">
+  <img src="images/27-about-update.png" alt="The About box after Check for updates found a newer version" width="818" height="791">
   <figcaption>A newer version was found.</figcaption>
 </figure>
 

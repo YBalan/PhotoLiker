@@ -18,6 +18,13 @@ namespace PhotoLikerUI
         public static string CaptionsOn => T();
         public static string CaptionsOff => T();
         public static string NoCaptionsToShow => T();
+        public static string LookFormat => T();
+        public static string BorderFormat => T();
+        public static string CollageFormat => T();
+        public static string CollageNotPossible => T();
+        public static string LookFileDialogTitle => T();
+        public static string LookFileFilter => T();
+        public static string StatusLookFileFailedFormat => T();
 
         // The indexing that runs behind the show (see SlideshowIndexing)
         public static string IndexingPreparing => T();

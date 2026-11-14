@@ -37,6 +37,8 @@
     <Using Include="PhotoLiker.Effects.Motion" />
     <Using Include="PhotoLiker.Effects.Compositing" />
     <Using Include="PhotoLiker.Effects.Depth" />
+    <Using Include="PhotoLiker.Effects.Focus" />
+    <Using Include="PhotoLiker.Effects.Looks" />
     <Using Include="PhotoLiker.Effects.Colorize" />
     <Using Include="PhotoLiker.Effects.Models" />
   </ItemGroup>
@@ -89,6 +91,14 @@
        Any file photo-liker-<code>.txt added to the folder languages\ is a language of the program. -->
   <ItemGroup>
     <Content Include="..\languages\photo-liker-*.txt" Link="Languages\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- The colour lookup tables (luts\*.cube, made by tools\LutGen) go into Luts\ next to the program: the file dialog of the LookFile row of the slideshow settings opens there. Publishing copies
+       them as well, so the zip and the installer (which packs the published folder) have them. -->
+  <ItemGroup>
+    <Content Include="..\luts\*.cube;..\luts\README.txt" Link="Luts\%(Filename)%(Extension)">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

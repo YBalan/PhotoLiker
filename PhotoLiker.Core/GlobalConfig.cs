@@ -23,6 +23,15 @@ namespace PhotoLiker.Core
         /// <summary>The warmth of the colours on the bar, from -100 (cooler) to 100 (warmer).</summary>
         public int ColorizeWarmth { get; set; }
 
+        /// <summary>How strong the blur is on the Refocus bar, 0 to 100 (see <c>FocusLook.Blur</c>): the same for the next photo, and the next time the program runs.</summary>
+        public int RefocusBlur { get; set; } = 50;
+
+        /// <summary>How deep the zone round the focus is that stays sharp on the Refocus bar, 0 to 100 (see <c>FocusLook.Range</c>).</summary>
+        public int RefocusRange { get; set; } = 30;
+
+        /// <summary>How much haze lies over what is far on the Refocus bar, 0 to 100 (see <c>FocusLook.Haze</c>).</summary>
+        public int RefocusHaze { get; set; }
+
         /// <summary>Whether the toolbar at the left edge shows the names of its buttons next to the icons (the hamburger button on top turns it on and off).</summary>
         public bool RailExpanded { get; set; }
 

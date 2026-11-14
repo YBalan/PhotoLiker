@@ -34,6 +34,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Removing empty folders](#removing-empty-folders)
 - [Finding duplicates](#finding-duplicates)
 - [Colorizing black and white photos](#colorizing-black-and-white-photos)
+- [Refocusing photos](#refocusing-photos)
 - [Progress on the taskbar](#progress-on-the-taskbar)
 - [Dark and light theme](#dark-and-light-theme)
 - [Language](#language)
@@ -67,6 +68,8 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - **Colorize** gives colours to black and white photos with an AI model that runs on this computer: a bar floats over a black and white photo that is shown, the colours are seen in the
   viewer and change as its sliders are moved, and **Save a copy** writes them next to the photo, with its date taken (or many photos at once, from a window): the photos are never changed.
   See [Colorizing black and white photos](#colorizing-black-and-white-photos).
+- **Refocus** takes a photo again in portrait mode after it was taken, with the depth model of the parallax: a bar floats over the photo that is shown, a click puts the focus where you want it, the
+  sliders change the blur, the sharp zone and the haze, and **Save a copy** writes the result next to the photo, which is never changed. See [Refocusing photos](#refocusing-photos).
 - **Videos** next to the photos, when **SupportVideo** is on: a poster picture with a play mark in the viewer and the strip, and an
   embedded player (any format: AVI of a camera, MP4 and MOV of a phone ...) with a slider, a box to type a time to jump to, and keys to step 5 or 30 seconds.
   They are liked, grouped, copied and deleted like photos. See [Videos](#videos).
@@ -347,7 +350,7 @@ What is kept where:
 | <kbd>1</kbd>-<kbd>9</kbd>, <kbd>A</kbd>-<kbd>Z</kbd> | Save the photo in a group, or take it out again (see [Groups](#groups)). |
 | <kbd>Alt</kbd>+<kbd>1</kbd>-<kbd>9</kbd> (also on the numpad), <kbd>Alt</kbd>+<kbd>A</kbd>-<kbd>Z</kbd> | While search results are shown: save *all* of them in the group, after telling how many photos and MB that is and asking. A group without a folder gets one named after the search (see [Groups](#groups)). |
 | <kbd>0</kbd> | Fit the image to the viewer (after zooming in). |
-| <kbd>Alt</kbd>+<kbd>Enter</kbd> | Show the photos of the list as a [slideshow](#slideshow) on the whole screen, beginning with the shown photo. In it any key but <kbd>Esc</kbd> pauses the show and <kbd>Space</kbd> continues it, <kbd>F</kbd> / <kbd>N</kbd> turn the faces / the names of the people on and off, <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one, <kbd>Down</kbd> / <kbd>Up</kbd> choose the next / previous effect, and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back. Like F1-F3 it also works while you type into a text box. |
+| <kbd>Alt</kbd>+<kbd>Enter</kbd> | Show the photos of the list as a [slideshow](#slideshow) on the whole screen, beginning with the shown photo. In it <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one and pause the show (so does any other key but <kbd>Esc</kbd>; <kbd>Space</kbd> continues it), while the keys that change how it looks do not pause it: <kbd>F</kbd> / <kbd>N</kbd> turn the faces / the names of the people on and off, <kbd>Down</kbd> / <kbd>Up</kbd> choose the next / previous effect, <kbd>L</kbd> the look, <kbd>B</kbd> the card, <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> <kbd>M</kbd> the collage; and <kbd>Esc</kbd> (or <kbd>Alt</kbd>+<kbd>Enter</kbd> again) goes back. Like F1-F3 it also works while you type into a text box. |
 | <kbd>F1</kbd> | Open the [About box](#about-box). |
 | <kbd>F2</kbd> / <kbd>F3</kbd> | Open the [user manual](#user-manual) in Ukrainian / in English, in the browser. F1-F3 also work while you type into a text box. |
 | <kbd>F5</kbd> | List the folder again from scratch instead of from the saved list (see [Big folders open at once](#big-folders-open-at-once)). |
@@ -379,6 +382,7 @@ ones are behind the arrow at the bottom of the column.
 | **three bars** (top) | Show or hide the names of the buttons. |
 | **Properties** (a small window with a title bar) | Fold the panel with the two grids into a thin tab at the edge, and bring it back; it is lit while the panel is shown. See [The Properties panel](#the-properties-panel). |
 | **Open** | Open a photo folder. |
+| **Save** (a floppy disk) | **Save As**: asks where, and saves a copy of the shown photo or video under the name and in the place you choose (it keeps the dates of the file; a file that is there is written over only after you said yes). With the **Colorize** bar showing colours, or the **Refocus** bar working, it saves the picture as it looks on the screen now, as a JPEG with the Exif of the photo and its dates, and the name it suggests is the one the bar's own **Save a copy** would give. The photo that is shown is never changed. |
 | **Copy** | Copy the shown photo to the clipboard (the same as <kbd>Ctrl</kbd>+<kbd>C</kbd>). |
 | **Dark** / **Light** (a moon / a sun) | Switch the theme, see [Dark and light theme](#dark-and-light-theme). |
 | **Open Source Folder**, **Open Liked Folder** | Show the photo folder, or the Liked folder, in File Explorer. |
@@ -389,6 +393,7 @@ ones are behind the arrow at the bottom of the column.
 | **Find duplicates** (two overlapping photos) | Find photos that are the same file in different folders and move the copies in the worse folders away, see [Finding duplicates](#finding-duplicates). |
 | **Video speech** (a video frame with a speech bubble; there while **SupportVideo** is on) | A table of the videos of the folder with what is said in each of them and their moments, hearing videos again in another language, and an export of the whole table to Excel, see [Videos](#videos). |
 | **Colorize** (a photo that is grey in its lower left and in colour in its upper right) | Give colours to the black and white photo that is shown (the bar over it: the colours change as you move its sliders, and **Save a copy** writes them), or to many photos at once, as copies next to them, see [Colorizing black and white photos](#colorizing-black-and-white-photos). |
+| **Refocus** (a photo with a sharp ring and soft lights) | Take the shown photo in portrait mode with a floating bar: click where the focus should be, and the sliders change the blur, the sharp zone and the haze, see [Refocusing photos](#refocusing-photos). The button opens the bar and closes it again. |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
 
@@ -588,7 +593,7 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 | **SpeechLanguage** | The language that is spoken: `ru`, `uk`, `en` ..., or `auto` (the model hears it for each video). |
 | **CpuCores** | How many cores of this computer the speech recognition may use, from 1 to all the cores it has (the default). With more cores several videos are heard at the same time. It can be changed while **Update index** runs: the next video that is started follows it. |
 
-The group **6. Slideshow** has its own twelve rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **UseVideo**, **MuteVideo**, **VideoPart**, **LowerOtherAudio** and **ShowCaptions**; see [Slideshow](#slideshow).
+The group **6. Slideshow** has its own sixteen rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **Look**, **LookFile**, **Border**, **Collage**, **UseVideo**, **MuteVideo**, **VideoPart**, **LowerOtherAudio** and **ShowCaptions**; see [Slideshow](#slideshow).
 
 The rows of **Current File** (except **LikedFolder**) and **TotalFiles** are read-only, and so are **PhotoCount** and **VideoCount**, which say how many of the files in the list now are photos and how many are
 videos (together they are **TotalFiles**; there are no videos unless **SupportVideo** is on). **CurrentIndex** is the number of the shown photo, counted
@@ -755,7 +760,9 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 - **Any key but <kbd>Esc</kbd> pauses the show**, and <kbd>Space</kbd> continues it (<kbd>Space</kbd> is a key like the others, so it pauses a show that runs; a
   held <kbd>Space</kbd> does not flicker between the two). While it is paused nothing changes by itself: the timer is off, a video that plays is held (and plays on
   from the same place), and **Paused (Space to continue)** is written in the top right corner of every monitor. The keys still work, and the show stays paused after them:
-  <kbd>Right</kbd> / <kbd>Left</kbd> browse, <kbd>Down</kbd> / <kbd>Up</kbd> choose the effect. <kbd>Space</kbd> gives the shown photo its full time again from that
+  <kbd>Right</kbd> / <kbd>Left</kbd> browse. **The keys that only change how the show looks do not pause it**: <kbd>Down</kbd> / <kbd>Up</kbd> (the effect), <kbd>F</kbd> / <kbd>N</kbd> (the faces and
+  the names), <kbd>C</kbd> (the captions), <kbd>L</kbd> (the look), <kbd>B</kbd> (the card), <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> and <kbd>M</kbd> (the collage; the digits of the number
+  pad too); a show that runs goes on, and one that was paused stays paused. The letters work with <kbd>Shift</kbd> as well (a Caps Lock), the others only alone. <kbd>Space</kbd> gives the shown photo its full time again from that
   moment. A change of photo that is under way when the key is pressed finishes, and a change the timer has just asked for, whose photo is not ready yet, is called off
   (the photo you were looking at stays). A modifier key alone (<kbd>Shift</kbd>, <kbd>Ctrl</kbd>, <kbd>Alt</kbd>, <kbd>Win</kbd>, <kbd>Caps Lock</kbd>) and <kbd>Alt</kbd>+<kbd>F4</kbd> do not
   pause; <kbd>Esc</kbd> and <kbd>Alt</kbd>+<kbd>Enter</kbd> go back, paused or not.
@@ -772,22 +779,26 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 - <kbd>F</kbd> turns **the faces of the people** on and off, and <kbd>N</kbd> **their names**: <kbd>F</kbd> puts a box round the face of every known person with the name above it (green
   and solid for a face you named, gold and dashed with a `?` for a look-alike, as the main window shows the faces), <kbd>N</kbd> writes the names in one line in the bottom left corner
   (`Anna, Oleh, Mom`). They are two switches that do not depend on each other, on every monitor, and the photo that is shown gets (or loses) them at once and so do the photos after it.
-  Like every key they also pause the show (<kbd>Space</kbd> continues; the people stay on). Each press writes `Faces: on` / `Faces: off` / `Names: on` / `Names: off` in the top left corner for
+  They do not pause the show. Each press writes `Faces: on` / `Faces: off` / `Names: on` / `Names: off` in the top left corner for
   a moment; a held key counts once. They show the people the search found, so the folder has to be indexed and the people named: without an index the corner says
   `No people to show: index the folder and name the people first`. The rows **PeopleFaces** and **PeopleNames** of the grid are how the show begins, and how the keys left them when it ended
   is the setting from then on (as with the effect). The boxes follow the photo through every effect.
 - <kbd>C</kbd> turns the **captions** of the videos on and off (the row **ShowCaptions**, see [below](#videos-in-the-slideshow)): the video that plays gets or loses its caption at once, and so do
-  the videos after it. Like every key it pauses the show (<kbd>Space</kbd> continues; a paused video shows the words of the place it stands at). Each press writes `Captions: on` /
+  the videos after it. It does not pause the show (a paused video shows the words of the place it stands at). Each press writes `Captions: on` /
   `Captions: off` in the top left corner for a moment; a held key counts once. A show without videos has nothing to caption: the corner says `No videos to caption: turn UseVideo on (and SupportVideo)`
   and the setting is left as it is. How the key left the captions when the show ended is the setting from then on.
 - <kbd>Right</kbd> / <kbd>Left</kbd> show the photo next to the shown one **in the list, also in the random mode** (where only the timer picks
   at random), and give that photo its full time again (when the show is not paused). After the last photo comes the first, and before the first the last. A key that is held
   down keeps scrolling.
 - <kbd>Down</kbd> / <kbd>Up</kbd> choose **the next / previous effect** (in the order of the drop-down of the **Effect** row, round at the ends: `None`,
-  `Fade`, `Slide`, `Zoom`, `KenBurns`, `Parallax`, `Random`) while the show runs (`Parallax` is left out while the depth model is not on this computer). The name is written in the top left corner of every monitor for about two seconds
+  `Fade`, `Slide`, `Zoom`, `KenBurns`, `Parallax`, `Portrait`, `Random`) while the show runs (`Parallax` and `Portrait` are left out while the depth model is not on this computer). The name is written in the top left corner of every monitor for about two seconds
   (`Effect: Slide`), the next change of photo is made by that effect, and with `KenBurns` the photo that is on the screen begins to move at once. The effect
   the show ended with becomes the setting: the **Effect** row shows it afterwards, and it is saved with the other settings of the folder.
-- The settings are the twelve rows of the **6. Slideshow** group of the settings grid (the last five are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
+- <kbd>L</kbd> chooses **the next look** (the colour grade, in the order of the **Look** row: `None`, `Vintage`, `Film`, `Sepia`, `BlackAndWhite`, `Cinema`, `Lut`, round at the end; `Lut` is left out when there is no
+  table), <kbd>B</kbd> **turns the Polaroid card on and off**, and <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> <kbd>M</kbd> **choose the collage** (see [Looks, the card and the collage](#looks-the-card-and-the-collage)).
+  Each writes its name in the top left corner for a moment (`Look: Film`, `Border: Polaroid`, `Collage: Two`), the photos that are ready are made again that way, and the one on the screen changes with the next change of
+  photo (a collage changes the screen as soon as its pages are ready). **None of these keys pauses the show.** What the show ended with is kept in the **Look**, **Border** and **Collage** rows.
+- The settings are the sixteen rows of the **6. Slideshow** group of the settings grid (the last five are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
   folder can have its own.
 
 | Setting | Meaning |
@@ -798,7 +809,11 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 | **Watermark** | What is written in the bottom right corner, white on a dark band: `DateTime` (the default), the day and the time the photo was taken (`14 Aug 2025 09:12:07`, as everywhere in the program), `Year`, or `None`. The date is the one the search and <kbd>PageUp</kbd> / <kbd>PageDown</kbd> use: the date the camera wrote into the photo if it can be believed, else the date of the file (see [Aligning file dates](#aligning-file-dates)). A photo with no date at all gets no text. |
 | **PeopleFaces** | `False` (the default): no boxes. `True`: **a box round the face of every known person with the name above it**, as the main window shows the faces: green and solid for a face you named yourself, gold and dashed for a face that only looks like that person (the name is written the same, without a `?`); a face nobody is known by gets no box. The faces are the ones the [search](#photo-search) found, so the folder has to be indexed and the people named (the **Faces** button); a photo that is not in the index yet, or has no known person, is shown as it is, and videos have no boxes. The <kbd>F</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. The boxes are drawn on the window after the photo, at the place the photo has at that moment, so they go with it through every effect (Ken Burns, Slide, Zoom) and fade with it while it dissolves into the next; the lines and the letters keep their size on the screen, so they stay sharp when the photo is magnified. The name goes under the box, or inside it, or to the left, where there is no room above it or at the right. **What it costs.** Drawing the boxes takes about a millisecond for each picture put on the screen (0.6 ms for 3 faces at 720p, about 1 ms for 6 faces at full HD) and nothing while they are off. Working out who is who takes about 0.6 microseconds for every face and every named example (7 ms for a photo with 6 faces against 2,000 named faces, 38 ms against 10,000): it is done once for a photo, in the background, along with the making of its frame, and only while the boxes or the names are on (with both off the index is not asked at all; turning one on during the show works out the photos that are ready already, two at a time, and a photo that is painted before its turn comes is worked out at once). A frame of a 12 MP JPEG at full HD took about 65 ms on this PC, so the lookup adds 5 to 11 ms with 2,000 named faces and 37 ms with 10,000: the show goes on as fast as it did, only the photos that are made ahead come a little later. |
 | **PeopleNames** | `False` (the default): no names. `True`: the names of the people in the photo in one line in the bottom left corner, in the same band as the date has on the other side, left to right as the people stand (`Anna, Oleh, Mom`). They come from the same faces as **PeopleFaces**, and a person with several faces is written once. A long list is wrapped over more lines upwards and leaves room for the date, and while a change is under way the names fade like the date. The <kbd>N</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. It does not depend on **PeopleFaces** (with both on the names are written twice). |
-| **Effect** | How one photo takes the place of the last. `Fade` (the default): the old photo dissolves into the new one. `Slide`: the new photo pushes the old one out to the left (the date in the corner stays where it is). `Zoom`: the new photo grows from 80% of its size while it fades in over the old one. `KenBurns`: every photo drifts and zooms slowly all the time it is on the screen (in or out, by 8 to 16%, around a point of the picture chosen at random, and never so that part of the screen it covered at the start is left bare), and dissolves into the next. `Parallax`: every photo is a little scene in depth: while it is on the screen the camera goes sideways across it, so the near parts of the photo move against the far ones (see [Depth parallax](#depth-parallax)); it needs the depth model, and without it moves like `KenBurns`. `Random`: one of the first four for every change (not `Parallax`, which costs half a second of work for every photo), never the same twice in a row. `None`: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the **Timeout** (so a short timeout still leaves the photo on the screen for most of it); it begins when the timer ends, and the time of the new photo counts from then. While a change is under way the date fades out in the first half and the new one fades in in the second, so two dates are never written over each other. <kbd>Right</kbd> / <kbd>Left</kbd> put the next photo there at once, with no change (whoever holds a key wants to get on), but with `KenBurns` and `Parallax` it still moves. <kbd>Down</kbd> / <kbd>Up</kbd> change the effect while the show runs (see above). With **Monitors** `All` all the monitors change at the same moment, each by the same effect. |
+| **Effect** | How one photo takes the place of the last. `Fade` (the default): the old photo dissolves into the new one. `Slide`: the new photo pushes the old one out to the left (the date in the corner stays where it is). `Zoom`: the new photo grows from 80% of its size while it fades in over the old one. `KenBurns`: every photo drifts and zooms slowly all the time it is on the screen (in or out, by 8 to 16%, and never so that part of the screen it covered at the start is left bare), and dissolves into the next. **It keeps the faces in view**: when the folder is indexed, the photo zooms about a point that lies on the faces the search found in it (the largest and those not much smaller; the head round each face is kept too) and no more than they allow, so the drift never slices through a head, and a face at the edge is kept by a zoom about that edge; a photo with no known face drifts about a random point as before. `Parallax`: every photo is a little scene in depth: while it is on the screen the camera goes sideways across it, so the near parts of the photo move against the far ones (see [Depth parallax](#depth-parallax)); it needs the depth model, and without it moves like `KenBurns`. `Portrait`: every photo is taken in portrait mode, as a phone does: what is at the depth of the people (the largest face; else the middle of the photo) stays sharp and what is nearer or farther is blurred (see [The Portrait effect](#the-portrait-effect)), with the slow drift of `KenBurns`; it needs the same depth model and without it moves like `KenBurns`. `Random`: one of the first four for every change (not `Parallax` and not `Portrait`, which cost half a second of work for every photo), never the same twice in a row. `None`: the next photo appears at once. A change takes 0.8 seconds at most and never more than 40% of the **Timeout** (so a short timeout still leaves the photo on the screen for most of it); it begins when the timer ends, and the time of the new photo counts from then. While a change is under way the date fades out in the first half and the new one fades in in the second, so two dates are never written over each other. <kbd>Right</kbd> / <kbd>Left</kbd> put the next photo there at once, with no change (whoever holds a key wants to get on), but with `KenBurns` and `Parallax` it still moves. <kbd>Down</kbd> / <kbd>Up</kbd> change the effect while the show runs (see above). With **Monitors** `All` all the monitors change at the same moment, each by the same effect. |
+| **Look** | How the colours of the photos are graded, as a film or a filter would do it: `None` (the default), `Vintage` (an old colour print: lifted blacks, paler warm colours, darker corners, a little grain), `Film` (gentle contrast, cool shadows, warm lights, grain), `Sepia`, `BlackAndWhite`, `Cinema` (teal shadows, orange lights, more contrast) and `Lut` (the table of the **LookFile** row). Done once to every photo when its frame is made, on the pool threads (about 20 ms for a full HD photo); the photos on the disk are not touched. The <kbd>L</kbd> key chooses the next look while the show runs. See [Looks, the card and the collage](#looks-the-card-and-the-collage). |
+| **LookFile** | A colour lookup table in the `.cube` format (a 3D LUT, as colour grading programs and many free packs of film looks write them; a 1D table works too), used when **Look** is `Lut`. It is read when the show starts; a file that can not be used is told in the status bar (with the line of the file that is wrong) and the show goes on without it. The row has a **...** button for the file dialog, which opens in the folder `Luts` beside the program (and has that folder among its places on the left): **twelve looks come with the program**, see [below](#looks-the-card-and-the-collage). Once you have chosen a file the dialog starts in its folder. **The row shows only the name of the file, without its folder and its extension** (`Teal and Orange`); the setting keeps the whole path, and the **tip of the row** (hold the mouse over it) is the whole path. A name typed in the cell is looked for, with and without `.cube`, beside the file that is chosen and in the folder `Luts`, and a whole path is taken as it is. Empty: none. |
+| **Border** | `None` (the default), or `Polaroid`: every photo on a white card like an instant print, with the date it was taken written in the margin below it by hand. The <kbd>B</kbd> key turns it on and off while the show runs. |
+| **Collage** | `None` (the default): one photo at a time. `Two`, `Three` (one large, two small) or `Four` (a grid): that many photos of one event on the screen at once; `Mixed`: three, two and four in turn. The photos that follow each other in the list make a page while they were taken within six hours of each other (so a page can have fewer photos where an event ends). The keys <kbd>2</kbd>, <kbd>3</kbd>, <kbd>4</kbd> and <kbd>M</kbd> choose it while the show runs (<kbd>1</kbd> takes it away, and the key of the collage that is on takes it away too), and the one the show ended with is kept here. See [Looks, the card and the collage](#looks-the-card-and-the-collage). |
 | **UseVideo** | `False` (the default): the slideshow shows photos only. `True`: it plays the videos of the list as well, between the photos (there are videos in the list while **SupportVideo** is on). See [below](#videos-in-the-slideshow). |
 | **MuteVideo** | `True`: the videos of the slideshow play without their sound. `False` (the default). |
 | **VideoPart** | How much of a video is played. `OnlyFoundTimeFrames` (the default): only the places a search found in it, 6 seconds around each (2 before, 4 after; places that touch are one stretch); a video of a folder, where nothing was searched for, has none and is played whole. `FullVideo`: the whole video. |
@@ -867,6 +882,46 @@ the direction, how much the camera leans up or down, and how far the photo is pu
   one, with clean edges and the black bars unchanged. The tests of the compositor check the movement on made-up depths (and fail if its direction or the lookup of the depth is broken), the
   window tests run a real slideshow with a made-up depth and a real Generate Video window, and one test makes a real video with the real model and ffmpeg and looks at its frames.
   **Not checked:** a real full-screen slideshow by eye on a monitor (smoothness at 60 Hz, 4K at about 25 frames a second by the numbers), photos from the router, and a long video of hundreds of photos.
+
+### The Portrait effect
+
+The depth model of the [parallax](#depth-parallax) does one more thing: it lets a photo be **refocused**, as a phone does in its portrait mode. What is at the depth of the focus stays as it is,
+what is nearer or farther is blurred (the more the farther it is from the focus), and what is far can be lost in haze.
+
+**The Portrait effect** of the slideshow does that to every photo when its frame is made (with the face-aware drift of `KenBurns` on top). The focus is on the largest face of the photo
+(the faces the search found; the middle of that face), else on the middle of the photo, so a photo of a person has the person sharp and the room blurred. It uses the depth model of Parallax
+(asked for in the same way) and without it the show moves like Ken Burns. Choosing the effect with <kbd>Down</kbd> / <kbd>Up</kbd> while a show runs makes the photos that are ready again with the blur,
+and choosing another takes it away (a blurred frame keeps no original). To refocus a photo by hand, and keep a copy of the result, see [Refocusing photos](#refocusing-photos).
+
+### Looks, the card and the collage
+
+Three settings of the **6. Slideshow** group dress the photos; all three are done to the pixels of a frame when it is made, on the pool threads, so a photo is shown as quickly as without them.
+
+- **Look** grades the colours: `Vintage`, `Film`, `Sepia`, `BlackAndWhite`, `Cinema`, or the table of a `.cube` file (`Lut`, see **LookFile**). A look is a few numbers (paler or stronger colours, contrast,
+  a tint in the shadows and another in the lights, the black lifted and the white lowered, darker corners, grain; the grain is the same on all three colours, so it never colours a grey) and costs about
+  20 ms for a full HD photo; the grain of a photo is the same every time it is shown. A `.cube` file is read when the show starts: `LUT_3D_SIZE` up to 129 (red changes fastest in the list) with trilinear
+  interpolation, or `LUT_1D_SIZE`, with `DOMAIN_MIN` / `DOMAIN_MAX`; a file with a wrong count of colours, a number that is none, or a size out of range is refused with the number of the line.
+  <kbd>L</kbd> goes through the looks while the show runs.
+- **The tables that come with the program.** The installer (and the zip) puts twelve `.cube` files in the folder `Luts` beside `PhotoLikerUI.exe`, in the styles people use most: `Teal and Orange`, `Warm Vintage`,
+  `Matte Fade`, `Soft Portrait Warm`, `Cool Green Film`, `Bleach Bypass`, `Cross Process`, `Golden Hour`, `Cold Night`, `Vivid Pop`, `Black and White Contrast` and `Black and White Soft Film`. They are 33 by 33 by 33
+  tables, the project's own (MIT, like the program) and not copies of any pack: popular packs from other makers are not shipped because their licences usually do not allow it. They were made by the small tool
+  `tools\LutGen` (a few lines of arithmetic for each look; `dotnet run` with that project writes the folder `luts\` of the repository again), and any program that reads `.cube` files can use them. To use one,
+  set **Look** to `Lut`, click **...** in the **LookFile** row and choose it; to add your own, put more `.cube` files in that folder or choose them from anywhere. Reading a table takes about 25 ms and grading a
+  full HD photo with it about 10 ms.
+- **Border** `Polaroid` puts the photo on a warm white card: the photo is 84% of the card each way, with 4% above it, 8% at the sides and 12% below, a thin edge round it, and the date the photo was taken
+  written in the margin in a handwriting font (Ink Free, else Segoe Script, Segoe Print, ...). The photo is graded first, the card is not. The faces (<kbd>F</kbd>) and the drift of `KenBurns`
+  go by the photo on the card; a photo on a card is not moved by `Parallax` (it drifts like Ken Burns instead). <kbd>B</kbd> turns the card on and off while the show runs.
+- **Collage** puts two to four photos of one event on the screen at once. The photos that follow each other in the list make a **page**, as many as the setting says, as long as each was taken within six hours of
+  the one before it (the dates are those of the index of the folder; a photo with no known date does not end an event; with no index the photos of a page are just those that follow each other); a photo that
+  starts another event starts a new page, so a page can have fewer photos, and a photo alone is shown as it is. Two photos go side by side (one above the other on a screen that is taller than wide), three as one
+  large and two small, four in a grid, each as large as its cell lets it be, with a gap of 1.2% of the height of the screen between them. A page is one step of the show: the timer, <kbd>Right</kbd> /
+  <kbd>Left</kbd> and the random order all go by pages, a video follows the page of the photo it followed, and the show ends on the first photo of its page. The effects, the look and the card go by the page as
+  a whole. The faces and the names (<kbd>F</kbd>, <kbd>N</kbd>) are not shown on a page. A photo of a page that can not be read leaves its cell black.
+  **The collage can be changed while the show runs, without stopping it**: <kbd>2</kbd>, <kbd>3</kbd>, <kbd>4</kbd> (also on the number pad) choose two, three or four photos, <kbd>M</kbd> three, two
+  and four in turn, the key of the collage that is on takes it away again, and <kbd>1</kbd> takes it away at once. The photos are divided into pages again and the show goes on from the page that holds the
+  photo that is shown (the first photo of the page that was on the screen of the window; with several monitors the others follow it as at the start, or take random pages in the random mode); the new
+  pages come with the effect as soon as they are ready, and the old ones stay on the screens until then. `Collage: Three` (and so on) is written in the corner. A show with fewer than two photos, or fewer
+  pages than monitors, says `No collage` and is left as it was. How the keys left the collage when the show ended is the **Collage** setting from then on.
 
 ### Videos in the slideshow
 
@@ -1223,6 +1278,12 @@ When the photo in the viewer is black and white (no colour at all, or one tint o
 the viewer, in the middle. It comes a moment after the photo (not for each photo that a held arrow key goes through) and goes with it. Its buttons show pictures, not words: point at one to see its
 name and what it does (the names below are the ones in those tips).
 
+![A black and white photo with the Colorize bar over it, ready: the strength and the warmth sliders and the buttons for the colours, a copy and many photos](docs/images/44-colorize-bar.png)
+
+![The same photo with the colours the model gave it, a little stronger and warmer: the picture follows the sliders as they are dragged](docs/images/45-colorized.png)
+
+(The pictures are of a drawn demo photo made grey; the model sees a drawing, so its colours are a guess, as they are for a real old print.)
+
 - **Colorize** (a photo that is grey in its lower left and in colour in its upper right) runs the model on the photo (about 2 seconds for a photo of 12 megapixels; about 2 more the first time, while the model starts) and the viewer shows the photo with its colours. The button then shows a grey photo and is called **Show
   original**: it brings the grey photo back at once; the colours are kept, so asking for them again costs nothing. The first time the model is not on the computer, PhotoLiker asks before
   downloading it (135 MB, once).
@@ -1272,6 +1333,43 @@ The **Colorize** button with no photo shown, or **Many photos...** on the bar, o
 - **Checked** on grey copies of real photos (a portrait, a cat, a cup of coffee, a rocket): the skin, the nose of the cat and the coffee came out like the originals, the lightness is the photo's.
   The tests of the library check the colour maths against the numbers of OpenCV (the convention the model was trained with), the rule above, and the copy (name, Exif, dates, never over another
   file); the window tests open the real window, tick and untick, refuse the model, and run the real model on a few files. **Not tried:** real old scans, a real library, photos over the router.
+
+## Refocusing photos
+
+The depth model of the [parallax](#depth-parallax) lets a photo be **refocused after it was taken**, as a phone does in its portrait mode: what is at the depth of the focus stays as it is,
+what is nearer or farther is blurred (the more the farther it is from the focus), and what is far can be lost in haze. A **bar over the photo** that is shown does it, and **no photo is changed**:
+the result is saved next to its photo as `name (portrait).jpg`. The slideshow does the same to every photo with its **Portrait** effect (see [The Portrait effect](#the-portrait-effect)).
+
+### The Refocus bar
+
+![The Refocus bar at the top of the photo, with the focus where the depth model put it: the middle of the picture](docs/images/46-refocus-bar.png)
+
+![The same photo with the focus put on the nearest hills by a click (the ring), the blur turned up and some haze added](docs/images/47-refocus-click.png)
+
+(The pictures are of a drawn demo photo; the Refocus bar is at the top of the photo, the Colorize bar at the bottom.)
+
+The **Refocus** button of the toolbar (after Colorize) opens a bar that floats over the photo in the viewer, as the Colorize bar does (at the **top**, in the middle, so that the two
+can be there together; the dotted handle on the left moves it, and its place is kept until the program is closed). The depth of the photo is worked out once (about half a second, with "Working out how near
+each part of the photo is" on the bar) and then the viewer shows the photo taken in portrait mode and every change is drawn in a fraction of a second: **click the photo where the focus should be** (a ring
+marks the place; a click is a press and a release at about the same place, so a photo that is enlarged can still be pulled about), and the sliders **Blur** (how strong it is where it is strongest: up to 3% of
+the long side of the photo), **Sharp zone** (how deep the zone round the focus is that stays sharp) and **Haze** (mist over what is far, in the colour of the far parts of the photo, lightened) change
+the look; a double click on a slider brings it back to its usual value. **The values of the sliders are kept** (in `global-config.json`, with the strength and the warmth of Colorize), so the next photo
+and the next run begin with them; the focus itself begins on the largest face of the photo, else on its middle. **The bar stays open and goes on to the next photos** (after a moment, so that going
+through the photos with a key held down works out none), until its ✕ is pressed or the button is pressed again; a video has no bar and gets it back with the next photo. It never takes the keyboard.
+The viewer shows a picture of its own, and the photo of the cache is never touched; closing the bar gives the photo back. Opening Colorize closes the Refocus bar and the other way round, since both change
+the picture.
+
+### Saving
+
+**Save a copy** on the bar writes `name (portrait).jpg` next to the photo (numbered when the name is taken, never over anything), upright, with its Exif and its file dates, at the size of the
+photo up to 4096 pixels on the long side (the blurred copies of the picture need memory in proportion to its size); the copy joins the list and the photo stays on the screen. It is refused while the folder is
+being indexed, as the other tools that add files are. The **Save** button of the toolbar (**Save As**) saves the same picture where you say, as a JPEG whatever extension you type. The picture on the screen
+is at most 1600 pixels on the long side.
+
+### The limits
+
+The depth is a model's guess from one picture: a thin thing (a wire, a hair, the leaves of a tree) in front of the focus can be blurred with what is behind it, and the edge round a
+sharp person is soft, not cut out. A photo whose middle is far (a landscape) begins with the far parts sharp and the near parts blurred: click what should be sharp.
 
 ## Progress on the taskbar
 
@@ -1376,7 +1474,7 @@ shared between machines that may run different versions. The spelling `GoThrough
 as well. `WindowState` is the number of `FormWindowState`: 0 normal, 2 maximized. `SortOrder` is written by name
 (`OldestFirst`, `NewestFirst`, `ByName`, `Random` or `None`); a name the app does not know (a typo, or one written by a newer version) reads
 as `OldestFirst` and does not spoil the rest of the file. `SlideshowMode` (`Random`, `OneByOne`), `SlideshowMonitors` (`Current`, `All`), `SlideshowWatermark` (`None`, `Year`, `DateTime`) and
-`SlideshowEffect` (`None`, `Fade`, `Slide`, `Zoom`, `KenBurns`, `Parallax`, `Random`) are
+`SlideshowEffect` (`None`, `Fade`, `Slide`, `Zoom`, `KenBurns`, `Parallax`, `Portrait`, `Random`), `SlideshowLook` (`None`, `Vintage`, `Film`, `Sepia`, `BlackAndWhite`, `Cinema`, `Lut`), `SlideshowBorder` (`None`, `Polaroid`) and `SlideshowCollage` (`None`, `Two`, `Three`, `Four`, `Mixed`) are
 written by name and read the same way (an unknown name gives `Random` / `Current` / `DateTime` / `Fade`); `SlideshowPeopleFaces` and `SlideshowPeopleNames` are `true` or `false`; `SlideshowTimeout` is in seconds. `SearchPrecision` (the slider) and `SearchModel` (the model box) are the
 settings of the [photo search](#photo-search).
 
@@ -1592,7 +1690,17 @@ checks the places of the toolbar, the panel, its splitter and its window as it g
 dotnet run -c Release --project tools\SmokeTour -- --only-layout --screenshots docs\images
 ```
 
-The mouse pointer is parked in the corner of the screen before each picture, so that no tip of a button it rests on is in it. The tour without a flag makes the pictures `01-home` to
+`--only-effects` makes the pictures of the two bars that float over the photo: a demo photo made grey (`11-forest-1950.jpg`, the forest scene) gets the Colorize bar (`44-colorize-bar`), the model
+colours it, and the two sliders are moved (`45-colorized`); then the colour forest gets the Refocus bar with the focus where the depth model put it (`46-refocus-bar`), and a real click on the
+nearest hills, with the blur and the haze turned up, makes `47-refocus-click`. The real colorizing and depth models do the work (the models folder of the app is linked into the tour's own
+data folder, as for `--only-search`), so they must be there; it takes a minute or less:
+
+```powershell
+dotnet run -c Release --project tools\SmokeTour -- --only-effects --screenshots docs\images
+```
+
+The mouse pointer is parked in the corner of the screen before each picture, so that no tip of a button it rests on is in it. Run the modes one at a time, each as its own command: when one is started right
+after another, Windows 11 can leave the title bar of the new window grey (as if it were not the active window), and then every picture of the window has a grey title bar. The tour without a flag makes the pictures `01-home` to
 `11-light-theme` and `30-align-dates` to `33-find-duplicates` (it also leaves `30b-aligned` and `32b-unreadable-photos`, which no page uses). Only `29-face-menu-groups` is made by hand
 (a menu of a face cut from the window, with made-up people).
 

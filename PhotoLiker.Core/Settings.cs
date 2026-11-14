@@ -138,6 +138,27 @@ namespace PhotoLiker.Core
         [JsonConverter(typeof(SlideshowEffectConverter))]
         public SlideshowEffect SlideshowEffect { get; set; } = SlideshowEffect.Fade;
 
+        /// <summary>
+        /// How the colours of the photos of the slideshow are graded (see <see cref="SlideshowLook"/>); none by default. The L key chooses the next look while the show runs, and the one the show ends with becomes
+        /// the setting. The photos on the disk are not touched.
+        /// </summary>
+        [JsonConverter(typeof(SlideshowLookConverter))]
+        public SlideshowLook SlideshowLook { get; set; } = SlideshowLook.None;
+
+        /// <summary>The <c>.cube</c> file (a 3D colour lookup table, as colour grading programs write them) that <see cref="SlideshowLook.Lut"/> grades the photos by; empty when there is none.</summary>
+        public string SlideshowLookFile { get; set; } = string.Empty;
+
+        /// <summary>What the photos of the slideshow are put in (see <see cref="SlideshowBorder"/>); nothing by default. The B key turns the card on and off while the show runs, and what the show ended with becomes the setting.</summary>
+        [JsonConverter(typeof(SlideshowBorderConverter))]
+        public SlideshowBorder SlideshowBorder { get; set; } = SlideshowBorder.None;
+
+        /// <summary>
+        /// How many photos of one event the slideshow shows on the screen at once (see <see cref="SlideshowCollage"/>); one by default. The photos that follow each other in the list, taken within a few hours
+        /// of each other, make a page; it is read when the show starts.
+        /// </summary>
+        [JsonConverter(typeof(SlideshowCollageConverter))]
+        public SlideshowCollage SlideshowCollage { get; set; } = SlideshowCollage.None;
+
         /// <summary>Whether the slideshow plays the videos of the list as well (there are some only while <see cref="SupportVideo"/> is on). Off by default: a slideshow shows photos.</summary>
         public bool SlideshowUseVideo { get; set; } = false;
 

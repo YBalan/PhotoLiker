@@ -93,11 +93,10 @@ namespace PhotoLikerUI
         private void ApplyControlTexts()
         {
             // The buttons of the designer
-            newToolStripButton.Text = ToolbarStrings.New;
             openToolStripButton.Text = ToolbarStrings.Open;
             saveToolStripButton.Text = ToolbarStrings.Save;
+            saveToolStripButton.ToolTipText = ToolbarStrings.SaveTooltip;
             copyToolStripButton.Text = ToolbarStrings.Copy;
-            pasteToolStripButton.Text = ToolbarStrings.Paste;
             helpToolStripButton.Text = ToolbarStrings.Help;
             themeToggleToolStripButton.ToolTipText = ToolbarStrings.ThemeTooltip;
             openSourceFolderToolStripButton.Text = ToolbarStrings.OpenSource;
@@ -121,6 +120,7 @@ namespace PhotoLikerUI
             _findDuplicatesButton.ToolTipText = DuplicatesStrings.ButtonTooltip;
             ApplyVideoSpeechLanguage();
             ApplyColorizeLanguage();
+            ApplyRefocusLanguage();
             ApplyRotateLanguage();
             ApplySearchLanguage();
 

@@ -41,17 +41,30 @@ namespace PhotoLiker.Effects.Transitions
         /// <summary>How a photo takes the place of the last one with this effect (<see cref="SlideshowEffect.Random"/> must have been resolved).</summary>
         public static SlideshowTransition TransitionOf(SlideshowEffect effect) => effect switch
         {
-            SlideshowEffect.Fade or SlideshowEffect.KenBurns or SlideshowEffect.Parallax => SlideshowTransition.Fade,
+            SlideshowEffect.Fade or SlideshowEffect.KenBurns or SlideshowEffect.Parallax or SlideshowEffect.Portrait => SlideshowTransition.Fade,
             SlideshowEffect.Slide => SlideshowTransition.Slide,
             SlideshowEffect.Zoom => SlideshowTransition.Zoom,
             _ => SlideshowTransition.None,
         };
 
         /// <summary>Whether a photo moves while it is on the screen.</summary>
-        public static bool HasMotion(SlideshowEffect effect) => effect is SlideshowEffect.KenBurns or SlideshowEffect.Parallax;
+        public static bool HasMotion(SlideshowEffect effect) => effect is SlideshowEffect.KenBurns or SlideshowEffect.Parallax or SlideshowEffect.Portrait;
 
-        /// <summary>Whether the effect needs to know how near each part of a photo is (<see cref="SlideshowEffect.Parallax"/>): the depth model has to be there.</summary>
-        public static bool UsesDepth(SlideshowEffect effect) => effect == SlideshowEffect.Parallax;
+        /// <summary>
+        /// Whether the effect may need to know where the faces of a photo are, to keep them in view while the photo drifts (<see cref="KenBurnsPath.Aimed"/>): the Ken Burns drift, a random effect (which may
+        /// choose it), and Parallax (a photo whose depth is not ready drifts like a Ken Burns one). The frames then have their faces worked out as they are made, not when they are first shown.
+        /// </summary>
+        public static bool AimsAtFaces(SlideshowEffect effect) =>
+            effect is SlideshowEffect.KenBurns or SlideshowEffect.Parallax or SlideshowEffect.Portrait or SlideshowEffect.Random;
+
+        /// <summary>Whether the effect needs to know how near each part of a photo is (<see cref="SlideshowEffect.Parallax"/> and <see cref="SlideshowEffect.Portrait"/>): the depth model has to be there.</summary>
+        public static bool UsesDepth(SlideshowEffect effect) => MovesByDepth(effect) || BlursByDepth(effect);
+
+        /// <summary>Whether the parts of a photo move against each other by their depth while it is shown (<see cref="SlideshowEffect.Parallax"/>).</summary>
+        public static bool MovesByDepth(SlideshowEffect effect) => effect == SlideshowEffect.Parallax;
+
+        /// <summary>Whether what is not at the depth of the people is blurred (<see cref="SlideshowEffect.Portrait"/>): the photo is changed when its frame is made, and it drifts like a Ken Burns photo.</summary>
+        public static bool BlursByDepth(SlideshowEffect effect) => effect == SlideshowEffect.Portrait;
 
         /// <summary>How long a change takes, in seconds: nothing for no effect, else not more than <see cref="MaxTransitionSeconds"/> and not more than a share of the <paramref name="timeoutSeconds"/> a photo stays.</summary>
         public static double TransitionSeconds(SlideshowEffect effect, double timeoutSeconds) =>

@@ -24,6 +24,9 @@ namespace SmokeTour;
 ///                          own data folder. No models needed, a few seconds.
 ///   --only-layout          instead of the tour: the toolbar at the left edge with the names of its buttons, the panel with the grids docked at the bottom and
 ///                          floating over the window (the pictures 41-43). No models needed, a few seconds.
+///   --only-effects         instead of the tour: the Colorize bar over a black and white photo, before and after the model gave it colours, and the Refocus bar over a
+///                          colour photo, with the focus where the depth model put it and where a real click put it (the pictures 44-47). Needs the models like
+///                          --only-search (the colorizing and the depth model). A minute or two.
 ///
 /// The window takes the screen for about a minute (it is photographed as it is on screen, and one step clicks and types
 /// for real): leave the mouse and the keyboard alone.
@@ -41,6 +44,7 @@ internal static class Program
         var onlyVideo = args.Contains("--only-video");
         var onlyPeople = args.Contains("--only-people");
         var onlyLayout = args.Contains("--only-layout");
+        var onlyEffects = args.Contains("--only-effects");
         var demoFolder = Path.GetFullPath(ValueOf(args, "--demo-folder") ?? DefaultDemoFolder());
 
         // Keep the real %LocalAppData%\PhotoLiker (last folder, crash log) out of this. Has to happen before anything reads AppPaths.
@@ -49,7 +53,7 @@ internal static class Program
 
         var checks = new Checks();
         var modelsLinked = false;
-        if (onlySearch || onlyVideo)
+        if (onlySearch || onlyVideo || onlyEffects)
         {
             modelsLinked = LinkModels(appData);
             Console.WriteLine(modelsLinked ? "The models of the app are linked into the tour's data folder." : "The app has no models folder: the search cannot be indexed.");
@@ -67,7 +71,7 @@ internal static class Program
         var window = new Rectangle(area.Left + 30, area.Top + 20, onlySearch || onlyVideo ? area.Width - 60 : Math.Min(1500, area.Width - 60), Math.Min(900, area.Height - 40));
         try
         {
-            DemoFolder.Create(demoFolder, window, onlyVideo);
+            DemoFolder.Create(demoFolder, window, onlyVideo, onlyEffects);
         }
         catch (InvalidOperationException ex)
         {
@@ -85,7 +89,7 @@ internal static class Program
         {
             try
             {
-                await (onlyDialogs ? tour.RunDialogs() : onlyLanguage ? tour.RunLanguage() : onlySearch ? tour.RunSearch() : onlyVideo ? tour.RunVideo() : onlyPeople ? tour.RunPeople() : onlyLayout ? tour.RunLayout() : tour.Run());
+                await (onlyDialogs ? tour.RunDialogs() : onlyLanguage ? tour.RunLanguage() : onlySearch ? tour.RunSearch() : onlyVideo ? tour.RunVideo() : onlyPeople ? tour.RunPeople() : onlyLayout ? tour.RunLayout() : onlyEffects ? tour.RunEffects() : tour.Run());
             }
             catch (Exception ex)
             {
@@ -100,7 +104,7 @@ internal static class Program
 
         Application.Run(form);
 
-        if (!onlyDialogs && !onlyLanguage && !onlySearch && !onlyVideo && !onlyPeople && !onlyLayout)
+        if (!onlyDialogs && !onlyLanguage && !onlySearch && !onlyVideo && !onlyPeople && !onlyLayout && !onlyEffects)
         {
             try
             {
