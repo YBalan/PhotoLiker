@@ -43,6 +43,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Development](#development)
   - [Releasing](#releasing)
   - [Smoke tour](#smoke-tour)
+  - [MAUI smoke tour](#maui-smoke-tour)
 - [License](#license)
 
 ![PhotoLiker with a folder of photos open, dark theme](docs/images/01-home.png)
@@ -1415,7 +1416,8 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
 | `PhotoLiker.Effects` | What is done to a photo apart from looking at it and searching it, without a user interface. The folders are the namespaces (`PhotoLiker.Effects.<folder>`): `Transitions` (the rules of the effects of the [slideshow](#slideshow): which one is used, how long a change takes, how two photos are drawn in the middle of it), `Motion` (the slow movements of one photo: Ken Burns and the [depth parallax](#depth-parallax)), `Compositing` (`FrameCompositor`, which puts the pictures of an effect together on the pixels, on all the cores, also moving a picture by its depth), `Depth` (the depth of a picture, Depth Anything V2 Small) and `Colorize` (the colours of a black and white photo, DDColor; the copy that is saved next to the photo; how much colour a photo has) and `Models` (the list of the files of the two models, and `EffectModels`, which downloads them and makes the ONNX sessions). It uses Core for the settings (`SlideshowEffect`, the name of the effect, is a setting and stays there) and Search for what the two have in common: decoding a photo, downloading model files, and the check that ONNX Runtime can start. |
 | `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form, heard again in a language that is chosen), the table of it for the window and the Excel file (`.xlsx`, written with the zip and XML of the framework) of that table, and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
-| `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
+| `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library: a light viewer (open a folder from the ⋮ menu, arrow overlays and the keyboard on the photo, a thumbnail strip, like with a heart, metadata, a status bar) with background caching in `Services\` and its own smoke tour in `SmokeTour\` (below). It is not built by CI and needs the .NET MAUI workloads. |
+| `PhotoLiker.Maui.Tests` | xUnit tests of the MAUI-free sources of the MAUI app, compiled in like the app sources in `PhotoLiker.Tests`: the cache (window, budget, thumbnails, retries), the nearest-first loading order, the dates of the files for the month keys, and the helpers of the MAUI smoke tour. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
 | `PhotoLiker.GenerateVideo.Tests` | xUnit tests of the video library: the order and the times of the photos, the sequence of a video (cover, repeats, audio), the ffmpeg arguments, the cuts on the beat, the rhythm analysis (on synthetic songs), the settings file. They need no ffmpeg. |
 | `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg), the pictures taken out of a real video and their times, the choice of moments, the faces, the search (words, people, dates, speech) and its merge with the photos, the word forms of the speech and the speech job with a stand-in for the model (also hearing chosen videos again), the table of the speech, the Excel writer (read back as XML), saving a picture. The tests that make a short video do so with the ffmpeg of the repository and do nothing without it; the one that runs the real CLIP model does nothing without it. |
@@ -1440,6 +1442,7 @@ dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the t
 dotnet test  PhotoLiker.Effects.Tests\PhotoLiker.Effects.Tests.csproj  # run the tests of the effects library (the depth, the colours, the compositor, the slideshow effects)
 dotnet test  PhotoLiker.Video.Tests\PhotoLiker.Video.Tests.csproj  # run the tests of the video library (videos in the archive)
 dotnet test  PhotoLikerUI.Tests\PhotoLikerUI.Tests.csproj  # run the tests that open the real windows (they flash on your desktop for a few seconds)
+dotnet test  PhotoLiker.Maui.Tests\PhotoLiker.Maui.Tests.csproj  # run the tests of the MAUI viewer's cache and helpers (no MAUI workloads needed)
 installer\build-installer.ps1                           # publish and pack the installer (needs Inno Setup 6)
 ```
 
@@ -1607,6 +1610,23 @@ The exit code is 0 when every check passed. The window is photographed as it is 
 presses keys for real, so leave the mouse and the keyboard alone for the minute it takes. The demo photos go to `PhotoLikerDemo\Holiday` on the drive of the repository (change it with
 `--demo-folder <path>`; `--keep` leaves it there afterwards); the tool only ever deletes a folder it made itself. Your own
 settings and last folder are not touched.
+
+### MAUI smoke tour
+
+The MAUI app has a smoke tour of its own, in the spirit of the WinForms one but inside the app: started with
+`--smoke-tour`, the real window opens a generated demo folder (five gradient photos of July, August and September 2025,
+written as plain BMPs so every platform decodes them), presses the keys of its viewer and checks every step: the photos are
+listed and the first one is shown with its thumbnails, <kbd>←</kbd> / <kbd>→</kbd> / <kbd>Home</kbd> / <kbd>End</kbd> move
+through them (and the arrow overlays come and go at the edges of the list), <kbd>Space</kbd> copies the photo to the Liked
+folder and shows the heart (and takes both away again), <kbd>PageDown</kbd> / <kbd>PageUp</kbd> jump between the months of
+the files' dates, and the global config went to the tour's own temp folder and not to the real `%LocalAppData%\PhotoLiker`.
+It writes its log to the file of `--smoke-tour-out` and exits with 0 when every check passed. The script builds the Windows
+head only (never Android), runs the tour and prints the log:
+
+```powershell
+.\tools\maui-smoke-tour.ps1            # build Debug and run the tour (the window flashes on the desktop for a few seconds)
+.\tools\maui-smoke-tour.ps1 -NoBuild   # run what is already built
+```
 
 ## License
 

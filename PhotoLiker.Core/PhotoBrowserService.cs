@@ -21,7 +21,9 @@ namespace PhotoLiker.Core
 
         public void OpenFolder(string folder)
         {
-            _settings.Save();
+            // The settings of the folder that was open; with none open there is nothing to save (and nowhere to save it)
+            if (!string.IsNullOrWhiteSpace(_settings.CurrentFolder))
+                _settings.Save();
             _settings = Settings.Load(folder);
             _settings.CurrentFolder = folder;
             _settings.ApplyDefaultLikedFolder();

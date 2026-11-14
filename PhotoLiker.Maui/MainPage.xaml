@@ -11,7 +11,7 @@
                      Clicked="OnOpenFolderClicked" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,3*,*" RowSpacing="8" Padding="10">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,3*,*,Auto" RowSpacing="8" Padding="10,10,10,4">
         <HorizontalStackLayout Grid.Row="0" Spacing="8" HorizontalOptions="End">
             <Button x:Name="LikeButton" Text="Like" Clicked="OnLikeClicked" />
             <Button x:Name="MapButton" Text="Open Map" IsVisible="False" Clicked="OnOpenMapClicked" />
@@ -66,6 +66,15 @@
                         VerticalOptions="Center"
                         Margin="0,0,12,0"
                         Clicked="OnNextClicked" />
+
+                <Label x:Name="LikedBadge"
+                       Text="♥"
+                       FontSize="28"
+                       TextColor="Crimson"
+                       IsVisible="False"
+                       HorizontalOptions="End"
+                       VerticalOptions="Start"
+                       Margin="0,8,16,0" />
             </Grid>
         </Border>
 
@@ -79,6 +88,10 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
         </Grid>
+
+        <Border Grid.Row="6" StrokeThickness="1" Padding="8,4" Stroke="LightGray" StrokeShape="RoundRectangle 6">
+            <Label x:Name="StatusLabel" FontSize="12" LineBreakMode="TailTruncation" TextColor="Gray" />
+        </Border>
     </Grid>
 
 </ContentPage>

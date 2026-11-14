@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLiker.Effects", "Photo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLiker.Effects.Tests", "PhotoLiker.Effects.Tests\PhotoLiker.Effects.Tests.csproj", "{57989E01-3270-42F4-A4F0-1B7666639C63}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PhotoLiker.Maui.Tests", "PhotoLiker.Maui.Tests\PhotoLiker.Maui.Tests.csproj", "{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -195,6 +197,18 @@ Global
 		{57989E01-3270-42F4-A4F0-1B7666639C63}.Release|x64.Build.0 = Release|Any CPU
 		{57989E01-3270-42F4-A4F0-1B7666639C63}.Release|x86.ActiveCfg = Release|Any CPU
 		{57989E01-3270-42F4-A4F0-1B7666639C63}.Release|x86.Build.0 = Release|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Debug|x64.Build.0 = Debug|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Debug|x86.Build.0 = Debug|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Release|x64.ActiveCfg = Release|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Release|x64.Build.0 = Release|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Release|x86.ActiveCfg = Release|Any CPU
+		{AB7FAB4D-FFEB-4FBA-90B3-2B839EF1799A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

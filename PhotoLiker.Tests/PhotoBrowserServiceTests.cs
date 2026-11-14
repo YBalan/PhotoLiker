@@ -195,6 +195,32 @@ public class PhotoBrowserServiceTests : IDisposable
         Assert.All(svc.Settings.Files, f => Assert.Equal(4, f.Length));
     }
 
+    [Fact]
+    public void OpenFolder_TheFirstTime_WritesNoSettingsFileToTheWorkingDirectory()
+    {
+        // With no folder open yet there is nothing to save: saving the fresh settings would
+        // drop a photo-liker-config.json wherever the process happens to run
+        var stray = Path.Combine(Environment.CurrentDirectory, AppStrings.SettingsFileName);
+        var existedBefore = File.Exists(stray);
+
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+
+        Assert.Equal(existedBefore, File.Exists(stray));
+    }
+
+    [Fact]
+    public void OpenFolder_SavesTheSettingsOfTheFolderThatWasOpen()
+    {
+        var svc = CreateService();
+        svc.OpenFolder(_tempDir);
+        var other = Directory.CreateDirectory(Path.Combine(_tempDir, "Other")).FullName;
+
+        svc.OpenFolder(other);
+
+        Assert.True(File.Exists(Path.Combine(_tempDir, AppStrings.SettingsFileName)));
+    }
+
     // ── Navigation ──────────────────────────────────────────────────────────
 
     [Fact]
