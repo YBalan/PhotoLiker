@@ -19,13 +19,13 @@ namespace PhotoLiker.Effects.Colorize
         private const string OrientationQuery = "/app1/ifd/{ushort=274}";
 
         /// <summary>The name of the first copy of a photo: next to it, with the suffix, always a JPEG.</summary>
-        public static string PathFor(string photoPath) =>
-            Path.Combine(Path.GetDirectoryName(photoPath) ?? string.Empty, Path.GetFileNameWithoutExtension(photoPath) + Suffix + ".jpg");
+        public static string PathFor(string photoPath, string suffix = Suffix) =>
+            Path.Combine(Path.GetDirectoryName(photoPath) ?? string.Empty, Path.GetFileNameWithoutExtension(photoPath) + suffix + ".jpg");
 
         /// <summary>The name for a new copy of a photo: <see cref="PathFor"/>, or the first of the numbered ones after it that is not taken ("... 2.jpg", "... 3.jpg").</summary>
-        public static string NextFreePath(string photoPath)
+        public static string NextFreePath(string photoPath, string suffix = Suffix)
         {
-            var first = PathFor(photoPath);
+            var first = PathFor(photoPath, suffix);
             if (!File.Exists(first))
                 return first;
 
@@ -74,9 +74,16 @@ namespace PhotoLiker.Effects.Colorize
         /// </summary>
         /// <param name="original">The bytes of the photo, as they were read: where the Exif is taken from.</param>
         /// <exception cref="IOException">The copy could not be written.</exception>
-        public static string Save(string photoPath, byte[] original, DecodedPhoto colorized)
+        public static string Save(string photoPath, byte[] original, DecodedPhoto colorized, string suffix = Suffix) =>
+            SaveTo(NextFreePath(photoPath, suffix), photoPath, original, colorized, overwrite: false);
+
+        /// <summary>
+        /// Writes the copy to <paramref name="path"/>, which the person chose (Save As): as <see cref="Save"/> does it, to a place of their own. A file that is there is written over when
+        /// <paramref name="overwrite"/> says so (the person was asked), else it is an error. The copy is always a JPEG, whatever the extension of <paramref name="path"/> says.
+        /// </summary>
+        /// <param name="photoPath">The photo the copy is of: where the dates of the copy are taken from.</param>
+        public static string SaveTo(string path, string photoPath, byte[] original, DecodedPhoto colorized, bool overwrite)
         {
-            var path = NextFreePath(photoPath);
             var partial = path + ".part";
             try
             {
@@ -99,7 +106,7 @@ namespace PhotoLiker.Effects.Colorize
                 if (!written)
                     Encode(bitmap, null, partial);
 
-                Retry(() => File.Move(partial, path, overwrite: false));
+                Retry(() => File.Move(partial, path, overwrite));
             }
             catch
             {

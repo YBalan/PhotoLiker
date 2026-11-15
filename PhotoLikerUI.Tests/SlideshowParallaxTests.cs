@@ -188,7 +188,11 @@ public sealed class SlideshowParallaxTests : IDisposable
             with.HandleKey(Keys.Down);
             Assert.Equal(SlideshowEffect.Parallax, with.Effect);
             with.HandleKey(Keys.Down);
+            Assert.Equal(SlideshowEffect.Portrait, with.Effect);
+            with.HandleKey(Keys.Down);
             Assert.Equal(SlideshowEffect.Random, with.Effect);
+            with.HandleKey(Keys.Up);
+            Assert.Equal(SlideshowEffect.Portrait, with.Effect);
             with.HandleKey(Keys.Up);
             Assert.Equal(SlideshowEffect.Parallax, with.Effect);
             return Task.CompletedTask;

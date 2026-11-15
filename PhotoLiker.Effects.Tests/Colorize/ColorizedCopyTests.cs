@@ -122,6 +122,34 @@ public class ColorizedCopyTests : IDisposable
         return (BitmapMetadata)decoder.Frames[0].Metadata;
     }
 
+    [Fact]
+    public void SaveTo_WritesExactlyWhereItIsTold_KeepsTheExifAndTheDatesOfThePhoto_AndOverwritesOnlyWhenAsked()
+    {
+        var photo = _folder.File("granny.jpg");
+        var original = JpegWithExif(8, 6, orientation: 1);
+        File.WriteAllBytes(photo, original);
+        File.SetLastWriteTimeUtc(photo, new DateTime(2001, 2, 3, 4, 5, 6, DateTimeKind.Utc));
+        File.SetCreationTimeUtc(photo, new DateTime(2000, 1, 2, 3, 4, 5, DateTimeKind.Utc));
+        var destination = _folder.File(@"out\chosen name.jpg");
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+
+        var path = ColorizedCopy.SaveTo(destination, photo, original, Picture(8, 6, 10, 200, 30), overwrite: false);
+
+        Assert.Equal(destination, path);
+        Assert.Equal("Test Camera 3000", MetadataOf(destination).CameraModel);                       // the Exif goes with it
+        Assert.Equal(new DateTime(2001, 2, 3, 4, 5, 6, DateTimeKind.Utc), File.GetLastWriteTimeUtc(destination));
+        Assert.Equal(new DateTime(2000, 1, 2, 3, 4, 5, DateTimeKind.Utc), File.GetCreationTimeUtc(destination));
+        Assert.Equal(new[] { "granny.jpg" }, Directory.GetFiles(_folder.Path, "*.jpg").Select(Path.GetFileName)); // nothing next to the photo: it was told where
+
+        // A file that is there is not written over unless the person said yes
+        Assert.Throws<IOException>(() => ColorizedCopy.SaveTo(destination, photo, original, Picture(8, 6, 200, 10, 30), overwrite: false));
+        Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(destination)!, "*.part")); // and no half-written file stays behind
+        Assert.InRange(PixelOf(destination, 4, 3).Green, 150, 250);                       // still the first picture
+
+        ColorizedCopy.SaveTo(destination, photo, original, Picture(8, 6, 200, 10, 30), overwrite: true);
+        Assert.InRange(PixelOf(destination, 4, 3).Blue, 150, 250);                        // the second one now
+    }
+
     private static (int Blue, int Green, int Red) PixelOf(string path, int x, int y)
     {
         using var stream = File.OpenRead(path);

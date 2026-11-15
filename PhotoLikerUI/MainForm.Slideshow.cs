@@ -96,9 +96,11 @@ namespace PhotoLikerUI
                 }
             }
 
-            // The Parallax effect needs the depth model (it is asked for once; without it the show moves its photos like Ken Burns does)
-            if (SlideshowEffects.UsesDepth(_currentConfig.SlideshowEffect) && !await EnsureToolModelAsync(ToolModels.Depth, ToolModelStrings.ParallaxFeature, askAgain: false))
-                SetStatus(ToolModelStrings.StatusParallaxWithoutModel);
+            // The Parallax and Portrait effects need the depth model (it is asked for once; without it the show moves its photos like Ken Burns does)
+            var depthEffect = _currentConfig.SlideshowEffect;
+            if (SlideshowEffects.UsesDepth(depthEffect)
+                && !await EnsureToolModelAsync(ToolModels.Depth, SlideshowEffects.BlursByDepth(depthEffect) ? ToolModelStrings.PortraitFeature : ToolModelStrings.ParallaxFeature, askAgain: false))
+                SetStatus(SlideshowEffects.BlursByDepth(depthEffect) ? ToolModelStrings.StatusPortraitWithoutModel : ToolModelStrings.StatusParallaxWithoutModel);
 
             // The depth model is given to the show when its file is the one that was tested, also when the show starts with another effect (Down can change to Parallax while it runs): the file is looked
             // at once a run (see IsTestedFileAsync), so this costs nothing after the first show
@@ -125,6 +127,7 @@ namespace PhotoLikerUI
                 }
 
                 KeepTheEffectThatWasChosen(slideshow.Effect);
+                KeepTheLookThatWasChosen(slideshow.Look, slideshow.Border, slideshow.Collage);
                 KeepThePeopleThatWereChosen(slideshow.ShowFaces, slideshow.ShowNames);
                 KeepTheCaptionsThatWereChosen(slideshow.ShowCaptions);
                 ShowWhereSlideshowEnded(slideshow.LastShownPath);
@@ -156,7 +159,52 @@ namespace PhotoLikerUI
             return new SlideshowSession(
                 files, start, _currentConfig.SlideshowMode, _currentConfig.SlideshowTimeout, _currentConfig.SlideshowWatermark, screens, primary,
                 _currentConfig.SlideshowEffect, useVideo ? SlideshowVideoSettings() : null, SlideshowPeopleOptionsOfTheFolder(),
-                depthTested ? SlideshowDepthOptions.Of(_effects) : null);
+                depthTested ? SlideshowDepthOptions.Of(_effects) : null, SlideshowStyleOptionsOfTheSettings());
+        }
+
+        /// <summary>
+        /// The look of the show (the Look row) and the table of the Lut look (the file of the LookFile row, read now: a 65 point cube is read in a fraction of a second). A file that can not be used is told
+        /// in the status bar and the show goes on without a table (a Lut look then grades nothing, and the L key leaves it out). Null when there is no look and no table.
+        /// </summary>
+        private SlideshowStyleOptions? SlideshowStyleOptionsOfTheSettings()
+        {
+            CubeLut? table = null;
+            var file = _currentConfig.SlideshowLookFile;
+            if (!string.IsNullOrWhiteSpace(file))
+            {
+                try
+                {
+                    table = CubeLut.Load(file);
+                }
+                catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+                {
+                    SetStatus(string.Format(SlideshowStrings.StatusLookFileFailedFormat, Path.GetFileName(file), ex.Message));
+                }
+            }
+
+            // The look stays what the person chose even when there is no table to grade by (the frames then are not graded): the show must not end by changing the setting to None
+            var look = _currentConfig.SlideshowLook;
+            var border = _currentConfig.SlideshowBorder;
+            var collage = _currentConfig.SlideshowCollage;
+            if (look == SlideshowLook.None && table is null && border == SlideshowBorder.None && collage == SlideshowCollage.None)
+                return null;
+
+            // When a photo was taken, for the events of the collage: what the index knows (the folder is indexed, or it is not and the photos of a page are only those that follow each other)
+            var index = _folderSearch;
+            Func<string, DateTime?>? takenOf = index is null ? null : path => index.Index.FindFullPath(path)?.Date.Taken;
+            return new SlideshowStyleOptions(look, table, border, collage, takenOf);
+        }
+
+        /// <summary>L chooses the next look, B turns the card on and off and 1, 2, 3, 4 and M choose the collage while the slideshow runs; what it ended with is the setting from then on (like the effect).</summary>
+        private void KeepTheLookThatWasChosen(SlideshowLook look, SlideshowBorder border, SlideshowCollage collage)
+        {
+            if (_currentConfig.SlideshowLook == look && _currentConfig.SlideshowBorder == border && _currentConfig.SlideshowCollage == collage)
+                return;
+
+            _currentConfig.SlideshowLook = look;
+            _currentConfig.SlideshowBorder = border;
+            _currentConfig.SlideshowCollage = collage;
+            settingsPropertyGrid.Refresh();
         }
 
         /// <summary>
@@ -211,13 +259,37 @@ namespace PhotoLikerUI
                 path =>
                 {
                     hits.TryGetValue(path, out var hit);
-                    records.TryGetValue(path, out var record);
+                    if (!records.TryGetValue(path, out var record))
+                        record = ReadVideoNow(VideoLibrary.Current, path); // not read when the show began: a file that came a moment ago, a copy in the Liked folder, a share the reading has not reached
                     long? length = record?.Info is { DurationSeconds: > 0 } info ? (long)(info.DurationSeconds * 1000) : null;
                     var taken = hit?.Taken ?? record?.Date.Taken;
                     // A search by date alone lists videos without having found anything inside them (its score is 0): those are played whole
                     return new SlideshowVideoFacts(hit is { Score: > 0 } ? hit.Moments : null, length, taken, SpeechOfTheVideo(path, speechModel));
                 },
                 ShowCaptions: captions);
+        }
+
+        private const int VideoReadSeconds = 5;       // a video that is read as its turn comes is waited for this long at most
+
+        /// <summary>
+        /// What the library knows of a video it had not read when the show began (it reads the header now, and keeps it): the date written in the corner and how long the video is. It is waited
+        /// for a few seconds at most, so that a share that does not answer cannot hold the show; then the video plays without its date. Null if it cannot be read.
+        /// </summary>
+        private static VideoRecord? ReadVideoNow(VideoCatalog? catalog, string path)
+        {
+            if (catalog is null)
+                return null;
+
+            try
+            {
+                using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(VideoReadSeconds));
+                var record = Task.Run(() => catalog.GetAsync(path, limit.Token), limit.Token).GetAwaiter().GetResult(); // on the pool: the window's thread is not given back to the reading
+                return record.Info is null ? null : record;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                return null; // gone, not readable, no ffmpeg, no answer in time, or the folder was changed meanwhile: no date
+            }
         }
 
         /// <summary>What is said in a video of the show, as the index read it (one query of the catalog when the video starts), by the model that is set if it heard anything in it, else by the one that heard most; none if it was not read, or the catalog is gone (another folder was opened).</summary>

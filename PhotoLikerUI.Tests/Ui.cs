@@ -73,6 +73,24 @@ internal static class Ui
             form.Close();
     }
 
+    /// <summary>
+    /// True once the file is there and nobody has it open any more. A file that the program writes on another thread exists before it is whole (and a copy has its full length at once), so a test that
+    /// reads it as soon as <c>File.Exists</c> says yes finds it half written or "being used by another process", which only a slow machine shows.
+    /// </summary>
+    public static Task<bool> FileIsWritten(string path, int milliseconds = 30000) =>
+        Until(() =>
+        {
+            try
+            {
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return false; // not there yet, or still open
+            }
+        }, milliseconds);
+
     public static async Task<bool> Until(Func<bool> condition, int milliseconds = 30000)
     {
         var end = Environment.TickCount64 + milliseconds;

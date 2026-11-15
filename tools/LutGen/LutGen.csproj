@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Makes the colour lookup tables (.cube) that the installer brings, into the folder luts\ of the repository: twelve looks in the styles people use most (teal and orange, a vintage print,
+    a matte fade, a warm portrait, a cool green film, bleach bypass, cross process, golden hour, a cold night, vivid colours and two black and white ones), each a 33 by 33 by 33 table that is
+    worked out here from a few lines of arithmetic. They are the project's own (MIT, like the rest), not copies of anybody's pack. Run it after changing a recipe:
+        dotnet run, with the project tools\LutGen
+    Not part of PhotoLiker.sln, nothing in CI builds it; the files it writes are committed and packed by PhotoLikerUI.csproj (into Luts\ next to the program).
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>LutGen</RootNamespace>
+  </PropertyGroup>
+
+</Project>

@@ -258,6 +258,30 @@ namespace PhotoLikerUI
             g.DrawRectangle(rim, 1.5f, 2.5f, 13f, 11f);
         });
 
+        // ── Refocus ───────────────────────────────────────────────────────
+        // A photo with a sharp ring where the focus is and soft discs of light round it: a portrait mode picture
+        public static Bitmap Refocus() => DrawOnBitmap(g =>
+        {
+            using (var sky = new LinearGradientBrush(new RectangleF(1.5f, 2.5f, 13f, 11f), Color.FromArgb(86, 156, 222), Color.FromArgb(34, 82, 156), 90f))
+                g.FillRectangle(sky, 1.5f, 2.5f, 13f, 11f);
+
+            // The out of focus lights, large and soft
+            using (var soft = new SolidBrush(Color.FromArgb(105, 255, 255, 255)))
+            {
+                g.FillEllipse(soft, 9.2f, 3.3f, 4.2f, 4.2f);
+                g.FillEllipse(soft, 11.2f, 8.2f, 2.8f, 2.8f);
+            }
+
+            // The sharp thing in focus: a ring with a point in its middle
+            using (var ring = new Pen(Color.White, 1.25f))
+                g.DrawEllipse(ring, 3.3f, 5.3f, 5.4f, 5.4f);
+            using (var point = new SolidBrush(Color.White))
+                g.FillEllipse(point, 5.2f, 7.2f, 1.6f, 1.6f);
+
+            using var rim = new Pen(Color.FromArgb(25, 55, 130), 1.2f);
+            g.DrawRectangle(rim, 1.5f, 2.5f, 13f, 11f);
+        });
+
         // ── Show original (the Colorize bar) ──────────────────────────────
         // The same photo all in grey: what the button brings back while the colours are on (the Colorize picture is what it does while they are off)
         public static Bitmap OriginalPhoto() => DrawOnBitmap(g =>
@@ -638,7 +662,7 @@ namespace PhotoLikerUI
     /// </summary>
     internal static class DialogIcons
     {
-        private static Icon? _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize;
+        private static Icon? _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
 
         public static Icon GenerateVideo => _generateVideo ??= AppIcons.WindowIcon(AppIcons.GenerateVideo);
 
@@ -657,6 +681,8 @@ namespace PhotoLikerUI
         public static Icon VideoSpeech => _videoSpeech ??= AppIcons.WindowIcon(AppIcons.VideoSpeech);
 
         public static Icon Colorize => _colorize ??= AppIcons.WindowIcon(AppIcons.Colorize);
+
+        public static Icon Refocus => _refocus ??= AppIcons.WindowIcon(AppIcons.Refocus);
     }
 
     internal static class GraphicsExtensions

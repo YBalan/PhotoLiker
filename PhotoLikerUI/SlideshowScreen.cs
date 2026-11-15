@@ -51,6 +51,7 @@ namespace PhotoLikerUI
         private readonly SlideshowFrame?[] _layerFrames = new SlideshowFrame?[2]; // the frames of _layers while an effect is put together, for the boxes round the faces
         private bool _showFaces;                           // the boxes with the names on the faces are on (the F key)
         private bool _showNames;                           // the line of names in the bottom left corner is on (the N key)
+        private bool _aimWanted;                           // the effect keeps the faces in view while a photo drifts: they are worked out along with the frames
         private string? _notice;                           // a few words in the top left corner (the effect that was just chosen), for a moment
         private PhotoOnScreen? _current;                           // what is on the screen; its frame belongs to Frames
         private PhotoOnScreen? _outgoing;                          // while one photo takes the place of another: the one that goes; also belongs to Frames
@@ -109,8 +110,18 @@ namespace PhotoLikerUI
         {
             _showFaces = faces;
             _showNames = names;
-            Frames.SetPeopleShown(faces || names);
+            Frames.SetPeopleShown(faces || names || _aimWanted);
             Invalidate();
+        }
+
+        /// <summary>
+        /// Says whether the photos drift with their faces in view (see <see cref="KenBurnsPath.Aimed"/>): the people of every photo are then worked out along with its frame (a few milliseconds on a thread of the
+        /// pool), so that the photo is put on the screen with its movement as quickly as without. Nothing is drawn for it.
+        /// </summary>
+        internal void SetFacesWantedForMotion(bool wanted)
+        {
+            _aimWanted = wanted;
+            Frames.SetPeopleShown(_showFaces || _showNames || wanted);
         }
 
         /// <summary>The photos made ready for this screen.</summary>
@@ -118,6 +129,9 @@ namespace PhotoLikerUI
 
         /// <summary>Whether a photo (or a video) is on this screen yet.</summary>
         public bool HasPhoto => _current is not null || _videoView is { Visible: true };
+
+        /// <summary>The key (see <see cref="FrameKeys"/>) of the frame that is on the screen now; null when none is. <see cref="Frames"/> must not let go of it: it is being painted, whatever the show thinks it shows.</summary>
+        public string? CurrentPath => _current?.Frame.Path;
 
         /// <summary>The file of the photo that is leaving the screen while an effect lasts; null when none is. <see cref="Frames"/> must not let go of it before.</summary>
         public string? OutgoingPath => _outgoing?.Frame.Path;
@@ -155,15 +169,19 @@ namespace PhotoLikerUI
             Invalidate();
         }
 
-        /// <summary>How a photo moves while it stays, if the plan says it does: by its depth (the Parallax effect, when the frame has it), else the drift and zoom of Ken Burns.</summary>
-        private static (KenBurnsPath? Path, ParallaxPath? Parallax) MotionFor(SlideshowFrame frame, SlideshowShowPlan plan)
+        /// <summary>
+        /// How a photo moves while it stays, if the plan says it does: by its depth (the Parallax effect, when the frame has it), else the drift and zoom of Ken Burns, which keeps the faces the
+        /// index found in the photo in view (a photo with none drifts at random).
+        /// </summary>
+        internal static (KenBurnsPath? Path, ParallaxPath? Parallax) MotionFor(SlideshowFrame frame, SlideshowShowPlan plan)
         {
             if (!plan.Motion || plan.MotionSeconds <= 0)
                 return (null, null);
 
-            return plan.Parallax && frame.Depth is not null
+            // A photo on a card does not move by its depth (the depth is that of the photo, which is a part of the frame, and the card would move with it): it drifts like a Ken Burns one
+            return plan.Parallax && frame.Depth is not null && !frame.HasCard
                 ? (null, ParallaxPath.Random(Random.Shared.NextDouble))
-                : (KenBurnsPath.Random(Random.Shared.NextDouble), null);
+                : (KenBurnsPath.Aimed(frame.FaceRegions, Random.Shared.NextDouble), null);
         }
 
         /// <summary>
@@ -755,7 +773,7 @@ namespace PhotoLikerUI
         private void DrawFaces(Graphics g, SlideshowFrame frame, SlidePlace place, double opacity)
         {
             if (_showFaces)
-                SlideFaces.Draw(g, frame.Faces, place, frame.Width, frame.Height, ClientRectangle, _faceFont, opacity);
+                SlideFaces.Draw(g, frame.Faces, place, frame.Width, frame.Height, ClientRectangle, _faceFont, opacity, frame.Inner);
         }
 
         /// <summary>A photo standing still: the pixels of the frame, copied, with no smoothing: the frame was made for this screen.</summary>

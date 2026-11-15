@@ -9,8 +9,12 @@ public class ParallaxPathTests
     private static ParallaxPath Path(double direction = 1, double tilt = 0, double pushIn = 0.02) => new(direction, tilt, pushIn);
 
     [Fact]
-    public void OnlyParallax_NeedsTheDepth() =>
-        Assert.All(Enum.GetValues<SlideshowEffect>(), effect => Assert.Equal(effect == SlideshowEffect.Parallax, SlideshowEffects.UsesDepth(effect)));
+    public void OnlyParallaxAndPortrait_NeedTheDepth_AndOnlyParallaxMovesByIt() =>
+        Assert.All(Enum.GetValues<SlideshowEffect>(), effect =>
+        {
+            Assert.Equal(effect is SlideshowEffect.Parallax or SlideshowEffect.Portrait, SlideshowEffects.UsesDepth(effect));
+            Assert.Equal(effect == SlideshowEffect.Parallax, SlideshowEffects.MovesByDepth(effect));
+        });
 
     [Fact]
     public void TheCamera_GoesAcrossFromOneSideToTheOther_AtAnEvenSpeed()

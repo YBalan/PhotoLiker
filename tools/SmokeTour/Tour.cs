@@ -1535,11 +1535,19 @@ internal sealed partial class Tour(DrivenForm form, string folder, string? scree
         if (form.TopMost && ScreenCapture.FindDialogOfThisThread(Window) == IntPtr.Zero)
         {
             form.BringToFront();
-            ScreenCapture.BringToFront(Window);
+            if (!ScreenCapture.BringToFront(Window))
+                Console.WriteLine($"         WARNING: the window is not the foreground one for '{name}' (grey title bar)");
         }
 
         ScreenCapture.ParkMouse();
         await Settle(450);
+        // The foreground can be taken away again while the window settles (the picture then has a grey title bar): take it back
+        for (var attempt = 0; attempt < 3 && form.TopMost && ScreenCapture.FindDialogOfThisThread(Window) == IntPtr.Zero && !ScreenCapture.IsForeground(Window); attempt++)
+        {
+            Console.WriteLine($"         note: '{ScreenCapture.ForegroundTitle()}' took the foreground before '{name}', taking it back");
+            ScreenCapture.BringToFront(Window);
+            await Settle(450);
+        }
         var picture = ScreenCapture.Capture(Window);
         if (name is not null)
         {

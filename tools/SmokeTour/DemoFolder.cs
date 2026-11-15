@@ -49,6 +49,43 @@ internal static class DemoFolder
 
     public static string[] FileNames => [.. Scenes.Select(s => Path.GetFileName(s.File))];
 
+    /// <summary>The black and white photo of the effects mode (<c>--only-effects</c>): the forest, as an old print. It is the last photo of the folder (the dates of the list order it by).</summary>
+    public const string BlackAndWhitePhoto = "11-forest-1950.jpg";
+
+    /// <summary>The photo of the effects mode that is refocused: the forest in colour (three layers of hills, the nearest one darkest, which the depth model tells apart).</summary>
+    public const string RefocusPhoto = "04-forest.jpg";
+
+    public static int EffectPhotos => 1;
+
+    /// <summary>Makes <see cref="BlackAndWhitePhoto"/> from the forest scene: the same picture in grey, with no Exif, dated after the others.</summary>
+    private static void MakeBlackAndWhite(string folder)
+    {
+        using var colour = new Bitmap(Path.Combine(folder, RefocusPhoto));
+        using var grey = new Bitmap(colour.Width, colour.Height, PixelFormat.Format24bppRgb);
+        using (var g = Graphics.FromImage(grey))
+        {
+            var matrix = new ColorMatrix(
+            [
+                [0.299f, 0.299f, 0.299f, 0, 0],
+                [0.587f, 0.587f, 0.587f, 0, 0],
+                [0.114f, 0.114f, 0.114f, 0, 0],
+                [0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 1],
+            ]);
+            using var attributes = new ImageAttributes();
+            attributes.SetColorMatrix(matrix);
+            g.DrawImage(colour, new Rectangle(0, 0, colour.Width, colour.Height), 0, 0, colour.Width, colour.Height, GraphicsUnit.Pixel, attributes);
+        }
+
+        var path = Path.Combine(folder, BlackAndWhitePhoto);
+        var jpeg = ImageCodecInfo.GetImageEncoders().First(e => e.FormatID == ImageFormat.Jpeg.Guid);
+        using var parameters = new EncoderParameters(1);
+        parameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 90L);
+        grey.Save(path, jpeg, parameters);
+        File.SetCreationTime(path, new DateTime(2025, 9, 5, 9, 0, 0));
+        File.SetLastWriteTime(path, new DateTime(2025, 9, 5, 9, 0, 0));
+    }
+
     /// <summary>Two clips, three scenes of four seconds each; they sort after the photos. The cake and the tree (drawn, see <see cref="DemoScenes"/>) are about
     /// different things, so the search has moments to tell apart; the other four scenes are demo photos.</summary>
     private static readonly (string File, string[] Scenes, DateTime Recorded)[] Clips =
@@ -107,7 +144,7 @@ internal static class DemoFolder
     /// Recreates the folder: photos, plus the settings file the first run would have left (dark, JPEG only).
     /// Throws if the folder exists and is not one this tool made.
     /// </summary>
-    public static void Create(string folder, Rectangle window, bool videos = false)
+    public static void Create(string folder, Rectangle window, bool videos = false, bool effects = false)
     {
         if (Directory.Exists(folder))
         {
@@ -130,6 +167,9 @@ internal static class DemoFolder
             File.SetCreationTime(path, FileDates[i]);
             File.SetLastWriteTime(path, FileDates[i]);
         }
+
+        if (effects)
+            MakeBlackAndWhite(folder);
 
         if (videos && !MakeVideos(folder))
             throw new InvalidOperationException("The demo videos could not be made (is ffmpeg\\ffmpeg.exe beside the tour?).");

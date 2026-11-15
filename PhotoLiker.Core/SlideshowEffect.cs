@@ -25,6 +25,13 @@ namespace PhotoLiker.Core
         /// </summary>
         Parallax,
 
+        /// <summary>
+        /// Every photo is taken in portrait mode: a model works out how near each part of it is, and what is at the depth of the people (of the largest face; else of the middle of the photo) stays sharp while
+        /// what is nearer or farther is blurred, as a phone does it, and the photo drifts slowly with its faces in view as in <see cref="KenBurns"/>. Dissolves into the next. Needs the depth model, like
+        /// <see cref="Parallax"/>, and <see cref="Random"/> does not pick it either.
+        /// </summary>
+        Portrait,
+
         /// <summary>Another one of <see cref="Fade"/>, <see cref="Slide"/>, <see cref="Zoom"/> and <see cref="KenBurns"/> for every change, never the same twice in a row (not <see cref="Parallax"/>, which costs more).</summary>
         Random,
     }

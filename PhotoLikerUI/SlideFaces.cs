@@ -29,7 +29,8 @@ namespace PhotoLikerUI
         /// <param name="screen">The client area of the window.</param>
         /// <param name="font">The letters of the names (bold, in pixels).</param>
         /// <param name="opacity">1 draws as it is, less lets the photo through (while one photo dissolves into another).</param>
-        public static int Draw(Graphics g, IReadOnlyList<FaceLabel> faces, SlidePlace place, int frameWidth, int frameHeight, Rectangle screen, Font font, double opacity)
+        /// <param name="inner">The part of the frame the photo is on, as fractions of it, when the frame has a card round the photo; null for a frame that is all photo.</param>
+        public static int Draw(Graphics g, IReadOnlyList<FaceLabel> faces, SlidePlace place, int frameWidth, int frameHeight, Rectangle screen, Font font, double opacity, RectangleF? inner = null)
         {
             if (opacity <= 0 || faces.Count == 0)
                 return 0;
@@ -51,7 +52,11 @@ namespace PhotoLikerUI
             // The big faces first, so that the name of a small one in front of them is not covered
             foreach (var label in faces.Where(label => label.Name is { Length: > 0 }).OrderByDescending(label => label.Face.Width * label.Face.Height))
             {
-                var box = SlideFaceMarks.OnScreen(SlideFaceMarks.BoxOf(label.Face.X, label.Face.Y, label.Face.Width, label.Face.Height, frameWidth, frameHeight), place, frameWidth, frameHeight);
+                var within = inner ?? new RectangleF(0, 0, 1, 1);
+                var box = SlideFaceMarks.OnScreen(
+                    SlideFaceMarks.BoxOf(
+                        within.X + label.Face.X * within.Width, within.Y + label.Face.Y * within.Height, label.Face.Width * within.Width, label.Face.Height * within.Height, frameWidth, frameHeight),
+                    place, frameWidth, frameHeight);
                 if (!box.IntersectsWith(screen))
                     continue;
 

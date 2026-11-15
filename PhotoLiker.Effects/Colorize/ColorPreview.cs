@@ -71,13 +71,21 @@ namespace PhotoLiker.Effects.Colorize
         /// <see cref="ColorizeJob.MaxSide"/>), also when the picture on screen is smaller.
         /// </summary>
         /// <exception cref="IOException">The copy could not be written.</exception>
-        public string Save(ColorTuning tuning)
+        public string Save(ColorTuning tuning) => ColorizedCopy.Save(Path, _original, FullSize(tuning));
+
+        /// <summary>
+        /// Writes the colorized photo where the person chose (Save As), at the full size as <see cref="Save"/> does; a file that is there is written over (they were asked). Returns <paramref name="destination"/>.
+        /// </summary>
+        /// <exception cref="IOException">The copy could not be written.</exception>
+        public string SaveAs(ColorTuning tuning, string destination) => ColorizedCopy.SaveTo(destination, Path, _original, FullSize(tuning), overwrite: true);
+
+        private DecodedPhoto FullSize(ColorTuning tuning)
         {
             var photo = _grey;
             if (Math.Max(photo.Width, photo.Height) >= PreviewSide)
                 photo = WicPhotoDecoder.Decode(_original, ColorizeJob.MaxSide); // it may have been made smaller for the screen
 
-            return ColorizedCopy.Save(Path, _original, Colorizer.Apply(photo, _colours, tuning));
+            return Colorizer.Apply(photo, _colours, tuning);
         }
     }
 }

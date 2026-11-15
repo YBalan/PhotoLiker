@@ -104,6 +104,80 @@ namespace PhotoLikerUI
         /// <summary>The faces of the photo, each with the name it is known by, if any; none when the folder has no index or the photo is not in it. Works them out at the first call (see the constructor).</summary>
         public IReadOnlyList<FaceLabel> Faces => _faces.Value;
 
+        /// <summary>
+        /// Where the faces are in the frame, as fractions of it, for a drift that keeps them in view (see <see cref="KenBurnsPath.Aimed"/>); every face the index has, named or not. A frame with a card
+        /// (<see cref="AddCard"/>) has the photo on a part of it (<see cref="Inner"/>), and the faces are where they are on the card.
+        /// </summary>
+        public IReadOnlyList<PhotoRegion> FaceRegions =>
+            [.. Faces.Select(label => new PhotoRegion(
+                Inner.X + label.Face.X * Inner.Width, Inner.Y + label.Face.Y * Inner.Height, label.Face.Width * Inner.Width, label.Face.Height * Inner.Height))];
+
+        /// <summary>Where the photo is in the frame, as fractions of it: all of it, or the part of it that is not the card (<see cref="AddCard"/>).</summary>
+        public RectangleF Inner { get; private set; } = new(0, 0, 1, 1);
+
+        /// <summary>Whether the photo is on a card (see <see cref="AddCard"/>).</summary>
+        public bool HasCard { get; private set; }
+
+        /// <summary>
+        /// Puts the photo on a Polaroid card, in the pixels of the frame (see <see cref="PolaroidCard"/>), and writes the date it was taken in the margin below it, by hand. Done once, last of all (the depth,
+        /// the portrait blur and the grade are those of the photo, not of the card), and the pixels are changed, so it is for a frame that is not on a screen yet.
+        /// </summary>
+        public void AddCard()
+        {
+            if (HasCard)
+                return;
+
+            try
+            {
+                PolaroidCard.Apply(_canvas.Pixels, Width, Height);
+                var (x, y, width, height) = PolaroidCard.Inner;
+                Inner = new RectangleF(x, y, width, height);
+                HasCard = true;
+                WriteDate();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // the photo is shown as it is
+            }
+        }
+
+        private static readonly string[] HandwritingFonts = ["Ink Free", "Segoe Script", "Segoe Print", "Bradley Hand ITC", "Comic Sans MS"];
+
+        /// <summary>The first of the handwriting fonts this computer has; a plain italic one if it has none.</summary>
+        private static FontFamily HandwritingFamily()
+        {
+            var installed = FontFamily.Families.Select(family => family.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var name = HandwritingFonts.FirstOrDefault(installed.Contains);
+            return name is null ? FontFamily.GenericSansSerif : new FontFamily(name);
+        }
+
+        private void WriteDate()
+        {
+            if (Taken is not { } date)
+                return;
+
+            var (x, y, width, height) = PolaroidCard.DateArea;
+            var area = new RectangleF(x * Width, y * Height, width * Width, height * Height);
+            using var family = HandwritingFamily();
+            using var g = Graphics.FromImage(_canvas.Image);
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+            using var brush = new SolidBrush(Color.FromArgb(255, 56, 52, 60));
+            using var format = new StringFormat(StringFormat.GenericTypographic) { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+
+            // As large as the margin lets it be, but not wider than it is
+            var text = date.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+            var size = Math.Max(8f, area.Height * 0.5f);
+            using (var probe = new Font(family, size, FontStyle.Regular, GraphicsUnit.Pixel))
+            {
+                var wide = g.MeasureString(text, probe, PointF.Empty, format).Width;
+                if (wide > area.Width * 0.9f)
+                    size = Math.Max(8f, size * area.Width * 0.9f / wide);
+            }
+
+            using var font = new Font(family, size, FontStyle.Regular, GraphicsUnit.Pixel);
+            g.DrawString(text, font, brush, area, format);
+        }
+
         /// <summary>The names of the people in the photo as one line for the corner (see <see cref="FaceNames.Caption"/>); null when there is nobody to write.</summary>
         public string? Names => _names.Value;
 
@@ -142,6 +216,55 @@ namespace PhotoLikerUI
             }
         }
 
+        /// <summary>The look the pixels were graded with (see <see cref="ApplyLook"/>); none for the photo as it is.</summary>
+        public SlideshowLook AppliedLook { get; private set; }
+
+        /// <summary>
+        /// Grades the colours of the photo in its own pixels (see <see cref="LookGrade"/>), once: a frame that has been graded is left as it is (it keeps no original to grade again). The pixels are changed, so it
+        /// is for a frame that is not on a screen yet. The grain is the same every time the photo is made.
+        /// </summary>
+        public void ApplyLook(SlideshowLook look, CubeLut? lut)
+        {
+            if (look == SlideshowLook.None || AppliedLook != SlideshowLook.None)
+                return;
+
+            try
+            {
+                LookGrade.Apply(_canvas.Pixels, Width, Height, look, lut, Path.GetHashCode());
+                AppliedLook = look;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // the photo is shown as it is
+            }
+        }
+
+        /// <summary>Whether the pixels are those of the portrait photo (see <see cref="ApplyPortrait"/>): the background is blurred and the pixels of the original are gone.</summary>
+        public bool IsPortrait { get; private set; }
+
+        /// <summary>
+        /// Takes the photo in portrait mode, in its own pixels: what is at the depth of the people (the largest face; else the middle of the photo) stays as it is, the nearer and the farther are blurred (see
+        /// <see cref="DepthOfField"/>). Needs the depth (<see cref="EnsureDepth"/> first: a frame that has none is left as it is) and the faces, and the pixels are changed, so it is for a frame that is not on a
+        /// screen yet: the one that makes it, before it is published. Done once.
+        /// </summary>
+        public void ApplyPortrait()
+        {
+            if (IsPortrait || Depth is not { } depth)
+                return;
+
+            try
+            {
+                var look = FocusLook.Portrait(DepthOfField.AutoFocus(depth, FaceRegions));
+                var portrait = DepthOfField.Render(_canvas.Pixels, Width, Height, depth, look);
+                Array.Copy(portrait, _canvas.Pixels, Width * Height);
+                IsPortrait = true;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // the photo is shown as it is
+            }
+        }
+
         /// <summary>The file the photo is from.</summary>
         public string Path { get; }
 
@@ -170,6 +293,10 @@ namespace PhotoLikerUI
         private volatile bool _warmPeople;   // the people are shown (the boxes or the names are on): they are worked out along with a frame, not when it is first painted
         private readonly Func<uint[], int, int, DepthMap?>? _depthOf; // works out the depth of a frame (the Parallax effect); null when the depth model is not here
         private volatile bool _warmDepth;    // the Parallax effect is on: the depth is worked out along with a frame, before it is published
+        private volatile bool _warmPortrait; // the Portrait effect is on: a frame is taken in portrait mode (its pixels are changed) before it is published
+        private volatile LookSetting? _look; // the colours of a frame are graded this way before it is published; null for the photo as it is
+        private volatile bool _card;         // a frame is put on a Polaroid card before it is published (the last thing that is done to it)
+        private int _variant;                // counts the times the way frames are made was changed (portrait, grade, card); UI thread only
         private readonly Dictionary<string, SlideshowFrame> _frames = new(StringComparer.Ordinal);
         private readonly HashSet<string> _loading = new(StringComparer.Ordinal);
         private readonly HashSet<string> _failed = new(StringComparer.Ordinal);
@@ -225,6 +352,60 @@ namespace PhotoLikerUI
             _ = Task.Run(() => Parallel.ForEach(here, new ParallelOptions { MaxDegreeOfParallelism = 2 }, frame => frame.EnsureDepth(estimate)));
         }
 
+        /// <summary>
+        /// Says whether the Portrait effect is on. The frames are made in portrait mode while it is (and as they are, when it is not), and the frames that are here are not the right ones when that changes: the
+        /// photo of a portrait frame has no original to go back to. So they are let go of, except the two that are on the screen, and made again, the nearest first. A frame that was being made when this was
+        /// said is made again when it is done.
+        /// </summary>
+        public void SetPortraitWanted(bool wanted)
+        {
+            wanted = wanted && _depthOf is not null;
+            if (_warmPortrait == wanted)
+                return;
+
+            _warmPortrait = wanted;
+            Remake();
+        }
+
+        /// <summary>
+        /// Says how the photos are graded (see <see cref="SlideshowLook"/>; <paramref name="lut"/> is the table of the <see cref="SlideshowLook.Lut"/> look). Frames are made with the grade from now on, and the
+        /// frames that are here are made again (a graded frame has no original), except the ones on the screen. Said again with what it is already, it does nothing.
+        /// </summary>
+        public void SetLook(SlideshowLook look, CubeLut? lut)
+        {
+            var next = look == SlideshowLook.None || (look == SlideshowLook.Lut && lut is null) ? null : new LookSetting(look, lut);
+            if (_look?.Look == next?.Look && ReferenceEquals(_look?.Lut, next?.Lut))
+                return;
+
+            _look = next;
+            Remake();
+        }
+
+        private sealed record LookSetting(SlideshowLook Look, CubeLut? Lut);
+
+        /// <summary>
+        /// Says what the photos are put in (see <see cref="SlideshowBorder"/>). Frames are made with the card from now on (or without), and the frames that are here are made again (a photo on a card has no
+        /// original), except the ones on the screen. Said again with what it is already, it does nothing.
+        /// </summary>
+        public void SetBorder(SlideshowBorder border)
+        {
+            var card = border == SlideshowBorder.Polaroid;
+            if (_card == card)
+                return;
+
+            _card = card;
+            Remake();
+        }
+
+        /// <summary>Lets go of the frames that are here, except the ones on the screen, and makes them again (the nearest first) the way that is wanted now.</summary>
+        private void Remake()
+        {
+            _variant++; // a frame that is being made now comes out for the old state: the pump sees that, and makes it again
+            foreach (var path in _frames.Keys.Where(path => !IsPinned(path)).ToList())
+                Evict(path);
+            SetWindow(_window, _pinned, _alsoPinned);
+        }
+
         /// <summary>A frame finished loading and is now here.</summary>
         public event Action<string, SlideshowFrame>? Loaded;
 
@@ -246,7 +427,7 @@ namespace PhotoLikerUI
             _window = mostNeededFirst;
             _pinned = pinned;
             _alsoPinned = alsoPinned;
-            _wanted = new HashSet<string>(mostNeededFirst.Select(photo => photo.OriginalFilePath), StringComparer.Ordinal);
+            _wanted = new HashSet<string>(mostNeededFirst.Select(FrameKeys.Of), StringComparer.Ordinal);
 
             foreach (var path in _frames.Keys.Where(p => !_wanted.Contains(p) && !IsPinned(p)).ToList())
                 Evict(path);
@@ -254,7 +435,7 @@ namespace PhotoLikerUI
             _queue.Clear();
             foreach (var photo in mostNeededFirst)
             {
-                var path = photo.OriginalFilePath;
+                var path = FrameKeys.Of(photo);
                 if (!_frames.ContainsKey(path) && !_loading.Contains(path) && !_failed.Contains(path))
                     _queue.Add(photo);
             }
@@ -290,21 +471,31 @@ namespace PhotoLikerUI
             {
                 while (!_cts.IsCancellationRequested && TryTakeJob(out var photo))
                 {
-                    var path = photo.OriginalFilePath;
+                    var path = FrameKeys.Of(photo);
                     _loading.Add(path);
                     SlideshowFrame? frame = null;
                     Exception? error = null;
+                    var variant = _variant; // the way frames are made as this one begins: if it has changed when it is done, this one is made the old way
 
                     try
                     {
                         // Only the file/GDI+ work runs on the pool; the result is private until it is published below.
                         frame = await Task.Run(() =>
                         {
-                            var made = ImageHelper.LoadSlide(photo, _screen, _facesOf);
+                            // A page of the collage is made of its photos (which are read here one after the other, each as large as its cell lets it be); a photo, of itself
+                            var made = photo is CollagePage page
+                                ? CollageFrames.Make(page, _screen, (member, cell) => ImageHelper.LoadSlide(member, cell))
+                                : ImageHelper.LoadSlide(photo, _screen, _facesOf);
                             if (_warmPeople)
                                 made.WarmPeople();
                             if (_warmDepth)
                                 made.EnsureDepth(_depthOf);
+                            if (_warmPortrait)
+                                made.ApplyPortrait();
+                            if (_look is { } grade)
+                                made.ApplyLook(grade.Look, grade.Lut);
+                            if (_card)
+                                made.AddCard();
                             return made;
                         });
                     }
@@ -321,6 +512,16 @@ namespace PhotoLikerUI
                     }
 
                     _loading.Remove(path);
+
+                    if (error is null && frame is not null && variant != _variant)
+                    {
+                        // The portrait blur, the grade or the card was chosen or taken away while this frame was being made: it is not the frame that is wanted now, and a frame that is dressed
+                        // keeps no original to dress again. It is let go of and made again, first of all (the photo is wanted: it is in the window still, and whoever waits for it waits for this one)
+                        frame.Dispose();
+                        if (_wanted.Contains(path) && !_frames.ContainsKey(path) && !_failed.Contains(path))
+                            _queue.Insert(0, photo);
+                        continue;
+                    }
 
                     if (error is not null)
                     {
@@ -346,7 +547,7 @@ namespace PhotoLikerUI
                 photo = _queue[0];
                 _queue.RemoveAt(0);
 
-                var path = photo.OriginalFilePath;
+                var path = FrameKeys.Of(photo);
                 if (!_wanted.Contains(path) || _loading.Contains(path) || _frames.ContainsKey(path) || _failed.Contains(path))
                     continue;
 
@@ -389,7 +590,7 @@ namespace PhotoLikerUI
         {
             for (var i = _window.Count - 1; i > 0 && _bytes > _maxBytes && _frames.Count > _minFrames; i--)
             {
-                var path = _window[i].OriginalFilePath;
+                var path = FrameKeys.Of(_window[i]);
                 if (!IsPinned(path))
                     Evict(path);
             }

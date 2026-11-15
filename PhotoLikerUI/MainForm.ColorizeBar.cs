@@ -244,6 +244,9 @@ namespace PhotoLikerUI
             if (_bar is not { } bar || _barPhoto is not { } file)
                 return;
 
+            if (_focusWanted)
+                CloseRefocusBar(); // the Refocus bar changes the picture too: the two do not both have the viewer
+
             var generation = _barGeneration;
             _barColours = true;
 
