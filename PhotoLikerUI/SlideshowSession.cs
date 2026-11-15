@@ -1198,6 +1198,10 @@ namespace PhotoLikerUI
 
             var file = _videos[index].File.OriginalFilePath;
             var facts = options.FactsOf(file);
+
+            // A video the library has no date for (no date was recorded in it, it cannot be read, the share did not answer) is dated like a photo that has no EXIF date: by the dates of its file
+            if (facts.Taken is null && PhotoLiker.Search.PhotoDates.FromFile(_videos[index].File, DateTime.Now) is { } fileDate)
+                facts = facts with { Taken = fileDate };
             var segments = SlideshowVideo.Segments(options.Part, facts.Found, facts.LengthMs);
 
             // The others' sound is turned down for as long as videos play with theirs (and put back when they are over)
