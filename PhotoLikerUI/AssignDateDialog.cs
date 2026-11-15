@@ -40,13 +40,14 @@ namespace PhotoLikerUI
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            ClientSize = new Size(610, 560);
+            ClientSize = new Size(610, 610);
 
             _sources =
             [
                 (new RadioButton { Text = DateAlignmentStrings.AssignSourceExif, AutoSize = true, Checked = true }, new Label { AutoSize = true }, DateChoice.ExifAsItIs),
                 (new RadioButton { Text = DateAlignmentStrings.AssignSourceFolder, AutoSize = true }, new Label { AutoSize = true }, DateChoice.FolderName),
                 (new RadioButton { Text = DateAlignmentStrings.AssignSourceFile, AutoSize = true }, new Label { AutoSize = true }, DateChoice.FileDate),
+                (new RadioButton { Text = DateAlignmentStrings.AssignSourceFileModified, AutoSize = true }, new Label { AutoSize = true }, DateChoice.FileModified),
                 (new RadioButton { Text = DateAlignmentStrings.AssignSourceTyped, AutoSize = true }, new Label { AutoSize = true }, DateChoice.Typed),
             ];
 
@@ -71,7 +72,7 @@ namespace PhotoLikerUI
             _writeTaken.CheckedChanged += (_, _) => UpdatePreview();
             _picker.ValueChanged += (_, _) =>
             {
-                _sources[3].Button.Checked = true;
+                _sources.Single(s => s.Choice == DateChoice.Typed).Button.Checked = true;
                 UpdatePreview();
             };
 

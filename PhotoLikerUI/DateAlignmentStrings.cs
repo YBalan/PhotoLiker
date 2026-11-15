@@ -109,6 +109,7 @@ namespace PhotoLikerUI
         public static string AssignSourceExif => T();
         public static string AssignSourceFolder => T();
         public static string AssignSourceFile => T();
+        public static string AssignSourceFileModified => T();
         public static string AssignSourceTyped => T();
         public static string AssignCountFormat => T();
         public static string AssignCountNone => T();

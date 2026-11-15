@@ -147,6 +147,41 @@ public sealed class DateAlignmentDialogTests : IDisposable
         });
     }
 
+    // ── a copied archive: created now, modified is the right date ──────
+
+    [Fact]
+    public void TheExactModifiedDate_IsTheWayToDateACopiedArchive_ThatIsCreatedNow()
+    {
+        var created = DateTime.UtcNow.AddMinutes(-5);                         // the day of the copy
+        var modified = new DateTime(2012, 7, 14, 9, 30, 15, DateTimeKind.Utc); // what the archive had
+        var path = _folder.Write(@"Archive\lost.jpg", ExifJpeg.Build(original: "2001:01:01 00:00:05"), modified);
+        File.SetCreationTimeUtc(path, created);
+        File.SetLastWriteTimeUtc(path, modified);
+
+        Ui.Run(() => Create(), async align =>
+        {
+            Assert.True(await Ui.Until(() => Ui.HasRadio(align, "No usable EXIF date (1)")));
+            Ui.RadioStartingWith(align, "No usable").Checked = true;
+            var list = ListOf(align);
+            Assert.True(await Ui.Until(() => list.VirtualListSize == 1));
+            list.SelectedIndices.Add(0);
+
+            var question = await OpenQuestion(align);
+            Ui.RadioStartingWith(question, "The date of the file").Checked = true;
+            Assert.Contains(Ui.Controls<Label>(question), l => l.Text == $"1 of 1, for example {DisplayLocal(created)}"); // that one goes by the day of the copy
+            Ui.RadioStartingWith(question, "The exact modified date").Checked = true;
+            Assert.Contains(Ui.Controls<Label>(question), l => l.Text == $"1 of 1, for example {DisplayLocal(modified)}");
+            await Answer(question);
+
+            Ui.ButtonStartingWith(align, "Change ").PerformClick();
+            Assert.True(await Ui.Until(() => Ui.LabelStartingWith(align, "Done").Length > 0), "the run finishes");
+
+            Assert.True(Same(File.GetCreationTimeUtc(path), modified), "the created date is now the modified one, not the day of the copy");
+            Assert.True(Same(File.GetLastWriteTimeUtc(path), modified), "and the modified date is still what it was");
+            Assert.Equal(modified.ToLocalTime(), OriginalOf(path));
+        });
+    }
+
     // ── the files vanished from "Will change" without a word ───────────
 
     [Fact]
