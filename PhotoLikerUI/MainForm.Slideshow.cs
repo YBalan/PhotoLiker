@@ -259,13 +259,37 @@ namespace PhotoLikerUI
                 path =>
                 {
                     hits.TryGetValue(path, out var hit);
-                    records.TryGetValue(path, out var record);
+                    if (!records.TryGetValue(path, out var record))
+                        record = ReadVideoNow(VideoLibrary.Current, path); // not read when the show began: a file that came a moment ago, a copy in the Liked folder, a share the reading has not reached
                     long? length = record?.Info is { DurationSeconds: > 0 } info ? (long)(info.DurationSeconds * 1000) : null;
                     var taken = hit?.Taken ?? record?.Date.Taken;
                     // A search by date alone lists videos without having found anything inside them (its score is 0): those are played whole
                     return new SlideshowVideoFacts(hit is { Score: > 0 } ? hit.Moments : null, length, taken, SpeechOfTheVideo(path, speechModel));
                 },
                 ShowCaptions: captions);
+        }
+
+        private const int VideoReadSeconds = 5;       // a video that is read as its turn comes is waited for this long at most
+
+        /// <summary>
+        /// What the library knows of a video it had not read when the show began (it reads the header now, and keeps it): the date written in the corner and how long the video is. It is waited
+        /// for a few seconds at most, so that a share that does not answer cannot hold the show; then the video plays without its date. Null if it cannot be read.
+        /// </summary>
+        private static VideoRecord? ReadVideoNow(VideoCatalog? catalog, string path)
+        {
+            if (catalog is null)
+                return null;
+
+            try
+            {
+                using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(VideoReadSeconds));
+                var record = Task.Run(() => catalog.GetAsync(path, limit.Token), limit.Token).GetAwaiter().GetResult(); // on the pool: the window's thread is not given back to the reading
+                return record.Info is null ? null : record;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                return null; // gone, not readable, no ffmpeg, no answer in time, or the folder was changed meanwhile: no date
+            }
         }
 
         /// <summary>What is said in a video of the show, as the index read it (one query of the catalog when the video starts), by the model that is set if it heard anything in it, else by the one that heard most; none if it was not read, or the catalog is gone (another folder was opened).</summary>
