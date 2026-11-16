@@ -1160,6 +1160,9 @@ has, and the file is then changed like the others. With nothing selected it is f
   the dialog says. A file date that is not believed otherwise (before 1995, a card whose clock was reset) is used too, when no
   believable one is there: you chose this source for these files. For a video whose recorded date is wrong and whose file dates are right, this
   is the way to make the date it says agree with the date of its file;
+- *The exact modified date of the file*: only when the file was last changed, exactly as it is (no look at the created date, no
+  doubt about the year). For an archive that was copied: every file is *created* on the day of the copy, but the *modified* date
+  went along with it and is the right one. With the default ticks the created date of the file becomes the modified one, and the modified date stays as it is;
 - *This date*: one you type.
 
 ![The question of Use a date: the selected photo, the date in the name of its folder chosen with the example it would get, and the tick that writes the date into the photo](docs/images/31-use-a-date.png)

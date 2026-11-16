@@ -20,6 +20,12 @@ namespace PhotoLiker.Search
 
         /// <summary>A date the person typed.</summary>
         Typed = 3,
+
+        /// <summary>
+        /// The modified date of the file, exactly as it is and nothing else (<see cref="DateSources.FromFileModified"/>). For an archive that was copied: the copy is created now, but the
+        /// modified date went along with the files, so it is the one that is right. Last in the enum so that the numbers of the others stay.
+        /// </summary>
+        FileModified = 4,
     }
 
     /// <summary>
@@ -44,6 +50,7 @@ namespace PhotoLiker.Search
             DateChoice.FolderName => FromFolderName(root, facts.Path, Own(facts)),
             DateChoice.FileDate => FromFile(facts, now) ?? FromFileAsItIs(facts),
             DateChoice.Typed => typed,
+            DateChoice.FileModified => FromFileModified(facts),
             _ => null,
         };
 
@@ -73,6 +80,12 @@ namespace PhotoLiker.Search
         /// </summary>
         public static DateTime? FromFileAsItIs(PhotoDateFacts facts) =>
             PhotoDates.FileTime(facts.CreatedUtc) ?? PhotoDates.FileTime(facts.ModifiedUtc);
+
+        /// <summary>
+        /// When the file was last changed, exactly: no look at when it was created, and no doubt about the year (the person who chose this source knows the date is the right one, also
+        /// when it is old). Null for a file that has none. Copying an archive makes every file "created" on the day of the copy while the modified date stays what it was.
+        /// </summary>
+        public static DateTime? FromFileModified(PhotoDateFacts facts) => PhotoDates.FileTime(facts.ModifiedUtc);
 
         /// <summary>
         /// The date in the name of the folder the photo is in (the innermost folder below the photo folder that has one), at the time of day of

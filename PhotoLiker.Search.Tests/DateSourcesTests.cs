@@ -90,6 +90,26 @@ public class DateSourcesTests
     }
 
     [Fact]
+    public void TheExactModifiedDateOfTheFile_IsTakenAsItIs_AndNeverTheCreatedOne()
+    {
+        // An archive that was copied: every file is created on the day of the copy, but the modified date went along with the files
+        var copiedNow = new DateTime(2026, 10, 28, 9, 0, 0, DateTimeKind.Utc);
+        var modified = new DateTime(2012, 7, 14, 9, 30, 15, DateTimeKind.Utc);
+        PhotoDateFacts Facts(DateTime c, DateTime m) => new(Path.Combine(Root, "a.jpg"), ExifDateSlots.None, null, c, m);
+
+        Assert.Equal(modified.ToLocalTime(), DateSources.Resolve(DateChoice.FileModified, Facts(copiedNow, modified), Root, null, Now));
+        Assert.Equal(copiedNow.ToLocalTime(), DateSources.Resolve(DateChoice.FileDate, Facts(copiedNow, modified), Root, null, Now)); // "the date of the file" goes by the created one: why this source exists
+
+        // As it is, whatever year it is (a scanned film of 1987 is real) and whatever the created date says
+        var old = new DateTime(1987, 8, 23, 9, 18, 35, DateTimeKind.Utc);
+        Assert.Equal(old.ToLocalTime(), DateSources.Resolve(DateChoice.FileModified, Facts(copiedNow, old), Root, null, Now));
+        Assert.Equal(modified.ToLocalTime(), DateSources.Resolve(DateChoice.FileModified, Facts(default, modified), Root, null, Now));
+
+        // No modified date: none, however good the created date is
+        Assert.Null(DateSources.Resolve(DateChoice.FileModified, Facts(copiedNow, default), Root, null, Now));
+    }
+
+    [Fact]
     public void TheDateTheCameraWrote_IsTakenWhetherItIsBelievedOrNot_FirstTheOriginalOne()
     {
         var original = new DateTime(2001, 1, 1, 0, 0, 5);
