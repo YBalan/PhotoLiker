@@ -102,6 +102,26 @@ public class NewTransitionsAndTiltTests
         Assert.Equal(0, SlideshowEffects.TransitionSeconds(SlideshowEffect.None, 5));
     }
 
+    // ── what is worth the graphics chip ─────────────────────────────────────
+
+    [Fact]
+    public void OnlyTheEffectsThatAreHeavyForTheProcessor_MayUseTheChip_AndRandomMayBecauseItMayChooseThem()
+    {
+        var heavy = new[]
+        {
+            SlideshowEffect.Tilt, SlideshowEffect.DollyZoom, SlideshowEffect.Parallax, SlideshowEffect.Ripple, SlideshowEffect.Cube, SlideshowEffect.BlurDissolve, SlideshowEffect.Random,
+        };
+
+        Assert.All(Enum.GetValues<SlideshowEffect>(), effect => Assert.Equal(heavy.Contains(effect), SlideshowEffects.MayUseGpu(effect)));
+    }
+
+    [Fact]
+    public void TheHeavyChanges_AreRippleCubeAndBlur_AndNoOther()
+    {
+        Assert.All(Enum.GetValues<SlideshowTransition>(), transition =>
+            Assert.Equal(transition is SlideshowTransition.Ripple or SlideshowTransition.Cube or SlideshowTransition.BlurDissolve, SlideshowEffects.IsHeavy(transition)));
+    }
+
     // ── the tilt ────────────────────────────────────────────────────────────
 
     [Fact]

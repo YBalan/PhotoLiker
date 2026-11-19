@@ -175,6 +175,12 @@ namespace PhotoLiker.Core
         /// <summary>Whether the slideshow writes what is said in a video (the speech the index read, see <see cref="VideoSpeech"/>) over the picture as captions while the video plays. Off by default.</summary>
         public bool SlideshowShowCaptions { get; set; } = false;
 
+        /// <summary>
+        /// Whether the slideshow lets the graphics chip draw the effects that are heavy for the processor (the Ripple, Cube and BlurDissolve changes, the turn of Tilt, the depth of Parallax and DollyZoom): on a 4K
+        /// screen they take a quarter of the time. On by default; a computer with no usable chip (or a software one), or a chip that fails, uses the processor whatever this says.
+        /// </summary>
+        public bool SlideshowGpu { get; set; } = true;
+
         // Main window of the WinForms app
         public int    WindowLeft     { get; set; } = 100;
         public int    WindowTop      { get; set; } = 100;

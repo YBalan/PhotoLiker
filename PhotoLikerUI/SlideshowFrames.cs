@@ -270,7 +270,21 @@ namespace PhotoLikerUI
 
         public long Bytes { get; }
 
-        public void Dispose() => _canvas.Dispose();
+        /// <summary>Whether <see cref="Dispose"/> was called: a thread of the pool that is about to make the texture of the pixels (see <see cref="SlideshowFrames.SetGpu"/>) looks.</summary>
+        public bool IsDisposed => Volatile.Read(ref _disposed);
+
+        private bool _disposed;
+
+        /// <summary>Called once when the frame is let go of, so that what was made from its pixels (the texture of the graphics chip) is let go of with it.</summary>
+        public Action<SlideshowFrame>? WhenDisposed { get; set; }
+
+        public void Dispose()
+        {
+            Volatile.Write(ref _disposed, true);
+            WhenDisposed?.Invoke(this);
+            WhenDisposed = null;
+            _canvas.Dispose();
+        }
     }
 
     /// <summary>
@@ -424,6 +438,66 @@ namespace PhotoLikerUI
             foreach (var path in _frames.Keys.Where(path => !IsPinned(path)).ToList())
                 Evict(path);
             SetWindow(_window, _pinned, _alsoPinned);
+        }
+
+        private SlideshowGpu? _gpu;
+        private volatile bool _warmGpu;      // the effect may be drawn by the graphics chip: the texture of a frame is made as the frame is made
+
+        /// <summary>
+        /// Gives the frames the graphics chip of the show (see <see cref="SlideshowGpu"/>), and says whether the effect may use it. While it may, the texture of every frame that is here, and of every one that is made, is
+        /// made on a thread of the pool (5 to 17 ms of copying for two pictures of full HD and of 4K), so that the first step of a change does not wait for it; the pixels of a frame never change once it is
+        /// published. A frame that is let go of lets go of its texture. Nothing is made while the chip has not started or when there is none.
+        /// </summary>
+        public void SetGpu(SlideshowGpu? gpu, bool warm)
+        {
+            _gpu = gpu;
+            var was = _warmGpu;
+            _warmGpu = warm && gpu is not null;
+            if (_warmGpu && !was)
+            {
+                foreach (var frame in _frames.Values)
+                    WarmTexture(frame);
+            }
+        }
+
+        private void WarmTexture(SlideshowFrame frame)
+        {
+            if (_gpu is not { } gpu)
+                return;
+
+            // Whatever the effect, a texture that a step makes for this frame is let go of with it
+            frame.WhenDisposed ??= released => Forget(gpu, released);
+            if (!_warmGpu)
+                return;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // The chip may still be starting (a few tens of milliseconds): the texture is made when it is there
+                    var renderer = await gpu.Ready.ConfigureAwait(false);
+                    if (renderer is not null && gpu.Renderer is not null && !frame.IsDisposed)
+                    {
+                        renderer.Warm(frame.Pixels, frame.Width, frame.Height);
+                        if (frame.IsDisposed)
+                            renderer.Forget(frame.Pixels); // let go of while its texture was being made
+                    }
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    gpu.Failed(ex);
+                }
+            });
+        }
+
+        private static void Forget(SlideshowGpu gpu, SlideshowFrame frame)
+        {
+            if (gpu.Renderer is not { } renderer)
+                return;
+
+            renderer.Forget(frame.Pixels);
+            if (frame.Depth is { } depth)
+                renderer.Forget(depth.Values);
         }
 
         /// <summary>A frame finished loading and is now here.</summary>
@@ -599,6 +673,7 @@ namespace PhotoLikerUI
 
             _frames[path] = frame;
             _bytes += frame.Bytes;
+            WarmTexture(frame);
 
             // The Parallax effect was chosen while this frame was being made: the pool thread that made it looked at _warmDepth before that, and SetDepthWanted worked on the frames that were here
             // then, not on this one (it was on its way). A frame that has its depth, or has been tried, costs nothing here.

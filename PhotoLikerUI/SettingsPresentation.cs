@@ -66,6 +66,7 @@ namespace PhotoLikerUI
             [nameof(Settings.SlideshowVideoPart)] = [Category(SlideshowCategory), new DisplayNameAttribute("VideoPart"), Describe(() => SettingsStrings.SlideshowVideoPart)],
             [nameof(Settings.SlideshowLowerOtherAudio)] = [Category(SlideshowCategory), new DisplayNameAttribute("LowerOtherAudio"), Describe(() => SettingsStrings.SlideshowLowerOtherAudio)],
             [nameof(Settings.SlideshowShowCaptions)] = [Category(SlideshowCategory), new DisplayNameAttribute("ShowCaptions"), Describe(() => SettingsStrings.SlideshowShowCaptions)],
+            [nameof(Settings.SlideshowGpu)] = [Category(SlideshowCategory), new DisplayNameAttribute("Gpu"), Describe(() => SettingsStrings.SlideshowGpu)],
 
             [nameof(Settings.WindowLeft)]     = [Category(WindowCategory), Hidden],
             [nameof(Settings.WindowTop)]      = [Category(WindowCategory), Hidden],

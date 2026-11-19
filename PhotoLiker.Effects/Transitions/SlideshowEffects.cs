@@ -76,6 +76,18 @@ namespace PhotoLiker.Effects.Transitions
         public static bool IsSliding(SlideshowTransition transition) =>
             transition is SlideshowTransition.Slide or SlideshowTransition.PushUp or SlideshowTransition.PushDown;
 
+        /// <summary>
+        /// Whether a step of the effect may be heavy enough for the processor that the graphics chip is worth the read back of its picture (see <see cref="Gpu.GpuRenderer"/>): what turns a photo or moves it by its
+        /// depth, the three changes that cost 15 to 90 ms of the processor (<see cref="SlideshowTransition.Ripple"/>, <see cref="SlideshowTransition.Cube"/>, <see cref="SlideshowTransition.BlurDissolve"/>), and
+        /// <see cref="SlideshowEffect.Random"/>, which may choose any of them. The frames of such an effect have their textures made as they are made.
+        /// </summary>
+        public static bool MayUseGpu(SlideshowEffect effect) =>
+            effect is SlideshowEffect.Tilt or SlideshowEffect.DollyZoom or SlideshowEffect.Parallax or SlideshowEffect.Ripple or SlideshowEffect.Cube or SlideshowEffect.BlurDissolve or SlideshowEffect.Random;
+
+        /// <summary>Whether this change is one of the three that the graphics chip does much quicker than the processor.</summary>
+        public static bool IsHeavy(SlideshowTransition transition) =>
+            transition is SlideshowTransition.Ripple or SlideshowTransition.Cube or SlideshowTransition.BlurDissolve;
+
         /// <summary>Whether a photo moves while it is on the screen.</summary>
         public static bool HasMotion(SlideshowEffect effect) =>
             effect is SlideshowEffect.KenBurns or SlideshowEffect.Parallax or SlideshowEffect.Portrait or SlideshowEffect.Tilt or SlideshowEffect.DollyZoom;

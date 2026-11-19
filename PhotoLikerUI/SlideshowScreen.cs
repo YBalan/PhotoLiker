@@ -1,7 +1,9 @@
 using PhotoLiker.Search;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Drawing.Text;
+using PhotoLiker.Effects.Gpu;
 using System.Globalization;
 using LibVLCSharp.Shared;
 using LibVLCSharp.WinForms;
@@ -83,10 +85,11 @@ namespace PhotoLikerUI
         /// <param name="facesOf">Says who is in a photo, for the boxes and the names (see <see cref="SetPeopleShown"/>); null when there is no one to ask. Asked on the threads that make the frames, and on this window's thread for a frame that was not asked yet.</param>
         public SlideshowScreen(
             SlideshowSession session, Rectangle bounds, SlideshowWatermark watermark, long frameBytes, int minFrames, int parallelLoads,
-            Func<string, IReadOnlyList<FaceLabel>>? facesOf = null, Func<uint[], int, int, DepthMap?>? depthOf = null)
+            Func<string, IReadOnlyList<FaceLabel>>? facesOf = null, Func<uint[], int, int, DepthMap?>? depthOf = null, SlideshowGpu? gpu = null)
         {
             _session = session;
             _watermark = watermark;
+            _gpu = gpu;
 
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
@@ -103,7 +106,11 @@ namespace PhotoLikerUI
             _noticeTimer.Tick += (_, _) => HideNotice();
             _videoWatch.Tick += (_, _) => OnVideoWatch();
             Frames = new SlideshowFrames(bounds.Size, frameBytes, minFrames, parallelLoads, facesOf, depthOf);
+            Frames.SetGpu(gpu, warm: false);
         }
+
+        /// <summary>The graphics chip of the show: it draws the steps that are heavy for the processor (see <see cref="WorthTheGpu"/>); null when the show has none.</summary>
+        private readonly SlideshowGpu? _gpu;
 
         /// <summary>
         /// Turns the boxes with the names on the faces, and the line of names in the corner, on or off (the F and N keys). With either on the people of every photo are worked out
@@ -802,11 +809,6 @@ namespace PhotoLikerUI
         {
             var width = ClientSize.Width;
             var height = ClientSize.Height;
-            if (_canvas is null || _canvas.Width != width || _canvas.Height != height)
-            {
-                _canvas?.Dispose();
-                _canvas = new PixelCanvas(width, height);
-            }
 
             var count = 0;
             var progress = TransitionProgress(now);
@@ -828,16 +830,25 @@ namespace PhotoLikerUI
                 _layers[count++] = LayerOf(current, now, currentMotion, SlideshowLayer.Plain, FrameCompositor.FullWeight, width, height);
             }
 
-            if (count == 2 && SlideshowEffects.UsesMixer(_transition))
-                ComposeMixed(width, height, progress);
-            else
-                FrameCompositor.Compose(_canvas.Pixels, width, height, _layers.AsSpan(0, count));
+            if (!TryDrawOnTheGpu(g, count, progress, width, height))
+            {
+                if (_canvas is null || _canvas.Width != width || _canvas.Height != height)
+                {
+                    _canvas?.Dispose();
+                    _canvas = new PixelCanvas(width, height);
+                }
 
-            g.CompositingMode = CompositingMode.SourceCopy;
-            g.InterpolationMode = InterpolationMode.NearestNeighbor;
-            g.PixelOffsetMode = PixelOffsetMode.Half;
-            g.DrawImage(_canvas.Image, new Rectangle(0, 0, width, height));
-            g.CompositingMode = CompositingMode.SourceOver;
+                if (count == 2 && SlideshowEffects.UsesMixer(_transition))
+                    ComposeMixed(width, height, progress);
+                else
+                    FrameCompositor.Compose(_canvas.Pixels, width, height, _layers.AsSpan(0, count));
+
+                g.CompositingMode = CompositingMode.SourceCopy;
+                g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                g.PixelOffsetMode = PixelOffsetMode.Half;
+                g.DrawImage(_canvas.Image, new Rectangle(0, 0, width, height));
+                g.CompositingMode = CompositingMode.SourceOver;
+            }
 
             // The boxes go with their photos: each at the place its layer has, as faint as the photo is (not on a photo that is turned: the boxes are not)
             for (var layer = 0; layer < count; layer++)
@@ -849,6 +860,53 @@ namespace PhotoLikerUI
             }
 
             DrawWatermarks(g, progress);
+        }
+
+        /// <summary>
+        /// Whether this step is one for the graphics chip: the processor needs 15 to 115 ms (on a 4K screen) for a step that turns a photo, moves one by its depth, or is a Ripple, a Cube or a BlurDissolve, and the chip
+        /// 20 to 30 with the picture read back; the other steps the processor does in 2 to 20 ms, which the read back would not beat (see <see cref="GpuRenderer"/>).
+        /// </summary>
+        private bool WorthTheGpu(int count)
+        {
+            if (count == 2 && SlideshowEffects.UsesMixer(_transition) && SlideshowEffects.IsHeavy(_transition))
+                return true;
+
+            for (var layer = 0; layer < count; layer++)
+            {
+                if (_layers[layer].Rotation != 0 || _layers[layer].Depth is not null)
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Draws the step on the graphics chip when it is one for it and the chip works (see <see cref="WorthTheGpu"/>, <see cref="SlideshowGpu"/>): the picture it makes is copied on the window as the processor's would be.
+        /// A step that fails turns the chip off for the rest of the show and is done by the processor, so nothing is seen of it.
+        /// </summary>
+        private bool TryDrawOnTheGpu(Graphics g, int count, double progress, int width, int height)
+        {
+            if (_gpu?.Renderer is not { } renderer || !WorthTheGpu(count))
+                return false;
+
+            try
+            {
+                renderer.Render(width, height, _layers.AsSpan(0, count), _transition, progress, (pixels, pitch) =>
+                {
+                    using var image = new Bitmap(width, height, pitch, PixelFormat.Format32bppPArgb, pixels);
+                    g.CompositingMode = CompositingMode.SourceCopy;
+                    g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                    g.PixelOffsetMode = PixelOffsetMode.Half;
+                    g.DrawImage(image, new Rectangle(0, 0, width, height));
+                    g.CompositingMode = CompositingMode.SourceOver;
+                });
+                _gpu.Counted();
+                return true;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _gpu.Failed(ex);
+                return false;
+            }
         }
 
         /// <summary>

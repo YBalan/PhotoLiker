@@ -63,6 +63,7 @@ namespace PhotoLikerUI
         private IReadOnlyList<int[]> _pageGroups = [];         // for each of _photos, the photos of _singles it is made of
         private SlideshowBorder _border;                       // what the photos are put in now: as the show began, or as the B key left it
         private readonly int _styleSeed = Random.Shared.Next(); // what the chance of a random look, card and collage goes by (see RandomStyle): the same all through a show
+        private readonly SlideshowGpu _gpu;                    // the graphics chip, for the steps of effects that are heavy for the processor: started when the show is made, let go of when it is over
         private bool _randomCollage;                           // the pages hold one to four photos by chance: the effect is Random and the collage was left at None
         private readonly double _timeoutSeconds;
 
@@ -162,6 +163,7 @@ namespace PhotoLikerUI
             _takenOf = look?.TakenOf;
             _mode = mode;
             _collage = look?.Collage ?? SlideshowCollage.None;
+            _gpu = new SlideshowGpu(look?.Gpu ?? true);
             _randomCollage = RandomStyle.IsRandom(effect) && _collage == SlideshowCollage.None;
             var (pages, pageOf, groups) = Paginate(_collage, _randomCollage);
             _photos = pages;
@@ -188,7 +190,7 @@ namespace PhotoLikerUI
 
             var frameBytes = MaxFrameBytes / chosen.Length;
             var parallelLoads = Math.Max(2, MaxParallelLoads / chosen.Length);
-            _screens = [.. chosen.Select(i => new SlideshowScreen(this, screens[i], watermark, frameBytes, MinFrames, parallelLoads, people?.FacesOf, depth?.Estimate))];
+            _screens = [.. chosen.Select(i => new SlideshowScreen(this, screens[i], watermark, frameBytes, MinFrames, parallelLoads, people?.FacesOf, depth?.Estimate, _gpu))];
             _depth = depth;
             _hasPeople = people is not null;
             _showFaces = people?.ShowFaces ?? false;
@@ -216,6 +218,7 @@ namespace PhotoLikerUI
             WantDepthIfNeeded();
             WantPortraitIfNeeded();
             WantFacesIfNeeded();
+            WantGpuIfNeeded();
             _timeoutSeconds = Slideshow.TimeoutOf(timeoutSeconds);
             _timer.Interval = (int)Math.Round(_timeoutSeconds * 1000);
             _timer.Tick += (_, _) => AdvanceByTimer();
@@ -698,6 +701,7 @@ namespace PhotoLikerUI
             WantDepthIfNeeded();
             WantPortraitIfNeeded();
             WantFacesIfNeeded();
+            WantGpuIfNeeded();
             ApplyRandomStyle();
             SyncRandomCollage();
 
@@ -712,6 +716,17 @@ namespace PhotoLikerUI
                 foreach (var screen in _screens)
                     screen.StartMotion(plan);
             }
+        }
+
+        /// <summary>The graphics chip of the show: it draws the heavy steps (see <see cref="SlideshowGpu"/>); for the tests, which look at how many it drew.</summary>
+        internal SlideshowGpu Gpu => _gpu;
+
+        /// <summary>The effect may be drawn by the graphics chip: the frames have their textures made as they are made (and for the ones that are here already). Said every time the effect may have changed.</summary>
+        private void WantGpuIfNeeded()
+        {
+            var wanted = SlideshowEffects.MayUseGpu(_effect);
+            foreach (var screen in _screens)
+                screen.Frames.SetGpu(_gpu, wanted);
         }
 
         /// <summary>The effect is one that moves photos by their depth: the frames work the depth out as they are made, and for the ones that are here already.</summary>
@@ -1335,6 +1350,7 @@ namespace PhotoLikerUI
             _timer.Dispose();
             foreach (var screen in _screens)
                 screen.Dispose(); // the frames on the screens go with them
+            _gpu.Dispose();
         }
     }
 }

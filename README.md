@@ -593,7 +593,7 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 | **SpeechLanguage** | The language that is spoken: `ru`, `uk`, `en` ..., or `auto` (the model hears it for each video). |
 | **CpuCores** | How many cores of this computer the speech recognition may use, from 1 to all the cores it has (the default). With more cores several videos are heard at the same time. It can be changed while **Update index** runs: the next video that is started follows it. |
 
-The group **6. Slideshow** has its own sixteen rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **Look**, **LookFile**, **Border**, **Collage**, **UseVideo**, **MuteVideo**, **VideoPart**, **LowerOtherAudio** and **ShowCaptions**; see [Slideshow](#slideshow).
+The group **6. Slideshow** has its own seventeen rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **Look**, **LookFile**, **Border**, **Collage**, **UseVideo**, **MuteVideo**, **VideoPart**, **LowerOtherAudio**, **ShowCaptions** and **Gpu**; see [Slideshow](#slideshow).
 
 The rows of **Current File** (except **LikedFolder**) and **TotalFiles** are read-only, and so are **PhotoCount** and **VideoCount**, which say how many of the files in the list now are photos and how many are
 videos (together they are **TotalFiles**; there are no videos unless **SupportVideo** is on). **CurrentIndex** is the number of the shown photo, counted
@@ -798,7 +798,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
   table), <kbd>B</kbd> **turns the Polaroid card on and off**, and <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> <kbd>M</kbd> **choose the collage** (see [Looks, the card and the collage](#looks-the-card-and-the-collage)).
   Each writes its name in the top left corner for a moment (`Look: Film`, `Border: Polaroid`, `Collage: Two`), the photos that are ready are made again that way, and the one on the screen changes with the next change of
   photo (a collage changes the screen as soon as its pages are ready). **None of these keys pauses the show.** What the show ended with is kept in the **Look**, **Border** and **Collage** rows.
-- The settings are the sixteen rows of the **6. Slideshow** group of the settings grid (the last five are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
+- The settings are the seventeen rows of the **6. Slideshow** group of the settings grid (five of them, before the last, are for [videos](#videos-in-the-slideshow)). They are kept in the settings file of the folder, so a
   folder can have its own.
 
 | Setting | Meaning |
@@ -819,6 +819,7 @@ black around it, and the mouse pointer is hidden. <kbd>Esc</kbd> (or <kbd>Alt</k
 | **VideoPart** | How much of a video is played. `OnlyFoundTimeFrames` (the default): only the places a search found in it, 6 seconds around each (2 before, 4 after; places that touch are one stretch); a video of a folder, where nothing was searched for, has none and is played whole. `FullVideo`: the whole video. |
 | **LowerOtherAudio** | While a video plays with its sound, the sound of the other programs (a player in the background, a browser) is turned down by this many percent, and put back when the video ends: 50 by default, 0 leaves them as they are, 100 silences them. Not used when **MuteVideo** is `True`. |
 | **ShowCaptions** | `True`: what is said in a video is written over the picture as captions while it plays. `False` (the default). The <kbd>C</kbd> key turns it on and off while the show runs, and what the show ended with is kept here. The words are the speech the index read (**VideoSpeech**, see [Videos](#videos)); a video whose speech was not read has no captions. See [below](#videos-in-the-slideshow). |
+| **Gpu** | `True` (the default): **the graphics chip draws the effects that are heavy for the processor**: the `Ripple`, `Cube` and `BlurDissolve` changes, the turn of `Tilt`, and the depth of `Parallax` and `DollyZoom` (see [The graphics chip](#the-graphics-chip)). The light effects are always done by the processor, and so is everything on a computer with no usable chip, with a software one, or when the chip fails during the show. `False`: the processor does everything, as before the chip was used. The row is read when a show starts, so a change counts from the next show (Alt+Enter) on. |
 
 **How the effects stay smooth.** GDI+, which draws everything else in the program, needs 13 ms (plus 7 ms for the black around it) to draw a full HD photo that is only partly there and 23 to 43 ms
 to draw one that is magnified (four times that on a 4K monitor: 50 ms, and 85 to 190 ms): that is a slide show of slides. So while an effect lasts, the photos are put together by a small compositor of our
@@ -889,6 +890,49 @@ the same pictures), and the pages are the same all through the show. A new show 
 <kbd>Down</kbd> / <kbd>Up</kbd> to `Random` make the frames that are ready again by chance and divide the photos into pages again (as a collage key does, without saying so, and the show stays at the photo it showed), and away
 from it they make them as the settings say. <kbd>L</kbd>, <kbd>B</kbd> and the collage keys still work: they set the look, the card or the collage (which is then no longer left to chance) and the notice says `Look: Random (the effect is Random)` when
 a key brings a setting back to `None` while the effect is `Random`. What the show ended with is kept in the **Look**, **Border** and **Collage** rows as usual (`None` stays `None`).
+
+### The graphics chip
+
+The steps of an effect that cost the processor most are drawn by the **graphics chip** (**Gpu** `True`, the default): Direct3D 11 pixel shaders, the same arithmetic as the processor's compositor and mixer, ported line for line
+(`PhotoLiker.Effects\Gpu`: `GpuRenderer` and `GpuShaders`). It is the **first thing that is not done with the processor alone in the program**, and it is only used for what it does much quicker.
+
+**What goes to the chip.** A step is drawn by it when a picture is turned (`Tilt`), moved by its depth (`Parallax`, `DollyZoom`), or the change is `Ripple`, `Cube` or `BlurDissolve`. Everything else (`Fade`, `Slide`,
+`Zoom`, the pushes, `CrossZoom`, `Wipe`, `Iris`, `Pixelate`, the dips, the plain drift of `KenBurns`) stays with the processor: it needs 2 to 20 ms, which is less than the chip needs to give the picture back. The chip does not
+show the picture itself: the window still draws everything else with GDI+ (the date, the names, the boxes round the faces, a playing video, the notice), so the picture the chip makes is **read back into memory** and
+copied on the window as the processor's would be. That keeps all of that as it was; the price is the read back, which on this PC (Intel UHD 630, shared memory) is the larger part of what the chip costs.
+
+**How it works.** Every frame of the show gets a **texture** (its pixels copied once to the memory of the chip) made on a thread of the pool **as soon as the frame is made**, while the effect is one that may use the chip, so the
+first step of a change does not wait for it (5 to 17 ms for two pictures of full HD and of 4K) and the work of the next change is done before it. The textures are kept for as long as their frames live, within **384 MB**, and let go of with the frames (the oldest first when the
+memory is short, never one that the step in hand uses). A step puts the layers together on the chip (one pass for each, added on black, with the same rules for a picture that only moves, is magnified, is turned
+with a smooth edge, or is moved by its depth), then the change is mixed from the two pictures in one more pass (the blur takes its smaller copies from the mip levels of the two pictures, which the chip makes), and the result goes
+through a staging texture to the window: the bitmap that GDI+ copies is a view of the mapped memory, so there is no copy in between. The device and the shaders (HLSL, compiled when the show is made: 15 to 40 ms) start on a
+thread of the pool when the show is made and are used from the moment they are there.
+
+**Measured** (real slideshow windows off screen, one paint mid-change with the picture captured into a bitmap, which costs about 20 ms at full HD and 50 ms at 4K by itself and is in every number; processor / chip):
+
+| Step | Full HD | 4K |
+|---|---|---|
+| `Ripple` | 118 / 29 ms | 133 / 62 ms |
+| `Cube` | 58 / 27 ms | 107 / 68 ms |
+| `BlurDissolve` | 66 / 27 ms | 138 / 62 ms |
+| `Tilt` (every paint while the photo moves) | 44 / 23 ms | 99 / 54 ms |
+| `DollyZoom` | 47 / 24 ms | 106 / 53 ms |
+| `Wipe` (stays with the processor) | 22 / 22 ms | 52 / 53 ms |
+
+Taking the fixed 20 and 50 ms off, a heavy step costs the chip 3 to 9 ms at full HD and 4 to 18 ms at 4K, against 25 to 100 and 55 to 90 ms for the processor, and the processor is free for decoding the next photos while the chip works.
+
+**When there is no chip.** The renderer is not started with the setting off, with no Direct3D 11 device (feature level 11.0, which every Windows 10 and 11 computer with a graphics driver has), or when the adapter is a **software** one
+(WARP or the Microsoft Basic Render Driver, as a virtual machine has: it is no quicker than the processor's code, which is tuned for the purpose). If a step throws (a driver that resets, a device that is removed) the chip is turned off for the rest of the show and the processor draws that step
+and all the next; nothing is seen of it. A build machine with no chip (the GitHub runner of the release has none) runs the tests of the processor's way; the tests of the chip itself ask for WARP, the software device that Windows has, and fail loudly if there is no Direct3D 11 at all. **Not seen on GitHub yet:** the release workflow has not run with these tests.
+
+**How it is tested.** `GpuRendererTests` put 32 cases through the chip and through the processor's `FrameCompositor` and `TransitionMixer` and compare the pictures pixel by pixel: a picture only moved is **exactly** the
+same; a magnified or turned one within 4 to 6 steps of 255 (the chip smooths in 1/256 steps like the processor, a little differently); each of the eight changes at five moments of the change, and exactly the first and the
+second picture at 0 and 1; the depth layers; and the rules of the textures (made once, within their memory, from many threads at once, let go of when forgotten). `SlideshowGpuTests` run real slideshow windows: the heavy steps are
+counted as drawn by the chip, the light ones are not, with the setting off or after a failed step the processor does it all and the change still ends on the next photo, textures are made ahead and let go of with their frames.
+Breaking the code two ways (the chip never judged worth it, no textures made ahead) fails the tests each time. **Not verified:** a real full-screen window on a real 4K monitor (the numbers above are from windows
+captured off screen), a driver that really resets under a show, mixed DPI and several monitors of different chips, and the memory of the textures over a very long show.
+
+The library is Vortice.Windows (`Vortice.Direct3D11`, `Vortice.D3DCompiler`, MIT): managed wrappers of `d3d11.dll` and `d3dcompiler_47.dll`, which every Windows has, so nothing native is shipped with them (about 3 MB of managed DLLs).
 
 ### Depth parallax
 
@@ -1560,7 +1604,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown. Shared by all front ends. |
 | `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run (also of frames that are drawn one by one: `VideoFrames`), the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
-| `PhotoLiker.Effects` | What is done to a photo apart from looking at it and searching it, without a user interface. The folders are the namespaces (`PhotoLiker.Effects.<folder>`): `Transitions` (the rules of the effects of the [slideshow](#slideshow): which one is used, how long a change takes, how two photos are drawn in the middle of it), `Motion` (the slow movements of one photo: Ken Burns and the [depth parallax](#depth-parallax)), `Compositing` (`FrameCompositor`, which puts the pictures of an effect together on the pixels, on all the cores, also moving a picture by its depth), `Depth` (the depth of a picture, Depth Anything V2 Small) and `Colorize` (the colours of a black and white photo, DDColor; the copy that is saved next to the photo; how much colour a photo has) and `Models` (the list of the files of the two models, and `EffectModels`, which downloads them and makes the ONNX sessions). It uses Core for the settings (`SlideshowEffect`, the name of the effect, is a setting and stays there) and Search for what the two have in common: decoding a photo, downloading model files, and the check that ONNX Runtime can start. |
+| `PhotoLiker.Effects` | What is done to a photo apart from looking at it and searching it, without a user interface. The folders are the namespaces (`PhotoLiker.Effects.<folder>`): `Transitions` (the rules of the effects of the [slideshow](#slideshow): which one is used, how long a change takes, how two photos are drawn in the middle of it), `Motion` (the slow movements of one photo: Ken Burns and the [depth parallax](#depth-parallax)), `Compositing` (`FrameCompositor`, which puts the pictures of an effect together on the pixels, on all the cores, also moving a picture by its depth), `Gpu` (`GpuRenderer`, the same on the graphics chip with Direct3D 11, for the steps that are heavy for the processor, see [The graphics chip](#the-graphics-chip)), `Depth` (the depth of a picture, Depth Anything V2 Small) and `Colorize` (the colours of a black and white photo, DDColor; the copy that is saved next to the photo; how much colour a photo has) and `Models` (the list of the files of the two models, and `EffectModels`, which downloads them and makes the ONNX sessions). It uses Core for the settings (`SlideshowEffect`, the name of the effect, is a setting and stays there) and Search for what the two have in common: decoding a photo, downloading model files, and the check that ONNX Runtime can start. |
 | `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form, heard again in a language that is chosen), the table of it for the window and the Excel file (`.xlsx`, written with the zip and XML of the framework) of that table, and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
@@ -1767,6 +1811,6 @@ settings and last folder are not touched.
 
 ## License
 
-MIT, see [LICENSE.txt](LICENSE.txt). The program also ships with `ffmpeg.exe`, which is GPL v3 and not covered by it: see [Install](#install).
+MIT, see [LICENSE.txt](LICENSE.txt). The program also ships with `ffmpeg.exe`, which is GPL v3 and not covered by it: see [Install](#install). It uses Vortice.Windows (MIT) for Direct3D 11.
 The models that are downloaded on first use have their own licences (see [Photo search](#photo-search)); those of InsightFace are for
 non-commercial use only.
