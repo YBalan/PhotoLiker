@@ -230,7 +230,7 @@ namespace PhotoLikerUI
 
             try
             {
-                LookGrade.Apply(_canvas.Pixels, Width, Height, look, lut, Path.GetHashCode());
+                LookGrade.Apply(_canvas.Pixels, Width, Height, look, lut, Path.GetHashCode(), Taken);
                 AppliedLook = look;
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -296,6 +296,10 @@ namespace PhotoLikerUI
         private volatile bool _warmPortrait; // the Portrait effect is on: a frame is taken in portrait mode (its pixels are changed) before it is published
         private volatile LookSetting? _look; // the colours of a frame are graded this way before it is published; null for the photo as it is
         private volatile bool _card;         // a frame is put on a Polaroid card before it is published (the last thing that is done to it)
+        private volatile bool _randomLook;   // the look of a frame is chosen for it by chance (see RandomStyle) and not given by _look
+        private volatile bool _randomCard;   // a frame is put on a card, or not, by chance
+        private volatile CubeLut? _table;    // the table of the Lut look, for a random look that may be it
+        private int _styleSeed;              // what the chance goes by: the same for all the frames of a show, so a photo that is made again gets what it had
         private int _variant;                // counts the times the way frames are made was changed (portrait, grade, card); UI thread only
         private readonly Dictionary<string, SlideshowFrame> _frames = new(StringComparer.Ordinal);
         private readonly HashSet<string> _loading = new(StringComparer.Ordinal);
@@ -373,6 +377,7 @@ namespace PhotoLikerUI
         /// </summary>
         public void SetLook(SlideshowLook look, CubeLut? lut)
         {
+            _table = lut;
             var next = look == SlideshowLook.None || (look == SlideshowLook.Lut && lut is null) ? null : new LookSetting(look, lut);
             if (_look?.Look == next?.Look && ReferenceEquals(_look?.Lut, next?.Lut))
                 return;
@@ -382,6 +387,21 @@ namespace PhotoLikerUI
         }
 
         private sealed record LookSetting(SlideshowLook Look, CubeLut? Lut);
+
+        /// <summary>
+        /// Says whether the look and the card of every frame are left to chance (see <see cref="RandomStyle"/>): each frame is made with a look, and on a card or not, that its file and <paramref name="seed"/> give. What the look or the
+        /// border is set to (<see cref="SetLook"/>, <see cref="SetBorder"/>) is used for the one that is not left to chance. The frames that are here are made again when something changed (except the ones on the screen).
+        /// </summary>
+        public void SetRandomStyle(bool look, bool border, int seed)
+        {
+            if (_randomLook == look && _randomCard == border && (_styleSeed == seed || (!look && !border)))
+                return;
+
+            _randomLook = look;
+            _randomCard = border;
+            _styleSeed = seed;
+            Remake();
+        }
 
         /// <summary>
         /// Says what the photos are put in (see <see cref="SlideshowBorder"/>). Frames are made with the card from now on (or without), and the frames that are here are made again (a photo on a card has no
@@ -477,6 +497,10 @@ namespace PhotoLikerUI
                     Exception? error = null;
                     var variant = _variant; // the way frames are made as this one begins: if it has changed when it is done, this one is made the old way
 
+                    // The grade and the card this frame gets: what is set, or what chance gives this file when that is left to it. Read here, on the UI thread, not on the pool
+                    var grade = _randomLook ? new LookSetting(RandomStyle.Look(path, _styleSeed, _table is not null), _table) : _look;
+                    var card = _randomCard ? RandomStyle.Card(path, _styleSeed) : _card;
+
                     try
                     {
                         // Only the file/GDI+ work runs on the pool; the result is private until it is published below.
@@ -492,9 +516,9 @@ namespace PhotoLikerUI
                                 made.EnsureDepth(_depthOf);
                             if (_warmPortrait)
                                 made.ApplyPortrait();
-                            if (_look is { } grade)
+                            if (grade is not null)
                                 made.ApplyLook(grade.Look, grade.Lut);
-                            if (_card)
+                            if (card)
                                 made.AddCard();
                             return made;
                         });

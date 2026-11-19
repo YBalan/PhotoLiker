@@ -167,7 +167,7 @@ public class LookTests
         for (var i = 0; i < all.Length; i++)
             Assert.Equal(all[(i + 1) % all.Length], LookGrade.Next(all[i], hasTable: true));
 
-        Assert.Equal(SlideshowLook.None, LookGrade.Next(SlideshowLook.Cinema, hasTable: false)); // Lut would do nothing
+        Assert.Equal(SlideshowLook.None, LookGrade.Next(SlideshowLook.Season, hasTable: false)); // Lut would do nothing (it is the last, after Season)
         Assert.Equal(SlideshowLook.Vintage, LookGrade.Next(SlideshowLook.None, hasTable: false));
         Assert.Equal(SlideshowLook.None, LookGrade.Next(SlideshowLook.Lut, hasTable: false));    // a look that has no table goes on at once
     }

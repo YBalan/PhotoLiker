@@ -24,13 +24,33 @@ namespace PhotoLiker.Effects.Looks
         /// <param name="taken">When each photo was taken (null for one that has no date: it does not end an event).</param>
         public static IReadOnlyList<int[]> Pages(IReadOnlyList<DateTime?> taken, SlideshowCollage collage)
         {
-            var pages = new List<int[]>();
             var sizes = SizesOf(collage);
             var turn = 0;
+            return Paginate(taken, () => sizes[turn++ % sizes.Length]);
+        }
+
+        /// <summary>
+        /// Divides the photos into pages of a size chosen by chance for each page, from one photo (a page that is the photo as it is) to <see cref="MostPhotos"/>, all as likely: the pages of a slideshow whose effect
+        /// is <see cref="SlideshowEffect.Random"/> and whose collage was left at <see cref="SlideshowCollage.None"/>. The same <paramref name="seed"/> gives the same pages, so that the pages are the same when
+        /// they are made again; the rule about events is that of <see cref="Pages"/>.
+        /// </summary>
+        public static IReadOnlyList<int[]> RandomPages(IReadOnlyList<DateTime?> taken, int seed)
+        {
+            var state = Looks.LookGrade.Mix("collage", seed);
+            return Paginate(taken, () =>
+            {
+                state = Looks.LookGrade.Mix("collage", unchecked((int)state));
+                return 1 + (int)(state % MostPhotos);
+            });
+        }
+
+        private static IReadOnlyList<int[]> Paginate(IReadOnlyList<DateTime?> taken, Func<int> nextSize)
+        {
+            var pages = new List<int[]>();
             var next = 0;
             while (next < taken.Count)
             {
-                var wanted = sizes[turn++ % sizes.Length];
+                var wanted = nextSize();
                 var page = new List<int> { next };
                 while (page.Count < wanted && next + 1 < taken.Count && SameEventAs(taken[next], taken[next + 1]))
                     page.Add(++next);

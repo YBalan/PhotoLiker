@@ -7,14 +7,45 @@ namespace PhotoLiker.Effects.Motion
     /// (<paramref name="ShiftX"/>) and up (<paramref name="ShiftY"/>), in pixels of the picture, and how much it is magnified (<paramref name="Zoom"/>) so that moving it never
     /// shows what is beyond its edge. A point of depth <c>d</c> (0 the farthest, 1 the nearest) is moved by <c>(d - <see cref="ParallaxPath.Focus"/>) * Shift</c>.
     /// </summary>
-    public readonly record struct ParallaxView(double ShiftX, double ShiftY, double Zoom);
+    public readonly record struct ParallaxView(double ShiftX, double ShiftY, double Zoom, double Radial = 0);
+
+    /// <summary>The movement of a photo that is moved by its depth: where the "camera" is at one moment of the time the photo stays (<see cref="ParallaxPath"/>, <see cref="DollyPath"/>).</summary>
+    public interface IDepthPath
+    {
+        /// <summary>How the camera is at <paramref name="progress"/> of the way through (0 at the start, 1 at the end) for a picture of this size.</summary>
+        ParallaxView At(double progress, double width, double height);
+    }
+
+    /// <summary>
+    /// The movement of one photo for <see cref="SlideshowEffect.DollyZoom"/>: the parts of the picture are magnified or shrunk about its middle by how near they are, by <c>(d - 0.5) * <see cref="ParallaxView.Radial"/></c> for a part of depth
+    /// <c>d</c> (0 the farthest, 1 the nearest), and the radial number goes evenly from <c>-Strength</c> to <c>Strength</c> (the other way round when <paramref name="Direction"/> is -1). The part at the focus depth never
+    /// changes its size: it is the subject that stays and the rest of the picture that breathes round it, as in the vertigo shot. The picture is magnified a little all the time, so that what shrinks never shows what is
+    /// beyond its edge.
+    /// </summary>
+    public readonly record struct DollyPath(double Direction, double Strength) : IDepthPath
+    {
+        /// <summary>How far the radial number goes, at the least and at the most (a Strength of 0.22: a far part is magnified 1.24 times between the ends, a near one shrinks as much).</summary>
+        public const double MinStrength = 0.18, MaxStrength = 0.28;
+
+        public ParallaxView At(double progress, double width, double height)
+        {
+            var p = double.IsNaN(progress) ? 0 : Math.Clamp(progress, 0, 1);
+            var radial = Direction * Strength * (2 * p - 1);
+            var farthest = Math.Max(ParallaxPath.Focus, 1 - ParallaxPath.Focus); // how far a part can be from the focus depth: it moves this share of the radial number
+            return new ParallaxView(0, 0, 1 + Strength * farthest, radial);
+        }
+
+        /// <summary>A path chosen at random: which way round, how strong. <paramref name="next"/> gives numbers from 0 up to but not including 1.</summary>
+        public static DollyPath Random(Func<double> next) =>
+            new(next() < 0.5 ? -1 : 1, MinStrength + (MaxStrength - MinStrength) * next());
+    }
 
     /// <summary>
     /// The movement of one photo for <see cref="SlideshowEffect.Parallax"/>: the camera goes across from one side to the other at an even speed (<paramref name="Direction"/> says which,
     /// 1 is to the right and -1 to the left), leaning up or down by <paramref name="Tilt"/> (-0.5 to 0.5 of the sideways way) while it does, and the photo is pushed in a little
     /// (<paramref name="PushIn"/>) as it goes.
     /// </summary>
-    public readonly record struct ParallaxPath(double Direction, double Tilt, double PushIn)
+    public readonly record struct ParallaxPath(double Direction, double Tilt, double PushIn) : IDepthPath
     {
         /// <summary>
         /// How far the nearest and the farthest parts of the picture move against each other, over the whole way across, as a share of the longer side of the picture

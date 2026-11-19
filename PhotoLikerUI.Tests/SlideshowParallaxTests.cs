@@ -175,7 +175,11 @@ public sealed class SlideshowParallaxTests : IDisposable
             Show(without, _ =>
             {
                 without.HandleKey(Keys.Down);
-                Assert.Equal(SlideshowEffect.Random, without.Effect); // Parallax is skipped
+                Assert.Equal(SlideshowEffect.Tilt, without.Effect); // Parallax and Portrait are skipped
+                without.HandleKey(Keys.Down);
+                Assert.Equal(SlideshowEffect.PushUp, without.Effect); // and so is the dolly zoom
+                without.HandleKey(Keys.Up);
+                Assert.Equal(SlideshowEffect.Tilt, without.Effect);
                 without.HandleKey(Keys.Up);
                 Assert.Equal(SlideshowEffect.KenBurns, without.Effect);
                 return Task.CompletedTask;
@@ -190,7 +194,11 @@ public sealed class SlideshowParallaxTests : IDisposable
             with.HandleKey(Keys.Down);
             Assert.Equal(SlideshowEffect.Portrait, with.Effect);
             with.HandleKey(Keys.Down);
-            Assert.Equal(SlideshowEffect.Random, with.Effect);
+            Assert.Equal(SlideshowEffect.Tilt, with.Effect);
+            with.HandleKey(Keys.Down);
+            Assert.Equal(SlideshowEffect.DollyZoom, with.Effect);
+            with.HandleKey(Keys.Up);
+            Assert.Equal(SlideshowEffect.Tilt, with.Effect);
             with.HandleKey(Keys.Up);
             Assert.Equal(SlideshowEffect.Portrait, with.Effect);
             with.HandleKey(Keys.Up);

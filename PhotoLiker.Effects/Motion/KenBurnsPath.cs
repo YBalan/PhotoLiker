@@ -9,13 +9,20 @@ namespace PhotoLiker.Effects.Motion
     /// from -1 (the left / top edge) through 0 (the middle) to 1 (the right / bottom edge). So the picture drifts as it grows, and it never shrinks
     /// below the size it was made, so the part of the screen it covered at the start is covered all the time.
     /// </summary>
-    public readonly record struct KenBurnsPath(double FromScale, double ToScale, double AnchorX, double AnchorY)
+    public readonly record struct KenBurnsPath(double FromScale, double ToScale, double AnchorX, double AnchorY, double Tilt = 0)
     {
         /// <summary>The farthest the picture grows or shrinks: 1.08 to 1.16 times its size.</summary>
         public const double MinZoom = 0.08;
         public const double MaxZoom = 0.16;
 
-        /// <summary>Where the picture is <paramref name="progress"/> of the way through (0 at the start, 1 at the end; outside it is the nearest of them), offsets as fractions of the picture.</summary>
+        /// <summary>The farthest the picture of <see cref="SlideshowEffect.Tilt"/> turns (in degrees, either way): 1 to 2.5.</summary>
+        public const double MinTiltDegrees = 1.0;
+        public const double MaxTiltDegrees = 2.5;
+
+        /// <summary>
+        /// Where the picture is <paramref name="progress"/> of the way through (0 at the start, 1 at the end; outside it is the nearest of them), offsets as fractions of the picture.
+        /// It is turned by <see cref="Tilt"/> (radians, clockwise) at the end, and not at all at the start, so it turns evenly as it drifts.
+        /// </summary>
         public SlideshowLayer At(double progress)
         {
             var p = double.IsNaN(progress) ? 0 : Math.Clamp(progress, 0, 1);
@@ -23,7 +30,17 @@ namespace PhotoLiker.Effects.Motion
 
             // The picture magnified about the anchor point has its middle moved by (1 - scale) times the distance from the anchor to the middle
             var shift = (1 - scale) / 2;
-            return new SlideshowLayer(1, scale, shift * AnchorX, shift * AnchorY);
+            return new SlideshowLayer(1, scale, shift * AnchorX, shift * AnchorY, Tilt * p);
+        }
+
+        /// <summary>The same path with the picture also turning, to <paramref name="radians"/> (clockwise) at the end.</summary>
+        public KenBurnsPath WithTilt(double radians) => this with { Tilt = radians };
+
+        /// <summary>How far a tilting photo turns: from <see cref="MinTiltDegrees"/> to <see cref="MaxTiltDegrees"/> degrees, either way, in radians. <paramref name="next"/> gives numbers from 0 up to but not including 1.</summary>
+        public static double RandomTilt(Func<double> next)
+        {
+            var degrees = MinTiltDegrees + (MaxTiltDegrees - MinTiltDegrees) * next();
+            return (next() < 0.5 ? -1 : 1) * degrees * Math.PI / 180;
         }
 
         /// <summary>A path chosen at random: zooming in or out, by how much, and around which point. <paramref name="next"/> gives numbers from 0 up to but not including 1.</summary>

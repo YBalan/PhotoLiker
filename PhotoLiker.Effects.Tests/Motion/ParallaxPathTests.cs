@@ -9,12 +9,54 @@ public class ParallaxPathTests
     private static ParallaxPath Path(double direction = 1, double tilt = 0, double pushIn = 0.02) => new(direction, tilt, pushIn);
 
     [Fact]
-    public void OnlyParallaxAndPortrait_NeedTheDepth_AndOnlyParallaxMovesByIt() =>
+    public void OnlyParallaxDollyZoomAndPortrait_NeedTheDepth_AndOnlyTheFirstTwoMoveByIt() =>
         Assert.All(Enum.GetValues<SlideshowEffect>(), effect =>
         {
-            Assert.Equal(effect is SlideshowEffect.Parallax or SlideshowEffect.Portrait, SlideshowEffects.UsesDepth(effect));
-            Assert.Equal(effect == SlideshowEffect.Parallax, SlideshowEffects.MovesByDepth(effect));
+            Assert.Equal(effect is SlideshowEffect.Parallax or SlideshowEffect.DollyZoom or SlideshowEffect.Portrait, SlideshowEffects.UsesDepth(effect));
+            Assert.Equal(effect is SlideshowEffect.Parallax or SlideshowEffect.DollyZoom, SlideshowEffects.MovesByDepth(effect));
+            Assert.Equal(effect == SlideshowEffect.DollyZoom, SlideshowEffects.Dollies(effect));
         });
+
+    [Fact]
+    public void TheDollyZoom_BreathesAboutTheMiddle_AndTheSubjectAtTheFocusNeverChangesSize()
+    {
+        var path = new DollyPath(1, 0.2);
+
+        Assert.Equal(-0.2, path.At(0, 1000, 600).Radial, 9);   // far parts shrunk, near ones magnified at the start ...
+        Assert.Equal(0, path.At(0.5, 1000, 600).Radial, 9);
+        Assert.Equal(0.2, path.At(1, 1000, 600).Radial, 9);    // ... and the other way round at the end
+        Assert.Equal(0, path.At(0.3, 1000, 600).ShiftX);       // nothing goes sideways
+        Assert.Equal(0, path.At(0.3, 1000, 600).ShiftY);
+        Assert.Equal(path.At(0, 1000, 600).Zoom, path.At(1, 1000, 600).Zoom, 9); // one magnification all the time: what stays in the middle does not grow
+        Assert.True(path.At(0, 1000, 600).Zoom >= 1 + 0.2 * 0.5, "magnified enough that what shrinks never shows what is beyond the edge");
+
+        var backwards = new DollyPath(-1, 0.2);
+        Assert.Equal(0.2, backwards.At(0, 1000, 600).Radial, 9);
+        Assert.Equal(-0.2, backwards.At(1, 1000, 600).Radial, 9);
+    }
+
+    [Fact]
+    public void ARandomDollyPath_GoesEitherWay_AndHasAStrengthInRange()
+    {
+        var low = DollyPath.Random(new Queue<double>([0.0, 0.0]).Dequeue);
+        var high = DollyPath.Random(new Queue<double>([0.9, 0.999999]).Dequeue);
+
+        Assert.Equal(-1, low.Direction);
+        Assert.Equal(DollyPath.MinStrength, low.Strength, 9);
+        Assert.Equal(1, high.Direction);
+        Assert.InRange(high.Strength, DollyPath.MinStrength, DollyPath.MaxStrength);
+        Assert.True(high.Strength > 0.27);
+    }
+
+    [Fact]
+    public void ADollyPath_AndAParallaxPath_AreBothDepthPaths()
+    {
+        IDepthPath dolly = new DollyPath(1, 0.2);
+        IDepthPath parallax = new ParallaxPath(1, 0, 0.02);
+
+        Assert.Equal(0, dolly.At(0.5, 100, 100).ShiftX);
+        Assert.Equal(0, parallax.At(0.5, 100, 100).Radial);
+    }
 
     [Fact]
     public void TheCamera_GoesAcrossFromOneSideToTheOther_AtAnEvenSpeed()

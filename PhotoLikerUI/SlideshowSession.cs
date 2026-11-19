@@ -62,6 +62,8 @@ namespace PhotoLikerUI
         private SlideshowCollage _collage;                     // how many photos of one event are on a screen at once now: as the show began, or as the keys left it
         private IReadOnlyList<int[]> _pageGroups = [];         // for each of _photos, the photos of _singles it is made of
         private SlideshowBorder _border;                       // what the photos are put in now: as the show began, or as the B key left it
+        private readonly int _styleSeed = Random.Shared.Next(); // what the chance of a random look, card and collage goes by (see RandomStyle): the same all through a show
+        private bool _randomCollage;                           // the pages hold one to four photos by chance: the effect is Random and the collage was left at None
         private readonly double _timeoutSeconds;
 
         private readonly int[] _shown;                         // the place in the list of the photo on each screen, -1 before the first
@@ -160,7 +162,8 @@ namespace PhotoLikerUI
             _takenOf = look?.TakenOf;
             _mode = mode;
             _collage = look?.Collage ?? SlideshowCollage.None;
-            var (pages, pageOf, groups) = Paginate(_collage);
+            _randomCollage = RandomStyle.IsRandom(effect) && _collage == SlideshowCollage.None;
+            var (pages, pageOf, groups) = Paginate(_collage, _randomCollage);
             _photos = pages;
             _pageGroups = groups;
             _videos = [.. videos.Select(slot => slot with { AfterPhoto = slot.AfterPhoto >= 0 ? pageOf[slot.AfterPhoto] : -1 })];
@@ -209,6 +212,7 @@ namespace PhotoLikerUI
                 screen.Frames.SetLook(_look, _lut);
                 screen.Frames.SetBorder(_border);
             }
+            ApplyRandomStyle();
             WantDepthIfNeeded();
             WantPortraitIfNeeded();
             WantFacesIfNeeded();
@@ -227,6 +231,9 @@ namespace PhotoLikerUI
 
         /// <summary>What the photos are put in now: as the show began, or as the B key left it.</summary>
         public SlideshowBorder Border => _border;
+
+        /// <summary>The number the chance of a random look, card and collage goes by in this show (see <see cref="RandomStyle"/>): chosen when the show was made, the same all through it.</summary>
+        internal int StyleSeed => _styleSeed;
 
         /// <summary>Whether the boxes with the names on the faces are on now: as the show began, or as the F key left them.</summary>
         public bool ShowFaces => _showFaces;
@@ -691,6 +698,8 @@ namespace PhotoLikerUI
             WantDepthIfNeeded();
             WantPortraitIfNeeded();
             WantFacesIfNeeded();
+            ApplyRandomStyle();
+            SyncRandomCollage();
 
             var text = string.Format(SlideshowStrings.EffectFormat, _effect);
             foreach (var screen in _screens)
@@ -722,10 +731,12 @@ namespace PhotoLikerUI
         internal void ChangeLook()
         {
             _look = LookGrade.Next(_look, _lut is not null);
+            ApplyRandomStyle();
+            var name = _look == SlideshowLook.None && RandomStyle.IsRandom(_effect) ? SlideshowStrings.RandomName : _look.ToString();
             foreach (var screen in _screens)
             {
                 screen.Frames.SetLook(_look, _lut);
-                screen.ShowNotice(string.Format(SlideshowStrings.LookFormat, _look));
+                screen.ShowNotice(string.Format(SlideshowStrings.LookFormat, name));
             }
         }
 
@@ -733,20 +744,43 @@ namespace PhotoLikerUI
         internal void ToggleBorder()
         {
             _border = _border == SlideshowBorder.None ? SlideshowBorder.Polaroid : SlideshowBorder.None;
+            ApplyRandomStyle();
+            var name = _border == SlideshowBorder.None && RandomStyle.IsRandom(_effect) ? SlideshowStrings.RandomName : _border.ToString();
             foreach (var screen in _screens)
             {
                 screen.Frames.SetBorder(_border);
-                screen.ShowNotice(string.Format(SlideshowStrings.BorderFormat, _border));
+                screen.ShowNotice(string.Format(SlideshowStrings.BorderFormat, name));
             }
+        }
+
+        /// <summary>
+        /// Leaves the look and the card of the photos to chance when the effect is <see cref="SlideshowEffect.Random"/> and the look or the border is <c>None</c> (see <see cref="RandomStyle"/>), and takes it away again when
+        /// that is not so. Said every time the effect, the look or the border may have changed; it does something only when it did.
+        /// </summary>
+        private void ApplyRandomStyle()
+        {
+            var random = RandomStyle.IsRandom(_effect);
+            foreach (var screen in _screens)
+                screen.Frames.SetRandomStyle(random && _look == SlideshowLook.None, random && _border == SlideshowBorder.None, _styleSeed);
+        }
+
+        /// <summary>
+        /// The pages of the collage are of random sizes when the effect is <see cref="SlideshowEffect.Random"/> and the collage is <c>None</c>: when the effect was changed to or from that, the photos are divided into pages
+        /// again, as a collage key does it (see <see cref="ChangeCollage"/>), without saying so.
+        /// </summary>
+        private void SyncRandomCollage()
+        {
+            if (_randomCollage != (RandomStyle.IsRandom(_effect) && _collage == SlideshowCollage.None))
+                ChangeCollage(_collage, toggle: false, announce: false);
         }
 
         /// <summary>
         /// Divides the photos into the pages of <paramref name="collage"/> (see <see cref="CollagePlan"/>): the pages the show goes through (a page of one photo is that photo), which page each photo is on,
         /// and the photos of each page. With no collage, or fewer than two photos, every photo is a page.
         /// </summary>
-        private (PhotoFile[] Pages, int[] PageOf, IReadOnlyList<int[]> Groups) Paginate(SlideshowCollage collage)
+        private (PhotoFile[] Pages, int[] PageOf, IReadOnlyList<int[]> Groups) Paginate(SlideshowCollage collage, bool random = false)
         {
-            if (collage == SlideshowCollage.None || _singles.Length < 2)
+            if ((collage == SlideshowCollage.None && !random) || _singles.Length < 2)
             {
                 var own = new int[_singles.Length];
                 var alone = new int[_singles.Length][];
@@ -759,7 +793,7 @@ namespace PhotoLikerUI
             }
 
             _taken ??= [.. _singles.Select(photo => _takenOf?.Invoke(photo.OriginalFilePath))];
-            var groups = CollagePlan.Pages(_taken, collage);
+            var groups = random ? RandomStyle.Pages(_taken, _styleSeed) : CollagePlan.Pages(_taken, collage);
             var pageOf = new int[_singles.Length];
             var pages = new PhotoFile[groups.Count];
             for (var page = 0; page < groups.Count; page++)
@@ -802,14 +836,19 @@ namespace PhotoLikerUI
         /// are ready (the frames of the old ones stay until then). The person is told which collage it is. A show that can not have it (fewer than two photos, or fewer pages than screens) says so and is left as it is.
         /// </summary>
         /// <param name="toggle">The key of the collage that is on takes it away (false: the collage asked for is the one that comes, also if it is on).</param>
-        internal void ChangeCollage(SlideshowCollage requested, bool toggle = true)
+        /// <param name="announce">Tell the person which collage it is, or that it can not be (false: it is done for them, as the effect was changed to or from Random, and nothing is said).</param>
+        internal void ChangeCollage(SlideshowCollage requested, bool toggle = true, bool announce = true)
         {
             var target = toggle && requested == _collage ? SlideshowCollage.None : requested;
-            var (pages, pageOf, groups) = Paginate(target);
+            var random = RandomStyle.IsRandom(_effect) && target == SlideshowCollage.None; // a collage that is left at None is left to chance when the effect is Random
+            var (pages, pageOf, groups) = Paginate(target, random);
             if (_photos.Length == 0 || _singles.Length < 2 || pages.Length < _screens.Length)
             {
-                foreach (var screen in _screens)
-                    screen.ShowNotice(SlideshowStrings.CollageNotPossible);
+                if (announce)
+                {
+                    foreach (var screen in _screens)
+                        screen.ShowNotice(SlideshowStrings.CollageNotPossible);
+                }
                 return;
             }
 
@@ -819,6 +858,7 @@ namespace PhotoLikerUI
             var shown = _shown.Select(place => place >= 0 ? pageOf[_pageGroups[place][0]] : -1).ToArray();
 
             _collage = target;
+            _randomCollage = random;
             _photos = pages;
             _pageGroups = groups;
             for (var v = 0; v < _videos.Length; v++)
@@ -836,9 +876,12 @@ namespace PhotoLikerUI
             _jump = (int[])_first.Clone();
             _jumpByTimer = true;
 
-            var text = string.Format(SlideshowStrings.CollageFormat, _collage);
-            foreach (var screen in _screens)
-                screen.ShowNotice(text);
+            if (announce)
+            {
+                var text = string.Format(SlideshowStrings.CollageFormat, random ? SlideshowStrings.RandomName : _collage.ToString());
+                foreach (var screen in _screens)
+                    screen.ShowNotice(text);
+            }
 
             Prefetch();
             Advance();
@@ -1049,7 +1092,7 @@ namespace PhotoLikerUI
             return new SlideshowShowPlan(
                 transition, transition == SlideshowTransition.None ? 0 : seconds,
                 SlideshowEffects.HasMotion(effect), SlideshowEffects.MotionSeconds(_timeoutSeconds, seconds),
-                Stopwatch.GetTimestamp(), SlideshowEffects.MovesByDepth(effect));
+                Stopwatch.GetTimestamp(), SlideshowEffects.MovesByDepth(effect), SlideshowEffects.Dollies(effect), SlideshowEffects.Tilts(effect));
         }
 
         private void RestartTimer()

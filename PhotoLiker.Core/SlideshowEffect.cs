@@ -32,7 +32,53 @@ namespace PhotoLiker.Core
         /// </summary>
         Portrait,
 
-        /// <summary>Another one of <see cref="Fade"/>, <see cref="Slide"/>, <see cref="Zoom"/> and <see cref="KenBurns"/> for every change, never the same twice in a row (not <see cref="Parallax"/>, which costs more).</summary>
+        /// <summary>Like <see cref="KenBurns"/> (the drift, the zoom, the faces kept in view), and the photo also turns slowly, a degree or two, while it is on the screen. Dissolves into the next.</summary>
+        Tilt,
+
+        /// <summary>
+        /// The vertigo shot of the cinema: while the photo is on the screen the far parts of it grow and the near ones shrink (or the other way round) about its middle, as if the camera went in while the lens
+        /// zoomed out. A model works out how near each part is, so it needs the depth model, like <see cref="Parallax"/>, and <see cref="Random"/> does not pick it either. Dissolves into the next.
+        /// </summary>
+        DollyZoom,
+
+        /// <summary>The next photo pushes the last one out upwards.</summary>
+        PushUp,
+
+        /// <summary>The next photo pushes the last one out downwards.</summary>
+        PushDown,
+
+        /// <summary>Both photos fly towards the viewer: the last one grows and fades out while the next one grows from a smaller size and fades in.</summary>
+        CrossZoom,
+
+        /// <summary>The next photo is wiped on over the last one from the left, with a soft edge.</summary>
+        Wipe,
+
+        /// <summary>The next photo shows through a circle that opens from the middle of the screen until it covers it.</summary>
+        Iris,
+
+        /// <summary>The photo turns into big squares that grow, the next photo takes their place, and the squares shrink to it again.</summary>
+        Pixelate,
+
+        /// <summary>Waves run out from the middle of the screen and bend the picture while the last photo dissolves into the next.</summary>
+        Ripple,
+
+        /// <summary>The photos are two faces of a box that turns, as the cube transitions of presentation programs do.</summary>
+        Cube,
+
+        /// <summary>The last photo blurs, dissolves into the next one, which comes into focus.</summary>
+        BlurDissolve,
+
+        /// <summary>The last photo fades to black, then the next one fades in out of it.</summary>
+        DipToBlack,
+
+        /// <summary>The last photo fades to white, then the next one fades in out of it.</summary>
+        DipToWhite,
+
+        /// <summary>
+        /// Another one of the effects that cost no model for every change, never the same twice in a row (not <see cref="Parallax"/>, <see cref="Portrait"/> and <see cref="DollyZoom"/>, which need the depth model
+        /// and more work). A <see cref="Settings.SlideshowLook"/>, <see cref="Settings.SlideshowBorder"/> and <see cref="Settings.SlideshowCollage"/> that are left at <c>None</c> are random too: every photo
+        /// has a look and a card of its own, and the pages hold one to four photos.
+        /// </summary>
         Random,
     }
 
