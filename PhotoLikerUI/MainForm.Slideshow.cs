@@ -187,13 +187,14 @@ namespace PhotoLikerUI
             var border = _currentConfig.SlideshowBorder;
             var collage = _currentConfig.SlideshowCollage;
             var gpu = _currentConfig.SlideshowGpu;
-            if (look == SlideshowLook.None && table is null && border == SlideshowBorder.None && collage == SlideshowCollage.None && gpu)
+            var perEffect = Slideshow.EffectRunOf(_currentConfig.SlideshowEffectRun);
+            if (look == SlideshowLook.None && table is null && border == SlideshowBorder.None && collage == SlideshowCollage.None && gpu && perEffect == Slideshow.DefaultEffectRun)
                 return null;
 
             // When a photo was taken, for the events of the collage: what the index knows (the folder is indexed, or it is not and the photos of a page are only those that follow each other)
             var index = _folderSearch;
             Func<string, DateTime?>? takenOf = index is null ? null : path => index.Index.FindFullPath(path)?.Date.Taken;
-            return new SlideshowStyleOptions(look, table, border, collage, takenOf, gpu);
+            return new SlideshowStyleOptions(look, table, border, collage, takenOf, gpu, perEffect);
         }
 
         /// <summary>L chooses the next look, B turns the card on and off and 1, 2, 3, 4 and M choose the collage while the slideshow runs; what it ended with is the setting from then on (like the effect).</summary>

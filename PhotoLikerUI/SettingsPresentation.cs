@@ -57,6 +57,7 @@ namespace PhotoLikerUI
             [nameof(Settings.SlideshowPeopleFaces)] = [Category(SlideshowCategory), new DisplayNameAttribute("PeopleFaces"), Describe(() => SettingsStrings.SlideshowPeopleFaces)],
             [nameof(Settings.SlideshowPeopleNames)] = [Category(SlideshowCategory), new DisplayNameAttribute("PeopleNames"), Describe(() => SettingsStrings.SlideshowPeopleNames)],
             [nameof(Settings.SlideshowEffect)] = [Category(SlideshowCategory), new DisplayNameAttribute("Effect"), Describe(() => SettingsStrings.SlideshowEffect)],
+            [nameof(Settings.SlideshowEffectRun)] = [Category(SlideshowCategory), new DisplayNameAttribute("EffectRun"), new TypeConverterAttribute(typeof(EffectRunGridConverter)), Describe(() => SettingsStrings.SlideshowEffectRun)],
             [nameof(Settings.SlideshowLook)] = [Category(SlideshowCategory), new DisplayNameAttribute("Look"), Describe(() => SettingsStrings.SlideshowLook)],
             [nameof(Settings.SlideshowLookFile)] = [Category(SlideshowCategory), new DisplayNameAttribute("LookFile"), new TypeConverterAttribute(typeof(LutFileConverter)), Editor<LutFileEditor>(), Describe(() => SettingsStrings.SlideshowLookFile)],
             [nameof(Settings.SlideshowBorder)] = [Category(SlideshowCategory), new DisplayNameAttribute("Border"), Describe(() => SettingsStrings.SlideshowBorder)],

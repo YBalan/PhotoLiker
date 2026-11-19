@@ -139,6 +139,14 @@ namespace PhotoLiker.Core
         public SlideshowEffect SlideshowEffect { get; set; } = SlideshowEffect.Fade;
 
         /// <summary>
+        /// How many photos a random effect stays for, when <see cref="SlideshowEffect"/> is <see cref="SlideshowEffect.Random"/>: the same effect for this many photos in a row (1 to
+        /// <see cref="Slideshow.MostEffectRun"/>; 5 by default), then another one. <see cref="Slideshow.RandomEffectRun"/> (written <c>Random</c> in the file) leaves it to chance how many, for each effect.
+        /// It does nothing for any other effect.
+        /// </summary>
+        [JsonConverter(typeof(EffectRunConverter))]
+        public int SlideshowEffectRun { get; set; } = Slideshow.DefaultEffectRun;
+
+        /// <summary>
         /// How the colours of the photos of the slideshow are graded (see <see cref="SlideshowLook"/>); none by default. The L key chooses the next look while the show runs, and the one the show ends with becomes
         /// the setting. The photos on the disk are not touched.
         /// </summary>

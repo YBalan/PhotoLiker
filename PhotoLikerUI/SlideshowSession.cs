@@ -72,6 +72,9 @@ namespace PhotoLikerUI
         private int[]? _jump;                                  // the photos the timer or the start asks for, while they are being made
         private bool _jumpByTimer;                             // _jump is the timer's, so its photos come with the effect (not the start's)
         private SlideshowEffect _lastEffect;                   // the effect of the last change, so a random one is not the same twice
+        private int _effectRun = Slideshow.DefaultEffectRun; // how many photos a random effect stays for (the setting EffectRun, kept in its range; 0: left to chance)
+        private SlideshowEffect _runEffect;                    // the random effect that is on now (while _runLeft is more than 0)
+        private int _runLeft;                                  // how many more photos _runEffect is wanted for
         private bool _scrolling;                               // a key was used since the timer last picked random photos
         private bool _closing;
         private bool _paused;                                  // a key was pressed: nothing changes by itself until Space
@@ -163,6 +166,7 @@ namespace PhotoLikerUI
             _mode = mode;
             _collage = look?.Collage ?? SlideshowCollage.None;
             _gpu = new SlideshowGpu(look?.Gpu ?? true);
+            _effectRun = Slideshow.EffectRunOf(look?.EffectRun ?? Slideshow.DefaultEffectRun);
             var (pages, pageOf, groups) = Paginate(_collage);
             _photos = pages;
             _pageGroups = groups;
@@ -696,6 +700,7 @@ namespace PhotoLikerUI
             while (SlideshowEffects.UsesDepth(next) && _depth is null && next != _effect)
                 next = SlideshowEffects.Next(next, direction); // there is no depth model: those are not offered
             _effect = next;
+            _runLeft = 0; // a random effect that is chosen now begins a run of its own
             WantDepthIfNeeded();
             WantPortraitIfNeeded();
             WantFacesIfNeeded();
@@ -713,6 +718,14 @@ namespace PhotoLikerUI
                     screen.StartMotion(plan);
             }
         }
+
+        /// <summary>The effect that was used for the last change (a random effect is the one that was chosen), and how many more photos the random effect that is on is wanted for; for the tests.</summary>
+        internal SlideshowEffect LastEffect => _lastEffect;
+
+        internal int RunLeft => _runLeft;
+
+        /// <summary>How many photos a random effect stays for in this show: the setting, kept in its range (0: left to chance); for the tests.</summary>
+        internal int EffectRun => _effectRun;
 
         /// <summary>The graphics chip of the show: it draws the heavy steps (see <see cref="SlideshowGpu"/>); for the tests, which look at how many it drew.</summary>
         internal SlideshowGpu Gpu => _gpu;
@@ -1074,7 +1087,19 @@ namespace PhotoLikerUI
             if (_effect == SlideshowEffect.None)
                 return default;
 
-            var effect = SlideshowEffects.Resolve(_effect, _lastEffect, Random.Shared.Next);
+            var effect = _effect;
+            if (effect == SlideshowEffect.Random)
+            {
+                // A random effect stays for a number of photos (the setting EffectRun: 1 to 100, or left to chance), then another one is chosen, never the one that was on
+                if (_runLeft <= 0)
+                {
+                    _runEffect = SlideshowEffects.Resolve(SlideshowEffect.Random, _lastEffect, Random.Shared.Next);
+                    _runLeft = Slideshow.RunLength(_effectRun, Random.Shared.NextDouble());
+                }
+                effect = _runEffect;
+                _runLeft--;
+            }
+
             if (SlideshowEffects.UsesDepth(effect) && _depth is null)
                 effect = SlideshowEffect.KenBurns; // no depth model: the nearest thing there is
             _lastEffect = effect;

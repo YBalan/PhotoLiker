@@ -48,6 +48,33 @@ namespace PhotoLiker.Core
 
         public const double MaxTimeoutSeconds = 3600;
 
+        /// <summary>How many photos the effect <see cref="SlideshowEffect.Random"/> stays the same for, until the setting <see cref="Settings.SlideshowEffectRun"/> says otherwise.</summary>
+        public const int DefaultEffectRun = 5;
+
+        /// <summary>The most photos one random effect can stay for.</summary>
+        public const int MostEffectRun = 100;
+
+        /// <summary>The value of the setting <see cref="Settings.SlideshowEffectRun"/> that stands for "random": how long a random effect stays is itself left to chance, for each effect.</summary>
+        public const int RandomEffectRun = 0;
+
+        /// <summary>The setting kept in its range: 1 to <see cref="MostEffectRun"/>, or <see cref="RandomEffectRun"/> (a value below that, which a file edited by hand may have, is taken as random too).</summary>
+        public static int EffectRunOf(int setting) => Math.Clamp(setting, RandomEffectRun, MostEffectRun);
+
+        /// <summary>
+        /// How many photos the random effect that is chosen now stays for: the setting when it is a number (1 to <see cref="MostEffectRun"/>); when it is <see cref="RandomEffectRun"/> a number from 1 to
+        /// <see cref="MostEffectRun"/> drawn evenly on a logarithmic scale (a run of 1 to 10 photos is as likely as one of 10 to 100): short runs are common and long ones are not, the median is 10.
+        /// <paramref name="unit"/> is a number from 0 up to but not including 1 (the draw).
+        /// </summary>
+        public static int RunLength(int setting, double unit)
+        {
+            var wanted = EffectRunOf(setting);
+            if (wanted != RandomEffectRun)
+                return wanted;
+
+            var u = double.IsNaN(unit) ? 0 : Math.Clamp(unit, 0, 1);
+            return Math.Clamp((int)Math.Round(Math.Pow(MostEffectRun, u)), 1, MostEffectRun);
+        }
+
         /// <summary>The seconds a photo stays on the screen: the setting, kept between <see cref="MinTimeoutSeconds"/> and <see cref="MaxTimeoutSeconds"/>; a value that is no number gives the default.</summary>
         public static double TimeoutOf(double seconds) =>
             double.IsNaN(seconds) ? DefaultTimeoutSeconds : Math.Clamp(seconds, MinTimeoutSeconds, MaxTimeoutSeconds);
