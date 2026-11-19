@@ -1,7 +1,9 @@
 using PhotoLiker.Search;
 using System.Diagnostics;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Drawing.Text;
+using PhotoLiker.Effects.Gpu;
 using System.Globalization;
 using LibVLCSharp.Shared;
 using LibVLCSharp.WinForms;
@@ -15,7 +17,7 @@ namespace PhotoLikerUI
     /// moves by it (see <see cref="SlideshowEffect.Parallax"/>); one that has none drifts and zooms like a Ken Burns photo.
     /// </summary>
     internal readonly record struct SlideshowShowPlan(
-        SlideshowTransition Transition, double TransitionSeconds, bool Motion, double MotionSeconds, long StartedAt, bool Parallax = false);
+        SlideshowTransition Transition, double TransitionSeconds, bool Motion, double MotionSeconds, long StartedAt, bool Parallax = false, bool Dolly = false, bool Tilt = false);
 
     /// <summary>
     /// The window of the slideshow on one screen: black, with the photo on it as large as the screen lets it be and the year or the date and time it was taken
@@ -59,6 +61,9 @@ namespace PhotoLikerUI
         private long _transitionStartedAt;
         private double _transitionSeconds;
         private PixelCanvas? _canvas;                      // what the effects are put together on, the size of the screen
+        private uint[]? _mixFrom;                          // the screen as it is for the photo that goes and for the one that comes, while a change that is worked out pixel by pixel lasts (see TransitionMixer)
+        private uint[]? _mixTo;
+        private readonly CompositeLayer[] _single = new CompositeLayer[1];
         private string? _message = SlideshowStrings.Loading;
 
         // A video on this screen: a player over the whole window (see ShowVideo)
@@ -80,10 +85,11 @@ namespace PhotoLikerUI
         /// <param name="facesOf">Says who is in a photo, for the boxes and the names (see <see cref="SetPeopleShown"/>); null when there is no one to ask. Asked on the threads that make the frames, and on this window's thread for a frame that was not asked yet.</param>
         public SlideshowScreen(
             SlideshowSession session, Rectangle bounds, SlideshowWatermark watermark, long frameBytes, int minFrames, int parallelLoads,
-            Func<string, IReadOnlyList<FaceLabel>>? facesOf = null, Func<uint[], int, int, DepthMap?>? depthOf = null)
+            Func<string, IReadOnlyList<FaceLabel>>? facesOf = null, Func<uint[], int, int, DepthMap?>? depthOf = null, SlideshowGpu? gpu = null)
         {
             _session = session;
             _watermark = watermark;
+            _gpu = gpu;
 
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
@@ -100,7 +106,11 @@ namespace PhotoLikerUI
             _noticeTimer.Tick += (_, _) => HideNotice();
             _videoWatch.Tick += (_, _) => OnVideoWatch();
             Frames = new SlideshowFrames(bounds.Size, frameBytes, minFrames, parallelLoads, facesOf, depthOf);
+            Frames.SetGpu(gpu, warm: false);
         }
+
+        /// <summary>The graphics chip of the show: it draws the steps that are heavy for the processor (see <see cref="WorthTheGpu"/>); null when the show has none.</summary>
+        private readonly SlideshowGpu? _gpu;
 
         /// <summary>
         /// Turns the boxes with the names on the faces, and the line of names in the corner, on or off (the F and N keys). With either on the people of every photo are worked out
@@ -173,15 +183,17 @@ namespace PhotoLikerUI
         /// How a photo moves while it stays, if the plan says it does: by its depth (the Parallax effect, when the frame has it), else the drift and zoom of Ken Burns, which keeps the faces the
         /// index found in the photo in view (a photo with none drifts at random).
         /// </summary>
-        internal static (KenBurnsPath? Path, ParallaxPath? Parallax) MotionFor(SlideshowFrame frame, SlideshowShowPlan plan)
+        internal static (KenBurnsPath? Path, IDepthPath? Parallax) MotionFor(SlideshowFrame frame, SlideshowShowPlan plan)
         {
             if (!plan.Motion || plan.MotionSeconds <= 0)
                 return (null, null);
 
             // A photo on a card does not move by its depth (the depth is that of the photo, which is a part of the frame, and the card would move with it): it drifts like a Ken Burns one
-            return plan.Parallax && frame.Depth is not null && !frame.HasCard
-                ? (null, ParallaxPath.Random(Random.Shared.NextDouble))
-                : (KenBurnsPath.Aimed(frame.FaceRegions, Random.Shared.NextDouble), null);
+            if (plan.Parallax && frame.Depth is not null && !frame.HasCard)
+                return (null, plan.Dolly ? DollyPath.Random(Random.Shared.NextDouble) : ParallaxPath.Random(Random.Shared.NextDouble));
+
+            var path = KenBurnsPath.Aimed(frame.FaceRegions, Random.Shared.NextDouble);
+            return (plan.Tilt ? path.WithTilt(KenBurnsPath.RandomTilt(Random.Shared.NextDouble)) : path, null);
         }
 
         /// <summary>
@@ -198,6 +210,9 @@ namespace PhotoLikerUI
             _animation.Start();
             Invalidate();
         }
+
+        /// <summary>The few words in the top left corner now (what the last key chose), null when there are none: for the tests.</summary>
+        internal string? Notice => _notice;
 
         /// <summary>Writes a few words in the top left corner for a moment (what the Up and Down keys chose); a new one takes the place of the last.</summary>
         public void ShowNotice(string text)
@@ -794,11 +809,6 @@ namespace PhotoLikerUI
         {
             var width = ClientSize.Width;
             var height = ClientSize.Height;
-            if (_canvas is null || _canvas.Width != width || _canvas.Height != height)
-            {
-                _canvas?.Dispose();
-                _canvas = new PixelCanvas(width, height);
-            }
 
             var count = 0;
             var progress = TransitionProgress(now);
@@ -808,7 +818,7 @@ namespace PhotoLikerUI
                 var comingWeight = WeightOf(coming.Alpha);
 
                 // What dissolves is the whole screen, the black around a photo too: the shares of the two add up to all. What slides is not over one another
-                var leavingWeight = _transition == SlideshowTransition.Slide ? WeightOf(leaving.Alpha) : FrameCompositor.FullWeight - comingWeight;
+                var leavingWeight = SlideshowEffects.IsSliding(_transition) ? WeightOf(leaving.Alpha) : FrameCompositor.FullWeight - comingWeight;
                 _layerFrames[count] = outgoing.Frame;
                 _layers[count++] = LayerOf(outgoing, now, outgoing.MotionAt(now), leaving, leavingWeight, width, height);
                 _layerFrames[count] = current.Frame;
@@ -820,23 +830,103 @@ namespace PhotoLikerUI
                 _layers[count++] = LayerOf(current, now, currentMotion, SlideshowLayer.Plain, FrameCompositor.FullWeight, width, height);
             }
 
-            FrameCompositor.Compose(_canvas.Pixels, width, height, _layers.AsSpan(0, count));
+            if (!TryDrawOnTheGpu(g, count, progress, width, height))
+            {
+                if (_canvas is null || _canvas.Width != width || _canvas.Height != height)
+                {
+                    _canvas?.Dispose();
+                    _canvas = new PixelCanvas(width, height);
+                }
 
-            g.CompositingMode = CompositingMode.SourceCopy;
-            g.InterpolationMode = InterpolationMode.NearestNeighbor;
-            g.PixelOffsetMode = PixelOffsetMode.Half;
-            g.DrawImage(_canvas.Image, new Rectangle(0, 0, width, height));
-            g.CompositingMode = CompositingMode.SourceOver;
+                if (count == 2 && SlideshowEffects.UsesMixer(_transition))
+                    ComposeMixed(width, height, progress);
+                else
+                    FrameCompositor.Compose(_canvas.Pixels, width, height, _layers.AsSpan(0, count));
 
-            // The boxes go with their photos: each at the place its layer has, as faint as the photo is
+                g.CompositingMode = CompositingMode.SourceCopy;
+                g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                g.PixelOffsetMode = PixelOffsetMode.Half;
+                g.DrawImage(_canvas.Image, new Rectangle(0, 0, width, height));
+                g.CompositingMode = CompositingMode.SourceOver;
+            }
+
+            // The boxes go with their photos: each at the place its layer has, as faint as the photo is (not on a photo that is turned: the boxes are not)
             for (var layer = 0; layer < count; layer++)
             {
                 var placed = _layers[layer];
-                DrawFaces(g, _layerFrames[layer]!, new SlidePlace((float)placed.CenterX, (float)placed.CenterY, (float)placed.Scale), placed.Weight / (double)FrameCompositor.FullWeight);
+                if (placed.Rotation == 0)
+                    DrawFaces(g, _layerFrames[layer]!, new SlidePlace((float)placed.CenterX, (float)placed.CenterY, (float)placed.Scale), placed.Weight / (double)FrameCompositor.FullWeight);
                 _layerFrames[layer] = null; // a frame that is let go of meanwhile is not held on to here
             }
 
             DrawWatermarks(g, progress);
+        }
+
+        /// <summary>
+        /// Whether this step is one for the graphics chip: the processor needs 15 to 115 ms (on a 4K screen) for a step that turns a photo, moves one by its depth, or is a Ripple, a Cube or a BlurDissolve, and the chip
+        /// 20 to 30 with the picture read back; the other steps the processor does in 2 to 20 ms, which the read back would not beat (see <see cref="GpuRenderer"/>).
+        /// </summary>
+        private bool WorthTheGpu(int count)
+        {
+            if (count == 2 && SlideshowEffects.UsesMixer(_transition) && SlideshowEffects.IsHeavy(_transition))
+                return true;
+
+            for (var layer = 0; layer < count; layer++)
+            {
+                if (_layers[layer].Rotation != 0 || _layers[layer].Depth is not null)
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Draws the step on the graphics chip when it is one for it and the chip works (see <see cref="WorthTheGpu"/>, <see cref="SlideshowGpu"/>): the picture it makes is copied on the window as the processor's would be.
+        /// A step that fails turns the chip off for the rest of the show and is done by the processor, so nothing is seen of it.
+        /// </summary>
+        private bool TryDrawOnTheGpu(Graphics g, int count, double progress, int width, int height)
+        {
+            if (_gpu?.Renderer is not { } renderer || !WorthTheGpu(count))
+                return false;
+
+            try
+            {
+                renderer.Render(width, height, _layers.AsSpan(0, count), _transition, progress, (pixels, pitch) =>
+                {
+                    using var image = new Bitmap(width, height, pitch, PixelFormat.Format32bppPArgb, pixels);
+                    g.CompositingMode = CompositingMode.SourceCopy;
+                    g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                    g.PixelOffsetMode = PixelOffsetMode.Half;
+                    g.DrawImage(image, new Rectangle(0, 0, width, height));
+                    g.CompositingMode = CompositingMode.SourceOver;
+                });
+                _gpu.Counted();
+                return true;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _gpu.Failed(ex);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// A change that is worked out pixel by pixel (see <see cref="TransitionMixer"/>): the screen as it is for the photo that goes and for the one that comes (each as it moves, on its card, with its black round it) is put
+        /// together on its own, and the canvas is made of the two. <c>_layers</c> holds the two layers (the weights they have are those of a dissolve, which the boxes round the faces follow).
+        /// </summary>
+        private void ComposeMixed(int width, int height, double progress)
+        {
+            var length = width * height;
+            if (_mixFrom is null || _mixFrom.Length != length)
+            {
+                _mixFrom = GC.AllocateUninitializedArray<uint>(length);
+                _mixTo = GC.AllocateUninitializedArray<uint>(length);
+            }
+
+            _single[0] = _layers[0] with { Weight = FrameCompositor.FullWeight };
+            FrameCompositor.Compose(_mixFrom, width, height, _single);
+            _single[0] = _layers[1] with { Weight = FrameCompositor.FullWeight };
+            FrameCompositor.Compose(_mixTo!, width, height, _single);
+            TransitionMixer.Mix(_canvas!.Pixels, _mixFrom, _mixTo!, width, height, _transition, progress);
         }
 
         private static int WeightOf(double alpha) => Math.Clamp((int)Math.Round(alpha * FrameCompositor.FullWeight), 0, FrameCompositor.FullWeight);
@@ -855,16 +945,16 @@ namespace PhotoLikerUI
                 frame.Pixels, frame.Width, frame.Height,
                 width / 2.0 + Math.Round(change.OffsetX * width), height / 2.0 + Math.Round(change.OffsetY * height),
                 view.Zoom * change.Scale, weight,
-                new DepthShift(depth.Values, depth.Width, depth.Height, view.ShiftX, view.ShiftY, ParallaxPath.Focus));
+                new DepthShift(depth.Values, depth.Width, depth.Height, view.ShiftX, view.ShiftY, ParallaxPath.Focus, view.Radial));
         }
 
         /// <summary>Where a picture goes at this moment: the middle of the screen, moved by its own movement (a fraction of the picture) and by the change (a fraction of the screen, whole pixels).</summary>
-        private static CompositeLayer LayerOf(SlideshowFrame frame, SlideshowLayer motion, SlideshowLayer change, int weight, int width, int height) =>
+        internal static CompositeLayer LayerOf(SlideshowFrame frame, SlideshowLayer motion, SlideshowLayer change, int weight, int width, int height) =>
             new(frame.Pixels, frame.Width, frame.Height,
                 width / 2.0 + motion.OffsetX * frame.Width + Math.Round(change.OffsetX * width),
                 height / 2.0 + motion.OffsetY * frame.Height + Math.Round(change.OffsetY * height),
                 motion.Scale * change.Scale,
-                weight);
+                weight, null, motion.Rotation);
 
         /// <summary>
         /// The writing of the photos: while one photo takes the place of the other the old date fades out in the first half of the change and the new one fades in in
@@ -990,6 +1080,8 @@ namespace PhotoLikerUI
                 _outgoing = null;
                 _canvas?.Dispose();
                 _canvas = null;
+                _mixFrom = null;
+                _mixTo = null;
                 _watermarkFont.Dispose();
                 _faceFont.Dispose();
             }
@@ -997,7 +1089,7 @@ namespace PhotoLikerUI
         }
 
         /// <summary>A photo on the screen: its frame, and how it moves while it stays (if it does) from the time it came.</summary>
-        private sealed class PhotoOnScreen(SlideshowFrame frame, KenBurnsPath? path, ParallaxPath? parallax, long startedAt, double motionSeconds)
+        private sealed class PhotoOnScreen(SlideshowFrame frame, KenBurnsPath? path, IDepthPath? parallax, long startedAt, double motionSeconds)
         {
             public SlideshowFrame Frame { get; } = frame;
 

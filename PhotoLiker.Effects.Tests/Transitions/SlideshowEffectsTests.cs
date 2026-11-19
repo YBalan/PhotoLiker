@@ -6,8 +6,9 @@ namespace PhotoLiker.Effects.Tests.Transitions;
 
 public class SlideshowEffectsTests
 {
-    private static readonly SlideshowEffect[] Concrete =
-        [SlideshowEffect.Fade, SlideshowEffect.Slide, SlideshowEffect.Zoom, SlideshowEffect.KenBurns];
+    /// <summary>What a random effect chooses from: all that need no model.</summary>
+    private static readonly SlideshowEffect[] Concrete = Enum.GetValues<SlideshowEffect>()
+        .Except([SlideshowEffect.None, SlideshowEffect.Random, SlideshowEffect.Parallax, SlideshowEffect.Portrait, SlideshowEffect.DollyZoom]).ToArray();
 
     // ── which effect ────────────────────────────────────────────────────────
 
@@ -19,16 +20,20 @@ public class SlideshowEffectsTests
     [InlineData(SlideshowEffect.KenBurns)]
     [InlineData(SlideshowEffect.Parallax)]
     [InlineData(SlideshowEffect.Portrait)]
+    [InlineData(SlideshowEffect.Tilt)]
+    [InlineData(SlideshowEffect.DollyZoom)]
+    [InlineData(SlideshowEffect.Cube)]
+    [InlineData(SlideshowEffect.DipToWhite)]
     public void AnEffectThatIsNotRandom_IsItself(SlideshowEffect effect) =>
         Assert.Equal(effect, SlideshowEffects.Resolve(effect, SlideshowEffect.Fade, _ => 0));
 
     [Fact]
-    public void Random_IsOneOfTheFour_NeverTheSameTwiceInARow_AndNeverParallax()
+    public void Random_IsOneOfThemAll_NeverTheSameTwiceInARow_AndNeverOneThatNeedsTheDepthModel()
     {
         foreach (var previous in Enum.GetValues<SlideshowEffect>())
         {
             var seen = new HashSet<SlideshowEffect>();
-            for (var pick = 0; pick < 4; pick++)
+            for (var pick = 0; pick < Concrete.Length; pick++)
                 seen.Add(SlideshowEffects.Resolve(SlideshowEffect.Random, previous, count => Math.Min(pick, count - 1)));
 
             Assert.DoesNotContain(previous, seen);
@@ -36,9 +41,21 @@ public class SlideshowEffectsTests
             Assert.DoesNotContain(SlideshowEffect.Random, seen);
             Assert.DoesNotContain(SlideshowEffect.Parallax, seen); // it costs half a second a photo: only when it is asked for
             Assert.DoesNotContain(SlideshowEffect.Portrait, seen); // as the depth model is for Parallax
+            Assert.DoesNotContain(SlideshowEffect.DollyZoom, seen);
             Assert.All(seen, effect => Assert.Contains(effect, Concrete));
-            Assert.Equal(previous is SlideshowEffect.None or SlideshowEffect.Random or SlideshowEffect.Parallax or SlideshowEffect.Portrait ? 4 : 3, seen.Count); // every other one can come
+            Assert.Equal(Concrete.Contains(previous) ? Concrete.Length - 1 : Concrete.Length, seen.Count); // every other one can come
         }
+    }
+
+    [Fact]
+    public void Random_CanChooseEveryNewTransition_AndTheTilt()
+    {
+        foreach (var effect in new[]
+        {
+            SlideshowEffect.PushUp, SlideshowEffect.PushDown, SlideshowEffect.CrossZoom, SlideshowEffect.Wipe, SlideshowEffect.Iris, SlideshowEffect.Pixelate,
+            SlideshowEffect.Ripple, SlideshowEffect.Cube, SlideshowEffect.BlurDissolve, SlideshowEffect.DipToBlack, SlideshowEffect.DipToWhite, SlideshowEffect.Tilt,
+        })
+            Assert.Contains(effect, Concrete);
     }
 
     [Fact]
@@ -51,7 +68,12 @@ public class SlideshowEffectsTests
     [Fact]
     public void TheNextEffect_GoesDownTheDropDown_AndRoundAtTheEnd()
     {
-        var order = new[] { SlideshowEffect.None, SlideshowEffect.Fade, SlideshowEffect.Slide, SlideshowEffect.Zoom, SlideshowEffect.KenBurns, SlideshowEffect.Parallax, SlideshowEffect.Portrait, SlideshowEffect.Random };
+        var order = new[]
+        {
+            SlideshowEffect.None, SlideshowEffect.Fade, SlideshowEffect.Slide, SlideshowEffect.Zoom, SlideshowEffect.KenBurns, SlideshowEffect.Parallax, SlideshowEffect.Portrait,
+            SlideshowEffect.Tilt, SlideshowEffect.DollyZoom, SlideshowEffect.PushUp, SlideshowEffect.PushDown, SlideshowEffect.CrossZoom, SlideshowEffect.Wipe, SlideshowEffect.Iris,
+            SlideshowEffect.Pixelate, SlideshowEffect.Ripple, SlideshowEffect.Cube, SlideshowEffect.BlurDissolve, SlideshowEffect.DipToBlack, SlideshowEffect.DipToWhite, SlideshowEffect.Random,
+        };
 
         for (var i = 0; i < order.Length; i++)
         {
@@ -78,6 +100,19 @@ public class SlideshowEffectsTests
     [InlineData(SlideshowEffect.KenBurns, SlideshowTransition.Fade, true)]
     [InlineData(SlideshowEffect.Parallax, SlideshowTransition.Fade, true)]
     [InlineData(SlideshowEffect.Portrait, SlideshowTransition.Fade, true)]
+    [InlineData(SlideshowEffect.Tilt, SlideshowTransition.Fade, true)]
+    [InlineData(SlideshowEffect.DollyZoom, SlideshowTransition.Fade, true)]
+    [InlineData(SlideshowEffect.PushUp, SlideshowTransition.PushUp, false)]
+    [InlineData(SlideshowEffect.PushDown, SlideshowTransition.PushDown, false)]
+    [InlineData(SlideshowEffect.CrossZoom, SlideshowTransition.CrossZoom, false)]
+    [InlineData(SlideshowEffect.Wipe, SlideshowTransition.Wipe, false)]
+    [InlineData(SlideshowEffect.Iris, SlideshowTransition.Iris, false)]
+    [InlineData(SlideshowEffect.Pixelate, SlideshowTransition.Pixelate, false)]
+    [InlineData(SlideshowEffect.Ripple, SlideshowTransition.Ripple, false)]
+    [InlineData(SlideshowEffect.Cube, SlideshowTransition.Cube, false)]
+    [InlineData(SlideshowEffect.BlurDissolve, SlideshowTransition.BlurDissolve, false)]
+    [InlineData(SlideshowEffect.DipToBlack, SlideshowTransition.DipBlack, false)]
+    [InlineData(SlideshowEffect.DipToWhite, SlideshowTransition.DipWhite, false)]
     [InlineData(SlideshowEffect.Random, SlideshowTransition.None, false)] // resolved to another before it is asked
     public void EachEffect_HasItsTransition_AndOnlyTheDriftingOnesMoveThePhoto(SlideshowEffect effect, SlideshowTransition transition, bool motion)
     {
@@ -89,6 +124,9 @@ public class SlideshowEffectsTests
     [InlineData(SlideshowEffect.KenBurns, false, false, true)]
     [InlineData(SlideshowEffect.Parallax, true, false, true)]
     [InlineData(SlideshowEffect.Portrait, false, true, true)]
+    [InlineData(SlideshowEffect.DollyZoom, true, false, true)]
+    [InlineData(SlideshowEffect.Tilt, false, false, true)]     // a Ken Burns drift that also turns
+    [InlineData(SlideshowEffect.Cube, false, false, false)]
     [InlineData(SlideshowEffect.Random, false, false, true)]   // it may choose Ken Burns
     [InlineData(SlideshowEffect.Fade, false, false, false)]
     [InlineData(SlideshowEffect.Slide, false, false, false)]

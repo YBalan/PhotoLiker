@@ -141,6 +141,9 @@ public sealed class SlideshowFaceAwareTests : IDisposable
     [InlineData(SlideshowEffect.Fade)]
     [InlineData(SlideshowEffect.Slide)]
     [InlineData(SlideshowEffect.Zoom)]
+    [InlineData(SlideshowEffect.PushUp)]
+    [InlineData(SlideshowEffect.Cube)]
+    [InlineData(SlideshowEffect.DipToBlack)]
     public void AnEffectThatDoesNotDrift_DoesNotAskForTheFaces(SlideshowEffect effect)
     {
         var photos = MakePhotos(3);

@@ -6,18 +6,21 @@ namespace PhotoLiker.Effects.Compositing
     /// <summary>
     /// One picture for <see cref="FrameCompositor.Compose"/>: its pixels (<paramref name="Pixels"/>, row after row, each pixel 0xAARRGGBB as GDI+ keeps a
     /// Format32bppPArgb bitmap, premultiplied, so what is behind it is black), the place of its middle on the screen, how much it is magnified
-    /// (<paramref name="Scale"/>) and how much of it shows (<paramref name="Weight"/>, 0 to <see cref="FrameCompositor.FullWeight"/>).
+    /// (<paramref name="Scale"/>) and how much of it shows (<paramref name="Weight"/>, 0 to <see cref="FrameCompositor.FullWeight"/>). It can also be turned about its middle by <paramref name="Rotation"/>
+    /// (radians, clockwise; not with a <paramref name="Depth"/>, which keeps the picture as it is): the edges of a picture that is turned are smoothed.
     /// </summary>
     public readonly record struct CompositeLayer(
-        uint[] Pixels, int Width, int Height, double CenterX, double CenterY, double Scale, int Weight, DepthShift? Depth = null);
+        uint[] Pixels, int Width, int Height, double CenterX, double CenterY, double Scale, int Weight, DepthShift? Depth = null, double Rotation = 0);
 
     /// <summary>
     /// How near each part of a picture is (<paramref name="Depth"/>: <paramref name="DepthWidth"/> by <paramref name="DepthHeight"/> bytes that cover the whole picture, 0 the farthest, 255 the
     /// nearest), and how far that moves it: a part of depth <c>d</c> is moved by <c>(d / 255 - Focus)</c> times <paramref name="ShiftX"/> sideways and <paramref name="ShiftY"/> down, in pixels
     /// of the picture (see <see cref="PhotoLiker.Effects.Motion.ParallaxView"/>). The picture is not moved as a whole: it stays where its middle is on the screen, and what it shows moves inside it.
-    /// <see cref="CompositeLayer.Scale"/> magnifies what it shows about its middle first, so that moving it never reaches beyond its edge.
+    /// <see cref="CompositeLayer.Scale"/> magnifies what it shows about its middle first, so that moving it never reaches beyond its edge. <paramref name="Radial"/> moves a part by its depth along the line from
+    /// the middle of the picture too: a part of depth <c>d</c> is taken from <c>(d / 255 - Focus) * Radial</c> times its distance from the middle further out, so the far parts (those below the focus) are magnified
+    /// and the near ones shrunk when it is positive, and the other way round when it is negative (the dolly zoom).
     /// </summary>
-    public readonly record struct DepthShift(byte[] Depth, int DepthWidth, int DepthHeight, double ShiftX, double ShiftY, double Focus);
+    public readonly record struct DepthShift(byte[] Depth, int DepthWidth, int DepthHeight, double ShiftX, double ShiftY, double Focus, double Radial = 0);
 
     /// <summary>
     /// Puts the pictures of an effect of the slideshow (a dissolve, a slide, a zoom) on a screen-sized buffer, quicker than GDI+ does: it needs 13 ms to draw a
@@ -93,6 +96,8 @@ namespace PhotoLiker.Effects.Compositing
 
                 if (plan.Deep)
                     DrawDepthRow(row, y, plan);
+                else if (plan.Rotated)
+                    DrawRotatedRow(row, y, plan);
                 else if (plan.Exact)
                     DrawExactRow(row, y, plan);
                 else
@@ -140,6 +145,48 @@ namespace PhotoLiker.Effects.Compositing
                 var pixel = Lerp(rowBuffer[plan.Columns[k]], rowBuffer[plan.NextColumns[k]], plan.Fractions[k]);
                 var x = plan.Left + k;
                 row[x] = weight >= FullWeight ? pixel | Opaque : row[x] + Weighted(pixel, weight);
+            }
+        }
+
+        /// <summary>
+        /// A row of a picture that is turned (and perhaps magnified) about its middle: every pixel of the screen is taken from the place of the picture it falls on when the turn is undone (bilinear), and
+        /// a pixel less than a pixel inside the edge is only partly there, so the edge is smooth and not a staircase.
+        /// </summary>
+        private static void DrawRotatedRow(Span<uint> row, int y, LayerPlan plan)
+        {
+            var width = plan.SourceWidth;
+            var height = plan.SourceHeight;
+            var pixels = plan.Pixels;
+            var weight = (uint)plan.Weight;
+            var scale = (float)plan.Scale;
+            float cos = plan.Cos, sin = plan.Sin;
+            var dy = y + 0.5f - plan.CenterY;
+
+            for (var x = plan.Left; x < plan.Right; x++)
+            {
+                var dx = x + 0.5f - plan.CenterX;
+                var sx = (dx * cos + dy * sin) * plan.ZoomInverse + plan.HalfWidth;
+                var sy = (dy * cos - dx * sin) * plan.ZoomInverse + plan.HalfHeight;
+
+                // How far inside the edge of the picture, in pixels of the screen: half a pixel inside is a pixel that is all there
+                var inside = Math.Min(Math.Min(sx, width - sx), Math.Min(sy, height - sy)) * scale;
+                if (inside <= -0.5f)
+                    continue;
+
+                var fx = Math.Clamp(sx - 0.5f, 0f, width - 1f);
+                var fy = Math.Clamp(sy - 0.5f, 0f, height - 1f);
+                var x0 = (int)fx;
+                var y0 = (int)fy;
+                var x1 = Math.Min(x0 + 1, width - 1);
+                var y1 = Math.Min(y0 + 1, height - 1);
+                var wx = (uint)((fx - x0) * 256);
+                var wy = (uint)((fy - y0) * 256);
+                var pixel = Lerp(Lerp(pixels[y0 * width + x0], pixels[y0 * width + x1], wx), Lerp(pixels[y1 * width + x0], pixels[y1 * width + x1], wx), wy);
+
+                var covered = weight;
+                if (inside < 0.5f)
+                    covered = (uint)(weight * (inside + 0.5f));
+                row[x] = covered >= FullWeight ? pixel | Opaque : row[x] + Weighted(pixel, covered);
             }
         }
 
@@ -242,7 +289,8 @@ namespace PhotoLiker.Effects.Compositing
         }
 
         /// <summary>The red, green and blue of <paramref name="pixel"/> times weight / 256, the alpha left out (it is made opaque by the black the row began with). Two channels at a time.</summary>
-        private static uint Weighted(uint pixel, uint weight)
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        internal static uint Weighted(uint pixel, uint weight)
         {
             var redBlue = ((pixel & 0x00FF00FF) * weight >> 8) & 0x00FF00FF;
             var green = ((pixel & 0x0000FF00) * weight >> 8) & 0x0000FF00;
@@ -250,7 +298,8 @@ namespace PhotoLiker.Effects.Compositing
         }
 
         /// <summary>The pixel between two pixels: <paramref name="fraction"/> / 256 of the way from <paramref name="a"/> to <paramref name="b"/>, every channel (two at a time, with room between them for the carry).</summary>
-        private static uint Lerp(uint a, uint b, uint fraction)
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        internal static uint Lerp(uint a, uint b, uint fraction)
         {
             var inverse = 256 - fraction;
             var redBlue = ((a & 0x00FF00FF) * inverse + (b & 0x00FF00FF) * fraction >> 8) & 0x00FF00FF;
@@ -269,12 +318,20 @@ namespace PhotoLiker.Effects.Compositing
 
             /// <summary>Moved by its depth (see <see cref="DepthShift"/>): drawn at the place and size of an exact picture, what it shows magnified about its own middle by <see cref="Scale"/>.</summary>
             public bool Deep { get; init; }
+
+            /// <summary>Turned about its middle (see <see cref="CompositeLayer.Rotation"/>): the middle on the screen, and the cosine and sine of the turn (the middle and 1 / magnification of the picture are those of a deep one).</summary>
+            public bool Rotated { get; init; }
+            public float CenterX { get; init; }
+            public float CenterY { get; init; }
+            public float Cos { get; init; }
+            public float Sin { get; init; }
             public byte[] Depth { get; init; } = [];
             public int DepthWidth { get; init; }
             public int DepthHeight { get; init; }
             public double ShiftX { get; init; }
             public double ShiftY { get; init; }
             public double Focus { get; init; }
+            public double Radial { get; init; }
 
             /// <summary>Deep: how far each point of the grid of the depth (in the place it has on the screen) is moved, sideways and down, in pixels of the picture; and the picture's middle and 1 / magnification.</summary>
             public float[] FieldX { get; set; } = [];
@@ -317,7 +374,7 @@ namespace PhotoLiker.Effects.Compositing
             public int[] NextColumns { get; init; } = []; // the right one
             public uint[] Fractions { get; init; } = [];  // how far from the left one to the right one, in 256ths
 
-            public int RowBufferLength => Exact || Deep ? 0 : MaxSourceX - MinSourceX + 1;
+            public int RowBufferLength => Exact || Deep || Rotated ? 0 : MaxSourceX - MinSourceX + 1;
 
             /// <summary>The plan for a layer; null if nothing of it shows (no weight, nothing on the screen, no pixels).</summary>
             public static LayerPlan? Create(CompositeLayer layer, int width, int height)
@@ -335,6 +392,9 @@ namespace PhotoLiker.Effects.Compositing
                         ? CreateDeep(layer, depth, weight, width, height)
                         : CreateExact(layer with { Scale = 1 }, weight, width, height);
                 }
+
+                if (Math.Abs(layer.Rotation) > 1e-9 && double.IsFinite(layer.Rotation))
+                    return CreateRotated(layer, weight, width, height);
 
                 return Math.Abs(layer.Scale - 1) < 1e-9
                     ? CreateExact(layer, weight, width, height)
@@ -358,7 +418,7 @@ namespace PhotoLiker.Effects.Compositing
                     Pixels = layer.Pixels, SourceWidth = layer.Width, SourceHeight = layer.Height, Weight = weight, Exact = false, Deep = true,
                     Left = left, Right = right, Top = top, Bottom = bottom, OffsetX = offsetX, OffsetY = offsetY, Scale = layer.Scale,
                     Depth = depth.Depth, DepthWidth = depth.DepthWidth, DepthHeight = depth.DepthHeight,
-                    ShiftX = depth.ShiftX, ShiftY = depth.ShiftY, Focus = depth.Focus,
+                    ShiftX = depth.ShiftX, ShiftY = depth.ShiftY, Focus = depth.Focus, Radial = depth.Radial,
                     HalfWidth = layer.Width / 2f, HalfHeight = layer.Height / 2f, ZoomInverse = (float)(1 / layer.Scale),
                 };
                 plan.BuildField();
@@ -381,6 +441,7 @@ namespace PhotoLiker.Effects.Compositing
 
                 var shiftX = (float)ShiftX;
                 var shiftY = (float)ShiftY;
+                var radial = (float)Radial;
                 var focus = (float)Focus;
                 var perPixelX = fieldWidth / (float)SourceWidth;
                 var perPixelY = fieldHeight / (float)SourceHeight;
@@ -402,8 +463,8 @@ namespace PhotoLiker.Effects.Compositing
                         for (var i = 0; i < DepthIterations; i++)
                         {
                             var move = DepthAt(depth, fieldWidth, fieldHeight, (qx + moveX) * perPixelX - 0.5f, (qy + moveY) * perPixelY - 0.5f) * (1f / 255f) - focus;
-                            moveX = shiftX * move;
-                            moveY = shiftY * move;
+                            moveX = shiftX * move + radial * move * (qx - halfWidth);
+                            moveY = shiftY * move + radial * move * (qy - halfHeight);
                         }
                         x[gridY * fieldWidth + gridX] = moveX;
                         y[gridY * fieldWidth + gridX] = moveY;
@@ -427,6 +488,32 @@ namespace PhotoLiker.Effects.Compositing
                     fractions[k] = grid - (int)grid;
                 }
                 Columns = lefts;
+            }
+
+            /// <summary>The picture turned about its middle: the part of the screen its turned frame lies in is looked at pixel by pixel (<see cref="DrawRotatedRow"/>).</summary>
+            private static LayerPlan? CreateRotated(CompositeLayer layer, int weight, int width, int height)
+            {
+                var cos = Math.Cos(layer.Rotation);
+                var sin = Math.Sin(layer.Rotation);
+                var halfWidth = layer.Width * layer.Scale / 2;
+                var halfHeight = layer.Height * layer.Scale / 2;
+                var reachX = Math.Abs(cos) * halfWidth + Math.Abs(sin) * halfHeight;
+                var reachY = Math.Abs(sin) * halfWidth + Math.Abs(cos) * halfHeight;
+
+                var left = Math.Max(0, (int)Math.Floor(layer.CenterX - reachX));
+                var right = Math.Min(width, (int)Math.Ceiling(layer.CenterX + reachX));
+                var top = Math.Max(0, (int)Math.Floor(layer.CenterY - reachY));
+                var bottom = Math.Min(height, (int)Math.Ceiling(layer.CenterY + reachY));
+                if (left >= right || top >= bottom)
+                    return null;
+
+                return new LayerPlan
+                {
+                    Pixels = layer.Pixels, SourceWidth = layer.Width, SourceHeight = layer.Height, Weight = weight, Exact = false, Rotated = true,
+                    Left = left, Right = right, Top = top, Bottom = bottom, Scale = layer.Scale,
+                    CenterX = (float)layer.CenterX, CenterY = (float)layer.CenterY, Cos = (float)cos, Sin = (float)sin,
+                    HalfWidth = layer.Width / 2f, HalfHeight = layer.Height / 2f, ZoomInverse = (float)(1 / layer.Scale),
+                };
             }
 
             private static LayerPlan? CreateExact(CompositeLayer layer, int weight, int width, int height)

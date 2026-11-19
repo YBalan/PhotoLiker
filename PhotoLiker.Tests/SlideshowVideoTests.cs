@@ -128,6 +128,18 @@ public class SlideshowVideoTests : IDisposable
     }
 
     [Fact]
+    public void TheGraphicsChipSetting_IsOnByDefault_AndIsKeptWithTheFolder_AndAnOlderFileHasItOn()
+    {
+        Assert.True(new Settings().SlideshowGpu);
+
+        new Settings { CurrentFolder = _root, SlideshowGpu = false }.Save(_root);
+        Assert.False(Settings.Load(_root).SlideshowGpu);
+
+        File.WriteAllText(Settings.GetFilePath(_root), """{ "SlideshowTimeout": 4 }""");
+        Assert.True(Settings.Load(_root).SlideshowGpu);
+    }
+
+    [Fact]
     public void AFileOfAnOlderVersion_HasTheDefaults()
     {
         File.WriteAllText(Settings.GetFilePath(_root), """{ "SlideshowTimeout": 4 }""");

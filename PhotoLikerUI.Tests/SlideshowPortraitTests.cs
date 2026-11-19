@@ -120,8 +120,8 @@ public sealed class SlideshowPortraitTests : IDisposable
 
             Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && made.IsPortrait, 15000), "the photos that were ready were made again, in portrait mode");
 
-            session.HandleKey(Keys.Down); // Random
-            Assert.Equal(SlideshowEffect.Random, session.Effect);
+            session.HandleKey(Keys.Down); // Tilt
+            Assert.Equal(SlideshowEffect.Tilt, session.Effect);
             Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && !made.IsPortrait, 15000), "and made again as they are when the effect is another");
         });
     }
@@ -148,17 +148,17 @@ public sealed class SlideshowPortraitTests : IDisposable
             Show(down, screen =>
             {
                 down.HandleKey(Keys.Down);
-                Assert.Equal(SlideshowEffect.Random, down.Effect); // Parallax and Portrait are skipped
+                Assert.Equal(SlideshowEffect.Tilt, down.Effect); // Parallax and Portrait are skipped
                 return Task.CompletedTask;
             });
         }
 
-        using (var up = Session(photos, SlideshowEffect.Random, depth: null))
+        using (var up = Session(photos, SlideshowEffect.Tilt, depth: null))
         {
             Show(up, screen =>
             {
                 up.HandleKey(Keys.Up);
-                Assert.Equal(SlideshowEffect.KenBurns, up.Effect);
+                Assert.Equal(SlideshowEffect.KenBurns, up.Effect); // Portrait and Parallax are skipped the other way too
                 return Task.CompletedTask;
             });
         }

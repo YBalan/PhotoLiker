@@ -14,8 +14,17 @@ namespace PhotoLiker.Effects.Transitions
         /// <summary>The size the photo of <see cref="SlideshowTransition.Zoom"/> starts at, as a share of its size.</summary>
         public const double ZoomStartScale = 0.8;
 
+        /// <summary>The size the last photo of <see cref="SlideshowTransition.CrossZoom"/> grows to, and the one the next photo starts at, as shares of their sizes.</summary>
+        public const double CrossZoomOutgoingEndScale = 1.5, CrossZoomIncomingStartScale = 0.7;
+
+        /// <summary>What <see cref="SlideshowEffect.Random"/> chooses from: every effect that needs no model (not <see cref="SlideshowEffect.Parallax"/>, <see cref="SlideshowEffect.Portrait"/> and <see cref="SlideshowEffect.DollyZoom"/>).</summary>
         private static readonly SlideshowEffect[] RandomChoices =
-            [SlideshowEffect.Fade, SlideshowEffect.Slide, SlideshowEffect.Zoom, SlideshowEffect.KenBurns];
+        [
+            SlideshowEffect.Fade, SlideshowEffect.Slide, SlideshowEffect.Zoom, SlideshowEffect.KenBurns, SlideshowEffect.Tilt,
+            SlideshowEffect.PushUp, SlideshowEffect.PushDown, SlideshowEffect.CrossZoom, SlideshowEffect.Wipe, SlideshowEffect.Iris,
+            SlideshowEffect.Pixelate, SlideshowEffect.Ripple, SlideshowEffect.Cube, SlideshowEffect.BlurDissolve,
+            SlideshowEffect.DipToBlack, SlideshowEffect.DipToWhite,
+        ];
 
         /// <summary>
         /// The effect to use for one change: <see cref="SlideshowEffect.Random"/> becomes one of the others, but not <paramref name="previous"/>, so it
@@ -41,27 +50,66 @@ namespace PhotoLiker.Effects.Transitions
         /// <summary>How a photo takes the place of the last one with this effect (<see cref="SlideshowEffect.Random"/> must have been resolved).</summary>
         public static SlideshowTransition TransitionOf(SlideshowEffect effect) => effect switch
         {
-            SlideshowEffect.Fade or SlideshowEffect.KenBurns or SlideshowEffect.Parallax or SlideshowEffect.Portrait => SlideshowTransition.Fade,
+            SlideshowEffect.Fade or SlideshowEffect.KenBurns or SlideshowEffect.Parallax or SlideshowEffect.Portrait or SlideshowEffect.Tilt or SlideshowEffect.DollyZoom => SlideshowTransition.Fade,
             SlideshowEffect.Slide => SlideshowTransition.Slide,
             SlideshowEffect.Zoom => SlideshowTransition.Zoom,
+            SlideshowEffect.PushUp => SlideshowTransition.PushUp,
+            SlideshowEffect.PushDown => SlideshowTransition.PushDown,
+            SlideshowEffect.CrossZoom => SlideshowTransition.CrossZoom,
+            SlideshowEffect.Wipe => SlideshowTransition.Wipe,
+            SlideshowEffect.Iris => SlideshowTransition.Iris,
+            SlideshowEffect.Pixelate => SlideshowTransition.Pixelate,
+            SlideshowEffect.Ripple => SlideshowTransition.Ripple,
+            SlideshowEffect.Cube => SlideshowTransition.Cube,
+            SlideshowEffect.BlurDissolve => SlideshowTransition.BlurDissolve,
+            SlideshowEffect.DipToBlack => SlideshowTransition.DipBlack,
+            SlideshowEffect.DipToWhite => SlideshowTransition.DipWhite,
             _ => SlideshowTransition.None,
         };
 
-        /// <summary>Whether a photo moves while it is on the screen.</summary>
-        public static bool HasMotion(SlideshowEffect effect) => effect is SlideshowEffect.KenBurns or SlideshowEffect.Parallax or SlideshowEffect.Portrait;
+        /// <summary>Whether the change is worked out pixel by pixel from the two pictures (<see cref="TransitionMixer"/>) and not by laying them over each other (<see cref="Transition"/>).</summary>
+        public static bool UsesMixer(SlideshowTransition transition) =>
+            transition is SlideshowTransition.Wipe or SlideshowTransition.Iris or SlideshowTransition.Pixelate or SlideshowTransition.Ripple
+                or SlideshowTransition.Cube or SlideshowTransition.BlurDissolve or SlideshowTransition.DipBlack or SlideshowTransition.DipWhite;
+
+        /// <summary>Whether the two pictures of the change lie side by side and never over each other (a slide, a push): each of them shows wholly, where the pictures of a dissolve share what shows.</summary>
+        public static bool IsSliding(SlideshowTransition transition) =>
+            transition is SlideshowTransition.Slide or SlideshowTransition.PushUp or SlideshowTransition.PushDown;
 
         /// <summary>
-        /// Whether the effect may need to know where the faces of a photo are, to keep them in view while the photo drifts (<see cref="KenBurnsPath.Aimed"/>): the Ken Burns drift, a random effect (which may
-        /// choose it), and Parallax (a photo whose depth is not ready drifts like a Ken Burns one). The frames then have their faces worked out as they are made, not when they are first shown.
+        /// Whether a step of the effect may be heavy enough for the processor that the graphics chip is worth the read back of its picture (see <see cref="Gpu.GpuRenderer"/>): what turns a photo or moves it by its
+        /// depth, the three changes that cost 15 to 90 ms of the processor (<see cref="SlideshowTransition.Ripple"/>, <see cref="SlideshowTransition.Cube"/>, <see cref="SlideshowTransition.BlurDissolve"/>), and
+        /// <see cref="SlideshowEffect.Random"/>, which may choose any of them. The frames of such an effect have their textures made as they are made.
+        /// </summary>
+        public static bool MayUseGpu(SlideshowEffect effect) =>
+            effect is SlideshowEffect.Tilt or SlideshowEffect.DollyZoom or SlideshowEffect.Parallax or SlideshowEffect.Ripple or SlideshowEffect.Cube or SlideshowEffect.BlurDissolve or SlideshowEffect.Random;
+
+        /// <summary>Whether this change is one of the three that the graphics chip does much quicker than the processor.</summary>
+        public static bool IsHeavy(SlideshowTransition transition) =>
+            transition is SlideshowTransition.Ripple or SlideshowTransition.Cube or SlideshowTransition.BlurDissolve;
+
+        /// <summary>Whether a photo moves while it is on the screen.</summary>
+        public static bool HasMotion(SlideshowEffect effect) =>
+            effect is SlideshowEffect.KenBurns or SlideshowEffect.Parallax or SlideshowEffect.Portrait or SlideshowEffect.Tilt or SlideshowEffect.DollyZoom;
+
+        /// <summary>Whether a photo turns while it is on the screen (<see cref="SlideshowEffect.Tilt"/>).</summary>
+        public static bool Tilts(SlideshowEffect effect) => effect == SlideshowEffect.Tilt;
+
+        /// <summary>
+        /// Whether the effect may need to know where the faces of a photo are, to keep them in view while the photo drifts (<see cref="KenBurnsPath.Aimed"/>): the Ken Burns drift (and the tilt, which is one), a random effect (which may
+        /// choose it), and Parallax and the dolly zoom (a photo whose depth is not ready drifts like a Ken Burns one). The frames then have their faces worked out as they are made, not when they are first shown.
         /// </summary>
         public static bool AimsAtFaces(SlideshowEffect effect) =>
-            effect is SlideshowEffect.KenBurns or SlideshowEffect.Parallax or SlideshowEffect.Portrait or SlideshowEffect.Random;
+            effect is SlideshowEffect.KenBurns or SlideshowEffect.Tilt or SlideshowEffect.Parallax or SlideshowEffect.DollyZoom or SlideshowEffect.Portrait or SlideshowEffect.Random;
 
-        /// <summary>Whether the effect needs to know how near each part of a photo is (<see cref="SlideshowEffect.Parallax"/> and <see cref="SlideshowEffect.Portrait"/>): the depth model has to be there.</summary>
+        /// <summary>Whether the effect needs to know how near each part of a photo is (<see cref="SlideshowEffect.Parallax"/>, <see cref="SlideshowEffect.DollyZoom"/> and <see cref="SlideshowEffect.Portrait"/>): the depth model has to be there.</summary>
         public static bool UsesDepth(SlideshowEffect effect) => MovesByDepth(effect) || BlursByDepth(effect);
 
-        /// <summary>Whether the parts of a photo move against each other by their depth while it is shown (<see cref="SlideshowEffect.Parallax"/>).</summary>
-        public static bool MovesByDepth(SlideshowEffect effect) => effect == SlideshowEffect.Parallax;
+        /// <summary>Whether the parts of a photo move against each other by their depth while it is shown (<see cref="SlideshowEffect.Parallax"/>, <see cref="SlideshowEffect.DollyZoom"/>).</summary>
+        public static bool MovesByDepth(SlideshowEffect effect) => effect is SlideshowEffect.Parallax or SlideshowEffect.DollyZoom;
+
+        /// <summary>Whether the parts of a photo that move by their depth do it as in a vertigo shot (<see cref="SlideshowEffect.DollyZoom"/>): about the middle, the far ones against the near ones, and not sideways.</summary>
+        public static bool Dollies(SlideshowEffect effect) => effect == SlideshowEffect.DollyZoom;
 
         /// <summary>Whether what is not at the depth of the people is blurred (<see cref="SlideshowEffect.Portrait"/>): the photo is changed when its frame is made, and it drifts like a Ken Burns photo.</summary>
         public static bool BlursByDepth(SlideshowEffect effect) => effect == SlideshowEffect.Portrait;
@@ -93,9 +141,16 @@ namespace PhotoLiker.Effects.Transitions
             var e = Ease(progress);
             return transition switch
             {
+                // A change that is worked out pixel by pixel (see UsesMixer) is laid out like a dissolve here: what this says is how much of each photo there is (the boxes round the faces fade by it)
                 SlideshowTransition.Fade => (new SlideshowLayer(1 - e, 1, 0, 0), new SlideshowLayer(e, 1, 0, 0)),
                 SlideshowTransition.Slide => (new SlideshowLayer(1, 1, -e, 0), new SlideshowLayer(1, 1, 1 - e, 0)),
+                SlideshowTransition.PushUp => (new SlideshowLayer(1, 1, 0, -e), new SlideshowLayer(1, 1, 0, 1 - e)),
+                SlideshowTransition.PushDown => (new SlideshowLayer(1, 1, 0, e), new SlideshowLayer(1, 1, 0, e - 1)),
                 SlideshowTransition.Zoom => (new SlideshowLayer(1 - e, 1, 0, 0), new SlideshowLayer(e, ZoomStartScale + (1 - ZoomStartScale) * e, 0, 0)),
+                SlideshowTransition.CrossZoom => (
+                    new SlideshowLayer(1 - e, 1 + (CrossZoomOutgoingEndScale - 1) * e, 0, 0),
+                    new SlideshowLayer(e, CrossZoomIncomingStartScale + (1 - CrossZoomIncomingStartScale) * e, 0, 0)),
+                _ when UsesMixer(transition) => (new SlideshowLayer(1 - e, 1, 0, 0), new SlideshowLayer(e, 1, 0, 0)),
                 _ => (new SlideshowLayer(0, 1, 0, 0), SlideshowLayer.Plain),
             };
         }

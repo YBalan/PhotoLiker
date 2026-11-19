@@ -230,7 +230,7 @@ namespace PhotoLikerUI
 
             try
             {
-                LookGrade.Apply(_canvas.Pixels, Width, Height, look, lut, Path.GetHashCode());
+                LookGrade.Apply(_canvas.Pixels, Width, Height, look, lut, Path.GetHashCode(), Taken);
                 AppliedLook = look;
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -270,7 +270,21 @@ namespace PhotoLikerUI
 
         public long Bytes { get; }
 
-        public void Dispose() => _canvas.Dispose();
+        /// <summary>Whether <see cref="Dispose"/> was called: a thread of the pool that is about to make the texture of the pixels (see <see cref="SlideshowFrames.SetGpu"/>) looks.</summary>
+        public bool IsDisposed => Volatile.Read(ref _disposed);
+
+        private bool _disposed;
+
+        /// <summary>Called once when the frame is let go of, so that what was made from its pixels (the texture of the graphics chip) is let go of with it.</summary>
+        public Action<SlideshowFrame>? WhenDisposed { get; set; }
+
+        public void Dispose()
+        {
+            Volatile.Write(ref _disposed, true);
+            WhenDisposed?.Invoke(this);
+            WhenDisposed = null;
+            _canvas.Dispose();
+        }
     }
 
     /// <summary>
@@ -296,6 +310,10 @@ namespace PhotoLikerUI
         private volatile bool _warmPortrait; // the Portrait effect is on: a frame is taken in portrait mode (its pixels are changed) before it is published
         private volatile LookSetting? _look; // the colours of a frame are graded this way before it is published; null for the photo as it is
         private volatile bool _card;         // a frame is put on a Polaroid card before it is published (the last thing that is done to it)
+        private volatile bool _randomLook;   // the look of a frame is chosen for it by chance (see RandomStyle) and not given by _look
+        private volatile bool _randomCard;   // a frame is put on a card, or not, by chance
+        private volatile CubeLut? _table;    // the table of the Lut look, for a random look that may be it
+        private int _styleSeed;              // what the chance goes by: the same for all the frames of a show, so a photo that is made again gets what it had
         private int _variant;                // counts the times the way frames are made was changed (portrait, grade, card); UI thread only
         private readonly Dictionary<string, SlideshowFrame> _frames = new(StringComparer.Ordinal);
         private readonly HashSet<string> _loading = new(StringComparer.Ordinal);
@@ -373,6 +391,7 @@ namespace PhotoLikerUI
         /// </summary>
         public void SetLook(SlideshowLook look, CubeLut? lut)
         {
+            _table = lut;
             var next = look == SlideshowLook.None || (look == SlideshowLook.Lut && lut is null) ? null : new LookSetting(look, lut);
             if (_look?.Look == next?.Look && ReferenceEquals(_look?.Lut, next?.Lut))
                 return;
@@ -382,6 +401,21 @@ namespace PhotoLikerUI
         }
 
         private sealed record LookSetting(SlideshowLook Look, CubeLut? Lut);
+
+        /// <summary>
+        /// Says whether the look and the card of every frame are left to chance (see <see cref="RandomStyle"/>): each frame is made with a look, and on a card or not, that its file and <paramref name="seed"/> give. What the look or the
+        /// border is set to (<see cref="SetLook"/>, <see cref="SetBorder"/>) is used for the one that is not left to chance. The frames that are here are made again when something changed (except the ones on the screen).
+        /// </summary>
+        public void SetRandomStyle(bool look, bool border, int seed)
+        {
+            if (_randomLook == look && _randomCard == border && (_styleSeed == seed || (!look && !border)))
+                return;
+
+            _randomLook = look;
+            _randomCard = border;
+            _styleSeed = seed;
+            Remake();
+        }
 
         /// <summary>
         /// Says what the photos are put in (see <see cref="SlideshowBorder"/>). Frames are made with the card from now on (or without), and the frames that are here are made again (a photo on a card has no
@@ -404,6 +438,66 @@ namespace PhotoLikerUI
             foreach (var path in _frames.Keys.Where(path => !IsPinned(path)).ToList())
                 Evict(path);
             SetWindow(_window, _pinned, _alsoPinned);
+        }
+
+        private SlideshowGpu? _gpu;
+        private volatile bool _warmGpu;      // the effect may be drawn by the graphics chip: the texture of a frame is made as the frame is made
+
+        /// <summary>
+        /// Gives the frames the graphics chip of the show (see <see cref="SlideshowGpu"/>), and says whether the effect may use it. While it may, the texture of every frame that is here, and of every one that is made, is
+        /// made on a thread of the pool (5 to 17 ms of copying for two pictures of full HD and of 4K), so that the first step of a change does not wait for it; the pixels of a frame never change once it is
+        /// published. A frame that is let go of lets go of its texture. Nothing is made while the chip has not started or when there is none.
+        /// </summary>
+        public void SetGpu(SlideshowGpu? gpu, bool warm)
+        {
+            _gpu = gpu;
+            var was = _warmGpu;
+            _warmGpu = warm && gpu is not null;
+            if (_warmGpu && !was)
+            {
+                foreach (var frame in _frames.Values)
+                    WarmTexture(frame);
+            }
+        }
+
+        private void WarmTexture(SlideshowFrame frame)
+        {
+            if (_gpu is not { } gpu)
+                return;
+
+            // Whatever the effect, a texture that a step makes for this frame is let go of with it
+            frame.WhenDisposed ??= released => Forget(gpu, released);
+            if (!_warmGpu)
+                return;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // The chip may still be starting (a few tens of milliseconds): the texture is made when it is there
+                    var renderer = await gpu.Ready.ConfigureAwait(false);
+                    if (renderer is not null && gpu.Renderer is not null && !frame.IsDisposed)
+                    {
+                        renderer.Warm(frame.Pixels, frame.Width, frame.Height);
+                        if (frame.IsDisposed)
+                            renderer.Forget(frame.Pixels); // let go of while its texture was being made
+                    }
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException)
+                {
+                    gpu.Failed(ex);
+                }
+            });
+        }
+
+        private static void Forget(SlideshowGpu gpu, SlideshowFrame frame)
+        {
+            if (gpu.Renderer is not { } renderer)
+                return;
+
+            renderer.Forget(frame.Pixels);
+            if (frame.Depth is { } depth)
+                renderer.Forget(depth.Values);
         }
 
         /// <summary>A frame finished loading and is now here.</summary>
@@ -477,6 +571,10 @@ namespace PhotoLikerUI
                     Exception? error = null;
                     var variant = _variant; // the way frames are made as this one begins: if it has changed when it is done, this one is made the old way
 
+                    // The grade and the card this frame gets: what is set, or what chance gives this file when that is left to it. Read here, on the UI thread, not on the pool
+                    var grade = _randomLook ? new LookSetting(RandomStyle.Look(path, _styleSeed, _table is not null), _table) : _look;
+                    var card = _randomCard ? RandomStyle.Card(path, _styleSeed) : _card;
+
                     try
                     {
                         // Only the file/GDI+ work runs on the pool; the result is private until it is published below.
@@ -492,9 +590,9 @@ namespace PhotoLikerUI
                                 made.EnsureDepth(_depthOf);
                             if (_warmPortrait)
                                 made.ApplyPortrait();
-                            if (_look is { } grade)
+                            if (grade is not null)
                                 made.ApplyLook(grade.Look, grade.Lut);
-                            if (_card)
+                            if (card)
                                 made.AddCard();
                             return made;
                         });
@@ -575,6 +673,7 @@ namespace PhotoLikerUI
 
             _frames[path] = frame;
             _bytes += frame.Bytes;
+            WarmTexture(frame);
 
             // The Parallax effect was chosen while this frame was being made: the pool thread that made it looked at _warmDepth before that, and SetDepthWanted worked on the frames that were here
             // then, not on this one (it was on its way). A frame that has its depth, or has been tried, costs nothing here.

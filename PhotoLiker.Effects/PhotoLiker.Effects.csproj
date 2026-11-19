@@ -21,6 +21,12 @@
     <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />
   </ItemGroup>
 
+  <!-- Direct3D 11 for the GPU renderer of the slideshow (Gpu folder): managed wrappers (MIT) of the d3d11.dll and d3dcompiler_47.dll that every Windows has; nothing native is shipped with them -->
+  <ItemGroup>
+    <PackageReference Include="Vortice.Direct3D11" Version="3.6.2" />
+    <PackageReference Include="Vortice.D3DCompiler" Version="3.6.2" />
+  </ItemGroup>
+
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>PhotoLiker.Effects.Tests</_Parameter1>

@@ -62,6 +62,8 @@ namespace PhotoLikerUI
         private SlideshowCollage _collage;                     // how many photos of one event are on a screen at once now: as the show began, or as the keys left it
         private IReadOnlyList<int[]> _pageGroups = [];         // for each of _photos, the photos of _singles it is made of
         private SlideshowBorder _border;                       // what the photos are put in now: as the show began, or as the B key left it
+        private readonly int _styleSeed = Random.Shared.Next(); // what the chance of a random look, card and collage goes by (see RandomStyle): the same all through a show
+        private readonly SlideshowGpu _gpu;                    // the graphics chip, for the steps of effects that are heavy for the processor: started when the show is made, let go of when it is over
         private readonly double _timeoutSeconds;
 
         private readonly int[] _shown;                         // the place in the list of the photo on each screen, -1 before the first
@@ -70,6 +72,9 @@ namespace PhotoLikerUI
         private int[]? _jump;                                  // the photos the timer or the start asks for, while they are being made
         private bool _jumpByTimer;                             // _jump is the timer's, so its photos come with the effect (not the start's)
         private SlideshowEffect _lastEffect;                   // the effect of the last change, so a random one is not the same twice
+        private int _effectRun = Slideshow.DefaultEffectRun; // how many photos a random effect stays for (the setting EffectRun, kept in its range; 0: left to chance)
+        private SlideshowEffect _runEffect;                    // the random effect that is on now (while _runLeft is more than 0)
+        private int _runLeft;                                  // how many more photos _runEffect is wanted for
         private bool _scrolling;                               // a key was used since the timer last picked random photos
         private bool _closing;
         private bool _paused;                                  // a key was pressed: nothing changes by itself until Space
@@ -160,6 +165,8 @@ namespace PhotoLikerUI
             _takenOf = look?.TakenOf;
             _mode = mode;
             _collage = look?.Collage ?? SlideshowCollage.None;
+            _gpu = new SlideshowGpu(look?.Gpu ?? true);
+            _effectRun = Slideshow.EffectRunOf(look?.EffectRun ?? Slideshow.DefaultEffectRun);
             var (pages, pageOf, groups) = Paginate(_collage);
             _photos = pages;
             _pageGroups = groups;
@@ -185,7 +192,7 @@ namespace PhotoLikerUI
 
             var frameBytes = MaxFrameBytes / chosen.Length;
             var parallelLoads = Math.Max(2, MaxParallelLoads / chosen.Length);
-            _screens = [.. chosen.Select(i => new SlideshowScreen(this, screens[i], watermark, frameBytes, MinFrames, parallelLoads, people?.FacesOf, depth?.Estimate))];
+            _screens = [.. chosen.Select(i => new SlideshowScreen(this, screens[i], watermark, frameBytes, MinFrames, parallelLoads, people?.FacesOf, depth?.Estimate, _gpu))];
             _depth = depth;
             _hasPeople = people is not null;
             _showFaces = people?.ShowFaces ?? false;
@@ -204,14 +211,11 @@ namespace PhotoLikerUI
             _look = look?.Look ?? SlideshowLook.None;
             _lut = look?.Lut;
             _border = look?.Border ?? SlideshowBorder.None;
-            foreach (var screen in _screens)
-            {
-                screen.Frames.SetLook(_look, _lut);
-                screen.Frames.SetBorder(_border);
-            }
+            DressTheFrames();
             WantDepthIfNeeded();
             WantPortraitIfNeeded();
             WantFacesIfNeeded();
+            WantGpuIfNeeded();
             _timeoutSeconds = Slideshow.TimeoutOf(timeoutSeconds);
             _timer.Interval = (int)Math.Round(_timeoutSeconds * 1000);
             _timer.Tick += (_, _) => AdvanceByTimer();
@@ -227,6 +231,9 @@ namespace PhotoLikerUI
 
         /// <summary>What the photos are put in now: as the show began, or as the B key left it.</summary>
         public SlideshowBorder Border => _border;
+
+        /// <summary>The number the chance of a random look, card and collage goes by in this show (see <see cref="RandomStyle"/>): chosen when the show was made, the same all through it.</summary>
+        internal int StyleSeed => _styleSeed;
 
         /// <summary>Whether the boxes with the names on the faces are on now: as the show began, or as the F key left them.</summary>
         public bool ShowFaces => _showFaces;
@@ -450,6 +457,11 @@ namespace PhotoLikerUI
                     if (!repeat)
                         ChangeCollage(SlideshowCollage.Mixed);
                     return true;
+                case Keys.R:
+                case Keys.R | Keys.Shift:
+                    if (!repeat)
+                        ChangeCollage(SlideshowCollage.Random);
+                    return true;
                 default:
                     return false;
             }
@@ -457,7 +469,7 @@ namespace PhotoLikerUI
 
         /// <summary>
         /// The keys that change how the show looks and do not stop it: Down and Up (the effect), F and N (the faces and the names), C (the captions), L (the look), B (the card), and 1, 2, 3, 4 (also on the number pad)
-        /// and M (the collage). The letters may come with Shift (a Caps Lock, or a finger that slipped), the others come alone. Every other key pauses the show.
+        /// M and R (the collage). The letters may come with Shift (a Caps Lock, or a finger that slipped), the others come alone. Every other key pauses the show.
         /// </summary>
         internal static bool KeepsTheShowGoing(Keys keyData)
         {
@@ -465,7 +477,7 @@ namespace PhotoLikerUI
             return (keyData & Keys.KeyCode) switch
             {
                 Keys.Down or Keys.Up or Keys.D1 or Keys.D2 or Keys.D3 or Keys.D4 or Keys.NumPad1 or Keys.NumPad2 or Keys.NumPad3 or Keys.NumPad4 => modifiers == Keys.None,
-                Keys.F or Keys.N or Keys.C or Keys.L or Keys.B or Keys.M => modifiers is Keys.None or Keys.Shift,
+                Keys.F or Keys.N or Keys.C or Keys.L or Keys.B or Keys.M or Keys.R => modifiers is Keys.None or Keys.Shift,
                 _ => false,
             };
         }
@@ -688,9 +700,11 @@ namespace PhotoLikerUI
             while (SlideshowEffects.UsesDepth(next) && _depth is null && next != _effect)
                 next = SlideshowEffects.Next(next, direction); // there is no depth model: those are not offered
             _effect = next;
+            _runLeft = 0; // a random effect that is chosen now begins a run of its own
             WantDepthIfNeeded();
             WantPortraitIfNeeded();
             WantFacesIfNeeded();
+            WantGpuIfNeeded();
 
             var text = string.Format(SlideshowStrings.EffectFormat, _effect);
             foreach (var screen in _screens)
@@ -703,6 +717,25 @@ namespace PhotoLikerUI
                 foreach (var screen in _screens)
                     screen.StartMotion(plan);
             }
+        }
+
+        /// <summary>The effect that was used for the last change (a random effect is the one that was chosen), and how many more photos the random effect that is on is wanted for; for the tests.</summary>
+        internal SlideshowEffect LastEffect => _lastEffect;
+
+        internal int RunLeft => _runLeft;
+
+        /// <summary>How many photos a random effect stays for in this show: the setting, kept in its range (0: left to chance); for the tests.</summary>
+        internal int EffectRun => _effectRun;
+
+        /// <summary>The graphics chip of the show: it draws the heavy steps (see <see cref="SlideshowGpu"/>); for the tests, which look at how many it drew.</summary>
+        internal SlideshowGpu Gpu => _gpu;
+
+        /// <summary>The effect may be drawn by the graphics chip: the frames have their textures made as they are made (and for the ones that are here already). Said every time the effect may have changed.</summary>
+        private void WantGpuIfNeeded()
+        {
+            var wanted = SlideshowEffects.MayUseGpu(_effect);
+            foreach (var screen in _screens)
+                screen.Frames.SetGpu(_gpu, wanted);
         }
 
         /// <summary>The effect is one that moves photos by their depth: the frames work the depth out as they are made, and for the ones that are here already.</summary>
@@ -722,27 +755,42 @@ namespace PhotoLikerUI
         internal void ChangeLook()
         {
             _look = LookGrade.Next(_look, _lut is not null);
+            DressTheFrames();
             foreach (var screen in _screens)
-            {
-                screen.Frames.SetLook(_look, _lut);
                 screen.ShowNotice(string.Format(SlideshowStrings.LookFormat, _look));
-            }
         }
 
-        /// <summary>B: the card of <see cref="SlideshowBorder.Polaroid"/> is put round the photos if it was not, and taken away if it was, from now on; the person is told which, on every screen.</summary>
+        /// <summary>
+        /// B: the next border, from now on, in the order of the <c>Border</c> row: none, the card of <see cref="SlideshowBorder.Polaroid"/>, a card for some of the photos by chance (<see cref="SlideshowBorder.Random"/>), and round;
+        /// the person is told which, on every screen.
+        /// </summary>
         internal void ToggleBorder()
         {
-            _border = _border == SlideshowBorder.None ? SlideshowBorder.Polaroid : SlideshowBorder.None;
+            _border = _border switch { SlideshowBorder.None => SlideshowBorder.Polaroid, SlideshowBorder.Polaroid => SlideshowBorder.Random, _ => SlideshowBorder.None };
+            DressTheFrames();
+            foreach (var screen in _screens)
+                screen.ShowNotice(string.Format(SlideshowStrings.BorderFormat, _border));
+        }
+
+        /// <summary>
+        /// Tells the frames of every screen how the photos are dressed now: the look and the border as they are set, and, where one of them is <c>Random</c>, that it is left to chance (see <see cref="RandomStyle"/>).
+        /// Said every time the look or the border may have changed; the frames that are here are made again only when something did change.
+        /// </summary>
+        private void DressTheFrames()
+        {
+            var randomLook = _look == SlideshowLook.Random;
+            var randomBorder = _border == SlideshowBorder.Random;
             foreach (var screen in _screens)
             {
-                screen.Frames.SetBorder(_border);
-                screen.ShowNotice(string.Format(SlideshowStrings.BorderFormat, _border));
+                screen.Frames.SetLook(randomLook ? SlideshowLook.None : _look, _lut);
+                screen.Frames.SetBorder(randomBorder ? SlideshowBorder.None : _border);
+                screen.Frames.SetRandomStyle(randomLook, randomBorder, _styleSeed);
             }
         }
 
         /// <summary>
-        /// Divides the photos into the pages of <paramref name="collage"/> (see <see cref="CollagePlan"/>): the pages the show goes through (a page of one photo is that photo), which page each photo is on,
-        /// and the photos of each page. With no collage, or fewer than two photos, every photo is a page.
+        /// Divides the photos into the pages of <paramref name="collage"/> (see <see cref="CollagePlan"/>; <see cref="SlideshowCollage.Random"/>: pages of one to four photos by chance, see <see cref="RandomStyle"/>): the pages
+        /// the show goes through (a page of one photo is that photo), which page each photo is on, and the photos of each page. With no collage, or fewer than two photos, every photo is a page.
         /// </summary>
         private (PhotoFile[] Pages, int[] PageOf, IReadOnlyList<int[]> Groups) Paginate(SlideshowCollage collage)
         {
@@ -759,7 +807,7 @@ namespace PhotoLikerUI
             }
 
             _taken ??= [.. _singles.Select(photo => _takenOf?.Invoke(photo.OriginalFilePath))];
-            var groups = CollagePlan.Pages(_taken, collage);
+            var groups = collage == SlideshowCollage.Random ? RandomStyle.Pages(_taken, _styleSeed) : CollagePlan.Pages(_taken, collage);
             var pageOf = new int[_singles.Length];
             var pages = new PhotoFile[groups.Count];
             for (var page = 0; page < groups.Count; page++)
@@ -793,11 +841,11 @@ namespace PhotoLikerUI
             return after;
         }
 
-        /// <summary>How many photos of one event are on a screen at once now: as the show began, or as the 1, 2, 3, 4 and M keys left it.</summary>
+        /// <summary>How many photos of one event are on a screen at once now: as the show began, or as the 1, 2, 3, 4, M and R keys left it.</summary>
         public SlideshowCollage Collage => _collage;
 
         /// <summary>
-        /// 2, 3, 4 and M: the collage is changed from now on (two, three, four, or three, two and four in turn), and the key of the collage that is on takes it away; 1 takes it away at once. The photos are divided
+        /// 2, 3, 4, M and R: the collage is changed from now on (two, three, four, three, two and four in turn, or one to four by chance), and the key of the collage that is on takes it away; 1 takes it away at once. The photos are divided
         /// into pages again and the show goes on from the page that holds the photo the person is looking at, the other screens following it as at the start; the new pages come with the effect, as soon as they
         /// are ready (the frames of the old ones stay until then). The person is told which collage it is. A show that can not have it (fewer than two photos, or fewer pages than screens) says so and is left as it is.
         /// </summary>
@@ -1039,7 +1087,19 @@ namespace PhotoLikerUI
             if (_effect == SlideshowEffect.None)
                 return default;
 
-            var effect = SlideshowEffects.Resolve(_effect, _lastEffect, Random.Shared.Next);
+            var effect = _effect;
+            if (effect == SlideshowEffect.Random)
+            {
+                // A random effect stays for a number of photos (the setting EffectRun: 1 to 100, or left to chance), then another one is chosen, never the one that was on
+                if (_runLeft <= 0)
+                {
+                    _runEffect = SlideshowEffects.Resolve(SlideshowEffect.Random, _lastEffect, Random.Shared.Next);
+                    _runLeft = Slideshow.RunLength(_effectRun, Random.Shared.NextDouble());
+                }
+                effect = _runEffect;
+                _runLeft--;
+            }
+
             if (SlideshowEffects.UsesDepth(effect) && _depth is null)
                 effect = SlideshowEffect.KenBurns; // no depth model: the nearest thing there is
             _lastEffect = effect;
@@ -1049,7 +1109,7 @@ namespace PhotoLikerUI
             return new SlideshowShowPlan(
                 transition, transition == SlideshowTransition.None ? 0 : seconds,
                 SlideshowEffects.HasMotion(effect), SlideshowEffects.MotionSeconds(_timeoutSeconds, seconds),
-                Stopwatch.GetTimestamp(), SlideshowEffects.MovesByDepth(effect));
+                Stopwatch.GetTimestamp(), SlideshowEffects.MovesByDepth(effect), SlideshowEffects.Dollies(effect), SlideshowEffects.Tilts(effect));
         }
 
         private void RestartTimer()
@@ -1292,6 +1352,7 @@ namespace PhotoLikerUI
             _timer.Dispose();
             foreach (var screen in _screens)
                 screen.Dispose(); // the frames on the screens go with them
+            _gpu.Dispose();
         }
     }
 }

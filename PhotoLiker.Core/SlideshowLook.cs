@@ -21,8 +21,26 @@ namespace PhotoLiker.Core
         /// <summary>The look of a film: teal in the shadows, orange in the lights, more contrast.</summary>
         Cinema,
 
+        /// <summary>The colours as they are, with the corners darkened, as a lens or a film that is not quite even does it.</summary>
+        Vignette,
+
+        /// <summary>The colours as they are, with the grain of a fast film over them.</summary>
+        Grain,
+
+        /// <summary>A photo from a drawer: brown, faded, with dark corners, grain, and a few scratches and specks of dust.</summary>
+        OldPhoto,
+
+        /// <summary>
+        /// The grade follows the date the photo was taken: cool and pale in winter (December to February), fresh in spring, warm and bright in summer, golden in autumn (the seasons of the northern hemisphere). A photo
+        /// with no date is left as it is.
+        /// </summary>
+        Season,
+
         /// <summary>The grade of a 3D lookup table in a <c>.cube</c> file (the file of the setting <see cref="Settings.SlideshowLookFile"/>), as colour grading programs write them.</summary>
         Lut,
+
+        /// <summary>Every photo has a look of its own, by chance: any of the looks above (also none, so some photos stay as they are; the table only if there is one): the same look for the same file in the same show.</summary>
+        Random,
     }
 
     public sealed class SlideshowLookConverter() : TolerantEnumConverter<SlideshowLook>(SlideshowLook.None);

@@ -63,6 +63,9 @@ public sealed class SlideshowKeysTests : IDisposable
     [InlineData(Keys.L, true)]
     [InlineData(Keys.B, true)]
     [InlineData(Keys.M, true)]
+    [InlineData(Keys.R, true)]
+    [InlineData(Keys.R | Keys.Shift, true)]
+    [InlineData(Keys.R | Keys.Control, false)]
     [InlineData(Keys.D1, true)]
     [InlineData(Keys.D2, true)]
     [InlineData(Keys.D3, true)]
@@ -94,7 +97,7 @@ public sealed class SlideshowKeysTests : IDisposable
         Show(session, async screen =>
         {
             Assert.False(screen.IsPaused);
-            foreach (var key in new[] { Keys.Down, Keys.Up, Keys.F, Keys.N, Keys.C, Keys.L, Keys.B, Keys.D2, Keys.M, Keys.NumPad3 })
+            foreach (var key in new[] { Keys.Down, Keys.Up, Keys.F, Keys.N, Keys.C, Keys.L, Keys.B, Keys.D2, Keys.M, Keys.R, Keys.NumPad3 })
             {
                 session.HandleKey(key);
                 Assert.False(screen.IsPaused, $"{key} did not pause the show");
