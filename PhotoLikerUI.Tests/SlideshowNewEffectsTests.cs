@@ -1,7 +1,6 @@
 using PhotoLiker.Core;
 using PhotoLiker.Effects.Compositing;
 using PhotoLiker.Effects.Depth;
-using PhotoLiker.Effects.Looks;
 using PhotoLiker.Effects.Motion;
 using PhotoLiker.Effects.Transitions;
 using System.Diagnostics;
@@ -10,8 +9,8 @@ using System.Drawing.Imaging;
 namespace PhotoLikerUI.Tests;
 
 /// <summary>
-/// The effects that came with the Random rule, in a real slideshow window: every new change of photo animates from one photo to the next and ends on it at rest, the tilt turns a photo, the dolly zoom
-/// moves one by its depth inside its place, and when the effect is Random a look, a border and a collage that are left at None are left to chance (by the file and the seed of the show), and only then.
+/// The new effects, in a real slideshow window: every new change of photo animates from one photo to the next and ends on it at rest, the tilt turns a photo, the dolly zoom
+/// moves one by its depth inside its place, and a random effect only chooses the effect (look, border and collage stay as they are set).
 /// </summary>
 [Collection(WindowsCollection.Name)]
 public sealed class SlideshowNewEffectsTests : IDisposable
@@ -438,126 +437,41 @@ public sealed class SlideshowNewEffectsTests : IDisposable
         });
     }
 
-    // ── the Random rule: look, border and collage left at None are left to chance ──
+    // ── a random effect only chooses the effect: look, border and collage are what they are set to ──
 
-    private static SlideshowStyleOptions Style(
-        SlideshowLook look = SlideshowLook.None, SlideshowBorder border = SlideshowBorder.None, SlideshowCollage collage = SlideshowCollage.None, Func<string, DateTime?>? takenOf = null) =>
-        new(look, Lut: null, border, collage, takenOf);
-
-    /// <summary>Every photo is taken a day after the one before: no two are of one event, so a collage that is left to chance still puts every photo on a page of its own (and the frames are those of the photos).</summary>
-    private static Func<string, DateTime?> ADayApart(List<PhotoFile> photos) =>
-        path => new DateTime(2020, 1, 1).AddDays(photos.FindIndex(photo => photo.OriginalFilePath == path));
+    private static SlideshowStyleOptions Style(SlideshowLook look = SlideshowLook.None, SlideshowBorder border = SlideshowBorder.None, SlideshowCollage collage = SlideshowCollage.None) =>
+        new(look, Lut: null, border, collage);
 
     [Fact]
-    public void WithARandomStyle_EveryFrameGetsItsOwnLookAndCard_ByItsFile_AndTheSameOnesWhenMadeAgain()
-    {
-        var photos = MakePhotos(30);
-
-        Ui.Run(() => new Form(), async host =>
-        {
-            using var frames = new SlideshowFrames(ScreenBounds.Size, 1L << 28, 3, 4);
-            frames.SetRandomStyle(look: true, border: true, seed: 42);
-            frames.SetWindow(photos, pinned: null);
-            Assert.True(await Ui.Until(() => photos.All(photo => frames.TryGet(photo.OriginalFilePath, out _)), 60000), "the frames are made");
-
-            var looks = new HashSet<SlideshowLook>();
-            var cards = 0;
-            foreach (var photo in photos)
-            {
-                Assert.True(frames.TryGet(photo.OriginalFilePath, out var frame));
-                Assert.Equal(RandomStyle.Look(FrameKeys.Of(photo), 42, hasTable: false), frame.AppliedLook);
-                Assert.Equal(RandomStyle.Card(FrameKeys.Of(photo), 42), frame.HasCard);
-                looks.Add(frame.AppliedLook);
-                if (frame.HasCard)
-                    cards++;
-            }
-            Assert.True(looks.Count >= 4, $"looks of many kinds: {string.Join(", ", looks)}");
-            Assert.InRange(cards, 1, 29);
-
-            // Not left to chance any more: the frames are made again as they are set
-            frames.SetRandomStyle(look: false, border: false, seed: 42);
-            Assert.True(await Ui.Until(() => photos.All(photo => frames.TryGet(photo.OriginalFilePath, out var frame) && frame.AppliedLook == SlideshowLook.None && !frame.HasCard), 60000),
-                "made again with no look and no card");
-
-            // What is set is what is used for the one that is not left to chance
-            frames.SetLook(SlideshowLook.Sepia, null);
-            frames.SetRandomStyle(look: false, border: true, seed: 7);
-            Assert.True(await Ui.Until(() => photos.All(photo => frames.TryGet(photo.OriginalFilePath, out var frame) && frame.AppliedLook == SlideshowLook.Sepia), 60000), "all sepia");
-            foreach (var photo in photos)
-            {
-                frames.TryGet(photo.OriginalFilePath, out var frame);
-                Assert.Equal(RandomStyle.Card(FrameKeys.Of(photo), 7), frame!.HasCard);
-            }
-        });
-    }
-
-    [Fact]
-    public void InAShowWithARandomEffect_TheLookAndTheCardAreLeftToChance_WithTheSeedOfTheShow()
+    public void WithARandomEffect_ALookABorderAndACollageAtNone_StayNone()
     {
         var photos = MakePhotos(12);
-        using var session = Session(photos, SlideshowEffect.Random, timeout: 30, style: Style(takenOf: ADayApart(photos)));
+        using var session = Session(photos, SlideshowEffect.Random, timeout: 30); // no dates: all of one event, so a collage left to chance would have made pages
 
         Show(session, async screen =>
         {
-            Assert.True(await Ui.Until(() => photos.Take(6).All(photo => screen.Frames.TryGet(photo.OriginalFilePath, out _)), 20000), "the photos next to the shown one are ready");
+            Assert.True(await Ui.Until(() => photos.Take(6).All(photo => screen.Frames.TryGet(photo.OriginalFilePath, out _)), 20000), "the photos next to the shown one are ready, every one with a frame of its own (no page)");
 
-            var chosen = 0;
             foreach (var photo in photos.Take(6))
-            {
-                screen.Frames.TryGet(photo.OriginalFilePath, out var frame);
-                var look = RandomStyle.Look(FrameKeys.Of(photo), session.StyleSeed, hasTable: false);
-                Assert.Equal(look, frame!.AppliedLook);
-                Assert.Equal(RandomStyle.Card(FrameKeys.Of(photo), session.StyleSeed), frame.HasCard);
-                if (look != SlideshowLook.None || frame.HasCard)
-                    chosen++;
-            }
-            Assert.True(chosen >= 1, "not every photo is left as it is");
-        });
-    }
-
-    [Fact]
-    public void ALookOrABorderThatIsSet_IsNotLeftToChance_EvenWithARandomEffect()
-    {
-        var photos = MakePhotos(8);
-        using var session = Session(photos, SlideshowEffect.Random, timeout: 30, style: Style(SlideshowLook.Vintage, SlideshowBorder.Polaroid, takenOf: ADayApart(photos)));
-
-        Show(session, async screen =>
-        {
-            Assert.True(await Ui.Until(() => photos.Take(5).All(photo => screen.Frames.TryGet(photo.OriginalFilePath, out _)), 20000), "the photos next to the shown one are ready");
-
-            foreach (var photo in photos.Take(5))
-            {
-                screen.Frames.TryGet(photo.OriginalFilePath, out var frame);
-                Assert.Equal(SlideshowLook.Vintage, frame!.AppliedLook);
-                Assert.True(frame.HasCard);
-            }
-        });
-    }
-
-    [Fact]
-    public void WithAnEffectThatIsNotRandom_NothingIsLeftToChance()
-    {
-        var photos = MakePhotos(8);
-        using var session = Session(photos, SlideshowEffect.Wipe, timeout: 30);
-
-        Show(session, async screen =>
-        {
-            Assert.True(await Ui.Until(() => photos.Take(5).All(photo => screen.Frames.TryGet(photo.OriginalFilePath, out _)), 20000), "the photos next to the shown one are ready");
-
-            foreach (var photo in photos.Take(5))
             {
                 screen.Frames.TryGet(photo.OriginalFilePath, out var frame);
                 Assert.Equal(SlideshowLook.None, frame!.AppliedLook);
                 Assert.False(frame.HasCard);
             }
+            Assert.Equal(SlideshowLook.None, session.Look);
+            Assert.Equal(SlideshowBorder.None, session.Border);
+            Assert.Equal(SlideshowCollage.None, session.Collage);
+
+            session.HandleKey(Keys.Right);
+            Assert.True(await Ui.Until(() => session.ShownPaths[0] == photos[1].OriginalFilePath, 20000), "the next page is the next photo");
         });
     }
 
     [Fact]
-    public void ChangingTheEffectToRandomAndAway_TurnsTheChanceOnAndOff_AndTheKeysSayRandomWhileItIsOn()
+    public void ChangingTheEffectToRandom_ChangesNothingOfTheLookTheBorderOrThePages_AndTheKeysNeverSayRandom()
     {
         var photos = MakePhotos(8);
-        using var session = Session(photos, SlideshowEffect.DipToWhite, timeout: 30, style: Style(takenOf: ADayApart(photos))); // the effect before Random in the list
+        using var session = Session(photos, SlideshowEffect.DipToWhite, timeout: 30); // the effect before Random in the list
 
         Show(session, async screen =>
         {
@@ -565,69 +479,61 @@ public sealed class SlideshowNewEffectsTests : IDisposable
 
             session.HandleKey(Keys.Down);
             Assert.Equal(SlideshowEffect.Random, session.Effect);
-            bool Chance() => photos.Skip(1).Take(3).All(photo =>
-                screen.Frames.TryGet(photo.OriginalFilePath, out var frame) && frame.AppliedLook == RandomStyle.Look(FrameKeys.Of(photo), session.StyleSeed, false)
-                && frame.HasCard == RandomStyle.Card(FrameKeys.Of(photo), session.StyleSeed));
-            Assert.True(await Ui.Until(Chance, 30000), "the photos that were ready were made again, by chance");
+            await Task.Delay(500); // the frames would be made again by now if anything were
 
-            // L goes round the looks, and when it comes back to None the show says that None is Random now
-            for (var press = 0; press < 10; press++)
+            foreach (var photo in photos.Skip(1).Take(3))
+            {
+                Assert.True(screen.Frames.TryGet(photo.OriginalFilePath, out var frame), "the frame is still there, made as it was");
+                Assert.Equal(SlideshowLook.None, frame.AppliedLook);
+                Assert.False(frame.HasCard);
+            }
+
+            // L goes round the eleven looks (the last is the Random look) and back to None: the notice says None
+            for (var press = 0; press < 11; press++)
                 session.HandleKey(Keys.L);
             Assert.Equal(SlideshowLook.None, session.Look);
-            Assert.Contains("Random", screen.Notice);
+            Assert.Contains("None", screen.Notice);
+            Assert.DoesNotContain("Random", screen.Notice);
 
-            session.HandleKey(Keys.Down); // round to None
-            Assert.Equal(SlideshowEffect.None, session.Effect);
-            Assert.True(await Ui.Until(() => photos.Skip(1).Take(3).All(photo =>
-                screen.Frames.TryGet(photo.OriginalFilePath, out var frame) && frame.AppliedLook == SlideshowLook.None && !frame.HasCard), 30000), "and made again as they are");
+            session.HandleKey(Keys.B); // None, Polaroid, Random: and round
+            session.HandleKey(Keys.B);
+            session.HandleKey(Keys.B);
+            Assert.Equal(SlideshowBorder.None, session.Border);
+            Assert.Contains("None", screen.Notice);
+            Assert.DoesNotContain("Random", screen.Notice);
+
+            session.HandleKey(Keys.Right);
+            Assert.True(await Ui.Until(() => session.ShownPaths[0] == photos[1].OriginalFilePath, 20000), "pages are photos");
         });
     }
 
     [Fact]
-    public void WithARandomEffectAndNoCollage_ThePagesHoldOneToFourPhotosByChance_AndFollowTheEffect()
-    {
-        var photos = MakePhotos(24);
-        using var session = Session(photos, SlideshowEffect.Random, timeout: 30); // no dates: all of them are one event
-
-        Show(session, async screen =>
-        {
-            var pages = RandomStyle.Pages(new DateTime?[photos.Count], session.StyleSeed);
-            Assert.True(pages.Count >= 6 && pages.Select(page => page.Length).Distinct().Count() >= 2, "the pages are of different sizes");
-
-            Assert.Equal(SlideshowCollage.None, session.Collage); // what is set is not changed
-            Assert.Equal(photos[0].OriginalFilePath, session.ShownPaths[0]);
-
-            // Through the pages as far as the first one that has more than one photo (after the first page): each begins with the photo the plan says
-            var target = Enumerable.Range(1, pages.Count - 1).First(page => pages[page].Length >= 2);
-            for (var page = 1; page <= target; page++)
-            {
-                session.HandleKey(Keys.Right);
-                var first = photos[pages[page][0]].OriginalFilePath;
-                Assert.True(await Ui.Until(() => session.ShownPaths[0] == first, 20000), $"page {page} begins with photo {pages[page][0]}");
-            }
-            var second = photos[pages[target][1]].OriginalFilePath;
-            Assert.False(screen.Frames.TryGet(second, out _), "the second photo of the page is on the page, it has no frame of its own");
-
-            // Away from Random (Down goes round to None): a page is a photo again, and the show stays at the photo it showed
-            session.HandleKey(Keys.Down);
-            Assert.Equal(SlideshowEffect.None, session.Effect);
-            Assert.True(await Ui.Until(() => screen.Frames.TryGet(second, out _), 30000), "the second photo has a frame of its own: pages are photos again");
-            Assert.Equal(photos[pages[target][0]].OriginalFilePath, session.ShownPaths[0]);
-        });
-    }
-
-    [Fact]
-    public void ACollageThatIsSet_IsNotLeftToChance_EvenWithARandomEffect()
+    public void ALookABorderAndACollageThatAreSet_AreWhatTheyAreSet_AlsoWithARandomEffect()
     {
         var photos = MakePhotos(8);
-        using var session = Session(photos, SlideshowEffect.Random, timeout: 30, style: Style(collage: SlideshowCollage.Two));
 
-        Show(session, async screen =>
+        using (var dressed = Session(photos, SlideshowEffect.Random, timeout: 30, style: Style(SlideshowLook.Vintage, SlideshowBorder.Polaroid)))
         {
-            session.HandleKey(Keys.Right);
-            Assert.True(await Ui.Until(() => session.ShownPaths[0] == photos[2].OriginalFilePath, 20000), "pages of two, as set");
-            session.HandleKey(Keys.Right);
-            Assert.True(await Ui.Until(() => session.ShownPaths[0] == photos[4].OriginalFilePath, 20000));
+            Show(dressed, async screen =>
+            {
+                Assert.True(await Ui.Until(() => photos.Take(5).All(photo => screen.Frames.TryGet(photo.OriginalFilePath, out _)), 20000), "the photos next to the shown one are ready");
+
+                foreach (var photo in photos.Take(5))
+                {
+                    screen.Frames.TryGet(photo.OriginalFilePath, out var frame);
+                    Assert.Equal(SlideshowLook.Vintage, frame!.AppliedLook);
+                    Assert.True(frame.HasCard);
+                }
+            });
+        }
+
+        using var pages = Session(photos, SlideshowEffect.Random, timeout: 30, style: Style(collage: SlideshowCollage.Two));
+        Show(pages, async screen =>
+        {
+            pages.HandleKey(Keys.Right);
+            Assert.True(await Ui.Until(() => pages.ShownPaths[0] == photos[2].OriginalFilePath, 20000), "pages of two, as set");
+            pages.HandleKey(Keys.Right);
+            Assert.True(await Ui.Until(() => pages.ShownPaths[0] == photos[4].OriginalFilePath, 20000));
         });
     }
 }

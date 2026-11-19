@@ -76,8 +76,7 @@ namespace PhotoLiker.Core
 
         /// <summary>
         /// Another one of the effects that cost no model for every change, never the same twice in a row (not <see cref="Parallax"/>, <see cref="Portrait"/> and <see cref="DollyZoom"/>, which need the depth model
-        /// and more work). A <see cref="Settings.SlideshowLook"/>, <see cref="Settings.SlideshowBorder"/> and <see cref="Settings.SlideshowCollage"/> that are left at <c>None</c> are random too: every photo
-        /// has a look and a card of its own, and the pages hold one to four photos.
+        /// and more work). It only chooses the effect: the look, the border and the collage are what they are set to, also when they are <c>None</c>.
         /// </summary>
         Random,
     }

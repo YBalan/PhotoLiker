@@ -38,6 +38,9 @@ namespace PhotoLiker.Core
 
         /// <summary>The grade of a 3D lookup table in a <c>.cube</c> file (the file of the setting <see cref="Settings.SlideshowLookFile"/>), as colour grading programs write them.</summary>
         Lut,
+
+        /// <summary>Every photo has a look of its own, by chance: any of the looks above (also none, so some photos stay as they are; the table only if there is one): the same look for the same file in the same show.</summary>
+        Random,
     }
 
     public sealed class SlideshowLookConverter() : TolerantEnumConverter<SlideshowLook>(SlideshowLook.None);

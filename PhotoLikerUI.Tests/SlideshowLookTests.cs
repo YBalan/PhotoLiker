@@ -103,14 +103,14 @@ public sealed class SlideshowLookTests : IDisposable
             Assert.Equal(SlideshowLook.Vintage, session.Look);
             Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && made.AppliedLook == SlideshowLook.Vintage, 10000), "the frame that was ready was made again, graded");
 
-            // Without a table: Vintage, Film, Sepia, BlackAndWhite, Cinema, Vignette, Grain, OldPhoto, Season, and round to None (Lut is left out)
+            // Without a table: Vintage, Film, Sepia, BlackAndWhite, Cinema, Vignette, Grain, OldPhoto, Season, Random, and round to None (Lut is left out)
             var seen = new List<SlideshowLook>();
-            for (var press = 0; press < 9; press++)
+            for (var press = 0; press < 10; press++)
             {
                 session.HandleKey(Keys.L);
                 seen.Add(session.Look);
             }
-            Assert.Equal([SlideshowLook.Film, SlideshowLook.Sepia, SlideshowLook.BlackAndWhite, SlideshowLook.Cinema, SlideshowLook.Vignette, SlideshowLook.Grain, SlideshowLook.OldPhoto, SlideshowLook.Season, SlideshowLook.None], seen);
+            Assert.Equal([SlideshowLook.Film, SlideshowLook.Sepia, SlideshowLook.BlackAndWhite, SlideshowLook.Cinema, SlideshowLook.Vignette, SlideshowLook.Grain, SlideshowLook.OldPhoto, SlideshowLook.Season, SlideshowLook.Random, SlideshowLook.None], seen);
             Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && made.AppliedLook == SlideshowLook.None, 10000), "and graded no more when the look is None");
         });
     }
@@ -123,8 +123,8 @@ public sealed class SlideshowLookTests : IDisposable
 
         Show(session, async screen =>
         {
-            // Eleven presses with the frames of the next photos being made all the while: the ten looks without a table (None, Vintage, ... Season) and round: the 11th is Vintage
-            for (var press = 0; press < 11; press++)
+            // Twelve presses with the frames of the next photos being made all the while: the eleven looks without a table (None, Vintage, ... Season, Random) and round: the 12th is Vintage
+            for (var press = 0; press < 12; press++)
             {
                 session.HandleKey(Keys.L);
                 await Task.Delay(12);
@@ -161,7 +161,9 @@ public sealed class SlideshowLookTests : IDisposable
             Assert.InRange(b, 255 - 160 - 3, 255 - 160 + 3);
 
             session.HandleKey(Keys.L);
-            Assert.Equal(SlideshowLook.None, session.Look); // round
+            Assert.Equal(SlideshowLook.Random, session.Look); // after the table, the random look
+            session.HandleKey(Keys.L);
+            Assert.Equal(SlideshowLook.None, session.Look);   // and round
         });
     }
 

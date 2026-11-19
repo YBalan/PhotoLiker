@@ -17,6 +17,9 @@ namespace PhotoLiker.Core
 
         /// <summary>Three, two and four in turn.</summary>
         Mixed,
+
+        /// <summary>One to four photos on every page, by chance: the same pages all through the show.</summary>
+        Random,
     }
 
     public sealed class SlideshowCollageConverter() : TolerantEnumConverter<SlideshowCollage>(SlideshowCollage.None);

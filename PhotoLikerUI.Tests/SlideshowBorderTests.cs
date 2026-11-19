@@ -129,6 +129,10 @@ public sealed class SlideshowBorderTests : IDisposable
             Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && made.HasCard, 10000), "made again, on a card");
 
             session.HandleKey(Keys.B);
+            Assert.Equal(SlideshowBorder.Random, session.Border); // after the card, a card for some photos by chance
+            Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && made.HasCard == RandomStyle.Card(FrameKeys.Of(photos[1]), session.StyleSeed), 10000), "made again, with a card or not as chance says for that photo");
+
+            session.HandleKey(Keys.B);
             Assert.Equal(SlideshowBorder.None, session.Border);
             Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && !made.HasCard, 10000), "and made again as it was");
         });

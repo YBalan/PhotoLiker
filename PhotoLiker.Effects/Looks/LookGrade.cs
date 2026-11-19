@@ -53,11 +53,11 @@ namespace PhotoLiker.Effects.Looks
         };
 
         /// <summary>
-        /// The looks that a random choice picks from (see <see cref="Random"/>): every look but <see cref="SlideshowLook.Lut"/>, which needs a table (it is one of them when there is one), and
+        /// The looks that a random choice picks from (see <see cref="Random"/>): every look but <see cref="SlideshowLook.Random"/> itself and <see cref="SlideshowLook.Lut"/>, which needs a table (it is one of them when there is one), and
         /// <see cref="SlideshowLook.None"/> is one of them as well, so some photos stay as they are.
         /// </summary>
         public static IReadOnlyList<SlideshowLook> RandomChoices(bool hasTable) =>
-            [.. Enum.GetValues<SlideshowLook>().Where(look => look != SlideshowLook.Lut || hasTable)];
+            [.. Enum.GetValues<SlideshowLook>().Where(look => look != SlideshowLook.Random && (look != SlideshowLook.Lut || hasTable))];
 
         /// <summary>
         /// A look chosen by chance for the photo with this <paramref name="key"/>: the same key and <paramref name="seed"/> always give the same look (a photo that is made again, or seen again, has the one it had), another

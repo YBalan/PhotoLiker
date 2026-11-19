@@ -3,8 +3,8 @@ using PhotoLiker.Effects.Looks;
 
 namespace PhotoLiker.Effects.Tests.Looks;
 
-/// <summary>The looks that came with the new effects (Vignette, Grain, OldPhoto, Season), and the rule that leaves look, card and collage to chance when the effect is Random.</summary>
-public class NewLooksAndRandomStyleTests
+/// <summary>The looks that came with the new effects (Vignette, Grain, OldPhoto, Season), and what is left to chance when a look, a border or a collage is Random.</summary>
+public class NewLooksTests
 {
     private const int W = 60, H = 40;
 
@@ -162,9 +162,10 @@ public class NewLooksAndRandomStyleTests
         for (var i = 0; i < 600; i++)
             seen.Add(RandomStyle.Look($"photo{i}.jpg", 1, hasTable: false));
 
-        Assert.Equal(Enum.GetValues<SlideshowLook>().Where(look => look != SlideshowLook.Lut).OrderBy(look => look), seen.OrderBy(look => look));
+        Assert.Equal(Enum.GetValues<SlideshowLook>().Where(look => look != SlideshowLook.Lut && look != SlideshowLook.Random).OrderBy(look => look), seen.OrderBy(look => look));
         Assert.Contains(SlideshowLook.None, seen); // some photos stay as they are
         Assert.DoesNotContain(SlideshowLook.Lut, seen); // there is no table
+        Assert.DoesNotContain(SlideshowLook.Random, seen); // a random look is never Random itself
     }
 
     [Fact]
@@ -175,8 +176,8 @@ public class NewLooksAndRandomStyleTests
 
         Assert.Contains(SlideshowLook.Lut, withTable);
         Assert.DoesNotContain(SlideshowLook.Lut, without);
-        Assert.Equal(Enum.GetValues<SlideshowLook>().Length, LookGrade.RandomChoices(true).Count);
-        Assert.Equal(Enum.GetValues<SlideshowLook>().Length - 1, LookGrade.RandomChoices(false).Count);
+        Assert.Equal(Enum.GetValues<SlideshowLook>().Length - 1, LookGrade.RandomChoices(true).Count);   // all but Random itself
+        Assert.Equal(Enum.GetValues<SlideshowLook>().Length - 2, LookGrade.RandomChoices(false).Count);  // and not the table either
     }
 
     [Fact]
@@ -201,12 +202,6 @@ public class NewLooksAndRandomStyleTests
         Assert.NotEqual(
             Enumerable.Range(0, 100).Select(i => RandomStyle.Card($"photo{i}.jpg", 9)),
             Enumerable.Range(0, 100).Select(i => RandomStyle.Card($"photo{i}.jpg", 10)));
-    }
-
-    [Fact]
-    public void OnlyARandomEffect_LeavesThingsToChance()
-    {
-        Assert.All(Enum.GetValues<SlideshowEffect>(), effect => Assert.Equal(effect == SlideshowEffect.Random, RandomStyle.IsRandom(effect)));
     }
 
     [Fact]

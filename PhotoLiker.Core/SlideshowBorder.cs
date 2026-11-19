@@ -8,6 +8,9 @@ namespace PhotoLiker.Core
 
         /// <summary>A white card like an instant print: the photo a little smaller on it, a wider margin below, and the date the photo was taken written in it by hand.</summary>
         Polaroid,
+
+        /// <summary>Every photo has a card or not, by chance (about one photo in three has it): the photo with the same file has the same in the same show.</summary>
+        Random,
     }
 
     public sealed class SlideshowBorderConverter() : TolerantEnumConverter<SlideshowBorder>(SlideshowBorder.None);

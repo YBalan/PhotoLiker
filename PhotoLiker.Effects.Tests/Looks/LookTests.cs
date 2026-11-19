@@ -167,9 +167,11 @@ public class LookTests
         for (var i = 0; i < all.Length; i++)
             Assert.Equal(all[(i + 1) % all.Length], LookGrade.Next(all[i], hasTable: true));
 
-        Assert.Equal(SlideshowLook.None, LookGrade.Next(SlideshowLook.Season, hasTable: false)); // Lut would do nothing (it is the last, after Season)
+        Assert.Equal(SlideshowLook.Random, LookGrade.Next(SlideshowLook.Season, hasTable: false)); // Lut would do nothing: Random follows Season
         Assert.Equal(SlideshowLook.Vintage, LookGrade.Next(SlideshowLook.None, hasTable: false));
-        Assert.Equal(SlideshowLook.None, LookGrade.Next(SlideshowLook.Lut, hasTable: false));    // a look that has no table goes on at once
+        Assert.Equal(SlideshowLook.Random, LookGrade.Next(SlideshowLook.Lut, hasTable: false));    // a look that has no table goes on at once, to Random
+        Assert.Equal(SlideshowLook.None, LookGrade.Next(SlideshowLook.Random, hasTable: false));   // and Random, the last, goes round to None
+        Assert.Equal(SlideshowLook.None, LookGrade.Next(SlideshowLook.Random, hasTable: true));
     }
 
     // ── the Polaroid card ───────────────────────────────────────────────────

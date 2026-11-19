@@ -30,9 +30,8 @@ namespace PhotoLiker.Effects.Looks
         }
 
         /// <summary>
-        /// Divides the photos into pages of a size chosen by chance for each page, from one photo (a page that is the photo as it is) to <see cref="MostPhotos"/>, all as likely: the pages of a slideshow whose effect
-        /// is <see cref="SlideshowEffect.Random"/> and whose collage was left at <see cref="SlideshowCollage.None"/>. The same <paramref name="seed"/> gives the same pages, so that the pages are the same when
-        /// they are made again; the rule about events is that of <see cref="Pages"/>.
+        /// Divides the photos into pages of a size chosen by chance for each page, from one photo (a page that is the photo as it is) to <see cref="MostPhotos"/>, all as likely: the pages of <see cref="SlideshowCollage.Random"/>.
+        /// The same <paramref name="seed"/> gives the same pages, so that the pages are the same when they are made again; the rule about events is that of <see cref="Pages"/>.
         /// </summary>
         public static IReadOnlyList<int[]> RandomPages(IReadOnlyList<DateTime?> taken, int seed)
         {
