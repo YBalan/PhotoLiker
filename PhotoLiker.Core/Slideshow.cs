@@ -57,23 +57,89 @@ namespace PhotoLiker.Core
         /// <summary>The value of the setting <see cref="Settings.SlideshowEffectRun"/> that stands for "random": how long a random effect stays is itself left to chance, for each effect.</summary>
         public const int RandomEffectRun = 0;
 
-        /// <summary>The setting kept in its range: 1 to <see cref="MostEffectRun"/>, or <see cref="RandomEffectRun"/> (a value below that, which a file edited by hand may have, is taken as random too).</summary>
-        public static int EffectRunOf(int setting) => Math.Clamp(setting, RandomEffectRun, MostEffectRun);
+        /// <summary>Random as well, but within a short range: 1 to 10 photos, every number of them as likely as another (written <c>Random 1-10</c>).</summary>
+        public const int RandomOneToTenEffectRun = -1;
+
+        /// <summary>Random as well, within 3 to 20 photos, every number of them as likely as another (written <c>Random 3-20</c>).</summary>
+        public const int RandomThreeToTwentyEffectRun = -2;
+
+        /// <summary>The word the random values are written with, in the grid and in the settings file.</summary>
+        public const string RandomWord = "Random";
+
+        /// <summary>Whether the setting leaves how many photos an effect stays for to chance (<see cref="RandomEffectRun"/>, <see cref="RandomOneToTenEffectRun"/> or <see cref="RandomThreeToTwentyEffectRun"/>).</summary>
+        public static bool IsRandomEffectRun(int setting) => EffectRunOf(setting) <= 0;
 
         /// <summary>
-        /// How many photos the random effect that is chosen now stays for: the setting when it is a number (1 to <see cref="MostEffectRun"/>); when it is <see cref="RandomEffectRun"/> a number from 1 to
-        /// <see cref="MostEffectRun"/> drawn evenly on a logarithmic scale (a run of 1 to 10 photos is as likely as one of 10 to 100): short runs are common and long ones are not, the median is 10.
+        /// The setting kept in its range: 1 to <see cref="MostEffectRun"/>, or one of the three random values. Any other value below 1, which a file edited by hand may have, is taken as
+        /// <see cref="RandomEffectRun"/>.
+        /// </summary>
+        public static int EffectRunOf(int setting) => setting switch
+        {
+            > MostEffectRun => MostEffectRun,
+            > 0 or RandomOneToTenEffectRun or RandomThreeToTwentyEffectRun => setting,
+            _ => RandomEffectRun,
+        };
+
+        /// <summary>A number that was typed or written in a file as the setting: kept between 1 and <see cref="MostEffectRun"/>; 0 or less is <see cref="RandomEffectRun"/> (the other random values are words, not numbers).</summary>
+        public static int EffectRunOfNumber(long number) => number <= 0 ? RandomEffectRun : (int)Math.Min(number, MostEffectRun);
+
+        /// <summary>The setting as it is written: the number, or for the random values <c>Random</c>, <c>Random 1-10</c> and <c>Random 3-20</c>.</summary>
+        public static string EffectRunText(int setting) => EffectRunOf(setting) switch
+        {
+            RandomEffectRun => RandomWord,
+            RandomOneToTenEffectRun => RandomWord + " 1-10",
+            RandomThreeToTwentyEffectRun => RandomWord + " 3-20",
+            var number => number.ToString(CultureInfo.InvariantCulture),
+        };
+
+        /// <summary>
+        /// Reads one of the random values from its text: <c>Random</c>, <c>Random 1-10</c> or <c>Random 3-20</c>, in any case, with or without spaces, and with any dash (<c>Random 3–20</c>); <c>Random 1-100</c>
+        /// is <c>Random</c>. False for any other text.
+        /// </summary>
+        public static bool TryReadRandomEffectRun(string? text, out int setting)
+        {
+            var compact = new string((text ?? string.Empty).Where(c => !char.IsWhiteSpace(c)).Select(c => c is '–' or '—' or '−' ? '-' : char.ToLowerInvariant(c)).ToArray());
+            switch (compact)
+            {
+                case "random":
+                case "random1-100":
+                    setting = RandomEffectRun;
+                    return true;
+                case "random1-10":
+                    setting = RandomOneToTenEffectRun;
+                    return true;
+                case "random3-20":
+                    setting = RandomThreeToTwentyEffectRun;
+                    return true;
+                default:
+                    setting = DefaultEffectRun;
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// How many photos the random effect that is chosen now stays for: the setting when it is a number (1 to <see cref="MostEffectRun"/>). <see cref="RandomOneToTenEffectRun"/> and
+        /// <see cref="RandomThreeToTwentyEffectRun"/> give a number of their range, every one as likely as another. <see cref="RandomEffectRun"/> gives a number from 1 to <see cref="MostEffectRun"/> drawn evenly
+        /// on a logarithmic scale (a run of 1 to 10 photos is as likely as one of 10 to 100): short runs are common and long ones are not, the median is 10.
         /// <paramref name="unit"/> is a number from 0 up to but not including 1 (the draw).
         /// </summary>
         public static int RunLength(int setting, double unit)
         {
             var wanted = EffectRunOf(setting);
-            if (wanted != RandomEffectRun)
+            if (wanted > 0)
                 return wanted;
 
             var u = double.IsNaN(unit) ? 0 : Math.Clamp(unit, 0, 1);
-            return Math.Clamp((int)Math.Round(Math.Pow(MostEffectRun, u)), 1, MostEffectRun);
+            return wanted switch
+            {
+                RandomOneToTenEffectRun => Even(1, 10, u),
+                RandomThreeToTwentyEffectRun => Even(3, 20, u),
+                _ => Math.Clamp((int)Math.Round(Math.Pow(MostEffectRun, u)), 1, MostEffectRun),
+            };
         }
+
+        /// <summary>A whole number from <paramref name="least"/> to <paramref name="most"/>, each as likely as another, from a draw of 0 up to 1.</summary>
+        private static int Even(int least, int most, double unit) => Math.Min(most, least + (int)(unit * (most - least + 1)));
 
         /// <summary>The seconds a photo stays on the screen: the setting, kept between <see cref="MinTimeoutSeconds"/> and <see cref="MaxTimeoutSeconds"/>; a value that is no number gives the default.</summary>
         public static double TimeoutOf(double seconds) =>
