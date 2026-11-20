@@ -74,22 +74,28 @@ public sealed class SlideshowRandomModeTests : IDisposable
             Assert.True(await Ui.Until(() => photos.All(photo => frames.TryGet(photo.OriginalFilePath, out _)), 60000), "the frames are made");
 
             var looks = new HashSet<SlideshowLook>();
+            var borders = new HashSet<SlideshowBorder>();
             var cards = 0;
             foreach (var photo in photos)
             {
                 Assert.True(frames.TryGet(photo.OriginalFilePath, out var frame));
                 Assert.Equal(RandomStyle.Look(FrameKeys.Of(photo), 42, hasTable: false), frame.AppliedLook);
-                Assert.Equal(RandomStyle.Card(FrameKeys.Of(photo), 42), frame.HasCard);
+                Assert.Equal(RandomStyle.Border(FrameKeys.Of(photo), 42), frame.Border); // which border, not only whether there is one
+                Assert.Equal(RandomStyle.Card(FrameKeys.Of(photo), 42), frame.HasBorder);
                 looks.Add(frame.AppliedLook);
-                if (frame.HasCard)
+                if (frame.HasBorder)
+                {
                     cards++;
+                    borders.Add(frame.Border);
+                }
             }
             Assert.True(looks.Count >= 4, $"looks of many kinds: {string.Join(", ", looks)}");
             Assert.InRange(cards, 1, 29);
+            Assert.True(borders.Count >= 2, $"borders of more than one kind: {string.Join(", ", borders)}");
 
             // Not left to chance any more: the frames are made again as they are set
             frames.SetRandomStyle(look: false, border: false, seed: 42);
-            Assert.True(await Ui.Until(() => photos.All(photo => frames.TryGet(photo.OriginalFilePath, out var frame) && frame.AppliedLook == SlideshowLook.None && !frame.HasCard), 60000),
+            Assert.True(await Ui.Until(() => photos.All(photo => frames.TryGet(photo.OriginalFilePath, out var frame) && frame.AppliedLook == SlideshowLook.None && !frame.HasBorder), 60000),
                 "made again with no look and no card");
 
             // What is set is what is used for the one that is not left to chance
@@ -99,7 +105,7 @@ public sealed class SlideshowRandomModeTests : IDisposable
             foreach (var photo in photos)
             {
                 frames.TryGet(photo.OriginalFilePath, out var frame);
-                Assert.Equal(RandomStyle.Card(FrameKeys.Of(photo), 7), frame!.HasCard);
+                Assert.Equal(RandomStyle.Border(FrameKeys.Of(photo), 7), frame!.Border);
             }
         });
     }
@@ -122,7 +128,7 @@ public sealed class SlideshowRandomModeTests : IDisposable
                 screen.Frames.TryGet(photo.OriginalFilePath, out var frame);
                 var look = RandomStyle.Look(FrameKeys.Of(photo), session.StyleSeed, hasTable: false);
                 Assert.Equal(look, frame!.AppliedLook);
-                Assert.False(frame.HasCard, "only the look is left to chance");
+                Assert.False(frame.HasBorder, "only the look is left to chance");
                 if (look != SlideshowLook.None)
                     chosen++;
             }
@@ -144,7 +150,7 @@ public sealed class SlideshowRandomModeTests : IDisposable
             foreach (var photo in photos.Take(6))
             {
                 screen.Frames.TryGet(photo.OriginalFilePath, out var frame);
-                Assert.Equal(RandomStyle.Card(FrameKeys.Of(photo), session.StyleSeed), frame!.HasCard);
+                Assert.Equal(RandomStyle.Border(FrameKeys.Of(photo), session.StyleSeed), frame!.Border);
                 Assert.Equal(SlideshowLook.Sepia, frame.AppliedLook); // what is set is what it says
             }
             Assert.Equal(SlideshowBorder.Random, session.Border);
@@ -256,12 +262,12 @@ public sealed class SlideshowRandomModeTests : IDisposable
             Assert.True(await Ui.Until(() => photos.Skip(1).Take(3).All(photo =>
                 screen.Frames.TryGet(photo.OriginalFilePath, out var frame) && frame.AppliedLook == SlideshowLook.None), 30000), "and as they are when the look is None");
 
-            session.HandleKey(Keys.B);
-            session.HandleKey(Keys.B);
+            for (var press = 0; press < Borders.Styles.Count + 1; press++)
+                session.HandleKey(Keys.B); // the Polaroid card, the frame, the film, the stamp, the glow, the shadow, and then
             Assert.Equal(SlideshowBorder.Random, session.Border);
             Assert.Contains("Random", screen.Notice);
             Assert.True(await Ui.Until(() => photos.Skip(1).Take(3).All(photo =>
-                screen.Frames.TryGet(photo.OriginalFilePath, out var frame) && frame.HasCard == RandomStyle.Card(FrameKeys.Of(photo), session.StyleSeed)), 30000), "cards by chance");
+                screen.Frames.TryGet(photo.OriginalFilePath, out var frame) && frame.Border == RandomStyle.Border(FrameKeys.Of(photo), session.StyleSeed)), 30000), "borders by chance");
 
             session.HandleKey(Keys.B);
             Assert.Equal(SlideshowBorder.None, session.Border);

@@ -15,8 +15,12 @@ namespace PhotoLiker.Effects.Looks
         /// <summary>The look of the photo with this <paramref name="key"/>: any of the looks (a photo may stay as it is), the table's too when there is one.</summary>
         public static SlideshowLook Look(string key, int seed, bool hasTable) => LookGrade.Random(key, seed, hasTable);
 
-        /// <summary>Whether the photo with this <paramref name="key"/> is put on a card: one photo in <see cref="OneCardIn"/>.</summary>
+        /// <summary>Whether the photo with this <paramref name="key"/> has a border at all: one photo in <see cref="OneCardIn"/>.</summary>
         public static bool Card(string key, int seed) => LookGrade.Mix(key + "|card", seed) % OneCardIn == 0;
+
+        /// <summary>The border of the photo with this <paramref name="key"/>: none for two photos in three; for the rest one of <see cref="Borders.Styles"/>, by chance.</summary>
+        public static SlideshowBorder Border(string key, int seed) =>
+            Card(key, seed) ? Borders.Styles[(int)(LookGrade.Mix(key + "|border", seed) % (uint)Borders.Styles.Count)] : SlideshowBorder.None;
 
         /// <summary>The pages of a collage that is left to chance: see <see cref="CollagePlan.RandomPages"/>.</summary>
         public static IReadOnlyList<int[]> Pages(IReadOnlyList<DateTime?> taken, int seed) => CollagePlan.RandomPages(taken, seed);

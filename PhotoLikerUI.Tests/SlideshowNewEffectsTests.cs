@@ -1,6 +1,7 @@
 using PhotoLiker.Core;
 using PhotoLiker.Effects.Compositing;
 using PhotoLiker.Effects.Depth;
+using PhotoLiker.Effects.Looks;
 using PhotoLiker.Effects.Motion;
 using PhotoLiker.Effects.Transitions;
 using System.Diagnostics;
@@ -456,7 +457,7 @@ public sealed class SlideshowNewEffectsTests : IDisposable
             {
                 screen.Frames.TryGet(photo.OriginalFilePath, out var frame);
                 Assert.Equal(SlideshowLook.None, frame!.AppliedLook);
-                Assert.False(frame.HasCard);
+                Assert.False(frame.HasBorder);
             }
             Assert.Equal(SlideshowLook.None, session.Look);
             Assert.Equal(SlideshowBorder.None, session.Border);
@@ -485,7 +486,7 @@ public sealed class SlideshowNewEffectsTests : IDisposable
             {
                 Assert.True(screen.Frames.TryGet(photo.OriginalFilePath, out var frame), "the frame is still there, made as it was");
                 Assert.Equal(SlideshowLook.None, frame.AppliedLook);
-                Assert.False(frame.HasCard);
+                Assert.False(frame.HasBorder);
             }
 
             // L goes round the eleven looks (the last is the Random look) and back to None: the notice says None
@@ -495,9 +496,8 @@ public sealed class SlideshowNewEffectsTests : IDisposable
             Assert.Contains("None", screen.Notice);
             Assert.DoesNotContain("Random", screen.Notice);
 
-            session.HandleKey(Keys.B); // None, Polaroid, Random: and round
-            session.HandleKey(Keys.B);
-            session.HandleKey(Keys.B);
+            for (var press = 0; press < Borders.Styles.Count + 2; press++)
+                session.HandleKey(Keys.B); // None, the six borders, Random: and round
             Assert.Equal(SlideshowBorder.None, session.Border);
             Assert.Contains("None", screen.Notice);
             Assert.DoesNotContain("Random", screen.Notice);
@@ -522,7 +522,7 @@ public sealed class SlideshowNewEffectsTests : IDisposable
                 {
                     screen.Frames.TryGet(photo.OriginalFilePath, out var frame);
                     Assert.Equal(SlideshowLook.Vintage, frame!.AppliedLook);
-                    Assert.True(frame.HasCard);
+                    Assert.True(frame.HasBorder);
                 }
             });
         }

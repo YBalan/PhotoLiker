@@ -105,35 +105,39 @@ namespace PhotoLikerUI
         public IReadOnlyList<FaceLabel> Faces => _faces.Value;
 
         /// <summary>
-        /// Where the faces are in the frame, as fractions of it, for a drift that keeps them in view (see <see cref="KenBurnsPath.Aimed"/>); every face the index has, named or not. A frame with a card
-        /// (<see cref="AddCard"/>) has the photo on a part of it (<see cref="Inner"/>), and the faces are where they are on the card.
+        /// Where the faces are in the frame, as fractions of it, for a drift that keeps them in view (see <see cref="KenBurnsPath.Aimed"/>); every face the index has, named or not. A frame with a border
+        /// (<see cref="AddBorder"/>) has the photo on a part of it (<see cref="Inner"/>), and the faces are where they are on the border.
         /// </summary>
         public IReadOnlyList<PhotoRegion> FaceRegions =>
             [.. Faces.Select(label => new PhotoRegion(
                 Inner.X + label.Face.X * Inner.Width, Inner.Y + label.Face.Y * Inner.Height, label.Face.Width * Inner.Width, label.Face.Height * Inner.Height))];
 
-        /// <summary>Where the photo is in the frame, as fractions of it: all of it, or the part of it that is not the card (<see cref="AddCard"/>).</summary>
+        /// <summary>Where the photo is in the frame, as fractions of it: all of it, or the part of it that is not the border (<see cref="AddBorder"/>).</summary>
         public RectangleF Inner { get; private set; } = new(0, 0, 1, 1);
 
-        /// <summary>Whether the photo is on a card (see <see cref="AddCard"/>).</summary>
-        public bool HasCard { get; private set; }
+        /// <summary>Whether the photo is in a border (see <see cref="AddBorder"/>).</summary>
+        public bool HasBorder => Border != SlideshowBorder.None;
+
+        /// <summary>The border the photo is in (see <see cref="AddBorder"/>); <see cref="SlideshowBorder.None"/> when it is in none.</summary>
+        public SlideshowBorder Border { get; private set; }
 
         /// <summary>
-        /// Puts the photo on a Polaroid card, in the pixels of the frame (see <see cref="PolaroidCard"/>), and writes the date it was taken in the margin below it, by hand. Done once, last of all (the depth,
-        /// the portrait blur and the grade are those of the photo, not of the card), and the pixels are changed, so it is for a frame that is not on a screen yet.
+        /// Puts the photo in a border, in the pixels of the frame (see <see cref="Borders"/>), and, for the borders that have a place for it, writes the date it was taken there (by hand on a Polaroid card, stamped in
+        /// orange on film, printed on a postage stamp). Done once, last of all (the depth, the portrait blur and the grade are those of the photo, not of the border), and the pixels are changed, so it is for a frame that is
+        /// not on a screen yet. <see cref="SlideshowBorder.None"/> and <see cref="SlideshowBorder.Random"/> (which is one of the others, photo by photo: see <see cref="RandomStyle.Border"/>) do nothing.
         /// </summary>
-        public void AddCard()
+        public void AddBorder(SlideshowBorder border)
         {
-            if (HasCard)
+            if (HasBorder || Borders.LayoutOf(border) is not { } layout)
                 return;
 
             try
             {
-                PolaroidCard.Apply(_canvas.Pixels, Width, Height);
-                var (x, y, width, height) = PolaroidCard.Inner;
-                Inner = new RectangleF(x, y, width, height);
-                HasCard = true;
-                WriteDate();
+                Borders.Apply(border, _canvas.Pixels, Width, Height);
+                Inner = new RectangleF(layout.X, layout.Y, layout.Width, layout.Height);
+                Border = border;
+                if (layout.Date is { } date)
+                    WriteDate(date);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
@@ -142,40 +146,67 @@ namespace PhotoLikerUI
         }
 
         private static readonly string[] HandwritingFonts = ["Ink Free", "Segoe Script", "Segoe Print", "Bradley Hand ITC", "Comic Sans MS"];
+        private static readonly string[] StampFonts = ["Consolas", "Lucida Console", "Courier New"];
+        private static readonly string[] SerifFonts = ["Georgia", "Cambria", "Times New Roman"];
 
-        /// <summary>The first of the handwriting fonts this computer has; a plain italic one if it has none.</summary>
-        private static FontFamily HandwritingFamily()
+        /// <summary>The first of the fonts that this computer has; the generic one of <paramref name="fallback"/> if it has none of them.</summary>
+        private static FontFamily FamilyOf(string[] names, Func<FontFamily> fallback)
         {
             var installed = FontFamily.Families.Select(family => family.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var name = HandwritingFonts.FirstOrDefault(installed.Contains);
-            return name is null ? FontFamily.GenericSansSerif : new FontFamily(name);
+            var name = names.FirstOrDefault(installed.Contains);
+            return name is null ? fallback() : new FontFamily(name);
         }
 
-        private void WriteDate()
+        /// <summary>Writes the date of the photo in the place the border has for it, in the ink it has for it (see <see cref="DateInk"/>).</summary>
+        private void WriteDate(BorderDate where)
         {
             if (Taken is not { } date)
                 return;
 
-            var (x, y, width, height) = PolaroidCard.DateArea;
-            var area = new RectangleF(x * Width, y * Height, width * Width, height * Height);
-            using var family = HandwritingFamily();
-            using var g = Graphics.FromImage(_canvas.Image);
-            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
-            using var brush = new SolidBrush(Color.FromArgb(255, 56, 52, 60));
-            using var format = new StringFormat(StringFormat.GenericTypographic) { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-
-            // As large as the margin lets it be, but not wider than it is
-            var text = date.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
-            var size = Math.Max(8f, area.Height * 0.5f);
-            using (var probe = new Font(family, size, FontStyle.Regular, GraphicsUnit.Pixel))
+            var area = new RectangleF(where.X * Width, where.Y * Height, where.Width * Width, where.Height * Height);
+            var (family, text, colour, alignment, style, share) = where.Ink switch
             {
-                var wide = g.MeasureString(text, probe, PointF.Empty, format).Width;
-                if (wide > area.Width * 0.9f)
-                    size = Math.Max(8f, size * area.Width * 0.9f / wide);
-            }
+                DateInk.FilmStamp => (
+                    FamilyOf(StampFonts, () => FontFamily.GenericMonospace),
+                    $"'{date.ToString("yy", System.Globalization.CultureInfo.InvariantCulture)}  {date.Month}  {date.Day}",
+                    Color.FromArgb(255, 255, 140, 30), StringAlignment.Far, FontStyle.Bold, 0.62f),
+                DateInk.Capitals => (
+                    FamilyOf(SerifFonts, () => FontFamily.GenericSerif),
+                    date.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture).ToUpperInvariant(),
+                    Color.FromArgb(255, 102, 48, 44), StringAlignment.Center, FontStyle.Bold, 0.55f),
+                _ => (
+                    FamilyOf(HandwritingFonts, () => FontFamily.GenericSansSerif),
+                    date.ToString("d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture),
+                    Color.FromArgb(255, 56, 52, 60), StringAlignment.Center, FontStyle.Regular, 0.5f),
+            };
 
-            using var font = new Font(family, size, FontStyle.Regular, GraphicsUnit.Pixel);
-            g.DrawString(text, font, brush, area, format);
+            using (family)
+            using (var g = Graphics.FromImage(_canvas.Image))
+            using (var format = new StringFormat(StringFormat.GenericTypographic) { Alignment = alignment, LineAlignment = StringAlignment.Center })
+            {
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
+
+                // As large as the place lets it be, but not wider than it is
+                var size = Math.Max(8f, area.Height * share);
+                using (var probe = new Font(family, size, style, GraphicsUnit.Pixel))
+                {
+                    var wide = g.MeasureString(text, probe, PointF.Empty, format).Width;
+                    if (wide > area.Width * 0.9f)
+                        size = Math.Max(8f, size * area.Width * 0.9f / wide);
+                }
+
+                using var font = new Font(family, size, style, GraphicsUnit.Pixel);
+                if (where.Ink == DateInk.FilmStamp)
+                {
+                    // Over the photo: a dark shadow keeps the orange readable on a light sky, and the digits are inset a little from the corner
+                    area = new RectangleF(area.X, area.Y, area.Width - size * 0.4f, area.Height);
+                    using var shadow = new SolidBrush(Color.FromArgb(150, 20, 10, 0));
+                    g.DrawString(text, font, shadow, new RectangleF(area.X + size * 0.06f, area.Y + size * 0.06f, area.Width, area.Height), format);
+                }
+
+                using var brush = new SolidBrush(colour);
+                g.DrawString(text, font, brush, area, format);
+            }
         }
 
         /// <summary>The names of the people in the photo as one line for the corner (see <see cref="FaceNames.Caption"/>); null when there is nobody to write.</summary>
@@ -309,9 +340,9 @@ namespace PhotoLikerUI
         private volatile bool _warmDepth;    // the Parallax effect is on: the depth is worked out along with a frame, before it is published
         private volatile bool _warmPortrait; // the Portrait effect is on: a frame is taken in portrait mode (its pixels are changed) before it is published
         private volatile LookSetting? _look; // the colours of a frame are graded this way before it is published; null for the photo as it is
-        private volatile bool _card;         // a frame is put on a Polaroid card before it is published (the last thing that is done to it)
+        private volatile SlideshowBorder _border; // a frame is put in this border before it is published (the last thing that is done to it); None for no border
         private volatile bool _randomLook;   // the look of a frame is chosen for it by chance (see RandomStyle) and not given by _look
-        private volatile bool _randomCard;   // a frame is put on a card, or not, by chance
+        private volatile bool _randomBorder; // a frame is put in a border, or not, and in which, by chance
         private volatile CubeLut? _table;    // the table of the Lut look, for a random look that may be it
         private int _styleSeed;              // what the chance goes by: the same for all the frames of a show, so a photo that is made again gets what it had
         private int _variant;                // counts the times the way frames are made was changed (portrait, grade, card); UI thread only
@@ -403,31 +434,31 @@ namespace PhotoLikerUI
         private sealed record LookSetting(SlideshowLook Look, CubeLut? Lut);
 
         /// <summary>
-        /// Says whether the look and the card of every frame are left to chance (see <see cref="RandomStyle"/>): each frame is made with a look, and on a card or not, that its file and <paramref name="seed"/> give. What the look or the
-        /// border is set to (<see cref="SetLook"/>, <see cref="SetBorder"/>) is used for the one that is not left to chance. The frames that are here are made again when something changed (except the ones on the screen).
+        /// Says whether the look and the border of every frame are left to chance (see <see cref="RandomStyle"/>): each frame is made with a look, and in a border or none (and which), that its file and <paramref name="seed"/> give.
+        /// What the look or the border is set to (<see cref="SetLook"/>, <see cref="SetBorder"/>) is used for the one that is not left to chance. The frames that are here are made again when something changed (except the ones on the screen).
         /// </summary>
         public void SetRandomStyle(bool look, bool border, int seed)
         {
-            if (_randomLook == look && _randomCard == border && (_styleSeed == seed || (!look && !border)))
+            if (_randomLook == look && _randomBorder == border && (_styleSeed == seed || (!look && !border)))
                 return;
 
             _randomLook = look;
-            _randomCard = border;
+            _randomBorder = border;
             _styleSeed = seed;
             Remake();
         }
 
         /// <summary>
-        /// Says what the photos are put in (see <see cref="SlideshowBorder"/>). Frames are made with the card from now on (or without), and the frames that are here are made again (a photo on a card has no
-        /// original), except the ones on the screen. Said again with what it is already, it does nothing.
+        /// Says what the photos are put in (see <see cref="SlideshowBorder"/>). Frames are made in that border from now on (or without one), and the frames that are here are made again (a photo in a border has no
+        /// original), except the ones on the screen. <see cref="SlideshowBorder.Random"/> is not a border of its own (that is <see cref="SetRandomStyle"/>): it is taken as none. Said again with what it is already, it does nothing.
         /// </summary>
         public void SetBorder(SlideshowBorder border)
         {
-            var card = border == SlideshowBorder.Polaroid;
-            if (_card == card)
+            var style = Borders.IsStyle(border) ? border : SlideshowBorder.None;
+            if (_border == style)
                 return;
 
-            _card = card;
+            _border = style;
             Remake();
         }
 
@@ -571,9 +602,9 @@ namespace PhotoLikerUI
                     Exception? error = null;
                     var variant = _variant; // the way frames are made as this one begins: if it has changed when it is done, this one is made the old way
 
-                    // The grade and the card this frame gets: what is set, or what chance gives this file when that is left to it. Read here, on the UI thread, not on the pool
+                    // The grade and the border this frame gets: what is set, or what chance gives this file when that is left to it. Read here, on the UI thread, not on the pool
                     var grade = _randomLook ? new LookSetting(RandomStyle.Look(path, _styleSeed, _table is not null), _table) : _look;
-                    var card = _randomCard ? RandomStyle.Card(path, _styleSeed) : _card;
+                    var border = _randomBorder ? RandomStyle.Border(path, _styleSeed) : _border;
 
                     try
                     {
@@ -592,8 +623,8 @@ namespace PhotoLikerUI
                                 made.ApplyPortrait();
                             if (grade is not null)
                                 made.ApplyLook(grade.Look, grade.Lut);
-                            if (card)
-                                made.AddCard();
+                            if (border != SlideshowBorder.None)
+                                made.AddBorder(border);
                             return made;
                         });
                     }
@@ -613,7 +644,7 @@ namespace PhotoLikerUI
 
                     if (error is null && frame is not null && variant != _variant)
                     {
-                        // The portrait blur, the grade or the card was chosen or taken away while this frame was being made: it is not the frame that is wanted now, and a frame that is dressed
+                        // The portrait blur, the grade or the border was chosen or taken away while this frame was being made: it is not the frame that is wanted now, and a frame that is dressed
                         // keeps no original to dress again. It is let go of and made again, first of all (the photo is wanted: it is in the window still, and whoever waits for it waits for this one)
                         frame.Dispose();
                         if (_wanted.Contains(path) && !_frames.ContainsKey(path) && !_failed.Contains(path))

@@ -761,12 +761,12 @@ namespace PhotoLikerUI
         }
 
         /// <summary>
-        /// B: the next border, from now on, in the order of the <c>Border</c> row: none, the card of <see cref="SlideshowBorder.Polaroid"/>, a card for some of the photos by chance (<see cref="SlideshowBorder.Random"/>), and round;
-        /// the person is told which, on every screen.
+        /// B: the next border, from now on, in the order of the <c>Border</c> row (see <see cref="Borders.Next"/>): none, the Polaroid card, the picture frame, the film, the stamp, the glow, the shadow, a border for some
+        /// of the photos by chance (<see cref="SlideshowBorder.Random"/>), and round; the person is told which, on every screen.
         /// </summary>
         internal void ToggleBorder()
         {
-            _border = _border switch { SlideshowBorder.None => SlideshowBorder.Polaroid, SlideshowBorder.Polaroid => SlideshowBorder.Random, _ => SlideshowBorder.None };
+            _border = Borders.Next(_border);
             DressTheFrames();
             foreach (var screen in _screens)
                 screen.ShowNotice(string.Format(SlideshowStrings.BorderFormat, _border));

@@ -9,8 +9,9 @@ using System.Drawing.Imaging;
 namespace PhotoLikerUI.Tests;
 
 /// <summary>
-/// The Polaroid card in a real slideshow: frames are made on a card (the photo smaller on it, the date written in the margin), the B key turns it on and off and makes the ready frames again, the
-/// faces are where they are on the card (so the drift and the boxes still go by the photo), and a photo on a card is not moved by its depth.
+/// The borders in a real slideshow: frames are made in one (the Polaroid card, the picture frame, the film, the stamp, the glow, the shadow: the photo smaller in it, and the date written where the border has a place
+/// for it), the B key goes through them and makes the ready frames again in each, the faces are where they are in the border (so the drift and the boxes still go by the photo), and a photo in a border is not moved
+/// by its depth.
 /// </summary>
 [Collection(WindowsCollection.Name)]
 public sealed class SlideshowBorderTests : IDisposable
@@ -74,7 +75,7 @@ public sealed class SlideshowBorderTests : IDisposable
         Show(session, screen =>
         {
             Assert.True(screen.Frames.TryGet(photos[0].OriginalFilePath, out var frame));
-            Assert.True(frame.HasCard);
+            Assert.True(frame.HasBorder);
             Assert.Equal(0.08f, frame.Inner.X, 4);
             Assert.Equal(0.04f, frame.Inner.Y, 4);
             Assert.Equal(0.84f, frame.Inner.Width, 4);
@@ -107,7 +108,7 @@ public sealed class SlideshowBorderTests : IDisposable
         Show(session, screen =>
         {
             Assert.True(screen.Frames.TryGet(photos[0].OriginalFilePath, out var frame));
-            Assert.False(frame.HasCard);
+            Assert.False(frame.HasBorder);
             Assert.Equal(new RectangleF(0, 0, 1, 1), frame.Inner);
             Assert.NotEqual(PolaroidCard.CardColour, At(frame, 0.01, 0.01));
             return Task.CompletedTask;
@@ -115,7 +116,7 @@ public sealed class SlideshowBorderTests : IDisposable
     }
 
     [Fact]
-    public void TheBKey_TurnsTheCardOnAndOff_AndMakesTheReadyFramesAgain()
+    public void TheBKey_GoesThroughTheBorders_AndMakesTheReadyFramesAgainInEach()
     {
         var photos = MakePhotos(4);
         using var session = Session(photos, SlideshowBorder.None);
@@ -124,17 +125,114 @@ public sealed class SlideshowBorderTests : IDisposable
         {
             Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out _), 10000), "the next photo is ready");
 
-            session.HandleKey(Keys.B);
-            Assert.Equal(SlideshowBorder.Polaroid, session.Border);
-            Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && made.HasCard, 10000), "made again, on a card");
+            // None, then each of the borders in turn: the next photo is made again in it, and the corner of the screen says which
+            foreach (var style in Borders.Styles)
+            {
+                session.HandleKey(Keys.B);
+                Assert.Equal(style, session.Border);
+                Assert.Contains(style.ToString(), screen.Notice);
+                Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && made.Border == style, 10000), $"made again, in the {style} border");
+            }
 
             session.HandleKey(Keys.B);
-            Assert.Equal(SlideshowBorder.Random, session.Border); // after the card, a card for some photos by chance
-            Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && made.HasCard == RandomStyle.Card(FrameKeys.Of(photos[1]), session.StyleSeed), 10000), "made again, with a card or not as chance says for that photo");
+            Assert.Equal(SlideshowBorder.Random, session.Border); // after the last border, a border for some photos by chance
+            Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && made.Border == RandomStyle.Border(FrameKeys.Of(photos[1]), session.StyleSeed), 10000),
+                "made again, with a border or not, and which, as chance says for that photo");
 
             session.HandleKey(Keys.B);
             Assert.Equal(SlideshowBorder.None, session.Border);
-            Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && !made.HasCard, 10000), "and made again as it was");
+            Assert.True(await Ui.Until(() => screen.Frames.TryGet(photos[1].OriginalFilePath, out var made) && !made.HasBorder, 10000), "and made again as it was");
+        });
+    }
+
+    [Theory]
+    [InlineData(SlideshowBorder.Frame)]
+    [InlineData(SlideshowBorder.Film)]
+    [InlineData(SlideshowBorder.Stamp)]
+    [InlineData(SlideshowBorder.Glow)]
+    [InlineData(SlideshowBorder.Shadow)]
+    public void WithAnotherBorder_ThePhotoIsInIt_AndTheFacesAreWhereTheyAreInIt(SlideshowBorder border)
+    {
+        var photos = MakePhotos(3);
+        using var session = Session(photos, border, SlideshowEffect.KenBurns, people: true);
+
+        Show(session, screen =>
+        {
+            Assert.True(screen.Frames.TryGet(photos[0].OriginalFilePath, out var frame));
+            var layout = Borders.LayoutOf(border)!.Value;
+            Assert.True(frame.HasBorder);
+            Assert.Equal(border, frame.Border);
+            Assert.Equal(new RectangleF(layout.X, layout.Y, layout.Width, layout.Height), frame.Inner);
+
+            // The photo is in the middle of the frame, and the border is what is round it
+            var photo = At(frame, layout.X + layout.Width * 0.5, layout.Y + layout.Height * 0.5);
+            Assert.True(((photo >> 16) & 0xFF) < 60 && (photo & 0xFF) > 150, "the photo is in the middle, blue");
+            var corner = At(frame, 0.005, 0.005);
+            Assert.False(((corner >> 16) & 0xFF) < 60 && (corner & 0xFF) > 150, "and not in the corner");
+
+            // The face was at 0.5, 0.25 (0.2 by 0.3) of the photo: of the frame that is where the photo is, and in proportion to it
+            var face = Assert.Single(frame.FaceRegions);
+            Assert.Equal(layout.X + 0.5 * layout.Width, face.X, 4);
+            Assert.Equal(layout.Y + 0.25 * layout.Height, face.Y, 4);
+            Assert.Equal(0.2 * layout.Width, face.Width, 4);
+            Assert.Equal(0.3 * layout.Height, face.Height, 4);
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>How many pixels of the area (shares of the frame) are of a colour that <paramref name="isInk"/> says is the writing's.</summary>
+    private static int InkIn(SlideshowFrame frame, BorderDate area, Func<int, int, int, bool> isInk)
+    {
+        var count = 0;
+        for (var y = (int)(area.Y * frame.Height); y < (int)((area.Y + area.Height) * frame.Height); y++)
+        for (var x = (int)(area.X * frame.Width); x < (int)((area.X + area.Width) * frame.Width); x++)
+        {
+            var pixel = frame.Pixels[y * frame.Width + x];
+            if (isInk((int)((pixel >> 16) & 0xFF), (int)((pixel >> 8) & 0xFF), (int)(pixel & 0xFF)))
+                count++;
+        }
+        return count;
+    }
+
+    [Fact]
+    public void OnFilm_TheDateIsStampedInOrange_OnTheCornerOfThePhoto()
+    {
+        var photos = MakePhotos(2);
+        using var session = Session(photos, SlideshowBorder.Film);
+
+        Show(session, screen =>
+        {
+            Assert.True(screen.Frames.TryGet(photos[0].OriginalFilePath, out var frame));
+            Assert.NotNull(frame.Taken);
+            var date = Borders.LayoutOf(SlideshowBorder.Film)!.Value.Date!.Value;
+
+            // The photo is blue (r < 60): orange digits (red high, blue low) are not its, so they are the writing
+            var orange = InkIn(frame, date, (r, g, b) => r > 200 && g is > 90 and < 200 && b < 90);
+            Assert.True(orange > 40, $"{orange} orange pixels in the corner of the photo");
+
+            // Flush right: more writing in the right half of the place than in the left
+            var right = InkIn(frame, date with { X = date.X + date.Width / 2, Width = date.Width / 2 }, (r, g, b) => r > 200 && g is > 90 and < 200 && b < 90);
+            Assert.True(right > orange / 2, "the digits end at the right");
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void OnAStamp_TheDateIsPrintedInDarkRed_InTheMarginBelowThePhoto()
+    {
+        var photos = MakePhotos(2);
+        using var session = Session(photos, SlideshowBorder.Stamp);
+
+        Show(session, screen =>
+        {
+            Assert.True(screen.Frames.TryGet(photos[0].OriginalFilePath, out var frame));
+            var date = Borders.LayoutOf(SlideshowBorder.Stamp)!.Value.Date!.Value;
+
+            // The paper is cream (all channels above 220): the printing is dark red-brown, with its anti-aliased edge
+            var ink = InkIn(frame, date, (r, g, b) => r < 150 && g < 100 && b < 100 && r > g);
+            Assert.True(ink > 40, $"{ink} pixels of dark red writing in the margin");
+            Assert.Equal(0, InkIn(frame, date, (r, g, b) => b > 200 && r < 60)); // none of the photo is in it
+            return Task.CompletedTask;
         });
     }
 
