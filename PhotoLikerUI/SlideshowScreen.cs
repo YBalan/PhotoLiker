@@ -188,8 +188,8 @@ namespace PhotoLikerUI
             if (!plan.Motion || plan.MotionSeconds <= 0)
                 return (null, null);
 
-            // A photo on a card does not move by its depth (the depth is that of the photo, which is a part of the frame, and the card would move with it): it drifts like a Ken Burns one
-            if (plan.Parallax && frame.Depth is not null && !frame.HasCard)
+            // A photo in a border does not move by its depth (the depth is that of the photo, which is a part of the frame, and the card would move with it): it drifts like a Ken Burns one
+            if (plan.Parallax && frame.Depth is not null && !frame.HasBorder)
                 return (null, plan.Dolly ? DollyPath.Random(Random.Shared.NextDouble) : ParallaxPath.Random(Random.Shared.NextDouble));
 
             var path = KenBurnsPath.Aimed(frame.FaceRegions, Random.Shared.NextDouble);

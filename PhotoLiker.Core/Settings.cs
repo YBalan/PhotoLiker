@@ -140,7 +140,8 @@ namespace PhotoLiker.Core
 
         /// <summary>
         /// How many photos a random effect stays for, when <see cref="SlideshowEffect"/> is <see cref="SlideshowEffect.Random"/>: the same effect for this many photos in a row (1 to
-        /// <see cref="Slideshow.MostEffectRun"/>; 5 by default), then another one. <see cref="Slideshow.RandomEffectRun"/> (written <c>Random</c> in the file) leaves it to chance how many, for each effect.
+        /// <see cref="Slideshow.MostEffectRun"/>; 5 by default), then another one. <see cref="Slideshow.RandomEffectRun"/> (written <c>Random</c> in the file) leaves it to chance how many, for each effect
+        /// (1 to 100); <see cref="Slideshow.RandomOneToTenEffectRun"/> (<c>Random 1-10</c>) and <see cref="Slideshow.RandomThreeToTwentyEffectRun"/> (<c>Random 3-20</c>) do the same within a shorter range.
         /// It does nothing for any other effect.
         /// </summary>
         [JsonConverter(typeof(EffectRunConverter))]
