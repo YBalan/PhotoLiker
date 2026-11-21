@@ -33,10 +33,32 @@ internal sealed partial class Tour
         ProgressBar? bar = null;
         var barShownWhileDownloading = false;
 
+        // The CHANGELOG.md the stand-in release carries: the sentences of 2.2.0 are what is new for 2.1.0, those of 2.1.0 are what it has already
+        const string changelog = """
+            # Changelog
+
+            ## 2.2.0 - 2026-11-30
+
+            - Added Make a book: the current, liked or grouped photos become a PDF or EPUB book, with your text above and below each photo.
+            - Added Save As that converts a photo to JPEG, PNG, BMP, GIF or TIFF, by the file type you pick.
+            - Fixed the date of a video that the slideshow had not read yet.
+
+            ## 2.1.0 - 2026-11-01
+
+            - Added what the installed version already has.
+            """;
+        var changelogRequests = 0;
+
         var requests = new List<string>();
         var handler = new StandInGitHub(request =>
         {
             requests.Add(request.RequestUri!.ToString());
+            if (request.RequestUri.Host == "github.com" && request.RequestUri.AbsolutePath.EndsWith("/CHANGELOG.md"))
+            {
+                changelogRequests++;
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(changelog, Encoding.UTF8, "text/plain") };
+            }
+
             if (request.RequestUri.Host == "github.com")
             {
                 barShownWhileDownloading = bar?.Visible == true; // the box shows the progress bar before it asks for the file
@@ -46,7 +68,8 @@ internal sealed partial class Tour
             var version = stage == "same" ? "2.1.0" : "2.2.0";
             var assets = stage == "nosetup" ? "" : $$"""
                 { "name": "PhotoLiker-Setup-{{version}}.exe", "size": {{setupBytes.Length}}, "digest": "sha256:{{sha}}",
-                  "browser_download_url": "{{FakeRepository}}/download/v{{version}}/PhotoLiker-Setup-{{version}}.exe" }
+                  "browser_download_url": "{{FakeRepository}}/download/v{{version}}/PhotoLiker-Setup-{{version}}.exe" },
+                { "name": "CHANGELOG.md", "size": {{changelog.Length}}, "browser_download_url": "{{FakeRepository}}/download/v{{version}}/CHANGELOG.md" }
                 """;
             return stage == "down"
                 ? new HttpResponseMessage(HttpStatusCode.InternalServerError)
@@ -75,8 +98,10 @@ internal sealed partial class Tour
         var releasePage = Field<Button>(dialog, "_releasePage");
         var status = Field<Label>(dialog, "_status");
         bar = Field<ProgressBar>(dialog, "_progress");
+        var changes = Field<TextBox>(dialog, "_changes");
+        var changesHeading = Field<Label>(dialog, "_changesHeading");
 
-        checks.That(check.Visible && check.Enabled && !install.Visible && !releasePage.Visible && !bar.Visible && status.Text.Length == 0,
+        checks.That(check.Visible && check.Enabled && !install.Visible && !releasePage.Visible && !bar.Visible && !changes.Visible && !changesHeading.Visible && status.Text.Length == 0,
             "at first there is the button and nothing else, and GitHub has not been asked");
         checks.That(requests.Count == 0, "nothing was asked of GitHub just by opening the box");
 
@@ -98,6 +123,13 @@ internal sealed partial class Tour
         check.PerformClick();
         checks.That(await Until(() => status.Text.Contains("Version 2.2.0 is available (you have 2.1.0)")), $"a newer version is announced ('{status.Text}')");
         checks.That(install.Visible && install.Text == "Install 2.2.0 and restart" && releasePage.Visible, $"with the buttons '{install.Text}' and '{releasePage.Text}'");
+
+        // ... and what is new in it, one sentence each, from the changelog of the release (the sentences of 2.1.0, which is installed, are not there)
+        checks.That(changesHeading.Visible && changes.Visible && changesHeading.Text == "What's new", "a list headed 'What's new' appears with the version");
+        checks.That(changes.Lines.Length == 3 && changes.Text.StartsWith("• Added Make a book") && changes.Text.Contains("Fixed the date of a video") && !changes.Text.Contains("already has"),
+            $"it has the three sentences of 2.2.0 and none of 2.1.0 ({changes.Lines.Length} lines)");
+        checks.That(changes.Bottom <= dialog.ClientSize.Height && dialog.Bounds.Bottom <= Screen.FromControl(dialog).WorkingArea.Bottom, "the box has room for it, on the screen");
+        checks.That(changelogRequests == 1, $"the changelog was asked for once ({changelogRequests})");
         await DialogShot(dialog, "27-about-update");
 
         releasePage.PerformClick();
@@ -128,6 +160,7 @@ internal sealed partial class Tour
         check.PerformClick();
         checks.That(await Until(() => status.Text.Contains("has no setup file")), $"a release without a setup says so ('{status.Text}')");
         checks.That(!install.Visible && releasePage.Visible, "and only offers its page");
+        checks.That(!changes.Visible && !changesHeading.Visible, "and has no list of what is new (the answer before it had one)");
         stage = "release";
 
         // 7. a copy that the setup put here: no question at all, a progress bar, then the window closes and starts the setup

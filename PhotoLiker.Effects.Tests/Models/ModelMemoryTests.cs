@@ -26,7 +26,7 @@ public class ModelMemoryTests
         return process.PrivateMemorySize64 / (1024 * 1024);
     }
 
-    private static PhotoLiker.Search.DecodedPhoto GreyDisc(int width, int height)
+    private static PhotoLiker.Imaging.DecodedPhoto GreyDisc(int width, int height)
     {
         var bgr = new byte[width * height * 3];
         for (var y = 0; y < height; y++)
@@ -37,7 +37,7 @@ public class ModelMemoryTests
             var light = dx * dx + dy * dy < 1 ? 200 - 60 * (dx * dx + dy * dy) : 70 + 80.0 * y / height;
             Array.Fill(bgr, (byte)Math.Clamp(light + 10 * Math.Sin(x / 5.0), 0, 255), (y * width + x) * 3, 3);
         }
-        return new PhotoLiker.Search.DecodedPhoto(width, height, bgr);
+        return new PhotoLiker.Imaging.DecodedPhoto(width, height, bgr);
     }
 
     [Fact]

@@ -1,7 +1,7 @@
-namespace PhotoLiker.Search
+namespace PhotoLiker.Imaging
 {
     /// <summary>Resizes pictures with a triangle filter that widens when shrinking, so large photos don't alias.</summary>
-    internal static class Resampler
+    public static class Resampler
     {
         /// <summary>Resizes interleaved BGR bytes (the same kind of filter as PIL's bilinear resize).</summary>
         public static byte[] ResizeBgr(byte[] source, int width, int height, int newWidth, int newHeight)

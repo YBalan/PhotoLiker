@@ -165,7 +165,8 @@ public sealed class SaveAsTests : IDisposable
             Assert.Contains("granny.jpg", asked.Title);
             Assert.Equal(_folder.Path, asked.Folder);
             Assert.Equal("granny.jpg", asked.Name);
-            Assert.StartsWith("JPG (*.jpg)|*.jpg|", asked.Filter);
+            Assert.StartsWith("JPEG (*.jpg;*.jpeg)|*.jpg;*.jpeg|PNG (*.png)|*.png|", asked.Filter); // its own format first: that is what is chosen, so a plain Save is a copy
+            Assert.EndsWith("|*.*", asked.Filter);
 
             Assert.Equal(File.ReadAllBytes(photo), File.ReadAllBytes(destination));
             Assert.Equal(File.GetLastWriteTimeUtc(photo), File.GetLastWriteTimeUtc(destination));
@@ -193,8 +194,26 @@ public sealed class SaveAsTests : IDisposable
             var asked = Assert.Single(((TestMainForm)form).Asked);
             Assert.Equal("holiday.mp4", asked.Name);
             Assert.StartsWith("MP4 (*.mp4)|*.mp4|", asked.Filter);
+            Assert.DoesNotContain("PNG", asked.Filter); // a video is copied as it is: no picture formats to choose from
             Assert.Equal(File.ReadAllBytes(video), File.ReadAllBytes(destination));
             Assert.Equal(new DateTime(2013, 7, 7, 12, 0, 0, DateTimeKind.Utc), File.GetLastWriteTimeUtc(destination));
+        }, seconds: 60);
+    }
+
+    [Fact]
+    public void AVideoNamedAsAnotherKind_IsStillACopyOfTheFile_UnderTheNameTheyTyped()
+    {
+        var video = _folder.File("holiday.avi");
+        File.WriteAllBytes(video, Enumerable.Range(0, 3000).Select(i => (byte)(i * 3)).ToArray());
+        var destination = _folder.File("holiday.mkv");
+
+        Ui.Run(() => new TestMainForm(_folder.Path) { Answer = destination }, async form =>
+        {
+            Viewer(form).Tag = video;
+
+            Button(form, "saveToolStripButton").PerformClick();
+            Assert.True(await CopyIsDone(video, destination));
+            Assert.Equal(File.ReadAllBytes(video), File.ReadAllBytes(destination));
         }, seconds: 60);
     }
 
@@ -242,13 +261,165 @@ public sealed class SaveAsTests : IDisposable
         }, seconds: 60);
     }
 
+    // ── another format: the photo is converted as it is saved ───────────────
+
+    /// <summary>A converted photo is done when it can be opened as the format it says, and has the dates of the photo (they are set after the file is written).</summary>
+    private static Task<bool> ConversionIsDone(string source, string converted, int milliseconds = 20000) =>
+        Ui.Until(() =>
+        {
+            try
+            {
+                using var stream = new FileStream(converted, FileMode.Open, FileAccess.Read, FileShare.None);
+                return stream.Length > 0 && File.GetLastWriteTimeUtc(converted) == File.GetLastWriteTimeUtc(source) && File.GetCreationTimeUtc(converted) == File.GetCreationTimeUtc(source);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }, milliseconds);
+
+    [Theory]
+    [InlineData("granny.png", new byte[] { 0x89, 0x50, 0x4E, 0x47 })]
+    [InlineData("granny.bmp", new byte[] { 0x42, 0x4D })]
+    [InlineData("granny.gif", new byte[] { 0x47, 0x49, 0x46, 0x38 })]
+    [InlineData("granny.tiff", new byte[] { 0x49, 0x49, 0x2A, 0x00 })]
+    public void ANameThatSaysAnotherFormat_ConvertsThePhoto_AndKeepsItsDates(string name, byte[] signature)
+    {
+        var photo = MakePhoto("granny.jpg");
+        var before = File.ReadAllBytes(photo);
+        var destination = _folder.File(name);
+
+        Ui.Run(() => new TestMainForm(_folder.Path) { Answer = destination }, async form =>
+        {
+            Assert.True(await Ui.Until(() => FileCount(form) == 1, 20000));
+            Show(form, photo);
+            Assert.True(await PhotoShown(form, photo));
+
+            Button(form, "saveToolStripButton").PerformClick();
+            Assert.True(await ConversionIsDone(photo, destination), "the converted picture is there, with the dates of the photo");
+
+            var bytes = File.ReadAllBytes(destination);
+            Assert.True(bytes.AsSpan().StartsWith(signature), $"{name} holds the format its name says");
+            using (var picture = new Bitmap(destination))
+                Assert.Equal((W, H), (picture.Width, picture.Height));
+            Assert.Equal(File.GetLastWriteTimeUtc(photo), File.GetLastWriteTimeUtc(destination));
+            Assert.Equal(File.GetCreationTimeUtc(photo), File.GetCreationTimeUtc(destination));
+            Assert.Equal(before, File.ReadAllBytes(photo));     // the photo is as it was
+            Assert.Equal(photo, Viewer(form).Tag);
+            Assert.True(await Ui.Until(() => Status(form) == string.Format(ToolbarStrings.StatusSaveAsSavedFormat, name), 5000));
+        }, seconds: 60);
+    }
+
+    [Fact]
+    public void APngPhoto_CanBeSavedAsAJpeg_AndItsOwnFormatIsTheFirstKindTheWindowOffers()
+    {
+        var jpeg = MakePhoto("source.jpg");
+        var png = _folder.File("granny.png");
+        using (var picture = new Bitmap(jpeg))
+            picture.Save(png, ImageFormat.Png);
+        File.SetLastWriteTimeUtc(png, new DateTime(2011, 3, 4, 5, 6, 7, DateTimeKind.Utc));
+        var converted = _folder.File("granny from png.jpeg");
+
+        Ui.Run(() => new TestMainForm(_folder.Path) { Answer = converted }, async form =>
+        {
+            Assert.True(await Ui.Until(() => FileCount(form) == 2, 20000));
+            Show(form, png);
+            Assert.True(await PhotoShown(form, png));
+
+            Button(form, "saveToolStripButton").PerformClick();
+            Assert.True(await ConversionIsDone(png, converted));
+            Assert.True(File.ReadAllBytes(converted).AsSpan().StartsWith(new byte[] { 0xFF, 0xD8 }), "a JPEG, which has the extension .jpeg");
+
+            var asked = Assert.Single(((TestMainForm)form).Asked);
+            Assert.StartsWith("PNG (*.png)|*.png|JPEG (*.jpg;*.jpeg)|*.jpg;*.jpeg|", asked.Filter); // the PNG first: it is the photo's own format
+        }, seconds: 60);
+    }
+
+    [Fact]
+    public void AnotherSpellingOfThePhotosOwnFormat_IsStillACopyOfTheBytes_NotDecodedAndCodedAgain()
+    {
+        var photo = MakePhoto("granny.jpg");
+        var copy = _folder.File("granny copy.jpeg");
+
+        Ui.Run(() => new TestMainForm(_folder.Path) { Answer = copy }, async form =>
+        {
+            Assert.True(await Ui.Until(() => FileCount(form) == 1, 20000));
+            Show(form, photo);
+            Assert.True(await PhotoShown(form, photo));
+
+            Button(form, "saveToolStripButton").PerformClick();
+            Assert.True(await CopyIsDone(photo, copy));
+            Assert.Equal(File.ReadAllBytes(photo), File.ReadAllBytes(copy));
+        }, seconds: 60);
+    }
+
+    [Fact]
+    public void ANameThatSaysNoFormat_GetsTheExtensionOfThePhoto_SoTheFileIsWhatItsNameSays()
+    {
+        var photo = MakePhoto("granny.jpg");
+        var typed = _folder.File("my picture.xyz");
+
+        Ui.Run(() => new TestMainForm(_folder.Path) { Answer = typed }, async form =>
+        {
+            Assert.True(await Ui.Until(() => FileCount(form) == 1, 20000));
+            Show(form, photo);
+            Assert.True(await PhotoShown(form, photo));
+
+            Button(form, "saveToolStripButton").PerformClick();
+
+            var saved = typed + ".jpg";
+            Assert.True(await CopyIsDone(photo, saved));
+            Assert.False(File.Exists(typed));
+        }, seconds: 60);
+    }
+
+    [Fact]
+    public void ANameThatIsChangedBecauseItSaysNoFormat_IsNotWrittenOverAFileThatIsThere_TheWindowDidNotAskAboutIt()
+    {
+        var photo = MakePhoto("granny.jpg");
+        var typed = _folder.File("my picture.xyz");
+        var there = typed + ".jpg";
+        File.WriteAllText(there, "precious");
+
+        Ui.Run(() => new TestMainForm(_folder.Path) { Answer = typed }, async form =>
+        {
+            Assert.True(await Ui.Until(() => FileCount(form) >= 1, 20000));
+            Show(form, photo);
+            Assert.True(await PhotoShown(form, photo));
+
+            Button(form, "saveToolStripButton").PerformClick();
+
+            Assert.True(await Ui.Until(() => Status(form) == string.Format(ToolbarStrings.StatusSaveAsExistsFormat, "my picture.xyz.jpg"), 5000));
+            Assert.Equal("precious", File.ReadAllText(there));
+        }, seconds: 60);
+    }
+
+    [Fact]
+    public void AFileThatIsNoPicture_IsReportedAndNothingIsLeftBehind()
+    {
+        var photo = _folder.File("broken.jpg");
+        File.WriteAllText(photo, "this is not a picture");
+        var destination = _folder.File("broken.png");
+
+        Ui.Run(() => new TestMainForm(_folder.Path) { Answer = destination }, async form =>
+        {
+            Viewer(form).Tag = photo;
+
+            Button(form, "saveToolStripButton").PerformClick();
+
+            Assert.True(await Ui.Until(() => Status(form).StartsWith(ToolbarStrings.StatusSaveAsFailedFormat.Split('{')[0]), 10000));
+            Assert.False(File.Exists(destination));
+            Assert.False(File.Exists(destination + ".part"));
+        }, seconds: 60);
+    }
+
     // ── the picture of the Refocus bar ──────────────────────────────────────
 
     [Fact]
-    public void WithTheRefocusBarWorking_ItSavesThePictureThatIsOnTheScreen_AsAJpeg_NotTheFile()
+    public void WithTheRefocusBarWorking_ItSavesThePictureThatIsOnTheScreen_InTheFormatTheNameSays_NotTheFile()
     {
         var photo = MakePhoto("granny.jpg");
-        var destination = _folder.File(@"portraits\granny blurred.png"); // a wrong extension: it is a JPEG all the same
+        var destination = _folder.File(@"portraits\granny blurred.png"); // a PNG: the picture is converted as it is saved
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
 
         Ui.Run(() => new TestMainForm(_folder.Path) { Answer = destination, WithDepth = true }, async form =>
@@ -261,21 +432,46 @@ public sealed class SaveAsTests : IDisposable
 
             Button(form, "saveToolStripButton").PerformClick();
 
-            var saved = destination + ".jpg";
-            Assert.True(await PictureIsDone(photo, saved), "a PNG name gets .jpg: the file is a JPEG, so it says so");
+            Assert.True(await PictureIsDone(photo, destination), "the picture is there, as the PNG its name says");
             var asked = Assert.Single(((TestMainForm)form).Asked);
             Assert.Equal("granny (portrait).jpg", asked.Name);                 // the name the bar's own Save a copy would give
-            Assert.StartsWith("JPEG (*.jpg;*.jpeg)|", asked.Filter);
+            Assert.StartsWith("JPEG (*.jpg;*.jpeg)|*.jpg;*.jpeg|PNG (*.png)|*.png|", asked.Filter); // a JPEG unless the person says otherwise, and they can
             Assert.Equal(_folder.Path, asked.Folder);
 
-            var bytes = File.ReadAllBytes(saved);
-            Assert.True(bytes[0] == 0xFF && bytes[1] == 0xD8, "a JPEG");
+            var bytes = File.ReadAllBytes(destination);
+            Assert.True(bytes.AsSpan().StartsWith(new byte[] { 0x89, 0x50, 0x4E, 0x47 }), "a PNG");
             Assert.NotEqual(File.ReadAllBytes(photo), bytes);                // not a copy of the file
-            using (var picture = new Bitmap(saved))
+            using (var picture = new Bitmap(destination))
                 Assert.Equal((W, H), (picture.Width, picture.Height));
-            Assert.Equal(File.GetLastWriteTimeUtc(photo), File.GetLastWriteTimeUtc(saved)); // it keeps the dates of the photo
+            Assert.Equal(File.GetLastWriteTimeUtc(photo), File.GetLastWriteTimeUtc(destination)); // it keeps the dates of the photo
+            Assert.Equal(File.GetCreationTimeUtc(photo), File.GetCreationTimeUtc(destination));
             Assert.True(File.Exists(photo));
             Assert.Equal(photo, Viewer(form).Tag);
+            Assert.Empty(Directory.GetFiles(Path.GetDirectoryName(destination)!, "*.part")); // nothing half written
+        }, seconds: 90);
+    }
+
+    [Fact]
+    public void WithTheRefocusBarWorking_ANameThatSaysNoFormat_IsAJpeg_AsItAlwaysWas()
+    {
+        var photo = MakePhoto("granny.jpg");
+        var typed = _folder.File("portrait.xyz");
+
+        Ui.Run(() => new TestMainForm(_folder.Path) { Answer = typed, WithDepth = true }, async form =>
+        {
+            Assert.True(await Ui.Until(() => FileCount(form) == 1, 20000));
+            Show(form, photo);
+            Assert.True(await PhotoShown(form, photo));
+            Button(form, "refocusToolStripButton").PerformClick();
+            Assert.True(await Ui.Until(() => Ui.Controls<RefocusBar>(form).FirstOrDefault() is { Visible: true, CanSave: true }, 15000), "the Refocus bar is working");
+
+            Button(form, "saveToolStripButton").PerformClick();
+
+            var saved = typed + ".jpg";
+            Assert.True(await PictureIsDone(photo, saved));
+            var bytes = File.ReadAllBytes(saved);
+            Assert.True(bytes[0] == 0xFF && bytes[1] == 0xD8, "a JPEG");
+            Assert.False(File.Exists(typed));
         }, seconds: 90);
     }
 
@@ -304,10 +500,57 @@ public sealed class SaveAsTests : IDisposable
     // ── the pure parts ──────────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(@"C:\x\a.jpg", @"C:\x\a.jpg")]
-    [InlineData(@"C:\x\a.JPEG", @"C:\x\a.JPEG")]
-    [InlineData(@"C:\x\a.png", @"C:\x\a.png.jpg")]
-    [InlineData(@"C:\x\a", @"C:\x\a.jpg")]
-    [InlineData(@"C:\x\a.tif", @"C:\x\a.tif.jpg")]
-    public void APictureThatIsSaved_IsNamedAJpeg(string typed, string saved) => Assert.Equal(saved, MainForm.JpegName(typed));
+    [InlineData("PNG (*.png)|*.png|JPEG (*.jpg;*.jpeg)|*.jpg;*.jpeg|All files (*.*)|*.*", 1, ".png")]
+    [InlineData("PNG (*.png)|*.png|JPEG (*.jpg;*.jpeg)|*.jpg;*.jpeg|All files (*.*)|*.*", 2, ".jpg")]   // the first pattern of the kind
+    [InlineData("PNG (*.png)|*.png|JPEG (*.jpg;*.jpeg)|*.jpg;*.jpeg|All files (*.*)|*.*", 3, null)]     // every file: no extension to add
+    [InlineData("PNG (*.png)|*.png", 2, null)]                                                         // there is no such kind
+    [InlineData("PNG (*.png)|*.png", 0, null)]
+    [InlineData("", 1, null)]
+    public void TheExtensionOfTheKindThatIsPicked_IsTheFirstPatternOfIt(string filter, int index, string? extension) => Assert.Equal(extension, MainForm.ExtensionOfFilter(filter, index));
+
+    /// <summary>
+    /// The Save As window of Windows refuses a filter that is not made of pairs "text|pattern" (it throws): the tests above answer the window themselves, so the filters are given to the real
+    /// one here. (The all files kind was once only the text, and Save As failed for every file.)
+    /// </summary>
+    [Theory]
+    [InlineData(@"C:\x\a.jpg")]
+    [InlineData(@"C:\x\a.png")]
+    [InlineData(@"C:\x\a.tiff")]
+    [InlineData(@"C:\x\a.webp")]  // can be read and copied, not written
+    [InlineData(@"C:\x\a.heic")]
+    [InlineData(@"C:\x\a.mp4")]
+    [InlineData(@"C:\x\a.avi")]
+    [InlineData(@"C:\x\a")]
+    public void TheKindsOfFileOfAFile_AreAcceptedByTheRealSaveAsWindow(string file)
+    {
+        var filter = MainForm.CopyFilter(file);
+
+        using var dialog = new SaveFileDialog();
+        dialog.Filter = filter; // throws for a filter the window refuses
+        Assert.Equal(filter, dialog.Filter);
+    }
+
+    [Fact]
+    public void TheKindsOfFileOfAPictureMadeByABar_AreAcceptedByTheRealSaveAsWindow_JpegFirst()
+    {
+        using var dialog = new SaveFileDialog();
+        dialog.Filter = MainForm.EditedFilter;
+
+        Assert.StartsWith("JPEG (*.jpg;*.jpeg)|", dialog.Filter);
+        Assert.Contains("TIFF", dialog.Filter);
+    }
+
+    [Theory]
+    [InlineData(@"C:\x\a.webp", "WEBP (*.webp)|*.webp|JPEG ")]   // its own kind first, then the formats it can become
+    [InlineData(@"C:\x\a.png", "PNG (*.png)|*.png|JPEG ")]
+    [InlineData(@"C:\x\a.tif", "TIFF (*.tiff;*.tif)|*.tiff;*.tif|JPEG ")]
+    [InlineData(@"C:\x\a.jpeg", "JPEG (*.jpg;*.jpeg)|*.jpg;*.jpeg|PNG ")]
+    public void APhoto_OffersItsOwnFormatFirst_ThenTheOthers_ThenEveryFile(string file, string start)
+    {
+        var filter = MainForm.CopyFilter(file);
+
+        Assert.StartsWith(start, filter);
+        Assert.EndsWith("|*.*", filter);
+        Assert.Equal(1, filter.Split('|').Count(part => part.StartsWith("JPEG ")));
+    }
 }

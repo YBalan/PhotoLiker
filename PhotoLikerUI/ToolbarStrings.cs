@@ -16,6 +16,7 @@ namespace PhotoLikerUI
         public static string StatusSaveAsSavedFormat => T();
         public static string StatusSaveAsFailedFormat => T();
         public static string StatusSaveAsSameFile => T();
+        public static string StatusSaveAsExistsFormat => T();
         public static string Copy => T();
         public static string Help => T();
         public static string ThemeTooltip => T();

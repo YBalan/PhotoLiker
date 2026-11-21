@@ -6,10 +6,12 @@ namespace PhotoLiker.Core
 {
     /// <summary>
     /// A release of the program on GitHub: its version, its page, and the setup to download (<see cref="InstallerUrl"/> is null if the
-    /// release has no setup file, or one that is not at the address of this project's releases).
+    /// release has no setup file, or one that is not at the address of this project's releases). <see cref="ChangelogUrl"/> is the
+    /// CHANGELOG.md the release carries (see <see cref="Changelog"/>), null for a release that has none (the first ones).
     /// </summary>
     public sealed record ReleaseInfo(
-        Version Version, string Tag, string PageUrl, string? InstallerName, string? InstallerUrl, long InstallerBytes, string? InstallerSha256);
+        Version Version, string Tag, string PageUrl, string? InstallerName, string? InstallerUrl, long InstallerBytes, string? InstallerSha256,
+        string? ChangelogUrl = null);
 
     /// <summary>
     /// Asks GitHub which release of the program is the latest and downloads its setup. It runs only when the person asks for it (the
@@ -20,6 +22,9 @@ namespace PhotoLiker.Core
     {
         public const string Repository = "YBalan/PhotoLiker";
         public const string InstallerPrefix = "PhotoLiker-Setup-";
+
+        /// <summary>A changelog larger than this is not read: it is a few kilobytes, so a file this big is not the one that was published.</summary>
+        public const int MaxChangelogBytes = 1 << 20;
 
         private readonly HttpClient _http;
         private readonly string _repository;
@@ -100,6 +105,40 @@ namespace PhotoLiker.Core
             }
         }
 
+        /// <summary>
+        /// What changed in the versions of the changelog that <paramref name="release"/> carries (all of its history, see <see cref="Changelog"/>); none if it carries none. A failure
+        /// is an exception, as with the other requests: the changes are a courtesy, so the caller may go on without them.
+        /// </summary>
+        public async Task<IReadOnlyList<ChangelogSection>> GetChangelogAsync(ReleaseInfo release, CancellationToken cancellationToken)
+        {
+            if (release.ChangelogUrl is null)
+                return [];
+
+            using var request = NewRequest(release.ChangelogUrl);
+            using var response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            if (response.Content.Headers.ContentLength > MaxChangelogBytes)
+                throw new InvalidDataException(CoreStrings.UpdateAnswerUnreadable);
+
+            // Read at most the limit plus one byte: a file that has no length in its headers cannot fill the memory
+            using var bytes = new MemoryStream();
+            await using (var source = await response.Content.ReadAsStreamAsync(cancellationToken))
+            {
+                var buffer = new byte[1 << 14];
+                int read;
+                while ((read = await source.ReadAsync(buffer, cancellationToken)) > 0)
+                {
+                    bytes.Write(buffer, 0, read);
+                    if (bytes.Length > MaxChangelogBytes)
+                        throw new InvalidDataException(CoreStrings.UpdateAnswerUnreadable);
+                }
+            }
+
+            bytes.Position = 0;
+            using var reader = new StreamReader(bytes, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            return Changelog.Parse(await reader.ReadToEndAsync(cancellationToken));
+        }
+
         /// <summary>The release that GitHub's JSON describes. The pages are built here from the tag, not taken from the answer, so only github.com of this project is ever opened.</summary>
         public static ReleaseInfo Parse(string json, string repository = Repository)
         {
@@ -115,7 +154,7 @@ namespace PhotoLiker.Core
                 var page = $"https://github.com/{repository}/releases/tag/{Uri.EscapeDataString(tag)}";
                 var downloads = $"https://github.com/{repository}/releases/download/";
 
-                string? name = null, url = null, sha = null;
+                string? name = null, url = null, sha = null, changelog = null;
                 long bytes = 0;
                 if (root.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
                 {
@@ -123,9 +162,18 @@ namespace PhotoLiker.Core
                     {
                         var assetName = asset.GetProperty("name").GetString() ?? string.Empty;
                         var assetUrl = asset.GetProperty("browser_download_url").GetString() ?? string.Empty;
-                        if (!assetName.StartsWith(InstallerPrefix, StringComparison.OrdinalIgnoreCase)
-                            || !assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
-                            || !assetUrl.StartsWith(downloads, StringComparison.Ordinal))
+                        if (!assetUrl.StartsWith(downloads, StringComparison.Ordinal))
+                            continue; // only files of this project's releases
+
+                        if (assetName.Equals(Changelog.FileName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            changelog ??= assetUrl;
+                            continue;
+                        }
+
+                        if (name is not null
+                            || !assetName.StartsWith(InstallerPrefix, StringComparison.OrdinalIgnoreCase)
+                            || !assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                             continue;
 
                         name = assetName;
@@ -134,11 +182,10 @@ namespace PhotoLiker.Core
                         sha = asset.TryGetProperty("digest", out var digest) && digest.GetString() is { } text && text.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)
                             ? text["sha256:".Length..]
                             : null;
-                        break;
                     }
                 }
 
-                return new ReleaseInfo(version, tag, page, name, url, bytes, sha);
+                return new ReleaseInfo(version, tag, page, name, url, bytes, sha, changelog);
             }
             catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
             {

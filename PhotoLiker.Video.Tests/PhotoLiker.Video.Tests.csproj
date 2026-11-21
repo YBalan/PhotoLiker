@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="PhotoLiker.Imaging" />
     <Using Include="System.IO" />
     <Using Include="PhotoLiker.Core" />
     <Using Include="PhotoLiker.Video" />

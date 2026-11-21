@@ -118,6 +118,7 @@ namespace PhotoLikerUI
             _removeEmptyFoldersButton.ToolTipText = EmptyFoldersStrings.ButtonTooltip;
             _findDuplicatesButton.Text = DuplicatesStrings.ButtonText;
             _findDuplicatesButton.ToolTipText = DuplicatesStrings.ButtonTooltip;
+            ApplyBookLanguage();
             ApplyVideoSpeechLanguage();
             ApplyColorizeLanguage();
             ApplyRefocusLanguage();

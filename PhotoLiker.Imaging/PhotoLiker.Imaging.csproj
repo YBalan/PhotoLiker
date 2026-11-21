@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Pictures as pixels, without a user interface: decoding a photo (upright, at a size), resizing it, and converting it to another format (JPEG, PNG, BMP, GIF, TIFF) with its dates.
+    It is the picture layer that search, effects and videos share, so it depends on none of them (nor on Core). Windows only: WPF is used for its WIC image decoder and encoders.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PhotoLiker.Imaging</RootNamespace>
+  </PropertyGroup>
+
+</Project>

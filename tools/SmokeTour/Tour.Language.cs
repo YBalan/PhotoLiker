@@ -97,7 +97,7 @@ internal sealed partial class Tour
         if (dialog is null)
             return;
 
-        var text = AllControls(dialog).OfType<TextBox>().Single().Text;
+        var text = Field<TextBox>(dialog, "_shortcuts").Text; // the list of keys (the box that says what is new is another TextBox)
         checks.That(dialog.Text == "Про PhotoLiker" && text.Contains("Пробіл") && text.Contains("Вподобати фото"), "the About box lists the keys in Ukrainian");
         var buttons = AllControls(dialog).OfType<Button>().Where(b => b.Visible).Select(b => b.Text).ToList();
         checks.That(buttons.Count == 4 && buttons[0] == "Перевірити оновлення" && buttons[1] == "User manual (English)" && buttons[2] == "Посібник користувача (українською)",

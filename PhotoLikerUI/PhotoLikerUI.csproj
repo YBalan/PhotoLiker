@@ -3,7 +3,9 @@
   <ItemGroup>
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
     <ProjectReference Include="..\PhotoLiker.Effects\PhotoLiker.Effects.csproj" />
+    <ProjectReference Include="..\PhotoLiker.Imaging\PhotoLiker.Imaging.csproj" />
     <ProjectReference Include="..\PhotoLiker.GenerateVideo\PhotoLiker.GenerateVideo.csproj" />
+    <ProjectReference Include="..\PhotoLiker.PhotoBook\PhotoLiker.PhotoBook.csproj" />
     <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />
     <ProjectReference Include="..\PhotoLiker.Video\PhotoLiker.Video.csproj" />
   </ItemGroup>
@@ -32,7 +34,9 @@
 
   <ItemGroup>
     <Using Include="PhotoLiker.Core" />
+    <Using Include="PhotoLiker.Imaging" />
     <Using Include="PhotoLiker.GenerateVideo" />
+    <Using Include="PhotoLiker.PhotoBook" />
     <Using Include="PhotoLiker.Effects.Transitions" />
     <Using Include="PhotoLiker.Effects.Motion" />
     <Using Include="PhotoLiker.Effects.Compositing" />

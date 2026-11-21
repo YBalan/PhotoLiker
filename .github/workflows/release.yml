@@ -1,7 +1,8 @@
 name: Release
 
 # Publishes a release on GitHub: push a tag  vMAJOR.MINOR.PATCH  (git tag v2.1.0 && git push origin v2.1.0).
-# The release gets the installer (PhotoLiker-Setup-<version>.exe, what the "Check for updates" button of the About box downloads) and the zip.
+# The release gets the installer (PhotoLiker-Setup-<version>.exe, what the "Check for updates" button of the About box downloads), the zip and CHANGELOG.md, whose section
+# for the version (one sentence per feature or fix) is also the first thing in the notes of the release. A tag whose version has no section there is refused.
 # The version of the tag is stamped on the program, which is how the program knows which release it is.
 
 on:
@@ -30,6 +31,18 @@ jobs:
           }
           "version=$($Matches[1])" >> $env:GITHUB_OUTPUT
 
+      # What this version changed is written in CHANGELOG.md, one sentence per feature or fix. Those sentences open the notes of the release, and the file itself is attached to it
+      # (the About box reads it from there). A version that has no section is refused here, before anything is built.
+      - name: Notes of the release
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $changes = & ./installer/Get-ChangelogSection.ps1 -Version $env:VERSION
+          $intro = (Get-Content .github/release-intro.md -Raw).Replace('{version}', $env:VERSION)
+          $notes = "### What's new in $env:VERSION`n`n" + ($changes -join "`n") + "`n`n" + $intro
+          Set-Content -Path release-notes.md -Value $notes -Encoding utf8
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
@@ -39,8 +52,14 @@ jobs:
       - name: Test the Core library
         run: dotnet test PhotoLiker.Tests/PhotoLiker.Tests.csproj --configuration Release
 
+      - name: Test the picture library
+        run: dotnet test PhotoLiker.Imaging.Tests/PhotoLiker.Imaging.Tests.csproj --configuration Release
+
       - name: Test the video library
         run: dotnet test PhotoLiker.GenerateVideo.Tests/PhotoLiker.GenerateVideo.Tests.csproj --configuration Release
+
+      - name: Test the photo book library
+        run: dotnet test PhotoLiker.PhotoBook.Tests/PhotoLiker.PhotoBook.Tests.csproj --configuration Release
 
       - name: Test the library of videos in the archive
         run: dotnet test PhotoLiker.Video.Tests/PhotoLiker.Video.Tests.csproj --configuration Release
@@ -85,15 +104,13 @@ jobs:
           TAG: ${{ github.ref_name }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          $intro = (Get-Content .github/release-intro.md -Raw).Replace('{version}', $env:VERSION)
-          Set-Content -Path release-intro.md -Value $intro -Encoding utf8
-
-          # The intro goes first, GitHub's list of what changed (the merged pull requests and commits since the last release) after it
+          # The notes are what the version changed (CHANGELOG.md), then how to install and update (release-intro.md): both were put in release-notes.md at the start.
+          # CHANGELOG.md goes along as a file: the About box of the program reads it to say what is new before it installs.
           gh release create $env:TAG `
             "publish/installer/PhotoLiker-Setup-$env:VERSION.exe" `
             "publish/PhotoLiker-$env:VERSION-win-x64.zip" `
+            CHANGELOG.md `
             --title "Photo Liker $env:VERSION" `
-            --notes-file release-intro.md `
-            --generate-notes `
+            --notes-file release-notes.md `
             --verify-tag
           if ($LASTEXITCODE -ne 0) { throw "gh release create failed with exit code $LASTEXITCODE" }

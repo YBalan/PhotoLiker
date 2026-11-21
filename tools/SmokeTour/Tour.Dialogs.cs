@@ -114,7 +114,7 @@ internal sealed partial class Tour
         if (dialog is null)
             return;
 
-        var text = AllControls(dialog).OfType<TextBox>().Single().Text;
+        var text = Field<TextBox>(dialog, "_shortcuts").Text; // the list of keys (the box that says what is new is another TextBox)
         checks.That(new[] { "Right / Left", "Space", "Delete", "1-9, A-Z", "Alt+1-9", "F5", "Ctrl+C" }.All(text.Contains), "it lists the keys");
 
         var buttons = AllControls(dialog).OfType<Button>().Where(b => b.Visible).Select(b => b.Text).ToList();

@@ -56,7 +56,8 @@ namespace PhotoLiker.Core
             return found;
         }
 
-        internal static void Sort(List<PhotoFile> photos, PhotoSortOrder sortOrder)
+        /// <summary>Puts photos in an order in place (the same rules the scan uses); <see cref="PhotoSortOrder.None"/> leaves them as they are.</summary>
+        public static void Sort(List<PhotoFile> photos, PhotoSortOrder sortOrder)
         {
             switch (sortOrder)
             {

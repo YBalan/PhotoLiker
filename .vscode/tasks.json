@@ -78,6 +78,19 @@
       "problemMatcher": []
     },
     {
+      "label": "remove-tag",
+      "detail": "Delete a tag here and on GitHub (lists the tags and asks which; refuses if GitHub has a release for it or a release run is going)",
+      "command": "pwsh",
+      "type": "process",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/installer/remove-tag.ps1"
+      ],
+      "presentation": { "reveal": "always", "focus": true, "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
       "label": "test",
       "command": "dotnet",
       "type": "process",

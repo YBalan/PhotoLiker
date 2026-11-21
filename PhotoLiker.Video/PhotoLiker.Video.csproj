@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
+    <ProjectReference Include="..\PhotoLiker.Imaging\PhotoLiker.Imaging.csproj" />
     <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageReference Include="Whisper.net" Version="1.9.1" />
@@ -30,6 +31,7 @@
 
   <ItemGroup>
     <Using Include="PhotoLiker.Core" />
+    <Using Include="PhotoLiker.Imaging" />
     <Using Include="System.IO" />
   </ItemGroup>
 

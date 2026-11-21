@@ -17,6 +17,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
   - [Keyboard and mouse](#keyboard-and-mouse)
   - [Toolbar](#toolbar)
     - [Generate Video](#generate-video)
+    - [Make a book](#make-a-book)
   - [About box](#about-box)
 - [Settings](#settings)
   - [Folder picker](#folder-picker)
@@ -43,6 +44,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Project layout](#project-layout)
 - [Development](#development)
   - [Releasing](#releasing)
+  - [The changelog](#the-changelog)
   - [Smoke tour](#smoke-tour)
 - [License](#license)
 
@@ -120,6 +122,9 @@ in the background, nothing runs at startup.
   does not match is thrown away), closes PhotoLiker (after it saved what it keeps), runs the setup silently over the installed copy (nothing to
   click: only the setup's small progress window shows) and starts PhotoLiker again. Your settings, likes and search indexes stay: they are in
   `%LocalAppData%\PhotoLiker` and in your photo folders, which the setup does not touch.
+- **What's new** appears under the answer: one sentence for each feature or fix of every version after yours (a version you skipped is in it too), read from the
+  `CHANGELOG.md` that the release carries (see [Releasing](#releasing)). The sentences are in English. A release that carries no changelog (the first ones), or whose
+  changelog does not come within 8 seconds, is offered without the list.
 - **Release page** opens the page of that release (what changed, the files).
 - A copy that the setup did not put there (unpacked from the zip, or a build run from the source) cannot be replaced by a setup: the setup
   installs PhotoLiker for your user as a second copy, and starts that one. So this is the one case in which **Install** asks first, and says so;
@@ -382,7 +387,7 @@ ones are behind the arrow at the bottom of the column.
 | **three bars** (top) | Show or hide the names of the buttons. |
 | **Properties** (a small window with a title bar) | Fold the panel with the two grids into a thin tab at the edge, and bring it back; it is lit while the panel is shown. See [The Properties panel](#the-properties-panel). |
 | **Open** | Open a photo folder. |
-| **Save** (a floppy disk) | **Save As**: asks where, and saves a copy of the shown photo or video under the name and in the place you choose (it keeps the dates of the file; a file that is there is written over only after you said yes). With the **Colorize** bar showing colours, or the **Refocus** bar working, it saves the picture as it looks on the screen now, as a JPEG with the Exif of the photo and its dates, and the name it suggests is the one the bar's own **Save a copy** would give. The photo that is shown is never changed. |
+| **Save** (a floppy disk) | **Save As**: asks where, and saves a copy of the shown photo or video under the name and in the place you choose (it keeps the dates of the file; a file that is there is written over only after you said yes). **A photo can be given another format as it is saved**: pick the type in the *Save as type* list (the photo's own format is the first, then JPEG, PNG, BMP, GIF and TIFF) or type the extension, and the photo is converted, whole, at its full size and upright, with the dates of the file; a JPEG and a TIFF take its Exif dates, the camera, the description, the artist and the copyright along (a PNG the date taken and the camera, BMP and GIF nothing: they have no room for them), and transparent parts become white where the format has none (JPEG, BMP). The same format (also as `.jpeg` for `.jpg`) is a copy of the bytes, as before; a name that says no format gets the extension of the photo (`x.xyz` becomes `x.xyz.jpg`, and a file of that name that is there is not touched). A WebP or HEIC photo can be converted to any of the five where Windows can read it (it needs its WebP / HEIF image extension), but is never saved as such (Windows has no encoder for them); a picture with several frames (a moving GIF, a TIFF of pages) is converted by its first frame. A video is copied as it is. With the **Colorize** bar showing colours, or the **Refocus** bar working, it saves the picture as it looks on the screen now, as a JPEG with the Exif of the photo and its dates unless you pick another type (the same five), and the name it suggests is the one the bar's own **Save a copy** would give. The photo that is shown is never changed. |
 | **Copy** | Copy the shown photo to the clipboard (the same as <kbd>Ctrl</kbd>+<kbd>C</kbd>). |
 | **Dark** / **Light** (a moon / a sun) | Switch the theme, see [Dark and light theme](#dark-and-light-theme). |
 | **Open Source Folder**, **Open Liked Folder** | Show the photo folder, or the Liked folder, in File Explorer. |
@@ -396,6 +401,7 @@ ones are behind the arrow at the bottom of the column.
 | **Refocus** (a photo with a sharp ring and soft lights) | Take the shown photo in portrait mode with a floating bar: click where the focus should be, and the sliders change the blur, the sharp zone and the haze, see [Refocusing photos](#refocusing-photos). The button opens the bar and closes it again. |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
+| **Make a book** (a teal book with a photo on its cover; last, after Help and a separator) | Make a PDF or an EPUB book of the photos, with a text above and below each photo and the photos in the order you choose, see [Make a book](#make-a-book). |
 
 #### The Properties panel
 
@@ -535,9 +541,62 @@ How the photos are prepared:
   although the file itself says the right length. Without B-frames there is nothing to delay. For a slideshow of stills the size is the same.
   Videos made before this still have the delay.
 
+#### Make a book
+
+The **Make a book** button (a teal book with a photo on its cover, the last button of the toolbar, after Help) makes a **PDF** or an **EPUB** book of photos: a page for each photo, a text
+you write **above** it and a text **below** it, and the photos in the order you put them in. Like Generate Video it works on the loaded photos, the Liked folder or a
+group, and it follows the dark theme of the window.
+
+![The Make a book window](docs/images/48-make-book.png)
+
+- **Photos from** picks the photos: `Current` (the loaded ones), `Liked`, and each group folder, with the number of photos (counted in the background, so the window opens at
+  once). The photos of a folder that has no book yet start in the order of **Sort by** (the order of the folder's setting); **Sort** puts all the photos in an order again.
+  Videos are left out.
+- **The thumbnails are the order of the book.** Drag the picked photos to a place (a line shows where they will go; the view scrolls by itself at its top and bottom edge, and
+  <kbd>Esc</kbd> gives the drag up). <kbd>Ctrl</kbd> and <kbd>Shift</kbd> pick several. <kbd>Alt</kbd>+arrows move the picked photos one place (a row with up and down), <kbd>Alt</kbd>+<kbd>Home</kbd> and
+  <kbd>Alt</kbd>+<kbd>End</kbd> to the start and the end; the buttons above the list do the same and **To place...** asks for a number. **Leave out** (<kbd>Delete</kbd>) keeps a photo in the list,
+  dimmed and crossed, but out of the book, and **Put back** undoes it. The two round arrows **Rotate left** and **Rotate right** (<kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd>, as in the main window) turn the picked
+  photos a quarter in the book: the thumbnail and the picture at the right show it, and the PDF page follows (a landscape photo turned a quarter is a portrait page). Only the **book** turns them, so it works for any format
+  and your photo files, their Exif and their dates are never touched (the Rotate buttons of the main window, by contrast, write a flag into the JPEG itself); a turn is a step of **Undo**. **Reverse**, **Sort**, every move and every leaving out can be undone with **Undo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, a hundred
+  steps) and done again (<kbd>Ctrl</kbd>+<kbd>Y</kbd>). The slider under the list sets the size of the thumbnails (80 to 320 px). Each thumbnail has its number in the book, the file name, and a blue mark for a text
+  above it and one for a text below it. The photos are read only when they come on the screen, a few at a time, and only if they are still there when their turn comes, so a list of
+  thousands opens at once and scrolling fast does not queue the photos that went by.
+- **Above the photo** and **Below the photo** are two Rich Text Boxes for the photo that is picked (with several picked there is nothing to write to). They look like paper (black on white)
+  in either theme. The buttons give **bold, italic, underline, strike-through**, the **size** (4 to 200 points; 12 is the size of text that has none of its own), the **colour**, and the
+  alignment: **left, centre, right and justified** (a Rich Text Box has no justification of its own; the paragraph format of Rich Edit is set directly). A pick that is in more than one look
+  (a bold word in the middle) is changed run by run, so each run keeps its other looks. What is written is kept as the RTF of the box; one Enter is one paragraph and Shift+Enter a line break.
+  There is one font for the whole book (below), not one per text; bullets, tables and pictures in a text are not offered.
+- **Make** picks **PDF** or **EPUB**. **Title** and **Author** (both optional) make the first page of the book, and for an EPUB its name in the library. For a **PDF**: the **Page**
+  (A4, A5, Letter, or a 21 cm square), **Turned** (portrait, landscape, or *as the photo is*: each page as its photo is), the **Margin** in millimetres (0 to 60), the **Font** and
+  **Page numbers** (small, grey, at the foot, the title page has none). The fonts offered are the ones of Windows that have Latin and Cyrillic letters and are installed on the computer (Segoe UI, Arial,
+  Calibri, Cambria, Candara, Constantia, Corbel, Georgia, Palatino Linotype, Book Antiqua, Times New Roman, Tahoma, Trebuchet MS, Verdana, Courier New, Consolas, Comic Sans MS). An EPUB is
+  set to the screen of its reader and in the reader's own font, so these four are greyed out for it. **Pictures** says how many pixels a photo keeps: small files (1600 px on the long side,
+  JPEG quality 80), good (2400 px, 87) or best (3600 px, 93, which is A4 at 300 dpi); a smaller photo is never enlarged.
+- **Save in** (the folder of the photos until you change it) and **File name** (`photobook_<date>_<time>.pdf` or `.epub`; the extension follows **Make**). **Make the book** asks before it writes
+  over a file that is there. A bar and the status line say how far it is (preparing the photos, then writing the file); **Cancel** stops it and leaves no half-written file. **Open** shows the
+  book in the program Windows has for it.
+
+**What the book looks like.** A PDF has a page for each photo: the text above, the photo as large as the page leaves room for after the texts (at least 30 % of the height of the page), the text
+below, the whole in the middle of the page. A text that is too long for that goes on to more pages (the photo is then at most 60 % of a page). The letters are embedded, so any reader shows
+Ukrainian (and every other script the font has) and can search and copy it; the photos are put in as the JPEG files they were made into, not squeezed again. An EPUB (version 3) has a page of XHTML
+for each photo, which starts a new page in a reader, a contents list (by the first words written above each photo, or *Photo 3*), the language of the program as the language of the book, and the
+first photo as its cover picture. In both, the photos are turned upright (the Exif orientation is applied, since a PDF and an EPUB have none to say how to turn them) and the camera's own notes
+(Exif, GPS, thumbnail) are **not** carried into the book.
+
+**What is kept.** The order, which photos are left out, how each is turned, every text, and every value of the window are written to `photo-liker-book.json` in the folder of the photos (the paths relative to the folder,
+as `photo-liker-video.json` does) when you switch to another source, when you close the window, when you make the book, and 15 seconds after the last change. The next time the folder is made into a book
+it comes back as you left it: photos that are new to the folder go to the end (in the sort order), photos that are gone are dropped with their texts. The window with nothing changed writes nothing.
+
+- The pictures are made in a temporary folder (`%TEMP%\PhotoLikerBook_...`) several at a time and it is gone when the book is made or stopped. A photo that cannot be read is left out of the
+  book and named at the end; the rest is made.
+- The library is its own project, `PhotoLiker.PhotoBook` (the RTF reader, the setting of text in lines, the PDF and EPUB writers, the order and the file kept with the folder); the thumbnails,
+  the Rich Text Box and the window are in `PhotoLikerUI`, and turning a photo into the JPEG of a book (`BookPictures`) is in `PhotoLiker.Imaging`. The PDF is written with [PDFsharp](https://docs.pdfsharp.net/)
+  (MIT); it finds only a few of the fonts of Windows by itself, so the program has its own resolver that reads the fonts of the Windows registry (TrueType and OpenType files; a collection of fonts
+  in one file, `.ttc`, is not read).
+
 ### About box
 
-The **Help** button (the question mark, last on the toolbar) or <kbd>F1</kbd> opens the About box: the version (the release, like `2.1.0`; a
+The **Help** button (the question mark; only **Make a book**, after a separator, comes after it) or <kbd>F1</kbd> opens the About box: the version (the release, like `2.1.0`; a
 build that is no release shows its assembly version) and build date, the list of
 keys and mouse moves of the window (the table under [Keyboard and mouse](#keyboard-and-mouse), without the explanations; keep the two
 in step: the list is `AboutStrings.Shortcuts`), the **Check for updates** button (see [Updating](#updating)), and two buttons,
@@ -547,7 +606,7 @@ that did not copy it) a message says where it should be.
 
 ![The About box](docs/images/16-about.png)
 
-When a newer version is found the box says so and offers it (a stand-in for GitHub made this picture, see the [smoke tour](#smoke-tour)):
+When a newer version is found the box says so, lists what is new in it and offers it (a stand-in for GitHub made this picture, see the [smoke tour](#smoke-tour)):
 
 ![The About box after Check for updates found a newer version](docs/images/27-about-update.png)
 
@@ -1471,7 +1530,7 @@ the picture.
 
 **Save a copy** on the bar writes `name (portrait).jpg` next to the photo (numbered when the name is taken, never over anything), upright, with its Exif and its file dates, at the size of the
 photo up to 4096 pixels on the long side (the blurred copies of the picture need memory in proportion to its size); the copy joins the list and the photo stays on the screen. It is refused while the folder is
-being indexed, as the other tools that add files are. The **Save** button of the toolbar (**Save As**) saves the same picture where you say, as a JPEG whatever extension you type. The picture on the screen
+being indexed, as the other tools that add files are. The **Save** button of the toolbar (**Save As**) saves the same picture where you say, as a JPEG unless you pick another type (see [Toolbar](#toolbar)). The picture on the screen
 is at most 1600 pixels on the long side.
 
 ### The limits
@@ -1617,19 +1676,24 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 |---|---|
 | `PhotoLikerUI` | The Windows (WinForms) app. Everything that needs WinForms or GDI+: the window, decoding and caching of photos, the settings grid with its editors, themes, the context menu registration. |
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown. Shared by all front ends. |
+| `PhotoLiker.Imaging` | Pictures as pixels, without a user interface: decoding a photo upright and at a size (`WicPhotoDecoder`, the Exif orientation applied), resizing it (`Resampler`), and **converting a photo to another format** (`PhotoConverter`: JPEG, PNG, BMP, GIF, TIFF, with the dates of the file and the Exif notes that the format has room for; used by the **Save** button). The picture layer that search, effects and videos share, so it depends on none of them (not even Core). Windows only (WPF's image decoder and encoders). |
 | `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run (also of frames that are drawn one by one: `VideoFrames`), the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
-| `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only (WPF's image decoder). |
-| `PhotoLiker.Effects` | What is done to a photo apart from looking at it and searching it, without a user interface. The folders are the namespaces (`PhotoLiker.Effects.<folder>`): `Transitions` (the rules of the effects of the [slideshow](#slideshow): which one is used, how long a change takes, how two photos are drawn in the middle of it), `Motion` (the slow movements of one photo: Ken Burns and the [depth parallax](#depth-parallax)), `Compositing` (`FrameCompositor`, which puts the pictures of an effect together on the pixels, on all the cores, also moving a picture by its depth), `Gpu` (`GpuRenderer`, the same on the graphics chip with Direct3D 11, for the steps that are heavy for the processor, see [The graphics chip](#the-graphics-chip)), `Depth` (the depth of a picture, Depth Anything V2 Small) and `Colorize` (the colours of a black and white photo, DDColor; the copy that is saved next to the photo; how much colour a photo has) and `Models` (the list of the files of the two models, and `EffectModels`, which downloads them and makes the ONNX sessions). It uses Core for the settings (`SlideshowEffect`, the name of the effect, is a setting and stays there) and Search for what the two have in common: decoding a photo, downloading model files, and the check that ONNX Runtime can start. |
+| `PhotoLiker.PhotoBook` | Making a book of photos as a PDF or an EPUB, without a user interface: the description above and below each photo (the RTF of a Rich Text Box read into paragraphs and runs: `RtfParser`), the setting of text in lines (`TextLayout`: wrapping, alignment, justification), the PDF writer (PDFsharp, embedded fonts found by `PdfFonts`) and the EPUB 3 writer, the order of the photos and its moves (`BookOrder`), and the `photo-liker-book.json` kept with a folder. Uses Core for the photos and the texts. |
+| `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only; uses Imaging for decoding photos. |
+| `PhotoLiker.Effects` | What is done to a photo apart from looking at it and searching it, without a user interface. The folders are the namespaces (`PhotoLiker.Effects.<folder>`): `Transitions` (the rules of the effects of the [slideshow](#slideshow): which one is used, how long a change takes, how two photos are drawn in the middle of it), `Motion` (the slow movements of one photo: Ken Burns and the [depth parallax](#depth-parallax)), `Compositing` (`FrameCompositor`, which puts the pictures of an effect together on the pixels, on all the cores, also moving a picture by its depth), `Gpu` (`GpuRenderer`, the same on the graphics chip with Direct3D 11, for the steps that are heavy for the processor, see [The graphics chip](#the-graphics-chip)), `Depth` (the depth of a picture, Depth Anything V2 Small) and `Colorize` (the colours of a black and white photo, DDColor; the copy that is saved next to the photo; how much colour a photo has) and `Models` (the list of the files of the two models, and `EffectModels`, which downloads them and makes the ONNX sessions). It uses Core for the settings (`SlideshowEffect`, the name of the effect, is a setting and stays there) Imaging for decoding a photo, and Search for what the two have in common: downloading model files, and the check that ONNX Runtime can start. |
 | `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form, heard again in a language that is chosen), the table of it for the window and the Excel file (`.xlsx`, written with the zip and XML of the framework) of that table, and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
 | `PhotoLiker.Maui` | An experimental cross-platform front end on top of the Core library. It is not built by CI and needs the .NET MAUI workloads. |
 | `PhotoLiker.Tests` | xUnit tests of the Core library (and of the one WinForms-free converter of the app), and of the [language](#language) files. |
 | `PhotoLiker.GenerateVideo.Tests` | xUnit tests of the video library: the order and the times of the photos, the sequence of a video (cover, repeats, audio), the ffmpeg arguments, the cuts on the beat, the rhythm analysis (on synthetic songs), the settings file. They need no ffmpeg. |
 | `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg), the pictures taken out of a real video and their times, the choice of moments, the faces, the search (words, people, dates, speech) and its merge with the photos, the word forms of the speech and the speech job with a stand-in for the model (also hearing chosen videos again), the table of the speech, the Excel writer (read back as XML), saving a picture. The tests that make a short video do so with the ffmpeg of the repository and do nothing without it; the one that runs the real CLIP model does nothing without it. |
 | `PhotoLiker.Effects.Tests` | xUnit tests of the effects library, in folders that are the namespaces they test: the transitions and the movements, the compositor (also on a made-up depth, and mutation-checked: they fail if the direction of the movement or the lookup of the depth is broken), the depth (the numbers of the model made into bytes, the blur, the size the model is given), the colours (Lab against the numbers of OpenCV, the rule for black and white, the strength and the warmth put on the colours of the model without it running again, one photo coloured and saved by `ColorPreview`, the copy with its name, Exif and dates) and the downloading of the model files (from a local socket, with the SHA-256 check). The tests that run a real model do so only if its file is there (in the app's models folder, or in the one named by `PHOTOLIKER_TEST_MODELS`). |
+| `PhotoLiker.Imaging.Tests` | xUnit tests of the picture layer: resizing, decoding (size, Exif orientation, fitting a screen), and the conversion of a photo to another format (the bytes of each format, the picture itself in the new format, turned upright, transparency made white, the Exif notes that go along, also for a date from 1925 that a two-digit year would turn into 2025, the dates of the file, a file that is no picture or a name that is no format; mutation-checked). They need no models. |
+| `PhotoLiker.PhotoBook.Tests` | xUnit tests of the book library: the RTF reader (also on what a real Rich Text Box writes: Cyrillic as `\uN?` and as bytes of a code page), the setting of text in lines (on a measurer of fixed widths), the moves of the order, the file kept with a folder, the PDF (pages, paper, orientation, embedded fonts, long texts) and the EPUB (the first file stored, every part well formed, the package, the contents, the look of the text). |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question, the Colorize window and the bar over a black and white photo (when it comes and goes, the colours in the viewer and the sliders, the original, the saved copy, the next photo, what is kept; mutation-checked), the Depth parallax box of Generate Video, the slideshow with the Parallax effect and a video made with it (with the real depth model where it is): which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
-| `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |
+| `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1`, `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)), `remove-tag.ps1` (deletes a tag here and on GitHub) and `Get-ChangelogSection.ps1` (the sentences of one version out of `CHANGELOG.md`). |
+| `CHANGELOG.md` | What each release changed, one sentence per feature or fix: the notes of the GitHub release, and what the About box lists as new. See [Releasing](#releasing). |
 | `.github` | `workflows\build.yml` (builds every push and pull request to `master`, as artifacts, and runs every test suite in a job beside the build, so that a failing test shows on the push and not only at release time) and `workflows\release.yml` (makes a GitHub release from a tag, see [Releasing](#releasing)), with `release-intro.md`, the text that opens the notes of a release. |
 | `languages` | The language files of the program, `photo-liker-en.txt` (the English texts, built into Core) and `photo-liker-ua.txt`; the build copies them to `Languages\` beside the app. See [Language](#language). |
 | `docs` | Screenshots, the [user manual](#user-manual) pages, [a how-to for Generate Video](docs/how-to-generate-video.md) and a small sample folder of photos. |
@@ -1642,6 +1706,8 @@ You need the .NET 10 SDK (see `global.json`) on Windows.
 dotnet build PhotoLikerUI\PhotoLikerUI.csproj          # build the app
 dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests of the Core library
 dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.csproj  # run the tests of the video library
+dotnet test  PhotoLiker.PhotoBook.Tests\PhotoLiker.PhotoBook.Tests.csproj  # run the tests of the book library
+dotnet test  PhotoLiker.Imaging.Tests\PhotoLiker.Imaging.Tests.csproj  # run the tests of the picture layer (decoding, resizing, converting a photo to another format)
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
 dotnet test  PhotoLiker.Effects.Tests\PhotoLiker.Effects.Tests.csproj  # run the tests of the effects library (the depth, the colours, the compositor, the slideshow effects)
 dotnet test  PhotoLiker.Video.Tests\PhotoLiker.Video.Tests.csproj  # run the tests of the video library (videos in the archive)
@@ -1665,17 +1731,22 @@ installer\publish-release.ps1 -Version 2.1.0 -Watch    # tag v2.1.0, push it, fo
 ```
 
 In VS Code: *Terminal > Run Task > **publish-release-check** / **publish-release***, which ask for the version. The script refuses when the version
-is not `major.minor.patch` or not newer than the existing `v*` tags, when something is uncommitted, when the commit is not on GitHub yet or has
-no `release.yml`, or when the tag exists (here or on GitHub). It shows the commit, asks you to type the version again (and asks once more if the
+is not `major.minor.patch` or not newer than the existing `v*` tags, when something is uncommitted, when `CHANGELOG.md` has no sentence for the version (under its own heading or
+under `## Unreleased`, see [the changelog](#the-changelog), which also says what the script then does with the heading), when the commit is not on GitHub yet or has no `release.yml`, or when the tag exists (here or on GitHub). It shows the commit, asks you to type the version again (and asks once more if the
 branch is not `master`), and removes the local tag again if the push fails. `-Yes` skips the questions. By hand it is
 `git tag -a v2.1.0 -m "Photo Liker 2.1.0"` and `git push origin v2.1.0`.
 
-`.github\workflows\release.yml` then runs the tests of both test projects, builds the installer with `build-installer.ps1 -Version 2.1.0`,
-zips the same published folder and creates the GitHub release **Photo Liker 2.1.0** with `PhotoLiker-Setup-2.1.0.exe` and
-`PhotoLiker-2.1.0-win-x64.zip`. Its notes are `.github\release-intro.md` (how to install and update, the SmartScreen warning, the ffmpeg
-licence) followed by GitHub's own list of what changed since the previous release. The workflow fails, and publishes nothing, if a test fails or
-the tag is not of that form. A release that turns out wrong is deleted on GitHub (*Releases > the release > Delete*, and delete the tag with
-`git push --delete origin v2.1.0`) and made again with a new tag; a version number is not used twice.
+`.github\workflows\release.yml` then runs the tests of the test projects, builds the installer with `build-installer.ps1 -Version 2.1.0`,
+zips the same published folder and creates the GitHub release **Photo Liker 2.1.0** with `PhotoLiker-Setup-2.1.0.exe`,
+`PhotoLiker-2.1.0-win-x64.zip` and `CHANGELOG.md`. Its notes are the sentences of version 2.1.0 from `CHANGELOG.md`, then `.github\release-intro.md` (how to install and update,
+the SmartScreen warning, the ffmpeg licence); GitHub's own list of merged pull requests is not used any more. The workflow fails, and publishes nothing, if a test fails,
+the tag is not of that form, or `CHANGELOG.md` has no sentence for the version (that is checked first, before anything is built). A release that turns out wrong is deleted on GitHub (*Releases > the release > Delete*) and made again with a new tag; a version number is not used twice.
+
+A run that fails before it publishes anything (a test fails, say) leaves only the tag behind, and `publish-release.ps1` will not tag the same version again while it exists. Remove it with the
+VS Code task *Terminal > Run Task > **remove-tag*** (`installer\remove-tag.ps1`): it lists the 5 newest versions among the tags and asks which one (a number, or the name of any tag), shows the commit it is on, and asks for the tag to be
+typed again. It deletes the tag on GitHub first and then here (a tag that is only in one of the two places is deleted from that one; if GitHub refuses, nothing is deleted here). It refuses when GitHub has a release for the
+tag (published, draft or pre-release; a run that died while it uploaded the files leaves a draft: delete the release first, in *Releases* on GitHub) or a run of the release workflow for it is still going, and when `gh` cannot be asked (not installed or not signed in) it
+does not go on with `-Yes`. `-Tag v2.1.0` skips the list, `-DryRun` only says what it would do. By hand it is `git push origin --delete v2.1.0` and `git tag -d v2.1.0`.
 
 What the [update button](#updating) of the About box relies on:
 
@@ -1691,8 +1762,41 @@ What the [update button](#updating) of the About box relies on:
   puts it there) is replaced without a question; any other copy is asked first (see [Updating](#updating)). The window is closed by the program itself before
   the setup starts, so the setup does not have to close it (if it still finds it running, Windows' Restart Manager closes it, which the tests of the
   setup showed to work).
-- The logic is `UpdateChecker` in Core (tested in `UpdateCheckerTests`, with a stand-in for GitHub); the button, the question and the download are
-  in `AboutDialog`, and the smoke tour presses them with a stand-in for GitHub (below).
+- The release has a file named `CHANGELOG.md` among its files, which is where the list **What's new** comes from (see [the changelog](#the-changelog)). It is asked for
+  only when the release is newer than the program (or the program is no release), after the answer about the release and before anything is shown, so that both appear
+  together; it is read by `UpdateChecker.GetChangelogAsync` (not more than 1 MB, from the same `releases/download/` address as the setup, waited for 8 seconds at most). If
+  it is missing or does not come, the version is offered without the list and without an error.
+- The logic is `UpdateChecker` and `Changelog` in Core (tested in `UpdateCheckerTests` and `ChangelogTests`, with a stand-in for GitHub); the button, the question, the
+  list and the download are in `AboutDialog` (its list is tested in `PhotoLikerUI.Tests`, `AboutDialogChangesTests`, in the real box, also on small monitors), and the smoke
+  tour presses them with a stand-in for GitHub (below).
+
+### The changelog
+
+`CHANGELOG.md` at the root says what each release changed, **one sentence per feature or fix**, newest release first. It is written for the person who is about to update, not for
+the next developer: what they can do now or what no longer goes wrong, not which class changed. The same sentences are used in three places: the notes of the GitHub release
+(`installer\Get-ChangelogSection.ps1 -Version 2.1.0` writes them out), the file `CHANGELOG.md` that the release carries, and the **What's new** list of the About box.
+
+```markdown
+## Unreleased
+
+- Added Make a book: the photos become a PDF or EPUB book, with your text above and below each photo.
+
+## 2.1.0 - 2026-11-30
+
+- Fixed a crash when the folder of the photos is on a share that goes away.
+```
+
+- While you work, add sentences under `## Unreleased` (a heading at the top of the file). `publish-release.ps1 -Version 2.1.0` renames it to `## 2.1.0 - <today>` for you: after
+  the confirmation it commits that one change (*Changelog for 2.1.0*), pushes the branch and only then tags, so the tag is on a commit GitHub has. `-DryRun` says so and changes nothing;
+  if the push is rejected (GitHub has newer commits on the branch) the commit and the file are put back as they were. It needs a branch that is on GitHub (not a detached HEAD). If the
+  section `## 2.1.0` is there already, nothing is renamed. `publish-release.ps1` and `release.yml` refuse a version that has no section with at least one sentence.
+- A sentence is one line that starts with `- `, begins with a verb (*Added*, *Fixed*, *Changed*), ends with a full stop, and has no more than 160 characters. It is plain text,
+  because the About box shows it as it is (no bold, backticks or links). A release that changes nothing you can see still gets one line that says so.
+- `ChangelogFileTests` (in `PhotoLiker.Tests`) reads the real file and fails for a heading that is not `## Unreleased` or `## x.y.z - yyyy-mm-dd`, versions that are not newest first
+  and once each, a section without a sentence, a line in a section that is not a sentence (the program would skip it without a word), and a sentence that breaks the rules above.
+- The sentences are English only. The headings of the box (*What's new*, *Version x.y.z*) are in the language of the program.
+- Releases before 4.0.1 are not in the file, nor are the ones since then that only changed tests; their GitHub releases have no list in the About box (it is made from
+  the file the release carries, and the first releases carry none).
 
 ### Smoke tour
 
