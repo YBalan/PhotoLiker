@@ -7,7 +7,9 @@ tests, installer, zip, and the GitHub release with both files.
 Nothing is built here. The script only makes sure that what is tagged is what you mean to release, then pushes the tag:
   - the version is MAJOR.MINOR.PATCH and newer than every v* tag that exists (the update button of the About box compares those numbers),
   - there is nothing uncommitted (a release is built from the commit, not from your files),
-  - CHANGELOG.md has a section for the version with at least one sentence (the notes of the release, and what the About box says is new); it is shown below,
+  - CHANGELOG.md has the sentences of the version (the notes of the release, and what the About box says is new); they are shown below. They are normally still
+    under "## Unreleased", where they are written while you work: the script then renames that heading to "## <Version> - <today>" and, after you confirm, commits
+    that one change and pushes the branch before it tags. If the section of the version is there already, nothing is renamed,
   - the commit is on GitHub already (pushed) and has release.yml in it,
   - the tag does not exist, here or on GitHub (a version number is not used twice).
 It shows the commit and asks for the version again to confirm. Releasing from a branch other than master asks one more question.
@@ -16,10 +18,10 @@ It shows the commit and asks for the version again to confirm. Releasing from a 
 2.1.0 (a leading v is accepted).
 
 .PARAMETER Yes
-Do not ask anything (for a script). The checks still apply.
+Do not ask anything (for a script), which includes the commit of the renamed heading of CHANGELOG.md. The checks still apply.
 
 .PARAMETER DryRun
-Run every check and say what would happen; tag nothing, push nothing.
+Run every check and say what would happen; change nothing, commit nothing, tag nothing, push nothing.
 
 .PARAMETER Watch
 After the push, follow the workflow run until it ends (needs the GitHub CLI, gh, signed in).
@@ -54,13 +56,35 @@ if (Invoke-Git status --porcelain) {
 
 # What this version changed, in CHANGELOG.md: the sentences become the notes of the release and are what the About box of the program lists before it installs. The working
 # tree is clean (checked above), so this is the file of the commit that is tagged. The release workflow refuses a version without them too, but only after the tag is pushed.
-$changes = & (Join-Path $PSScriptRoot 'Get-ChangelogSection.ps1') -Version $Version
+# The sentences are written under "## Unreleased" while you work, so a version that has no section of its own takes them from there (renamed after the confirmation, below).
+$getChanges = Join-Path $PSScriptRoot 'Get-ChangelogSection.ps1'
+$today = Get-Date -Format 'yyyy-MM-dd'
+$renameUnreleased = $false
+try {
+    $changes = & $getChanges -Version $Version
+}
+catch {
+    $notWritten = $_
+    try { $changes = & $getChanges -Version 'Unreleased' } catch { throw $notWritten } # neither is there: say what the version lacks
+    $renameUnreleased = $true
+}
 
 Invoke-Git fetch origin --tags --quiet
 
 $branch = (Invoke-Git branch --show-current)
 $sha = (Invoke-Git rev-parse --short HEAD)
 $subject = (Invoke-Git log -1 --format=%s)
+
+if ($renameUnreleased) {
+    # The renamed heading is a commit that is pushed before the tag, so the tag is on a commit that GitHub has: that needs a branch that is on GitHub
+    if (-not $branch) {
+        throw "HEAD is not on a branch, so the script cannot commit the new heading of CHANGELOG.md. Rename '## Unreleased' to '## $Version - $today' yourself, commit, push and run this again."
+    }
+    & git rev-parse --verify --quiet "refs/remotes/origin/$branch" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "The branch '$branch' is not on GitHub yet, and the new heading of CHANGELOG.md is pushed to it. Push the branch first (git push -u origin $branch)."
+    }
+}
 
 if (-not (Invoke-Git branch -r --contains HEAD)) {
     throw "The commit $sha is not on GitHub yet. Push the branch first (git push)."
@@ -93,10 +117,14 @@ if ($latest) {
 }
 Write-Host "Changes   : $($changes.Count) in CHANGELOG.md"
 foreach ($change in $changes) { Write-Host "            $change" }
+if ($renameUnreleased) {
+    Write-Host "Changelog : '## Unreleased' becomes '## $Version - $today' in a commit ""Changelog for $Version"", pushed to origin/$branch before the tag"
+}
 Write-Host ''
 
 if ($DryRun) {
-    Write-Host "Dry run: every check passed. Without -DryRun this would run  git tag -a $tag  and  git push origin $tag."
+    $steps = if ($renameUnreleased) { "rename the heading of CHANGELOG.md, commit it and push $branch, then run " } else { 'run ' }
+    Write-Host "Dry run: every check passed. Without -DryRun this would ${steps}git tag -a $tag  and  git push origin $tag."
     return
 }
 
@@ -107,6 +135,28 @@ if (-not $Yes) {
     }
     $answer = Read-Host "Type the version ($Version) to publish it"
     if ($answer.Trim().TrimStart('v', 'V') -ne $Version) { Write-Host 'Not the same: nothing done.'; return }
+}
+
+if ($renameUnreleased) {
+    $before = Invoke-Git rev-parse HEAD
+    $file = Join-Path (Get-Location) 'CHANGELOG.md'
+    $heading = [regex]::new('(?m)^## Unreleased[^\r\n]*', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $renamed = $heading.Replace([IO.File]::ReadAllText($file), "## $Version - $today", 1)
+    [IO.File]::WriteAllText($file, $renamed, [Text.UTF8Encoding]::new($false))
+
+    # Nothing else is staged: the tree was clean when the script began
+    Invoke-Git add CHANGELOG.md
+    Invoke-Git commit -q -m "Changelog for $Version"
+    try {
+        Invoke-Git push origin $branch
+    }
+    catch {
+        # Not pushed (GitHub has newer commits on the branch, or no answer): the file and the history are put back as they were
+        Invoke-Git reset -q --soft $before
+        Invoke-Git restore --staged --worktree CHANGELOG.md
+        throw
+    }
+    Write-Host "Committed and pushed the heading of CHANGELOG.md ($(Invoke-Git rev-parse --short HEAD))."
 }
 
 Invoke-Git tag -a $tag -m "Photo Liker $Version"

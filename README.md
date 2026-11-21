@@ -1731,8 +1731,8 @@ installer\publish-release.ps1 -Version 2.1.0 -Watch    # tag v2.1.0, push it, fo
 ```
 
 In VS Code: *Terminal > Run Task > **publish-release-check** / **publish-release***, which ask for the version. The script refuses when the version
-is not `major.minor.patch` or not newer than the existing `v*` tags, when something is uncommitted, when `CHANGELOG.md` has no sentence for the version (see
-[the changelog](#the-changelog)), when the commit is not on GitHub yet or has no `release.yml`, or when the tag exists (here or on GitHub). It shows the commit, asks you to type the version again (and asks once more if the
+is not `major.minor.patch` or not newer than the existing `v*` tags, when something is uncommitted, when `CHANGELOG.md` has no sentence for the version (under its own heading or
+under `## Unreleased`, see [the changelog](#the-changelog), which also says what the script then does with the heading), when the commit is not on GitHub yet or has no `release.yml`, or when the tag exists (here or on GitHub). It shows the commit, asks you to type the version again (and asks once more if the
 branch is not `master`), and removes the local tag again if the push fails. `-Yes` skips the questions. By hand it is
 `git tag -a v2.1.0 -m "Photo Liker 2.1.0"` and `git push origin v2.1.0`.
 
@@ -1781,8 +1781,10 @@ the next developer: what they can do now or what no longer goes wrong, not which
 - Fixed a crash when the folder of the photos is on a share that goes away.
 ```
 
-- While you work, add sentences under `## Unreleased`. To release 2.1.0, rename that heading to `## 2.1.0 - <date>` and commit: `publish-release.ps1` and `release.yml` refuse a version
-  that has no section there with at least one sentence.
+- While you work, add sentences under `## Unreleased` (a heading at the top of the file). `publish-release.ps1 -Version 2.1.0` renames it to `## 2.1.0 - <today>` for you: after
+  the confirmation it commits that one change (*Changelog for 2.1.0*), pushes the branch and only then tags, so the tag is on a commit GitHub has. `-DryRun` says so and changes nothing;
+  if the push is rejected (GitHub has newer commits on the branch) the commit and the file are put back as they were. It needs a branch that is on GitHub (not a detached HEAD). If the
+  section `## 2.1.0` is there already, nothing is renamed. `publish-release.ps1` and `release.yml` refuse a version that has no section with at least one sentence.
 - A sentence is one line that starts with `- `, begins with a verb (*Added*, *Fixed*, *Changed*), ends with a full stop, and has no more than 160 characters. It is plain text,
   because the About box shows it as it is (no bold, backticks or links). A release that changes nothing you can see still gets one line that says so.
 - `ChangelogFileTests` (in `PhotoLiker.Tests`) reads the real file and fails for a heading that is not `## Unreleased` or `## x.y.z - yyyy-mm-dd`, versions that are not newest first

@@ -8,7 +8,7 @@ GitHub release. The format is read the way PhotoLiker.Core\Changelog.cs reads it
 the same heading) and, under it, one line that starts with "- " for each change, up to the next "## " heading.
 
 .PARAMETER Version
-2.1.0 (a leading v is accepted).
+2.1.0 (a leading v is accepted), or Unreleased for the sentences that are not in a release yet (publish-release.ps1 asks for those when the version has no section).
 
 .PARAMETER Path
 The changelog. Default: CHANGELOG.md at the root of the repository.
@@ -44,7 +44,7 @@ foreach ($line in Get-Content -LiteralPath $Path -Encoding utf8) {
 }
 
 if (-not $found) {
-    throw "CHANGELOG.md has no section '## $Version'. Write one sentence per feature or fix of this release under '## Unreleased', rename that heading to '## $Version - $(Get-Date -Format yyyy-MM-dd)' and commit it."
+    throw "CHANGELOG.md has no section '## $Version'. Write one sentence per feature or fix of this release under '## Unreleased' (a heading at the top of the file), then run installer\publish-release.ps1 -Version ${Version}. It renames that heading, commits it and tags the release."
 }
 if ($sentences.Count -eq 0) {
     throw "The section '## $Version' of CHANGELOG.md has no sentence. Each change is a line that starts with '- '."

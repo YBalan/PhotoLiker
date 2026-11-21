@@ -7,7 +7,7 @@ of every version newer than yours when you press **Check for updates**, so you c
 
 Writing it (`installer\publish-release.ps1` and the tests check this):
 
-- While you work, add sentences under `## Unreleased`. To release version 2.1.0, rename that heading to `## 2.1.0 - 2026-11-30` (the date of the release) and commit it; the release is refused if its version has no section here.
+- While you work, add sentences under `## Unreleased`. `installer\publish-release.ps1 -Version 2.1.0` renames that heading to `## 2.1.0 - <today>` for you, commits and pushes it, and then tags the release (by hand: rename it and commit). A release whose version has no section here is refused.
 - One sentence per line, a line that starts with `- `, beginning with a verb (Added, Fixed, Changed), ending with a full stop, at most 160 characters. Plain text only: the About box shows the line as it is, so no `**bold**`, backticks or links.
 - A release that changes nothing you can see (only tests or build scripts) still gets one line saying so.
 
