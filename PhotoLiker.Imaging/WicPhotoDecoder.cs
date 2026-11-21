@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace PhotoLiker.Search
+namespace PhotoLiker.Imaging
 {
     /// <summary>
     /// Decodes a photo file with the Windows imaging component. JPEGs are decoded at a reduced size straight away,
@@ -87,22 +87,26 @@ namespace PhotoLiker.Search
         private static (int Width, int Height, int Orientation) ReadHeader(Stream stream)
         {
             var frame = BitmapFrame.Create(stream, BitmapCreateOptions.DelayCreation | BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);
+            return (frame.PixelWidth, frame.PixelHeight, OrientationOf(frame));
+        }
 
-            var orientation = 1;
+        /// <summary>The EXIF orientation (1-8) a decoded picture says it has; 1 (as stored) when it has none or its Exif cannot be read.</summary>
+        internal static int OrientationOf(BitmapFrame frame)
+        {
             try
             {
                 if (frame.Metadata is BitmapMetadata metadata && metadata.ContainsQuery(OrientationQuery))
-                    orientation = Convert.ToInt32(metadata.GetQuery(OrientationQuery));
+                    return Convert.ToInt32(metadata.GetQuery(OrientationQuery));
             }
             catch
             {
                 // no readable EXIF block: the photo is shown as it is
             }
-            return (frame.PixelWidth, frame.PixelHeight, orientation);
+            return 1;
         }
 
         /// <summary>The transform that turns the stored pixels upright for an EXIF orientation value.</summary>
-        private static Transform? OrientationTransform(int orientation) => orientation switch
+        internal static Transform? OrientationTransform(int orientation) => orientation switch
         {
             2 => new ScaleTransform(-1, 1),
             3 => new RotateTransform(180),

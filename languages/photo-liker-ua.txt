@@ -1208,13 +1208,14 @@ DialogStrings.LanguageFileProblem = {0} рядків не вдалося про�
 # ──────────── ToolbarStrings ────────────
 ToolbarStrings.Open = Відкрити
 ToolbarStrings.Save = Зберегти
-ToolbarStrings.SaveTooltip = Зберегти як: зберегти показане фото чи відео під назвою й у місці, які ви оберете; коли працює панель розфарбування чи перефокусування, — картинку такою, як вона зараз виглядає
+ToolbarStrings.SaveTooltip = Зберегти як: зберегти показане фото чи відео під назвою й у місці, які ви оберете; оберіть інший тип (JPEG, PNG, BMP, GIF, TIFF) — і фото перетворюється під час збереження; коли працює панель розфарбування чи перефокусування, — картинку такою, як вона зараз виглядає
 ToolbarStrings.SaveAsTitleFormat = Зберегти {0} як
 ToolbarStrings.SaveAsFilterAll = Усі файли (*.*)
 ToolbarStrings.StatusNothingToSave = Нічого зберігати: спершу покажіть фото чи відео.
 ToolbarStrings.StatusSaveAsSavedFormat = Збережено {0}.
 ToolbarStrings.StatusSaveAsFailedFormat = Не вдалося зберегти: {0}
 ToolbarStrings.StatusSaveAsSameFile = Це той самий файл, що показаний: нічого не збережено.
+ToolbarStrings.StatusSaveAsExistsFormat = {0} уже є: нічого не збережено (щоб замінити файл, вкажіть назву з розширенням).
 ToolbarStrings.Copy = Копіювати
 ToolbarStrings.Help = Довідка
 ToolbarStrings.ThemeTooltip = Перемкнути темну / світлу тему

@@ -1,4 +1,4 @@
-namespace PhotoLiker.Search
+namespace PhotoLiker.Imaging
 {
     /// <summary>
     /// A photo decoded to pixels for showing on a screen, upright: interleaved B, G, R, A bytes with the colours multiplied by the alpha (the format

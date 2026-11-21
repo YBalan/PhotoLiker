@@ -1222,13 +1222,14 @@ DialogStrings.LanguageFileProblem = {0} lines that could not be read
 # ──────────── ToolbarStrings ────────────
 ToolbarStrings.Open = &Open
 ToolbarStrings.Save = &Save
-ToolbarStrings.SaveTooltip = Save as: save the photo or video that is shown under a name and in a place you choose; with the Colorize or Refocus bar working, the picture as it looks now
+ToolbarStrings.SaveTooltip = Save as: save the photo or video that is shown under a name and in a place you choose; pick another type (JPEG, PNG, BMP, GIF, TIFF) and a photo is converted as it is saved; with the Colorize or Refocus bar working, the picture as it looks now
 ToolbarStrings.SaveAsTitleFormat = Save {0} as
 ToolbarStrings.SaveAsFilterAll = All files (*.*)
 ToolbarStrings.StatusNothingToSave = There is nothing to save: show a photo or a video first.
 ToolbarStrings.StatusSaveAsSavedFormat = Saved {0}.
 ToolbarStrings.StatusSaveAsFailedFormat = Could not save: {0}
 ToolbarStrings.StatusSaveAsSameFile = That is the file that is shown: nothing was saved.
+ToolbarStrings.StatusSaveAsExistsFormat = {0} is already there: nothing was saved (choose a name with an extension to replace a file).
 ToolbarStrings.Copy = &Copy
 ToolbarStrings.Help = He&lp
 ToolbarStrings.ThemeTooltip = Toggle dark / light theme
