@@ -18,6 +18,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
   - [Toolbar](#toolbar)
     - [Generate Video](#generate-video)
     - [Make a book](#make-a-book)
+    - [Trace bitmap](#trace-bitmap)
   - [About box](#about-box)
 - [Settings](#settings)
   - [Folder picker](#folder-picker)
@@ -401,7 +402,8 @@ ones are behind the arrow at the bottom of the column.
 | **Refocus** (a photo with a sharp ring and soft lights) | Take the shown photo in portrait mode with a floating bar: click where the focus should be, and the sliders change the blur, the sharp zone and the haze, see [Refocusing photos](#refocusing-photos). The button opens the bar and closes it again. |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
-| **Make a book** (a teal book with a photo on its cover; last, after Help and a separator) | Make a PDF or an EPUB book of the photos, with a text above and below each photo and the photos in the order you choose, see [Make a book](#make-a-book). |
+| **Make a book** (a teal book with a photo on its cover; after Help and a separator) | Make a PDF or an EPUB book of the photos, with a text above and below each photo and the photos in the order you choose, see [Make a book](#make-a-book). |
+| **Trace bitmap** (an orange tile with a curve and two nodes; the very last button) | Turn the photo that is shown into a vector drawing, an SVG or a DXF file of a size in millimetres, with the scans and the options of the Trace Bitmap of Inkscape, see [Trace bitmap](#trace-bitmap). |
 
 #### The Properties panel
 
@@ -543,7 +545,7 @@ How the photos are prepared:
 
 #### Make a book
 
-The **Make a book** button (a teal book with a photo on its cover, the last button of the toolbar, after Help) makes a **PDF** or an **EPUB** book of photos: a page for each photo, a text
+The **Make a book** button (a teal book with a photo on its cover, after Help and a separator) makes a **PDF** or an **EPUB** book of photos: a page for each photo, a text
 you write **above** it and a text **below** it, and the photos in the order you put them in. Like Generate Video it works on the loaded photos, the Liked folder or a
 group, and it follows the dark theme of the window.
 
@@ -594,9 +596,56 @@ it comes back as you left it: photos that are new to the folder go to the end (i
   (MIT); it finds only a few of the fonts of Windows by itself, so the program has its own resolver that reads the fonts of the Windows registry (TrueType and OpenType files; a collection of fonts
   in one file, `.ttc`, is not read).
 
+#### Trace bitmap
+
+The **Trace bitmap** button (an orange tile with a few pixels turning into a smooth white curve with a node at each end; the very last button of the toolbar, after **Make a book**) turns the
+photo that is shown into a **vector drawing**, shapes made of lines and curves instead of pixels, and saves it as an **SVG** or a **DXF** file of the size in millimetres you give. It is for
+logos and pictures that have to be cut, engraved, plotted or drawn over in a CAD or drawing program. The scans and the options are those of the **Trace Bitmap** window of
+[Inkscape](https://inkscape.org/), so a setting means what you know from there; the window follows the dark theme of the program. A video cannot be traced; the file of the photo is traced,
+not what a Colorize or Refocus bar shows.
+
+![The Trace Bitmap window](docs/images/49-trace-bitmap.png)
+
+- **Numbers and sliders.** Every number of the scans and of the options has a **slider** beside it, and the two always show the same value: drag the slider, or type or step the number. The slider of
+  **Suppress speckles** ends at 100 although the number goes on to 1000 (a number beyond the end keeps its value and the slider waits at its end). A slider is greyed with its number when the scan or the
+  tick does not use it.
+- **Single scan** makes one black shape or line drawing. **Brightness cutoff** traces what is darker than the number (0 is black, 1 is white; 0.450). **Edge detection** traces the edges of the
+  picture as lines (a Canny detector: the number is how strong an edge must be to start a line, the lower the more lines; 0.650). **Color quantization** reduces the picture to that many colours (8) and
+  draws the lines where the colours meet. **Invert image** traces what is light instead of what is dark.
+- **Multiple scans** make a shape of its own colour for each scan. **Brightness steps** cuts the picture at that many evenly spaced brightnesses (gray shapes), **Colors** reduces it to that many
+  colours (a shape in each of the colours it found) and **Grays** cuts it into that many shades of gray (8 each; 2 to 64). **Smooth** blurs the picture a little first, so that the noise of a photo
+  does not become thousands of tiny shapes. **Stack scans** makes each shape cover everything that is darker as well, so there are no gaps between shapes (good for filling; off, each shape is only its own band,
+  good for outlines). **Remove background** leaves out the bottom shape, the lightest, which is the paper.
+- **Options.** **Suppress speckles** leaves out shapes of that many pixels or fewer and fills holes of that size (2). **Smooth corners** rounds the corners that are not sharp enough: 0 keeps every corner,
+  1.00 is the usual value, over 1.3 rounds every one; switched off, the drawing is straight lines only. **Optimize paths** uses fewer curves as long as they stay within that many pixels of the outline (0.20);
+  a bigger number gives fewer nodes and a rougher drawing.
+- **Drawing.** **Trace at** is the longest side, in pixels, of the picture that is traced (600 to 4000; a bigger photo is made smaller first, a smaller one is not enlarged): more pixels, more detail and more nodes.
+  **Width** and **Height** are the size of the drawing in **millimetres**, 100 mm on the long side at first, in the proportions of the photo. The **chain** button between them keeps the proportions (on at first):
+  change one side and the other follows; switch it off and the sides are independent, so the drawing can be stretched. **File format** is **SVG** or **DXF**; for a DXF, **DXF curve accuracy** says how far, in
+  millimetres, the straight pieces a curve is cut into may be from it (0.020).
+- **The preview** shows the trace on a white sheet; **Photo** switches to the photo, in the same place and at the same size, so that you can see what the trace changed. The mouse wheel zooms where the pointer is,
+  a drag moves the picture, a double click fits it into the window again. **Update** traces again with the settings that are in the window (the status line says when they changed since the last trace); with **Live
+  preview** on, it traces again a moment after each change. **Save...** asks for a name (the photo's name with `.svg` or `.dxf`, in the folder of the photo); if the settings changed since the last trace it is traced
+  again first, so the file is always the trace of what the window says. A name that ends in `.svg` or `.dxf` decides the format, whatever **File format** says.
+
+**What the files are.** An **SVG** has the size in millimetres (`width="160mm" height="100mm"`) and a view box of the same numbers, so Inkscape, a laser or plotter program and a CAD program that reads SVG all get the
+size you asked for. Each colour is one `<path>` filled by the even-odd rule (holes are holes), without a stroke, the lightest at the bottom. A **DXF** is the plain R12 form every CAD program reads, in millimetres
+(`$INSUNITS` 4): every outline is a closed `POLYLINE`, a hole is just another outline inside it, and each colour has a layer of its own named `TRACE_<number>_<RRGGBB>` (with the nearest AutoCAD colour; R12 has no true
+colours). A DXF has no curves, so each curve is cut into short straight pieces; and the drawing is turned over (a picture's y goes down, a drawing's up) so that it looks the way the picture does.
+
+**What is kept.** The scan, the options, **Trace at**, the longest side in millimetres (so the next photo comes out at the size you last used), the format, the accuracy, the chain and **Live preview** are
+written to `trace-bitmap.json` in the data folder of the program (`%LocalAppData%\PhotoLiker`) when the window closes.
+
+- The tracer is the program's own, not Potrace (which Inkscape uses, and which is GPL, while this program is MIT): the picture is cut into black and white, the outlines of the black are followed along the edges
+  of the pixels, and each outline is fitted with straight lines and cubic Bezier curves (Schneider's algorithm). The settings mean the same as in Inkscape and the shapes look alike, but the nodes are not the same
+  ones. **Color quantization** of a single scan draws the lines where the reduced colours meet. A trace takes about half a second at 1200 pixels in any mode on a computer with no graphics chip, and the window
+  never waits for it: **Update** stops a trace that is still going and starts the new one.
+- The library is its own project, `PhotoLiker.TraceBitmap` (the cutting into scans, the following of the outlines, the fitting of curves, the SVG and DXF writers, the settings file); it has no window and
+  depends on no other project. The photo is read upright and at the size of **Trace at** by `PhotoLiker.Imaging`; the window, the preview and the toolbar button are in `PhotoLikerUI`.
+
 ### About box
 
-The **Help** button (the question mark; only **Make a book**, after a separator, comes after it) or <kbd>F1</kbd> opens the About box: the version (the release, like `2.1.0`; a
+The **Help** button (the question mark; only **Make a book**, after a separator, and **Trace bitmap** come after it) or <kbd>F1</kbd> opens the About box: the version (the release, like `2.1.0`; a
 build that is no release shows its assembly version) and build date, the list of
 keys and mouse moves of the window (the table under [Keyboard and mouse](#keyboard-and-mouse), without the explanations; keep the two
 in step: the list is `AboutStrings.Shortcuts`), the **Check for updates** button (see [Updating](#updating)), and two buttons,
@@ -1679,6 +1728,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Imaging` | Pictures as pixels, without a user interface: decoding a photo upright and at a size (`WicPhotoDecoder`, the Exif orientation applied), resizing it (`Resampler`), and **converting a photo to another format** (`PhotoConverter`: JPEG, PNG, BMP, GIF, TIFF, with the dates of the file and the Exif notes that the format has room for; used by the **Save** button). The picture layer that search, effects and videos share, so it depends on none of them (not even Core). Windows only (WPF's image decoder and encoders). |
 | `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run (also of frames that are drawn one by one: `VideoFrames`), the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.PhotoBook` | Making a book of photos as a PDF or an EPUB, without a user interface: the description above and below each photo (the RTF of a Rich Text Box read into paragraphs and runs: `RtfParser`), the setting of text in lines (`TextLayout`: wrapping, alignment, justification), the PDF writer (PDFsharp, embedded fonts found by `PdfFonts`) and the EPUB 3 writer, the order of the photos and its moves (`BookOrder`), and the `photo-liker-book.json` kept with a folder. Uses Core for the photos and the texts. |
+| `PhotoLiker.TraceBitmap` | Trace Bitmap, without a user interface: cutting a picture into scans (a brightness cutoff, the edges, reduced colours; steps of brightness, colours or grays, stacked or side by side: `Binarizer`, `ColorQuantizer`), following the outlines of the black along the pixel edges (`ContourTracer`), fitting them with lines and Bezier curves (`CurveFitter`), and the **SVG** and **DXF** writers in millimetres (`SvgWriter`, `DxfWriter`), with the settings of Inkscape's window and the file the dialog keeps them in (`TraceSettings`, `TraceDialogSettings`). Its own tracer, not Potrace (GPL); it depends on no other project. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only; uses Imaging for decoding photos. |
 | `PhotoLiker.Effects` | What is done to a photo apart from looking at it and searching it, without a user interface. The folders are the namespaces (`PhotoLiker.Effects.<folder>`): `Transitions` (the rules of the effects of the [slideshow](#slideshow): which one is used, how long a change takes, how two photos are drawn in the middle of it), `Motion` (the slow movements of one photo: Ken Burns and the [depth parallax](#depth-parallax)), `Compositing` (`FrameCompositor`, which puts the pictures of an effect together on the pixels, on all the cores, also moving a picture by its depth), `Gpu` (`GpuRenderer`, the same on the graphics chip with Direct3D 11, for the steps that are heavy for the processor, see [The graphics chip](#the-graphics-chip)), `Depth` (the depth of a picture, Depth Anything V2 Small) and `Colorize` (the colours of a black and white photo, DDColor; the copy that is saved next to the photo; how much colour a photo has) and `Models` (the list of the files of the two models, and `EffectModels`, which downloads them and makes the ONNX sessions). It uses Core for the settings (`SlideshowEffect`, the name of the effect, is a setting and stays there) Imaging for decoding a photo, and Search for what the two have in common: downloading model files, and the check that ONNX Runtime can start. |
 | `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form, heard again in a language that is chosen), the table of it for the window and the Excel file (`.xlsx`, written with the zip and XML of the framework) of that table, and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
@@ -1689,6 +1739,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Effects.Tests` | xUnit tests of the effects library, in folders that are the namespaces they test: the transitions and the movements, the compositor (also on a made-up depth, and mutation-checked: they fail if the direction of the movement or the lookup of the depth is broken), the depth (the numbers of the model made into bytes, the blur, the size the model is given), the colours (Lab against the numbers of OpenCV, the rule for black and white, the strength and the warmth put on the colours of the model without it running again, one photo coloured and saved by `ColorPreview`, the copy with its name, Exif and dates) and the downloading of the model files (from a local socket, with the SHA-256 check). The tests that run a real model do so only if its file is there (in the app's models folder, or in the one named by `PHOTOLIKER_TEST_MODELS`). |
 | `PhotoLiker.Imaging.Tests` | xUnit tests of the picture layer: resizing, decoding (size, Exif orientation, fitting a screen), and the conversion of a photo to another format (the bytes of each format, the picture itself in the new format, turned upright, transparency made white, the Exif notes that go along, also for a date from 1925 that a two-digit year would turn into 2025, the dates of the file, a file that is no picture or a name that is no format; mutation-checked). They need no models. |
 | `PhotoLiker.PhotoBook.Tests` | xUnit tests of the book library: the RTF reader (also on what a real Rich Text Box writes: Cyrillic as `\uN?` and as bytes of a code page), the setting of text in lines (on a measurer of fixed widths), the moves of the order, the file kept with a folder, the PDF (pages, paper, orientation, embedded fonts, long texts) and the EPUB (the first file stored, every part well formed, the package, the contents, the look of the text). |
+| `PhotoLiker.TraceBitmap.Tests` | xUnit tests of the tracing library: the outlines of known shapes (areas that add up, holes, a chessboard corner), the fit of curves (few nodes for a circle, four sharp corners for a rectangle, no runaway handle, the traced shape filled back into pixels and compared with what was traced), every scan and option, the SVG (parsed as XML, millimetres, a point for the decimals in any language) and the DXF (group codes, closed polylines, the turned-over y, layers), the settings file. Mutation-checked. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question, the Colorize window and the bar over a black and white photo (when it comes and goes, the colours in the viewer and the sliders, the original, the saved copy, the next photo, what is kept; mutation-checked), the Depth parallax box of Generate Video, the slideshow with the Parallax effect and a video made with it (with the real depth model where it is): which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
@@ -1707,6 +1758,7 @@ dotnet build PhotoLikerUI\PhotoLikerUI.csproj          # build the app
 dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests of the Core library
 dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.csproj  # run the tests of the video library
 dotnet test  PhotoLiker.PhotoBook.Tests\PhotoLiker.PhotoBook.Tests.csproj  # run the tests of the book library
+dotnet test  PhotoLiker.TraceBitmap.Tests\PhotoLiker.TraceBitmap.Tests.csproj  # run the tests of the tracing library (the scans, the curves, the SVG and DXF files)
 dotnet test  PhotoLiker.Imaging.Tests\PhotoLiker.Imaging.Tests.csproj  # run the tests of the picture layer (decoding, resizing, converting a photo to another format)
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
 dotnet test  PhotoLiker.Effects.Tests\PhotoLiker.Effects.Tests.csproj  # run the tests of the effects library (the depth, the colours, the compositor, the slideshow effects)

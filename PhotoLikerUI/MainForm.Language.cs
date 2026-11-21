@@ -119,6 +119,7 @@ namespace PhotoLikerUI
             _findDuplicatesButton.Text = DuplicatesStrings.ButtonText;
             _findDuplicatesButton.ToolTipText = DuplicatesStrings.ButtonTooltip;
             ApplyBookLanguage();
+            ApplyTraceLanguage();
             ApplyVideoSpeechLanguage();
             ApplyColorizeLanguage();
             ApplyRefocusLanguage();

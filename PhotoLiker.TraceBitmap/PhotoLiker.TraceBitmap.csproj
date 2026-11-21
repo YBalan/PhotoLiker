@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Trace Bitmap: turning a picture into vector shapes and writing them as an SVG or a DXF file. The same idea and the same settings as the Trace Bitmap of Inkscape: a single scan (a brightness
+    cutoff, the edges, the lines between reduced colours) or multiple scans (steps of brightness, colours, grays, stacked or side by side), then the speckles are suppressed, the corners
+    smoothed and the paths optimized. The tracer is written for this program (it is not Potrace and has none of its code): the pixels are cut into black and white, the outlines of the
+    black are followed along the pixel edges, and each outline is fitted with straight lines and cubic Bezier curves.
+
+    No user interface and nothing of Windows, so any front end can use it: the picture arrives as plain pixels (PhotoLikerUI decodes the photo with PhotoLiker.Imaging) and what leaves is
+    the text of a file. It does not depend on any other project of the solution.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PhotoLiker.TraceBitmap</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLiker.TraceBitmap.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLikerUI.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>
