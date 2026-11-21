@@ -114,6 +114,21 @@ namespace PhotoLikerUI
             }
         });
 
+        // ── Video to GIF ──────────────────────────────────────────────────
+        // A violet tile: a play triangle (the video) and a small arrow that goes round (the GIF that repeats)
+        public static Bitmap VideoToGif() => DrawOnBitmap(g =>
+        {
+            using var tile = new LinearGradientBrush(new RectangleF(1, 1, 14, 14), Color.FromArgb(185, 120, 235), Color.FromArgb(95, 50, 175), 90f);
+            g.FillRoundedRectangle(tile, 1, 1, 14, 14, 2f);
+
+            using var play = new SolidBrush(Color.White);
+            g.FillPolygon(play, [new PointF(4.2f, 3.6f), new PointF(4.2f, 9.2f), new PointF(8.8f, 6.4f)]);
+
+            using var arrow = new Pen(Color.White, 1.3f);
+            g.DrawArc(arrow, 7.2f, 7.4f, 6f, 5.4f, 200, 270);
+            g.FillPolygon(play, [new PointF(7.2f, 8.1f), new PointF(9.6f, 7.4f), new PointF(8.6f, 9.6f)]);
+        });
+
         // ── Register / Unregister Context Menu ────────────────────────────
         // Windows-flag quadrants + check-mark
         public static Bitmap RegisterContextMenu() => DrawOnBitmap(g =>
@@ -708,13 +723,15 @@ namespace PhotoLikerUI
     /// </summary>
     internal static class DialogIcons
     {
-        private static Icon? _book, _trace, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
+        private static Icon? _book, _trace, _videoToGif, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
 
         public static Icon GenerateVideo => _generateVideo ??= AppIcons.WindowIcon(AppIcons.GenerateVideo);
 
         public static Icon Book => _book ??= AppIcons.WindowIcon(AppIcons.Book);
 
         public static Icon Trace => _trace ??= AppIcons.WindowIcon(AppIcons.Trace);
+
+        public static Icon VideoToGif => _videoToGif ??= AppIcons.WindowIcon(AppIcons.VideoToGif);
 
         public static Icon AlignDates => _alignDates ??= AppIcons.WindowIcon(AppIcons.AlignDates);
 

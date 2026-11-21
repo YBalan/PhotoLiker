@@ -805,14 +805,15 @@ public sealed class TraceBitmapDialogTests : IDisposable
         Ui.Controls<ToolStrip>(form).Single(strip => strip is not StatusStrip && strip.Items.Cast<ToolStripItem>().Any(item => item.Name == "colorizeToolStripButton"));
 
     [Fact]
-    public void TheMainWindow_HasTheTraceButton_LastOnTheToolbar_AfterMakeABook()
+    public void TheMainWindow_HasTheTraceButton_AfterMakeABook_AndBeforeVideoToGif()
     {
         Ui.Run(() => new MainForm(), async form =>
         {
             var names = Toolbar(form).Items.Cast<ToolStripItem>().Select(item => item.Name).ToList();
 
-            Assert.Equal("traceBitmapToolStripButton", names[^1]);
-            Assert.Equal("makeBookToolStripButton", names[^2]);
+            Assert.Equal("videoToGifToolStripButton", names[^1]);
+            Assert.Equal("traceBitmapToolStripButton", names[^2]);
+            Assert.Equal("makeBookToolStripButton", names[^3]);
             var button = Toolbar(form).Items["traceBitmapToolStripButton"]!;
             Assert.Equal(TraceStrings.ButtonText, button.Text);
             Assert.Equal(TraceStrings.ButtonTooltip, button.ToolTipText);
