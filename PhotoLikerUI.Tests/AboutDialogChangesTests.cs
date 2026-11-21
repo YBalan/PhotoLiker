@@ -82,6 +82,9 @@ public sealed class AboutDialogChangesTests : IDisposable
     // (the build machine of the release has a 1024x768 one: a made-up 1920x1040 let the box grow past it, and its lower rows were cut off)
     private static Rectangle RealScreen => Screen.PrimaryScreen!.WorkingArea;
 
+    /// <summary>A monitor of this working-area size, but not bigger than the one the test runs on: Windows cuts a window to the real screen, so a made-up 1920x1040 asked of a 1024x768 screen proves nothing about the box (it failed on the build machine of the release).</summary>
+    private static Rectangle Monitor(int width, int height) => new(0, 0, Math.Min(width, RealScreen.Width), Math.Min(height, RealScreen.Height));
+
     /// <summary>Opens the About box on the given part of the screen, as the version <paramref name="installed"/>, presses Check for updates and runs the body once it has answered.</summary>
     private void Run(Version? installed, Func<AboutDialog, Task> body, Rectangle? area = null, bool dark = false)
     {
@@ -235,7 +238,7 @@ public sealed class AboutDialogChangesTests : IDisposable
     [InlineData(1920, 1040)]
     public void WhateverTheMonitor_TheBoxStaysInItsWorkingArea_WithTheList(int width, int height)
     {
-        var area = new Rectangle(0, 0, width, height);
+        var area = Monitor(width, height); // a row that is bigger than this machine's screen is tried at the size of the screen
         _changelog = Changelog(("2.2.0", Enumerable.Range(1, 12).Select(i => $"Added feature number {i}, described in a sentence that goes on for a good while so that it wraps.").ToArray()));
 
         Run(new Version(2, 1, 0), dialog =>
@@ -254,7 +257,7 @@ public sealed class AboutDialogChangesTests : IDisposable
     public void WhenTheListIsHiddenAgain_TheKeysAreAsTheyWere()
     {
         // On a small monitor the list of keys gave way to the sentences (it scrolls); a second check that finds nothing new must give it all its room back
-        var area = new Rectangle(0, 0, 1280, 680);
+        var area = Monitor(1280, 680);
         _changelog = Changelog(("2.2.0", Enumerable.Range(1, 12).Select(i => $"Added feature number {i}, described in a sentence that goes on for a good while so that it wraps.").ToArray()));
         Size withoutList = default;
         int heightWithout = 0;

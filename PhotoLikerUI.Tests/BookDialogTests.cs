@@ -128,7 +128,7 @@ public sealed class BookDialogTests : IDisposable
             var dialog = (BookDialog)form;
             await Loaded(dialog, 4);
 
-            ToolStripButton Button(string text) => dialog.ViewTools.Items.OfType<ToolStripButton>().First(item => item.Text.Contains(text));
+            ToolStripButton Button(string text) => dialog.ViewTools.Items.OfType<ToolStripButton>().First(item => item.Text?.Contains(text) == true);
 
             dialog.View.Select(0);
             Button("Later").PerformClick();
