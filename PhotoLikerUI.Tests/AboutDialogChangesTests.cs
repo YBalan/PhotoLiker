@@ -78,13 +78,15 @@ public sealed class AboutDialogChangesTests : IDisposable
     private static T Field<T>(object owner, string name) =>
         (T)owner.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(owner)!;
 
-    private static Rectangle Roomy => new(0, 0, 1920, 1040);
+    // The box is made to fit the working area it is given, and Windows does not let a window be taller than the real screen: a test that is not about small monitors gives the area of the screen it runs on
+    // (the build machine of the release has a 1024x768 one: a made-up 1920x1040 let the box grow past it, and its lower rows were cut off)
+    private static Rectangle RealScreen => Screen.PrimaryScreen!.WorkingArea;
 
     /// <summary>Opens the About box on the given part of the screen, as the version <paramref name="installed"/>, presses Check for updates and runs the body once it has answered.</summary>
     private void Run(Version? installed, Func<AboutDialog, Task> body, Rectangle? area = null, bool dark = false)
     {
         UpdateLauncher.InstalledVersion = installed;
-        Ui.Run(() => new AboutDialog(dark, area ?? Roomy), async form =>
+        Ui.Run(() => new AboutDialog(dark, area ?? RealScreen), async form =>
         {
             var dialog = (AboutDialog)form;
             var check = Field<Button>(dialog, "_check");
@@ -227,6 +229,7 @@ public sealed class AboutDialogChangesTests : IDisposable
     }
 
     [Theory]
+    [InlineData(1024, 728)] // a 1024x768 screen less its taskbar: what the build machine of the release has
     [InlineData(1280, 680)]
     [InlineData(1366, 728)]
     [InlineData(1920, 1040)]
@@ -239,6 +242,10 @@ public sealed class AboutDialogChangesTests : IDisposable
         {
             Assert.True(Field<TextBox>(dialog, "_changes").Visible);
             Assert.True(area.Contains(dialog.Bounds), $"the box {dialog.Bounds} is inside the working area {area}");
+
+            // And nothing of it is cut off: the last row (the buttons) is inside the window, which is what a box taller than the screen does not have
+            var lastRow = Ui.ButtonStartingWith(dialog, "OK").Parent!;
+            Assert.True(lastRow.Bottom <= dialog.ClientSize.Height, $"the buttons end at {lastRow.Bottom}, the window at {dialog.ClientSize.Height}");
             return Task.CompletedTask;
         }, area);
     }
