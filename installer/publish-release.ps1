@@ -7,6 +7,7 @@ tests, installer, zip, and the GitHub release with both files.
 Nothing is built here. The script only makes sure that what is tagged is what you mean to release, then pushes the tag:
   - the version is MAJOR.MINOR.PATCH and newer than every v* tag that exists (the update button of the About box compares those numbers),
   - there is nothing uncommitted (a release is built from the commit, not from your files),
+  - CHANGELOG.md has a section for the version with at least one sentence (the notes of the release, and what the About box says is new); it is shown below,
   - the commit is on GitHub already (pushed) and has release.yml in it,
   - the tag does not exist, here or on GitHub (a version number is not used twice).
 It shows the commit and asks for the version again to confirm. Releasing from a branch other than master asks one more question.
@@ -51,6 +52,10 @@ if (Invoke-Git status --porcelain) {
     throw "There are uncommitted changes. Commit (and push) them first: the release is built from the commit, not from your files.`n$(Invoke-Git status --short | Out-String)"
 }
 
+# What this version changed, in CHANGELOG.md: the sentences become the notes of the release and are what the About box of the program lists before it installs. The working
+# tree is clean (checked above), so this is the file of the commit that is tagged. The release workflow refuses a version without them too, but only after the tag is pushed.
+$changes = & (Join-Path $PSScriptRoot 'Get-ChangelogSection.ps1') -Version $Version
+
 Invoke-Git fetch origin --tags --quiet
 
 $branch = (Invoke-Git branch --show-current)
@@ -86,6 +91,8 @@ if ($latest) {
 } else {
     Write-Host 'Since     : this is the first release'
 }
+Write-Host "Changes   : $($changes.Count) in CHANGELOG.md"
+foreach ($change in $changes) { Write-Host "            $change" }
 Write-Host ''
 
 if ($DryRun) {

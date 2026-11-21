@@ -32,6 +32,10 @@ namespace PhotoLikerUI
         public static string UpdateDownloadFailedFormat => T();
         public static string UpdateStartFailedFormat => T();
 
+        // The sentences of the changelog under them stay in English: they are written once, for the release on GitHub
+        public static string ChangesHeading => T();
+        public static string ChangesVersionFormat => T();
+
         /// <summary>The keys and mouse moves of the main window, with what they do. Keep it in step with "Keyboard and mouse" in the README.</summary>
         public static (string Input, string Action)[] Shortcuts =>
             [.. ShortcutIds.Select(id => (T($"Shortcut{id}Input"), T($"Shortcut{id}Action")))];

@@ -44,6 +44,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Project layout](#project-layout)
 - [Development](#development)
   - [Releasing](#releasing)
+  - [The changelog](#the-changelog)
   - [Smoke tour](#smoke-tour)
 - [License](#license)
 
@@ -121,6 +122,9 @@ in the background, nothing runs at startup.
   does not match is thrown away), closes PhotoLiker (after it saved what it keeps), runs the setup silently over the installed copy (nothing to
   click: only the setup's small progress window shows) and starts PhotoLiker again. Your settings, likes and search indexes stay: they are in
   `%LocalAppData%\PhotoLiker` and in your photo folders, which the setup does not touch.
+- **What's new** appears under the answer: one sentence for each feature or fix of every version after yours (a version you skipped is in it too), read from the
+  `CHANGELOG.md` that the release carries (see [Releasing](#releasing)). The sentences are in English. A release that carries no changelog (the first ones), or whose
+  changelog does not come within 8 seconds, is offered without the list.
 - **Release page** opens the page of that release (what changed, the files).
 - A copy that the setup did not put there (unpacked from the zip, or a build run from the source) cannot be replaced by a setup: the setup
   installs PhotoLiker for your user as a second copy, and starts that one. So this is the one case in which **Install** asks first, and says so;
@@ -602,7 +606,7 @@ that did not copy it) a message says where it should be.
 
 ![The About box](docs/images/16-about.png)
 
-When a newer version is found the box says so and offers it (a stand-in for GitHub made this picture, see the [smoke tour](#smoke-tour)):
+When a newer version is found the box says so, lists what is new in it and offers it (a stand-in for GitHub made this picture, see the [smoke tour](#smoke-tour)):
 
 ![The About box after Check for updates found a newer version](docs/images/27-about-update.png)
 
@@ -1688,7 +1692,8 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question, the Colorize window and the bar over a black and white photo (when it comes and goes, the colours in the viewer and the sliders, the original, the saved copy, the next photo, what is kept; mutation-checked), the Depth parallax box of Generate Video, the slideshow with the Parallax effect and a video made with it (with the real depth model where it is): which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
-| `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1` and `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)). |
+| `installer` | Inno Setup script (setup in English or Ukrainian), `build-installer.ps1`, `publish-release.ps1` (tags and pushes a release, see [Releasing](#releasing)) and `Get-ChangelogSection.ps1` (the sentences of one version out of `CHANGELOG.md`). |
+| `CHANGELOG.md` | What each release changed, one sentence per feature or fix: the notes of the GitHub release, and what the About box lists as new. See [Releasing](#releasing). |
 | `.github` | `workflows\build.yml` (builds every push and pull request to `master`, as artifacts, and runs every test suite in a job beside the build, so that a failing test shows on the push and not only at release time) and `workflows\release.yml` (makes a GitHub release from a tag, see [Releasing](#releasing)), with `release-intro.md`, the text that opens the notes of a release. |
 | `languages` | The language files of the program, `photo-liker-en.txt` (the English texts, built into Core) and `photo-liker-ua.txt`; the build copies them to `Languages\` beside the app. See [Language](#language). |
 | `docs` | Screenshots, the [user manual](#user-manual) pages, [a how-to for Generate Video](docs/how-to-generate-video.md) and a small sample folder of photos. |
@@ -1726,16 +1731,16 @@ installer\publish-release.ps1 -Version 2.1.0 -Watch    # tag v2.1.0, push it, fo
 ```
 
 In VS Code: *Terminal > Run Task > **publish-release-check** / **publish-release***, which ask for the version. The script refuses when the version
-is not `major.minor.patch` or not newer than the existing `v*` tags, when something is uncommitted, when the commit is not on GitHub yet or has
-no `release.yml`, or when the tag exists (here or on GitHub). It shows the commit, asks you to type the version again (and asks once more if the
+is not `major.minor.patch` or not newer than the existing `v*` tags, when something is uncommitted, when `CHANGELOG.md` has no sentence for the version (see
+[the changelog](#the-changelog)), when the commit is not on GitHub yet or has no `release.yml`, or when the tag exists (here or on GitHub). It shows the commit, asks you to type the version again (and asks once more if the
 branch is not `master`), and removes the local tag again if the push fails. `-Yes` skips the questions. By hand it is
 `git tag -a v2.1.0 -m "Photo Liker 2.1.0"` and `git push origin v2.1.0`.
 
-`.github\workflows\release.yml` then runs the tests of both test projects, builds the installer with `build-installer.ps1 -Version 2.1.0`,
-zips the same published folder and creates the GitHub release **Photo Liker 2.1.0** with `PhotoLiker-Setup-2.1.0.exe` and
-`PhotoLiker-2.1.0-win-x64.zip`. Its notes are `.github\release-intro.md` (how to install and update, the SmartScreen warning, the ffmpeg
-licence) followed by GitHub's own list of what changed since the previous release. The workflow fails, and publishes nothing, if a test fails or
-the tag is not of that form. A release that turns out wrong is deleted on GitHub (*Releases > the release > Delete*, and delete the tag with
+`.github\workflows\release.yml` then runs the tests of the test projects, builds the installer with `build-installer.ps1 -Version 2.1.0`,
+zips the same published folder and creates the GitHub release **Photo Liker 2.1.0** with `PhotoLiker-Setup-2.1.0.exe`,
+`PhotoLiker-2.1.0-win-x64.zip` and `CHANGELOG.md`. Its notes are the sentences of version 2.1.0 from `CHANGELOG.md`, then `.github\release-intro.md` (how to install and update,
+the SmartScreen warning, the ffmpeg licence); GitHub's own list of merged pull requests is not used any more. The workflow fails, and publishes nothing, if a test fails,
+the tag is not of that form, or `CHANGELOG.md` has no sentence for the version (that is checked first, before anything is built). A release that turns out wrong is deleted on GitHub (*Releases > the release > Delete*, and delete the tag with
 `git push --delete origin v2.1.0`) and made again with a new tag; a version number is not used twice.
 
 What the [update button](#updating) of the About box relies on:
@@ -1752,8 +1757,39 @@ What the [update button](#updating) of the About box relies on:
   puts it there) is replaced without a question; any other copy is asked first (see [Updating](#updating)). The window is closed by the program itself before
   the setup starts, so the setup does not have to close it (if it still finds it running, Windows' Restart Manager closes it, which the tests of the
   setup showed to work).
-- The logic is `UpdateChecker` in Core (tested in `UpdateCheckerTests`, with a stand-in for GitHub); the button, the question and the download are
-  in `AboutDialog`, and the smoke tour presses them with a stand-in for GitHub (below).
+- The release has a file named `CHANGELOG.md` among its files, which is where the list **What's new** comes from (see [the changelog](#the-changelog)). It is asked for
+  only when the release is newer than the program (or the program is no release), after the answer about the release and before anything is shown, so that both appear
+  together; it is read by `UpdateChecker.GetChangelogAsync` (not more than 1 MB, from the same `releases/download/` address as the setup, waited for 8 seconds at most). If
+  it is missing or does not come, the version is offered without the list and without an error.
+- The logic is `UpdateChecker` and `Changelog` in Core (tested in `UpdateCheckerTests` and `ChangelogTests`, with a stand-in for GitHub); the button, the question, the
+  list and the download are in `AboutDialog` (its list is tested in `PhotoLikerUI.Tests`, `AboutDialogChangesTests`, in the real box, also on small monitors), and the smoke
+  tour presses them with a stand-in for GitHub (below).
+
+### The changelog
+
+`CHANGELOG.md` at the root says what each release changed, **one sentence per feature or fix**, newest release first. It is written for the person who is about to update, not for
+the next developer: what they can do now or what no longer goes wrong, not which class changed. The same sentences are used in three places: the notes of the GitHub release
+(`installer\Get-ChangelogSection.ps1 -Version 2.1.0` writes them out), the file `CHANGELOG.md` that the release carries, and the **What's new** list of the About box.
+
+```markdown
+## Unreleased
+
+- Added Make a book: the photos become a PDF or EPUB book, with your text above and below each photo.
+
+## 2.1.0 - 2026-11-30
+
+- Fixed a crash when the folder of the photos is on a share that goes away.
+```
+
+- While you work, add sentences under `## Unreleased`. To release 2.1.0, rename that heading to `## 2.1.0 - <date>` and commit: `publish-release.ps1` and `release.yml` refuse a version
+  that has no section there with at least one sentence.
+- A sentence is one line that starts with `- `, begins with a verb (*Added*, *Fixed*, *Changed*), ends with a full stop, and has no more than 160 characters. It is plain text,
+  because the About box shows it as it is (no bold, backticks or links). A release that changes nothing you can see still gets one line that says so.
+- `ChangelogFileTests` (in `PhotoLiker.Tests`) reads the real file and fails for a heading that is not `## Unreleased` or `## x.y.z - yyyy-mm-dd`, versions that are not newest first
+  and once each, a section without a sentence, a line in a section that is not a sentence (the program would skip it without a word), and a sentence that breaks the rules above.
+- The sentences are English only. The headings of the box (*What's new*, *Version x.y.z*) are in the language of the program.
+- Releases before 4.0.1 are not in the file, nor are the ones since then that only changed tests; their GitHub releases have no list in the About box (it is made from
+  the file the release carries, and the first releases carry none).
 
 ### Smoke tour
 
