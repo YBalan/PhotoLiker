@@ -840,7 +840,11 @@ public sealed class TraceBitmapDialogTests : IDisposable
     [Fact]
     public void ForAVideo_TheButtonSaysItCannotBeTraced()
     {
-        var video = _folder.File("clip.mp4");
+        // The video lives OUTSIDE the folder the window opens: a video inside it would be read for its poster in the background, and
+        // when that read fails (these 8 bytes are no video) the window writes "Error loading image" into the status label - on a slow
+        // machine (the release CI) after the click, over the very message this test waits for
+        using var elsewhere = new TempFolder();
+        var video = elsewhere.File("clip.mp4");
         File.WriteAllBytes(video, [0, 0, 0, 24, 102, 116, 121, 112]);
         Ui.Run(() => new MainForm(_folder.Path), async form =>
         {
