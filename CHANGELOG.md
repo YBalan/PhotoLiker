@@ -13,7 +13,7 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
-## Unreleased
+## 4.2.12 - 2026-11-21
 
 - Added Make a book: the current, liked or grouped photos become a PDF or EPUB book, with your text above and below each photo and thumbnails you drag into order.
 - Added Save As that converts a photo to JPEG, PNG, BMP, GIF or TIFF, by the file type you pick.
