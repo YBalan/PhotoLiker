@@ -90,6 +90,45 @@ namespace PhotoLikerUI
             g.DrawLine(line, 5.8f, 12.8f, 10.2f, 12.8f);
         });
 
+        // ── Trace bitmap ──────────────────────────────────────────────────
+        // An orange tile: a few pixels turning into a smooth white curve with a node at each end (a picture traced into a vector path)
+        public static Bitmap Trace() => DrawOnBitmap(g =>
+        {
+            using var tile = new LinearGradientBrush(new RectangleF(1, 1, 14, 14), Color.FromArgb(255, 190, 80), Color.FromArgb(215, 100, 10), 90f);
+            g.FillRoundedRectangle(tile, 1, 1, 14, 14, 2f);
+
+            using var pixels = new SolidBrush(Color.FromArgb(90, 255, 255, 255));
+            g.FillRectangle(pixels, 2.5f, 10f, 2f, 2f);
+            g.FillRectangle(pixels, 4.5f, 12f, 2f, 2f);
+            g.FillRectangle(pixels, 6.5f, 10f, 2f, 2f);
+
+            using var curve = new Pen(Color.White, 1.5f);
+            g.DrawBezier(curve, new PointF(3.5f, 11.5f), new PointF(5.5f, 2f), new PointF(10f, 14f), new PointF(12.5f, 4.5f));
+
+            using var nodeFill = new SolidBrush(Color.White);
+            using var nodeEdge = new Pen(Color.FromArgb(120, 55, 5), 0.8f);
+            foreach (var (x, y) in new[] { (3.5f, 11.5f), (12.5f, 4.5f) })
+            {
+                g.FillRectangle(nodeFill, x - 1.3f, y - 1.3f, 2.6f, 2.6f);
+                g.DrawRectangle(nodeEdge, x - 1.3f, y - 1.3f, 2.6f, 2.6f);
+            }
+        });
+
+        // ── Video to GIF ──────────────────────────────────────────────────
+        // A violet tile: a play triangle (the video) and a small arrow that goes round (the GIF that repeats)
+        public static Bitmap VideoToGif() => DrawOnBitmap(g =>
+        {
+            using var tile = new LinearGradientBrush(new RectangleF(1, 1, 14, 14), Color.FromArgb(185, 120, 235), Color.FromArgb(95, 50, 175), 90f);
+            g.FillRoundedRectangle(tile, 1, 1, 14, 14, 2f);
+
+            using var play = new SolidBrush(Color.White);
+            g.FillPolygon(play, [new PointF(4.2f, 3.6f), new PointF(4.2f, 9.2f), new PointF(8.8f, 6.4f)]);
+
+            using var arrow = new Pen(Color.White, 1.3f);
+            g.DrawArc(arrow, 7.2f, 7.4f, 6f, 5.4f, 200, 270);
+            g.FillPolygon(play, [new PointF(7.2f, 8.1f), new PointF(9.6f, 7.4f), new PointF(8.6f, 9.6f)]);
+        });
+
         // ── Register / Unregister Context Menu ────────────────────────────
         // Windows-flag quadrants + check-mark
         public static Bitmap RegisterContextMenu() => DrawOnBitmap(g =>
@@ -684,11 +723,15 @@ namespace PhotoLikerUI
     /// </summary>
     internal static class DialogIcons
     {
-        private static Icon? _book, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
+        private static Icon? _book, _trace, _videoToGif, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
 
         public static Icon GenerateVideo => _generateVideo ??= AppIcons.WindowIcon(AppIcons.GenerateVideo);
 
         public static Icon Book => _book ??= AppIcons.WindowIcon(AppIcons.Book);
+
+        public static Icon Trace => _trace ??= AppIcons.WindowIcon(AppIcons.Trace);
+
+        public static Icon VideoToGif => _videoToGif ??= AppIcons.WindowIcon(AppIcons.VideoToGif);
 
         public static Icon AlignDates => _alignDates ??= AppIcons.WindowIcon(AppIcons.AlignDates);
 

@@ -7,7 +7,9 @@
     <ProjectReference Include="..\PhotoLiker.GenerateVideo\PhotoLiker.GenerateVideo.csproj" />
     <ProjectReference Include="..\PhotoLiker.PhotoBook\PhotoLiker.PhotoBook.csproj" />
     <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />
+    <ProjectReference Include="..\PhotoLiker.TraceBitmap\PhotoLiker.TraceBitmap.csproj" />
     <ProjectReference Include="..\PhotoLiker.Video\PhotoLiker.Video.csproj" />
+    <ProjectReference Include="..\PhotoLiker.VideoToGif\PhotoLiker.VideoToGif.csproj" />
   </ItemGroup>
 
   <!-- Playing videos: VLC's engine (libvlc, LGPL) through LibVLCSharp. The package carries the engine for x86, x64 and ARM64, 300 MB in all: only x64 is

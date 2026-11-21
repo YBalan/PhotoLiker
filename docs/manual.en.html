@@ -39,6 +39,8 @@
     <li><a href="#refocus">Refocusing a photo</a></li>
     <li><a href="#video">Making a video</a></li>
     <li><a href="#book">Making a book</a></li>
+    <li><a href="#trace">Tracing a photo into a vector drawing</a></li>
+    <li><a href="#gif">Making a GIF of a video</a></li>
     <li><a href="#videos">Videos in the folder</a></li>
     <li><a href="#theme">Dark and light theme</a></li>
     <li><a href="#files">What PhotoLiker keeps, and where</a></li>
@@ -279,6 +281,8 @@ and hide them again; that is kept for the next start. If the window is too low f
   <li><strong>Register Context Menu</strong> / <strong>Unregister Context Menu</strong>: add or remove <em>Open in Photo Liker</em> in the right-click menu of folders.</li>
   <li><strong>Help</strong> (the question mark): the About box, with the keys and this manual.</li>
   <li><strong>Make a book</strong> (a teal book with a photo on its cover): make a PDF or an EPUB book of your photos, with a text above and below each, see <a href="#book">Making a book</a>.</li>
+  <li><strong>Trace bitmap</strong> (an orange tile with a curve and two nodes; after Make a book): turn the photo that is shown into a vector drawing, an SVG or a DXF file of a size in millimetres, see <a href="#trace">Tracing a photo into a vector drawing</a>.</li>
+  <li><strong>Video to GIF</strong> (a violet tile with a play triangle and a round arrow; the very last button): make an animated GIF of a part of a video, to paste in a README, a chat or a page, see <a href="#gif">Making a GIF of a video</a>.</li>
 </ul>
 
 <h3>The Properties panel</h3>
@@ -853,10 +857,12 @@ when it is what you want.</p></div>
 <p><strong>If something is not right.</strong> <em>No photos in this folder:</em> like some photos first, or pick <strong>Current</strong>. <em>A message that ffmpeg was not found:</em> reinstall
 PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe</code> on your <code>PATH</code>.</p>
 
+<p><strong>A GIF of the video.</strong> To paste a few seconds of the finished video in a README or a chat, show the video in the window (or pick it with <em>Browse...</em> in the Video to GIF window), see <a href="#gif">Making a GIF of a video</a>.</p>
+
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="book">19. Making a book</h2>
 
-<p>The <strong>Make a book</strong> button (a teal book with a photo on its cover, the last button of the toolbar, after <strong>Help</strong>) makes a <strong>PDF</strong> or an <strong>EPUB</strong> book of your
+<p>The <strong>Make a book</strong> button (a teal book with a photo on its cover, after <strong>Help</strong> and a separator) makes a <strong>PDF</strong> or an <strong>EPUB</strong> book of your
 photos: a page for each photo, a text that you write above it and one below it, and the photos in the order you choose. An EPUB is a book for an e-reader or a reading app; a PDF is pages for the
 screen or for a printer. Nothing else has to be installed.</p>
 
@@ -901,8 +907,101 @@ that Windows can read; the rest of the book is made without it. <em>A font is mi
 Cyrillic letters. A text cannot have bullets, tables or pictures, and there is one font for the whole book.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="trace">20. Tracing a photo into a vector drawing</h2>
 
-<h2 id="videos">20. Videos in the folder</h2>
+<p>The <strong>Trace bitmap</strong> button (an orange tile with a few pixels turning into a curve with a node at each end; after <strong>Make a book</strong>; <strong>Video to GIF</strong> comes after it)
+turns the photo that is shown into a <strong>vector drawing</strong>: shapes made of lines and curves instead of pixels. You save it as an <strong>SVG</strong> file or a <strong>DXF</strong> file, in a size in
+millimetres that you choose. That is what a laser cutter, a plotter, an engraver, a CAD program or a drawing program such as Inkscape wants. The scans and the options are those of the
+<em>Trace Bitmap</em> window of Inkscape, so a setting means what you know from there. Nothing else has to be installed.</p>
+
+<figure><img src="images/49-trace-bitmap.png" alt="The Trace Bitmap window: the scans and the options on the left, the traced drawing of a sunset with a sailing boat on the right" width="1196" height="779"></figure>
+
+<ol class="steps">
+  <li>
+    <strong>Show the photo and press the button.</strong> The window reads the photo and traces it at once, with the settings you used last. A video cannot be traced, and what a Colorize or a Refocus bar
+    shows is not what is traced: the file of the photo is.
+  </li>
+  <li>
+    <strong>Choose how the picture is cut.</strong> A <em>single scan</em> makes one black shape or line drawing: <em>Brightness cutoff</em> traces what is darker than the number (0 is black, 1 is white),
+    <em>Edge detection</em> the edges of the picture as lines (the lower the number, the more lines), <em>Color quantization</em> the lines where a few reduced colours meet; <em>Invert image</em> traces what is
+    light instead of what is dark. <em>Multiple scans</em> make a shape of its own colour for each scan: <em>Brightness steps</em> (gray shapes), <em>Colors</em> (the colours the picture was reduced to) and
+    <em>Grays</em>. <em>Smooth</em> blurs the picture a little first, so the noise of a photo does not become thousands of tiny shapes; <em>Stack scans</em> lets each shape cover everything that is darker as well, so
+    there are no gaps (good for filling; off, each shape is its own band, good for outlines); <em>Remove background</em> leaves out the lightest shape at the bottom, which is the paper.
+  </li>
+  <li>
+    <strong>Tune the outlines.</strong> <em>Suppress speckles</em> drops the tiniest shapes and fills the tiniest holes. <em>Smooth corners</em> rounds the corners that are not sharp enough (0 keeps every corner, 1.00 is
+    the usual value; switched off, the drawing is straight lines). <em>Optimize paths</em> uses fewer curves (a bigger number gives fewer nodes and a rougher drawing). <em>Trace at</em> is how many pixels the long side of the
+    photo is traced at: more pixels, more detail, more nodes. Every number has a <strong>slider</strong> beside it, and the two show the same value: drag the slider, or type or step the number.
+  </li>
+  <li>
+    <strong>Set the size.</strong> <em>Width</em> and <em>Height</em> are in millimetres (the long side is 100 mm at first). The <strong>chain</strong> button between them keeps the proportions of the photo: change one side and the
+    other follows. Switch it off and the two sides are independent, so the drawing can be stretched. <em>File format</em> is SVG, or DXF for a CAD program; for a DXF, <em>DXF curve accuracy</em> says how far, in millimetres,
+    the little straight pieces that a curve is cut into may be from it.
+  </li>
+  <li>
+    <strong>Look at it.</strong> <strong>Trace</strong> and <strong>Photo</strong> switch the picture in the middle, in the same place and at the same size, so you can see what the trace changed. The mouse wheel zooms where the pointer is,
+    a drag moves the picture, a double click fits it to the window. <strong>Update</strong> traces again after you changed something (the line at the bottom says when the settings changed); with <em>Live preview</em> ticked it does
+    that by itself a moment after each change.
+  </li>
+  <li>
+    <strong>Press Save...</strong> and give a name. A name that ends in <code>.svg</code> or <code>.dxf</code> decides the format. If you changed a setting after the last trace, the photo is traced again first, so the file is
+    always the trace of what the window says.
+  </li>
+</ol>
+
+<div class="tip"><p>The values of the window are <strong>remembered</strong>, the size too (as the length of the long side), so the next photo comes out at the size you used last.</p></div>
+
+<p><strong>What the files are.</strong> An <strong>SVG</strong> has its size in millimetres, and its coordinates are millimetres too, so Inkscape, a laser or plotter program and a CAD program that reads SVG all get the size you
+asked for. Each colour is one path, filled so that holes stay holes, without an outline, the lightest at the bottom. A <strong>DXF</strong> is the plain old R12 form that every CAD program reads, in millimetres: every outline is a closed
+polyline (a hole is just another outline inside it), each colour has a layer of its own, named by its number and its colour (<code>TRACE_2_C8501E</code>). A DXF has no curves, so each curve is cut into short straight pieces; the
+drawing is turned over, because a picture's y goes down and a drawing's goes up, so that it looks the way the picture does.</p>
+
+<p><strong>If something is not right.</strong> <em>Too many little shapes:</em> tick <em>Smooth</em> (multiple scans), raise <em>Suppress speckles</em>, use fewer colours or steps, or lower <em>Trace at</em>. <em>Not enough detail:</em>
+raise <em>Trace at</em>, lower <em>Optimize paths</em> or <em>Smooth corners</em>. <em>Nothing was traced with these settings:</em> the brightness cutoff is below every pixel (or the whole picture is one colour); try another value.
+The tracer is the program's own, not Inkscape's (Inkscape uses Potrace), so the shapes look alike but the nodes are not the same ones; <em>Color quantization</em> of a single scan draws the lines where the colours meet.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="gif">21. Making a GIF of a video</h2>
+
+<p>The <strong>Video to GIF</strong> button (a violet tile with a play triangle and an arrow that goes round; the very last button of the toolbar, after <strong>Trace bitmap</strong>) makes an
+<strong>animated GIF</strong> of a part of a video. A GIF plays by itself wherever a picture can be shown (a README on GitHub, a chat, a web page) and a video file cannot, so a few seconds of a screen
+recording, for instance the video you made in <a href="#video">Making a video</a>, can be pasted as it is. Nothing else has to be installed: the GIF is made by the ffmpeg that comes with the program.</p>
+
+<figure><img src="images/50-video-to-gif.png" alt="The Video to GIF window: the first and the last frame of the part that is picked, and the finished GIF of a sailing boat, with the settings of the GIF under them" width="1076" height="779"></figure>
+
+<ol class="steps">
+  <li>
+    <strong>Show the video and press the button.</strong> The window opens for the video that is shown. If a photo (or nothing) is shown, it asks which video first; <em>Browse...</em> picks another video at any time.
+  </li>
+  <li>
+    <strong>Pick the frames.</strong> The part of the video that becomes the GIF is all of it until you change it. <em>First frame</em> and <em>Last frame</em> each have a slider and a number (frames are counted from 1)
+    and the time of that frame; the pictures of the two frames are shown under them, so you see where the GIF starts and where it ends. The first frame cannot pass the last one, nor the last go before the first.
+    <em>All frames</em> puts both back.
+  </li>
+  <li>
+    <strong>Choose how the GIF is.</strong> <em>Take a frame every</em> (seconds, a decimal number from 0.02 to 60: 0.1 is ten frames for every second of the video, smooth enough for a screen; 2.5 is a frame every two and a half seconds, for a GIF of slides) and <em>Each frame plays</em> (how long each frame of the GIF is shown, the same range: this is the speed of the GIF. Frames taken every 0.5 seconds and played for 0.1 make a GIF five times as fast as the video; it is greyed, and the same as the first box, while <em>As fast as the video</em> is ticked, as it is at first), <em>Width</em> in pixels (the height follows; a video that is narrower is not made wider) or
+    <em>Original size</em>, <em>Colors</em> (2 to 256), <em>Dithering</em> (Sierra is the smoothest, Bayer is small and steady, None is the smallest and shows bands in gradients) and <em>Repeat</em> (forever, or once).
+    Under the settings the window says what the GIF will be: how many frames, how big and how long it plays.
+  </li>
+  <li>
+    <strong>Press Make GIF...</strong> and give a name (the name of the video, in its folder). A bar shows the work: first the best colours for the frames are found (that takes as long as reading the video
+    once, and has no percentage), then the frames are drawn. <em>Stop</em> stops it and leaves nothing behind; a GIF that was there before stays until the new one is whole. When it is done the GIF plays in
+    the window beside the two frames, and the line at the bottom tells what was made: the frames, the size in pixels and the size of the file.
+  </li>
+</ol>
+
+<div class="tip"><p>For a README: GitHub shows a picture about 800 pixels wide at the most, so 480 to 640 pixels, a frame every 0.08 to 0.12 seconds and a few seconds make a GIF of a megabyte or two. If a GIF is too big, each of
+these makes it smaller: a shorter part, a longer time between frames, a narrower width, fewer colours, no dithering.</p></div>
+
+<p>The values of the window are <strong>remembered</strong>, but not the frames: they belong to one video.</p>
+
+<p><strong>If something is not right.</strong> <em>The video could not be read:</em> ffmpeg does not know that kind of file, or the file is damaged. <em>No GIF was made, there are no frames in the part:</em>
+the video is shorter than its file says; pick an earlier last frame. <em>A message that ffmpeg was not found:</em> reinstall PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe</code> on your
+<code>PATH</code>.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+
+<h2 id="videos">22. Videos in the folder</h2>
 
 <p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. <strong>SupportVideo</strong> is on in the settings
 table by default (turn it off to have a folder look as it did before videos), and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
@@ -1000,7 +1099,7 @@ the first time <strong>SupportVideo</strong> is turned on, or a video is played,
 the status bar, and it stays on your computer, in <code>%LocalAppData%\PhotoLiker\libvlc</code>; nothing else is changed. If you say no, videos open in the program Windows plays them with, and you are asked again when you turn
 <strong>SupportVideo</strong> off and on. When it was turning <strong>SupportVideo</strong> on that started the download, the folder is listed again once the player is there (as <kbd>F5</kbd> does). Its licence and the place to get its source are in the <code>libvlc</code> folder next to the program.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="theme">21. Dark and light theme</h2>
+<h2 id="theme">23. Dark and light theme</h2>
 
 <p>The theme button of the toolbar switches between the two. A folder that is opened for the first time is dark; the choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
@@ -1011,7 +1110,7 @@ see <a href="#language">Language</a>.)</p>
 </figure>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="files">22. What PhotoLiker keeps, and where</h2>
+<h2 id="files">24. What PhotoLiker keeps, and where</h2>
 
 <ul>
   <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
@@ -1022,11 +1121,11 @@ see <a href="#language">Language</a>.)</p>
   <li><strong>The Liked folder</strong> (by default inside the photo folder) and its group folders: your copies.</li>
   <li><strong>The <code>Deleted</code> folder</strong> inside the photo folder: the photos you removed, and the duplicates and unreadable photos that were moved.</li>
   <li><strong>On this computer</strong>, in <code>%LocalAppData%\PhotoLiker</code>: the saved lists of folders, the search index, the AI models, the people of all
-  your folders and the groups you sorted them into, the last folder you opened and the language of the program. All of it except the models can be rebuilt, so deleting it only costs the time to make it again.</li>
+  your folders and the groups you sorted them into, the last folder you opened, the values of the Trace Bitmap and Video to GIF windows and the language of the program. All of it except the models can be rebuilt, so deleting it only costs the time to make it again.</li>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="about">23. About box and this manual</h2>
+<h2 id="about">25. About box and this manual</h2>
 
 <p>The <strong>Help</strong> button (the question mark) at the end of the toolbar, or the <kbd>F1</kbd> key, opens the About box: the version and build date of the program, the
 keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and two buttons that open this manual, in English or in Ukrainian.

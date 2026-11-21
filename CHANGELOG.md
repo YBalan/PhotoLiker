@@ -13,6 +13,11 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
+## 4.3.12 - 2026-11-21
+
+- Added Trace bitmap: the photo that is shown becomes a vector drawing, an SVG or a DXF file of a size in millimetres, with the scans and options of Inkscape.
+- Added Video to GIF: a part of a video, picked by its first and last frame, becomes an animated GIF that plays in the window and can be pasted in a README.
+
 ## 4.2.12 - 2026-11-21
 
 - Added Make a book: the current, liked or grouped photos become a PDF or EPUB book, with your text above and below each photo and thumbnails you drag into order.

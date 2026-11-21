@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Video to GIF: an animated GIF of a part of a video, made by the ffmpeg that comes with the program. Two runs, as ffmpeg's own guide for good GIFs says: the first finds the best palette of
+    256 colours (or fewer) for the frames that are used, the second draws the frames with it (a GIF has one palette, so one made for a video of a screen looks far better than the default one).
+    Also what the front end needs to ask: the range of frames (all of the video unless told), the size the GIF will have, how many frames it will have, and a reader that tells what is in a GIF
+    that was made (its size, frames, length and repeats).
+
+    No user interface, nothing of Windows and no other project of the solution: the video arrives as a path and a few numbers (PhotoLikerUI reads them with PhotoLiker.Video), what leaves
+    is a file. The messages of an error are English; the front end words them for the person (see GifException.Reason).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PhotoLiker.VideoToGif</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLiker.VideoToGif.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLikerUI.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>
