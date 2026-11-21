@@ -36,6 +36,7 @@ namespace PhotoLikerUI
             InitializeLayout();
             InitializeSearch();
             InitializeDateAlignment();
+            InitializeBook();
             InitializeEmptyFolders();
             InitializeDuplicates();
             InitializeColorize();

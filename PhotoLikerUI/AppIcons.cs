@@ -68,6 +68,28 @@ namespace PhotoLikerUI
             g.FillPolygon(play, [new PointF(6f, 5f), new PointF(6f, 10f), new PointF(10f, 7.5f)]);
         });
 
+        // ── Make a book ───────────────────────────────────────────────────
+        // A teal book with a photo (sky, a hill) and two lines of text on its cover
+        public static Bitmap Book() => DrawOnBitmap(g =>
+        {
+            using var cover = new LinearGradientBrush(new RectangleF(2, 1, 12, 14), Color.FromArgb(70, 175, 155), Color.FromArgb(20, 100, 105), 90f);
+            g.FillRoundedRectangle(cover, 2, 1, 12, 14, 1.5f);
+
+            using var spine = new SolidBrush(Color.FromArgb(150, 5, 55, 65));
+            g.FillRectangle(spine, 2, 2, 2.6f, 12);
+
+            using var frame = new SolidBrush(Color.FromArgb(245, 255, 255, 255));
+            g.FillRectangle(frame, 5.5f, 3, 7.5f, 6);
+            using var sky = new SolidBrush(Color.FromArgb(120, 190, 235));
+            g.FillRectangle(sky, 6.3f, 3.8f, 5.9f, 4.4f);
+            using var hill = new SolidBrush(Color.FromArgb(70, 160, 90));
+            g.FillPolygon(hill, [new PointF(6.3f, 8.2f), new PointF(8.8f, 5.6f), new PointF(10.4f, 7.2f), new PointF(11.2f, 6.4f), new PointF(12.2f, 8.2f)]);
+
+            using var line = new Pen(Color.FromArgb(225, 255, 255, 255), 0.9f);
+            g.DrawLine(line, 5.8f, 11f, 12.6f, 11f);
+            g.DrawLine(line, 5.8f, 12.8f, 10.2f, 12.8f);
+        });
+
         // ── Register / Unregister Context Menu ────────────────────────────
         // Windows-flag quadrants + check-mark
         public static Bitmap RegisterContextMenu() => DrawOnBitmap(g =>
@@ -662,9 +684,11 @@ namespace PhotoLikerUI
     /// </summary>
     internal static class DialogIcons
     {
-        private static Icon? _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
+        private static Icon? _book, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
 
         public static Icon GenerateVideo => _generateVideo ??= AppIcons.WindowIcon(AppIcons.GenerateVideo);
+
+        public static Icon Book => _book ??= AppIcons.WindowIcon(AppIcons.Book);
 
         public static Icon AlignDates => _alignDates ??= AppIcons.WindowIcon(AppIcons.AlignDates);
 

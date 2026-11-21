@@ -38,6 +38,7 @@
     <li><a href="#colorize">Colorizing black and white photos</a></li>
     <li><a href="#refocus">Refocusing a photo</a></li>
     <li><a href="#video">Making a video</a></li>
+    <li><a href="#book">Making a book</a></li>
     <li><a href="#videos">Videos in the folder</a></li>
     <li><a href="#theme">Dark and light theme</a></li>
     <li><a href="#files">What PhotoLiker keeps, and where</a></li>
@@ -277,6 +278,7 @@ and hide them again; that is kept for the next start. If the window is too low f
   <li><strong>Refocus</strong> (a photo with a sharp ring and soft lights): take the shown photo in portrait mode with a floating bar, see <a href="#refocus">Refocusing a photo</a>.</li>
   <li><strong>Register Context Menu</strong> / <strong>Unregister Context Menu</strong>: add or remove <em>Open in Photo Liker</em> in the right-click menu of folders.</li>
   <li><strong>Help</strong> (the question mark): the About box, with the keys and this manual.</li>
+  <li><strong>Make a book</strong> (a teal book with a photo on its cover): make a PDF or an EPUB book of your photos, with a text above and below each, see <a href="#book">Making a book</a>.</li>
 </ul>
 
 <h3>The Properties panel</h3>
@@ -852,7 +854,55 @@ when it is what you want.</p></div>
 PhotoLiker (its <code>ffmpeg</code> folder is missing), or put <code>ffmpeg.exe</code> on your <code>PATH</code>.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="videos">19. Videos in the folder</h2>
+<h2 id="book">19. Making a book</h2>
+
+<p>The <strong>Make a book</strong> button (a teal book with a photo on its cover, the last button of the toolbar, after <strong>Help</strong>) makes a <strong>PDF</strong> or an <strong>EPUB</strong> book of your
+photos: a page for each photo, a text that you write above it and one below it, and the photos in the order you choose. An EPUB is a book for an e-reader or a reading app; a PDF is pages for the
+screen or for a printer. Nothing else has to be installed.</p>
+
+<figure><img src="images/48-make-book.png" alt="The Make a book window: the settings on top, the thumbnails on the left, the photo that is picked and its two texts on the right" width="1240" height="800"></figure>
+
+<ol class="steps">
+  <li>
+    <strong>Pick the photos.</strong> <em>Photos from</em> offers the photos that are loaded (<em>Current</em>), the <em>Liked</em> folder and each group, with the number of photos in each.
+    The photos start in the order of <em>Sort by</em>; <strong>Sort</strong> puts them in an order again at any time.
+  </li>
+  <li>
+    <strong>Put them in order.</strong> The thumbnails are the order of the book. <strong>Drag</strong> photos to where they should be (a line shows the place); <kbd>Ctrl</kbd> or <kbd>Shift</kbd> picks
+    several. The buttons above, or <kbd>Alt</kbd> and the arrows, move the picked photos one place, <kbd>Alt</kbd>+<kbd>Home</kbd> and <kbd>Alt</kbd>+<kbd>End</kbd> to the start and the end, and
+    <strong>To place...</strong> asks for a number. <strong>Leave out</strong> (<kbd>Delete</kbd>) keeps a photo in the list but out of the book. The two round arrows turn the picked photos a quarter
+    to the left or to the right (<kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd>): only in the book, the photo files are not changed. Everything can be undone
+    (<kbd>Ctrl</kbd>+<kbd>Z</kbd>). The slider under the list makes the thumbnails larger or smaller.
+  </li>
+  <li>
+    <strong>Write.</strong> Pick one photo: it is shown on the right, with two boxes, <em>Above the photo</em> and <em>Below the photo</em>. They are like a small word processor: bold, italic,
+    underline, strike-through, the size and the colour of the text, and left, centre, right or justified lines. A thumbnail with a text above it, or below it, has a blue mark for each.
+  </li>
+  <li>
+    <strong>Choose the book.</strong> <em>Make</em>: a PDF or an EPUB. A <em>Title</em> (and an <em>Author</em>) makes the first page. For a PDF you also choose the page (A4, A5, Letter or a square),
+    how it is turned (portrait, landscape, or as each photo is), the margin, the font and whether the pages are numbered; <em>Pictures</em> says how sharp the photos stay (small files, good, or best for a
+    print). Then <em>Save in</em> and <em>File name</em>.
+  </li>
+  <li>
+    <strong>Press Make the book.</strong> The photos are prepared and the file is written; the bar shows how far it is, <strong>Cancel</strong> stops it. When it is done, <strong>Open</strong> shows the book.
+  </li>
+</ol>
+
+<div class="tip"><p>Everything you do is <strong>kept with the folder</strong> of the photos, in <code>photo-liker-book.json</code>: the order, the photos left out, how they are turned, every text and every setting. Close the
+window and open it later and the book is as you left it; photos that were added to the folder since go to the end. So the work can be done in more than one sitting.</p></div>
+
+<p><strong>What the book looks like.</strong> In a PDF each photo has a page of its own: the text above, the photo as large as the page leaves room for, the text below. A text that is too long for one
+page goes on to the next. The letters are put into the file, so every reader shows Ukrainian (and other scripts) correctly, and the text can be searched and copied. In an EPUB the reader sets the text
+to its screen and uses its own font, so the page, the margin and the font of the window do not apply; each photo starts a new page, and the contents list the photos by the first words written above them.
+The photos are turned the right way up, and what the camera wrote in them (the Exif notes, the place) is not put into the book.</p>
+
+<p><strong>If something is not right.</strong> <em>No photos in this folder:</em> like some photos first, or pick <strong>Current</strong>. <em>A photo is named as not read:</em> it is not a picture
+that Windows can read; the rest of the book is made without it. <em>A font is missing from the list:</em> it is not installed on this computer; the list holds the usual fonts of Windows that have Latin and
+Cyrillic letters. A text cannot have bullets, tables or pictures, and there is one font for the whole book.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+
+<h2 id="videos">20. Videos in the folder</h2>
 
 <p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. <strong>SupportVideo</strong> is on in the settings
 table by default (turn it off to have a folder look as it did before videos), and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
@@ -950,7 +1000,7 @@ the first time <strong>SupportVideo</strong> is turned on, or a video is played,
 the status bar, and it stays on your computer, in <code>%LocalAppData%\PhotoLiker\libvlc</code>; nothing else is changed. If you say no, videos open in the program Windows plays them with, and you are asked again when you turn
 <strong>SupportVideo</strong> off and on. When it was turning <strong>SupportVideo</strong> on that started the download, the folder is listed again once the player is there (as <kbd>F5</kbd> does). Its licence and the place to get its source are in the <code>libvlc</code> folder next to the program.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="theme">20. Dark and light theme</h2>
+<h2 id="theme">21. Dark and light theme</h2>
 
 <p>The theme button of the toolbar switches between the two. A folder that is opened for the first time is dark; the choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
@@ -961,7 +1011,7 @@ see <a href="#language">Language</a>.)</p>
 </figure>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="files">21. What PhotoLiker keeps, and where</h2>
+<h2 id="files">22. What PhotoLiker keeps, and where</h2>
 
 <ul>
   <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
@@ -976,7 +1026,7 @@ see <a href="#language">Language</a>.)</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="about">22. About box and this manual</h2>
+<h2 id="about">23. About box and this manual</h2>
 
 <p>The <strong>Help</strong> button (the question mark) at the end of the toolbar, or the <kbd>F1</kbd> key, opens the About box: the version and build date of the program, the
 keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and two buttons that open this manual, in English or in Ukrainian.

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Making a book of photos as a PDF or an EPUB file: the description above and below each photo (rich text, read from RTF), the order of the photos and the book kept with their folder,
+    the layout of the text on a page, and the two file writers. No user interface and nothing of Windows except the fonts the PDF is set in, so any front end can use it; the pictures
+    arrive as JPEG files already made upright and the size the book needs (PhotoLikerUI makes them with PhotoLiker.Imaging). It uses Core for the photos and for the texts of the language files.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PhotoLiker.PhotoBook</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PDFsharp" Version="6.2.4" />
+    <!-- PDFsharp needs this for signing PDFs, which the book does not do; it asks for 8.0.1, which has known vulnerabilities (NU1902, NU1903), so the patched one of this framework is taken -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="PhotoLiker.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLiker.PhotoBook.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

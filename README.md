@@ -17,6 +17,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
   - [Keyboard and mouse](#keyboard-and-mouse)
   - [Toolbar](#toolbar)
     - [Generate Video](#generate-video)
+    - [Make a book](#make-a-book)
   - [About box](#about-box)
 - [Settings](#settings)
   - [Folder picker](#folder-picker)
@@ -396,6 +397,7 @@ ones are behind the arrow at the bottom of the column.
 | **Refocus** (a photo with a sharp ring and soft lights) | Take the shown photo in portrait mode with a floating bar: click where the focus should be, and the sliders change the blur, the sharp zone and the haze, see [Refocusing photos](#refocusing-photos). The button opens the bar and closes it again. |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
+| **Make a book** (a teal book with a photo on its cover; last, after Help and a separator) | Make a PDF or an EPUB book of the photos, with a text above and below each photo and the photos in the order you choose, see [Make a book](#make-a-book). |
 
 #### The Properties panel
 
@@ -535,9 +537,62 @@ How the photos are prepared:
   although the file itself says the right length. Without B-frames there is nothing to delay. For a slideshow of stills the size is the same.
   Videos made before this still have the delay.
 
+#### Make a book
+
+The **Make a book** button (a teal book with a photo on its cover, the last button of the toolbar, after Help) makes a **PDF** or an **EPUB** book of photos: a page for each photo, a text
+you write **above** it and a text **below** it, and the photos in the order you put them in. Like Generate Video it works on the loaded photos, the Liked folder or a
+group, and it follows the dark theme of the window.
+
+![The Make a book window](docs/images/48-make-book.png)
+
+- **Photos from** picks the photos: `Current` (the loaded ones), `Liked`, and each group folder, with the number of photos (counted in the background, so the window opens at
+  once). The photos of a folder that has no book yet start in the order of **Sort by** (the order of the folder's setting); **Sort** puts all the photos in an order again.
+  Videos are left out.
+- **The thumbnails are the order of the book.** Drag the picked photos to a place (a line shows where they will go; the view scrolls by itself at its top and bottom edge, and
+  <kbd>Esc</kbd> gives the drag up). <kbd>Ctrl</kbd> and <kbd>Shift</kbd> pick several. <kbd>Alt</kbd>+arrows move the picked photos one place (a row with up and down), <kbd>Alt</kbd>+<kbd>Home</kbd> and
+  <kbd>Alt</kbd>+<kbd>End</kbd> to the start and the end; the buttons above the list do the same and **To place...** asks for a number. **Leave out** (<kbd>Delete</kbd>) keeps a photo in the list,
+  dimmed and crossed, but out of the book, and **Put back** undoes it. The two round arrows **Rotate left** and **Rotate right** (<kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd>, as in the main window) turn the picked
+  photos a quarter in the book: the thumbnail and the picture at the right show it, and the PDF page follows (a landscape photo turned a quarter is a portrait page). Only the **book** turns them, so it works for any format
+  and your photo files, their Exif and their dates are never touched (the Rotate buttons of the main window, by contrast, write a flag into the JPEG itself); a turn is a step of **Undo**. **Reverse**, **Sort**, every move and every leaving out can be undone with **Undo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, a hundred
+  steps) and done again (<kbd>Ctrl</kbd>+<kbd>Y</kbd>). The slider under the list sets the size of the thumbnails (80 to 320 px). Each thumbnail has its number in the book, the file name, and a blue mark for a text
+  above it and one for a text below it. The photos are read only when they come on the screen, a few at a time, and only if they are still there when their turn comes, so a list of
+  thousands opens at once and scrolling fast does not queue the photos that went by.
+- **Above the photo** and **Below the photo** are two Rich Text Boxes for the photo that is picked (with several picked there is nothing to write to). They look like paper (black on white)
+  in either theme. The buttons give **bold, italic, underline, strike-through**, the **size** (4 to 200 points; 12 is the size of text that has none of its own), the **colour**, and the
+  alignment: **left, centre, right and justified** (a Rich Text Box has no justification of its own; the paragraph format of Rich Edit is set directly). A pick that is in more than one look
+  (a bold word in the middle) is changed run by run, so each run keeps its other looks. What is written is kept as the RTF of the box; one Enter is one paragraph and Shift+Enter a line break.
+  There is one font for the whole book (below), not one per text; bullets, tables and pictures in a text are not offered.
+- **Make** picks **PDF** or **EPUB**. **Title** and **Author** (both optional) make the first page of the book, and for an EPUB its name in the library. For a **PDF**: the **Page**
+  (A4, A5, Letter, or a 21 cm square), **Turned** (portrait, landscape, or *as the photo is*: each page as its photo is), the **Margin** in millimetres (0 to 60), the **Font** and
+  **Page numbers** (small, grey, at the foot, the title page has none). The fonts offered are the ones of Windows that have Latin and Cyrillic letters and are installed on the computer (Segoe UI, Arial,
+  Calibri, Cambria, Candara, Constantia, Corbel, Georgia, Palatino Linotype, Book Antiqua, Times New Roman, Tahoma, Trebuchet MS, Verdana, Courier New, Consolas, Comic Sans MS). An EPUB is
+  set to the screen of its reader and in the reader's own font, so these four are greyed out for it. **Pictures** says how many pixels a photo keeps: small files (1600 px on the long side,
+  JPEG quality 80), good (2400 px, 87) or best (3600 px, 93, which is A4 at 300 dpi); a smaller photo is never enlarged.
+- **Save in** (the folder of the photos until you change it) and **File name** (`photobook_<date>_<time>.pdf` or `.epub`; the extension follows **Make**). **Make the book** asks before it writes
+  over a file that is there. A bar and the status line say how far it is (preparing the photos, then writing the file); **Cancel** stops it and leaves no half-written file. **Open** shows the
+  book in the program Windows has for it.
+
+**What the book looks like.** A PDF has a page for each photo: the text above, the photo as large as the page leaves room for after the texts (at least 30 % of the height of the page), the text
+below, the whole in the middle of the page. A text that is too long for that goes on to more pages (the photo is then at most 60 % of a page). The letters are embedded, so any reader shows
+Ukrainian (and every other script the font has) and can search and copy it; the photos are put in as the JPEG files they were made into, not squeezed again. An EPUB (version 3) has a page of XHTML
+for each photo, which starts a new page in a reader, a contents list (by the first words written above each photo, or *Photo 3*), the language of the program as the language of the book, and the
+first photo as its cover picture. In both, the photos are turned upright (the Exif orientation is applied, since a PDF and an EPUB have none to say how to turn them) and the camera's own notes
+(Exif, GPS, thumbnail) are **not** carried into the book.
+
+**What is kept.** The order, which photos are left out, how each is turned, every text, and every value of the window are written to `photo-liker-book.json` in the folder of the photos (the paths relative to the folder,
+as `photo-liker-video.json` does) when you switch to another source, when you close the window, when you make the book, and 15 seconds after the last change. The next time the folder is made into a book
+it comes back as you left it: photos that are new to the folder go to the end (in the sort order), photos that are gone are dropped with their texts. The window with nothing changed writes nothing.
+
+- The pictures are made in a temporary folder (`%TEMP%\PhotoLikerBook_...`) several at a time and it is gone when the book is made or stopped. A photo that cannot be read is left out of the
+  book and named at the end; the rest is made.
+- The library is its own project, `PhotoLiker.PhotoBook` (the RTF reader, the setting of text in lines, the PDF and EPUB writers, the order and the file kept with the folder); the thumbnails,
+  the Rich Text Box and the window are in `PhotoLikerUI`, and turning a photo into the JPEG of a book (`BookPictures`) is in `PhotoLiker.Imaging`. The PDF is written with [PDFsharp](https://docs.pdfsharp.net/)
+  (MIT); it finds only a few of the fonts of Windows by itself, so the program has its own resolver that reads the fonts of the Windows registry (TrueType and OpenType files; a collection of fonts
+  in one file, `.ttc`, is not read).
+
 ### About box
 
-The **Help** button (the question mark, last on the toolbar) or <kbd>F1</kbd> opens the About box: the version (the release, like `2.1.0`; a
+The **Help** button (the question mark; only **Make a book**, after a separator, comes after it) or <kbd>F1</kbd> opens the About box: the version (the release, like `2.1.0`; a
 build that is no release shows its assembly version) and build date, the list of
 keys and mouse moves of the window (the table under [Keyboard and mouse](#keyboard-and-mouse), without the explanations; keep the two
 in step: the list is `AboutStrings.Shortcuts`), the **Check for updates** button (see [Updating](#updating)), and two buttons,
@@ -1619,6 +1674,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Core` | The logic without a user interface: settings and their file, scanning folders and keeping the list of a folder between runs, finding empty ones and duplicates (and the rules that pick the copy to keep), the liked and group libraries, EXIF reading and GPS decoding, how dates are shown. Shared by all front ends. |
 | `PhotoLiker.Imaging` | Pictures as pixels, without a user interface: decoding a photo upright and at a size (`WicPhotoDecoder`, the Exif orientation applied), resizing it (`Resampler`), and **converting a photo to another format** (`PhotoConverter`: JPEG, PNG, BMP, GIF, TIFF, with the dates of the file and the Exif notes that the format has room for; used by the **Save** button). The picture layer that search, effects and videos share, so it depends on none of them (not even Core). Windows only (WPF's image decoder and encoders). |
 | `PhotoLiker.GenerateVideo` | Making a video of photos, without a user interface: the pictures and the time of each (also cut on the beats of the audio), the ffmpeg run (also of frames that are drawn one by one: `VideoFrames`), the audio (its length, a WAV to listen to, its rhythm: tempo and beats), the sources of photos, and the `photo-liker-video.json` settings kept with a folder. Uses Core for the photos and the texts. |
+| `PhotoLiker.PhotoBook` | Making a book of photos as a PDF or an EPUB, without a user interface: the description above and below each photo (the RTF of a Rich Text Box read into paragraphs and runs: `RtfParser`), the setting of text in lines (`TextLayout`: wrapping, alignment, justification), the PDF writer (PDFsharp, embedded fonts found by `PdfFonts`) and the EPUB 3 writer, the order of the photos and its moves (`BookOrder`), and the `photo-liker-book.json` kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only; uses Imaging for decoding photos. |
 | `PhotoLiker.Effects` | What is done to a photo apart from looking at it and searching it, without a user interface. The folders are the namespaces (`PhotoLiker.Effects.<folder>`): `Transitions` (the rules of the effects of the [slideshow](#slideshow): which one is used, how long a change takes, how two photos are drawn in the middle of it), `Motion` (the slow movements of one photo: Ken Burns and the [depth parallax](#depth-parallax)), `Compositing` (`FrameCompositor`, which puts the pictures of an effect together on the pixels, on all the cores, also moving a picture by its depth), `Gpu` (`GpuRenderer`, the same on the graphics chip with Direct3D 11, for the steps that are heavy for the processor, see [The graphics chip](#the-graphics-chip)), `Depth` (the depth of a picture, Depth Anything V2 Small) and `Colorize` (the colours of a black and white photo, DDColor; the copy that is saved next to the photo; how much colour a photo has) and `Models` (the list of the files of the two models, and `EffectModels`, which downloads them and makes the ONNX sessions). It uses Core for the settings (`SlideshowEffect`, the name of the effect, is a setting and stays there) Imaging for decoding a photo, and Search for what the two have in common: downloading model files, and the check that ONNX Runtime can start. |
 | `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form, heard again in a language that is chosen), the table of it for the window and the Excel file (`.xlsx`, written with the zip and XML of the framework) of that table, and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
@@ -1628,6 +1684,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.Video.Tests` | xUnit tests of the video library: ffmpeg's text of a Canon, a phone and a camera without a clock, the dates and places, the typed times, the catalog (read once, kept, read again when the file changes, a file that is no video, no ffmpeg), the pictures taken out of a real video and their times, the choice of moments, the faces, the search (words, people, dates, speech) and its merge with the photos, the word forms of the speech and the speech job with a stand-in for the model (also hearing chosen videos again), the table of the speech, the Excel writer (read back as XML), saving a picture. The tests that make a short video do so with the ffmpeg of the repository and do nothing without it; the one that runs the real CLIP model does nothing without it. |
 | `PhotoLiker.Effects.Tests` | xUnit tests of the effects library, in folders that are the namespaces they test: the transitions and the movements, the compositor (also on a made-up depth, and mutation-checked: they fail if the direction of the movement or the lookup of the depth is broken), the depth (the numbers of the model made into bytes, the blur, the size the model is given), the colours (Lab against the numbers of OpenCV, the rule for black and white, the strength and the warmth put on the colours of the model without it running again, one photo coloured and saved by `ColorPreview`, the copy with its name, Exif and dates) and the downloading of the model files (from a local socket, with the SHA-256 check). The tests that run a real model do so only if its file is there (in the app's models folder, or in the one named by `PHOTOLIKER_TEST_MODELS`). |
 | `PhotoLiker.Imaging.Tests` | xUnit tests of the picture layer: resizing, decoding (size, Exif orientation, fitting a screen), and the conversion of a photo to another format (the bytes of each format, the picture itself in the new format, turned upright, transparency made white, the Exif notes that go along, also for a date from 1925 that a two-digit year would turn into 2025, the dates of the file, a file that is no picture or a name that is no format; mutation-checked). They need no models. |
+| `PhotoLiker.PhotoBook.Tests` | xUnit tests of the book library: the RTF reader (also on what a real Rich Text Box writes: Cyrillic as `\uN?` and as bytes of a code page), the setting of text in lines (on a measurer of fixed widths), the moves of the order, the file kept with a folder, the PDF (pages, paper, orientation, embedded fonts, long texts) and the EPUB (the first file stored, every part well formed, the package, the contents, the look of the text). |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question, the Colorize window and the bar over a black and white photo (when it comes and goes, the colours in the viewer and the sliders, the original, the saved copy, the next photo, what is kept; mutation-checked), the Depth parallax box of Generate Video, the slideshow with the Parallax effect and a video made with it (with the real depth model where it is): which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
@@ -1644,6 +1701,7 @@ You need the .NET 10 SDK (see `global.json`) on Windows.
 dotnet build PhotoLikerUI\PhotoLikerUI.csproj          # build the app
 dotnet test  PhotoLiker.Tests\PhotoLiker.Tests.csproj  # run the tests of the Core library
 dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.csproj  # run the tests of the video library
+dotnet test  PhotoLiker.PhotoBook.Tests\PhotoLiker.PhotoBook.Tests.csproj  # run the tests of the book library
 dotnet test  PhotoLiker.Imaging.Tests\PhotoLiker.Imaging.Tests.csproj  # run the tests of the picture layer (decoding, resizing, converting a photo to another format)
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
 dotnet test  PhotoLiker.Effects.Tests\PhotoLiker.Effects.Tests.csproj  # run the tests of the effects library (the depth, the colours, the compositor, the slideshow effects)

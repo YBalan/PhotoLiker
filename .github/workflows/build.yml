@@ -93,6 +93,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: dotnet test PhotoLiker.GenerateVideo.Tests/PhotoLiker.GenerateVideo.Tests.csproj --configuration Release
 
+      - name: Test the photo book library
+        if: ${{ !cancelled() }}
+        run: dotnet test PhotoLiker.PhotoBook.Tests/PhotoLiker.PhotoBook.Tests.csproj --configuration Release
+
       - name: Test the library of videos in the archive
         if: ${{ !cancelled() }}
         run: dotnet test PhotoLiker.Video.Tests/PhotoLiker.Video.Tests.csproj --configuration Release

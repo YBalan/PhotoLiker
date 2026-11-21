@@ -261,7 +261,7 @@ namespace PhotoLiker.Imaging
         }
 
         /// <summary>The picture with its transparent parts white (a half transparent pixel is a mix of its colour and white).</summary>
-        private static BitmapSource OnWhite(BitmapSource picture)
+        internal static BitmapSource OnWhite(BitmapSource picture)
         {
             var width = picture.PixelWidth;
             var height = picture.PixelHeight;
