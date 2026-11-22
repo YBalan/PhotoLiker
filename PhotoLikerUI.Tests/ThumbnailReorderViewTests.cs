@@ -287,8 +287,13 @@ public sealed class ThumbnailReorderViewTests
             var start = Middle(view, 0);
             view.Press(start, Keys.None);
             view.DragTo(new Point(start.X + 30, start.Y + 30));
-            view.DragTo(new Point(start.X, view.ClientSize.Height - 4)); // the bottom edge
-            Assert.True(await Ui.Until(() => -view.AutoScrollPosition.Y > 100, 5000), "the view scrolled by itself");
+            var edge = new Point(start.X, view.ClientSize.Height - 4); // the bottom edge
+            view.DragTo(edge);
+
+            // A window that is in front and has the mouse captured is told where the REAL cursor is (a mouse move the system makes up), and that moved the held
+            // pointer off the edge: the view then rightly stopped scrolling, and whether this test passed depended on where the cursor of the machine was (it
+            // failed once on the CI runner and on 3 of 6 fresh runs here). A hand that holds the mouse at the edge puts it back there at once, so the test does the same at every look.
+            Assert.True(await Ui.Until(() => { view.DragTo(edge); return -view.AutoScrollPosition.Y > 100; }, 5000), "the view scrolled by itself");
 
             view.CancelDrag();
             await Task.CompletedTask;
