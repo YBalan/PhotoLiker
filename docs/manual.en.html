@@ -41,6 +41,7 @@
     <li><a href="#book">Making a book</a></li>
     <li><a href="#trace">Tracing a photo into a vector drawing</a></li>
     <li><a href="#gif">Making a GIF of a video</a></li>
+    <li><a href="#sticker">Making a Telegram sticker</a></li>
     <li><a href="#videos">Videos in the folder</a></li>
     <li><a href="#theme">Dark and light theme</a></li>
     <li><a href="#files">What PhotoLiker keeps, and where</a></li>
@@ -282,7 +283,8 @@ and hide them again; that is kept for the next start. If the window is too low f
   <li><strong>Help</strong> (the question mark): the About box, with the keys and this manual.</li>
   <li><strong>Make a book</strong> (a teal book with a photo on its cover): make a PDF or an EPUB book of your photos, with a text above and below each, see <a href="#book">Making a book</a>.</li>
   <li><strong>Trace bitmap</strong> (an orange tile with a curve and two nodes; after Make a book): turn the photo that is shown into a vector drawing, an SVG or a DXF file of a size in millimetres, see <a href="#trace">Tracing a photo into a vector drawing</a>.</li>
-  <li><strong>Video to GIF</strong> (a violet tile with a play triangle and a round arrow; the very last button): make an animated GIF of a part of a video, to paste in a README, a chat or a page, see <a href="#gif">Making a GIF of a video</a>.</li>
+  <li><strong>Video to GIF</strong> (a violet tile with a play triangle and a round arrow; after Trace bitmap): make an animated GIF of a part of a video, to paste in a README, a chat or a page, see <a href="#gif">Making a GIF of a video</a>.</li>
+  <li><strong>Telegram sticker</strong> (a blue face on a white die-cut sticker with a peeling corner; the very last button): cut the subject out of the photo that is shown and save it as a sticker for Telegram, a WebP or PNG of 512 pixels with a see-through background, see <a href="#sticker">Making a Telegram sticker</a>.</li>
 </ul>
 
 <h3>The Properties panel</h3>
@@ -963,7 +965,7 @@ The tracer is the program's own, not Inkscape's (Inkscape uses Potrace), so the 
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="gif">21. Making a GIF of a video</h2>
 
-<p>The <strong>Video to GIF</strong> button (a violet tile with a play triangle and an arrow that goes round; the very last button of the toolbar, after <strong>Trace bitmap</strong>) makes an
+<p>The <strong>Video to GIF</strong> button (a violet tile with a play triangle and an arrow that goes round; after <strong>Trace bitmap</strong>; <strong>Telegram sticker</strong> comes after it) makes an
 <strong>animated GIF</strong> of a part of a video. A GIF plays by itself wherever a picture can be shown (a README on GitHub, a chat, a web page) and a video file cannot, so a few seconds of a screen
 recording, for instance the video you made in <a href="#video">Making a video</a>, can be pasted as it is. Nothing else has to be installed: the GIF is made by the ffmpeg that comes with the program.</p>
 
@@ -1000,8 +1002,63 @@ the video is shorter than its file says; pick an earlier last frame. <em>A messa
 <code>PATH</code>.</p>
 
 <!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="sticker">22. Making a Telegram sticker</h2>
 
-<h2 id="videos">22. Videos in the folder</h2>
+<p>The <strong>Telegram sticker</strong> button (a blue face on a white die-cut sticker with a peeling corner; the very last button of the toolbar, after <strong>Video to GIF</strong>) turns the photo that
+is shown into a <strong>sticker for Telegram</strong>: the subject of the photo is cut out, given the white outline and the soft shadow that stickers have, and saved as a picture with a see-through background
+that is exactly 512 pixels on its longer side, in the file Telegram takes (<strong>WebP</strong>, which is what Telegram's own stickers are, or <strong>PNG</strong>; 512 KB at most). The subject is found by a
+model that runs on this computer, so the photo goes nowhere.</p>
+
+<figure><img src="images/51-telegram-sticker.png" alt="The Telegram Sticker window: a drawn cat in a garden with a pink cut line round it on the left, the finished sticker of the cat with a white outline on a checkerboard on the right, and the settings of the cutout, the outline and the file" width="1196" height="759"></figure>
+
+<p>(The picture in the window is a drawing made for this manual, not a photo.)</p>
+
+<ol class="steps">
+  <li>
+    <strong>Show a photo and press the button.</strong> The window opens for the photo that is shown (a video cannot be made into a sticker). The first time, the program asks whether to download the model that
+    finds the subject (IS-Net, 179 MB, once; it says what it is and where it comes from). If you say no, the whole picture becomes the sticker, with rounded corners, and the window says why;
+    pick <em>Find the subject (AI)</em> again and it asks again.
+  </li>
+  <li>
+    <strong>Look at the cut line.</strong> On the left is the photo, with what is cut away darkened and the line where it is cut drawn in pink. About two seconds after the window opens the model has
+    looked at the photo and the sticker is shown on the right. <em>Show on</em> puts it on a checkerboard, a dark chat or a light chat; that is only how it is shown, the file has no background.
+  </li>
+  <li>
+    <strong>Adjust the cutout.</strong> <em>Sensitivity</em> is how much of what the model is unsure of is kept: higher keeps more of the subject (and of the background next to it), lower cuts closer.
+    <em>Drop small parts</em> removes the patches that the model found in the background (parts smaller than that percent of the biggest part; 0 keeps every part, 100 only the biggest).
+    <em>Follow edges</em> pulls the cut line to the nearest edge that is in the photo, because the model's own mask is soft; 0 leaves it as the model drew it.
+    <em>Move the edge</em> moves the cut line by some pixels of the sticker: less takes off a fringe of the old background, more keeps what was cut too closely. Each setting has a number and a slider;
+    the sticker is made again a moment after you stop.
+  </li>
+  <li>
+    <strong>Give it the outline you want.</strong> <em>Outline</em> is the border all round the subject that die-cut stickers have: white and 8 pixels wide at first (0 to 40 pixels of the sticker; <em>Color</em>
+    opens the colour window of Windows). It runs round fingers and hair as one smooth line: notches narrower than the outline are filled. <em>Shadow</em> is a soft shade under the sticker, so that it shows
+    on a light chat as well.
+  </li>
+  <li>
+    <strong>Choose the file.</strong> <em>WebP</em> is what Telegram's own stickers are and a fifth of the size of a PNG; <em>Quality</em> is how much of the picture it keeps (85 at first). A WebP that comes out
+    over 512 KB is written again with less quality until it fits. <em>PNG</em> has no quality and is not made smaller: a busy photo can make one that is over 512 KB, and then the line under the pictures
+    says so in red; pick WebP in that case. That line is read from the file that would be saved, for instance <em>454 x 512 pixels, 27 KB, WebP: fits what Telegram takes.</em>
+  </li>
+  <li>
+    <strong>Press Save sticker...</strong> and give a name (the name of the photo with <code>-sticker</code>, in its folder). The extension decides the kind of file (<code>.webp</code> or <code>.png</code>);
+    a name with none takes the kind picked in the list. A file that was there stays until the new one is whole. The status line says where the sticker went.
+  </li>
+</ol>
+
+<div class="tip"><p>To add the sticker to Telegram: send the file to the <code>@Stickers</code> bot, start a pack with <code>/newpack</code>, give it a name, send the sticker (as a file, so that it is not
+shrunk) and answer with an emoji for it; <code>/publish</code> finishes the pack. Telegram's own guide at core.telegram.org/stickers has the rest.</p></div>
+
+<p>The values of the window are <strong>remembered</strong> for the next photo.</p>
+
+<p><strong>If something is not right.</strong> <em>Nothing was found to cut out:</em> the photo has no subject the model can find (a wall, a fountain); raise <em>Sensitivity</em> or pick <em>The whole picture</em>.
+<em>The cutout has a piece of the background in it:</em> lower <em>Sensitivity</em>, raise <em>Drop small parts</em> or move the edge in. <em>The cutout is too close:</em> raise <em>Sensitivity</em> or move the edge out.
+<em>The sticker is blurred:</em> the photo is read at 1600 pixels at most, so a subject that is a small part of a big photo is enlarged beyond its own pixels; crop the photo first. <em>The model could not be
+downloaded:</em> the whole picture is used; check the connection and pick <em>Find the subject (AI)</em> again. <em>ffmpeg was not found:</em> a WebP cannot be written; pick PNG, or reinstall PhotoLiker.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+
+<h2 id="videos">23. Videos in the folder</h2>
 
 <p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. <strong>SupportVideo</strong> is on in the settings
 table by default (turn it off to have a folder look as it did before videos), and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
@@ -1099,7 +1156,7 @@ the first time <strong>SupportVideo</strong> is turned on, or a video is played,
 the status bar, and it stays on your computer, in <code>%LocalAppData%\PhotoLiker\libvlc</code>; nothing else is changed. If you say no, videos open in the program Windows plays them with, and you are asked again when you turn
 <strong>SupportVideo</strong> off and on. When it was turning <strong>SupportVideo</strong> on that started the download, the folder is listed again once the player is there (as <kbd>F5</kbd> does). Its licence and the place to get its source are in the <code>libvlc</code> folder next to the program.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="theme">23. Dark and light theme</h2>
+<h2 id="theme">24. Dark and light theme</h2>
 
 <p>The theme button of the toolbar switches between the two. A folder that is opened for the first time is dark; the choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
@@ -1110,7 +1167,7 @@ see <a href="#language">Language</a>.)</p>
 </figure>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="files">24. What PhotoLiker keeps, and where</h2>
+<h2 id="files">25. What PhotoLiker keeps, and where</h2>
 
 <ul>
   <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
@@ -1125,7 +1182,7 @@ see <a href="#language">Language</a>.)</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="about">25. About box and this manual</h2>
+<h2 id="about">26. About box and this manual</h2>
 
 <p>The <strong>Help</strong> button (the question mark) at the end of the toolbar, or the <kbd>F1</kbd> key, opens the About box: the version and build date of the program, the
 keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and two buttons that open this manual, in English or in Ukrainian.

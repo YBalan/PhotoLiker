@@ -39,6 +39,7 @@ namespace PhotoLikerUI
             InitializeBook();
             InitializeTrace();
             InitializeVideoToGif();
+            InitializeSticker();
             InitializeEmptyFolders();
             InitializeDuplicates();
             InitializeColorize();

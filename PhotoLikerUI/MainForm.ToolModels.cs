@@ -18,7 +18,7 @@ namespace PhotoLikerUI
 
         /// <summary>Asked before a model is downloaded. A test answers it.</summary>
         protected virtual bool ConfirmToolModelDownload(string feature, ToolModel model) =>
-            MessageBox.Show(this, string.Format(ToolModelStrings.DownloadQuestionFormat, feature, model.Title, model.Megabytes, model.Origin),
+            MessageBox.Show(this, string.Format(ToolModelStrings.DownloadQuestionFormat, feature, model.Title, model.Megabytes, model.Origin, new Uri(model.File.Url).Host),
                 ToolModelStrings.DownloadTitle, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) == DialogResult.OK;
 
         /// <summary>
