@@ -13,7 +13,7 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
-## Unreleased
+## 4.4.12 - 2026-11-23
 
 - Added Telegram sticker: a model on this computer cuts the subject out of the photo and saves a 512 pixel WebP or PNG sticker with an outline.
 
