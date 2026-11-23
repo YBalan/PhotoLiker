@@ -40,6 +40,7 @@ namespace PhotoLikerUI
             InitializeTrace();
             InitializeVideoToGif();
             InitializeSticker();
+            InitializeDrawing();
             InitializeEmptyFolders();
             InitializeDuplicates();
             InitializeColorize();
@@ -834,6 +835,11 @@ namespace PhotoLikerUI
             else if (IsEditDateKey(keyData))
             {
                 EditDateOfShownFile();
+                return true;
+            }
+            else if (IsDrawKey(keyData))
+            {
+                DrawCurrentPhoto();
                 return true;
             }
             else if (keyData == Keys.Space)

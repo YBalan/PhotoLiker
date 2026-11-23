@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 
 namespace PhotoLikerUI
 {
-    /// <summary>The texts about the models of the features that edit or move a photo (the Parallax effect, Colorize, the Telegram stickers): asking to download one, and how the download goes.</summary>
+    /// <summary>The texts about the models of the features that edit or move a photo (the Parallax effect, Colorize, the Telegram stickers, Scan text of the Draw window): asking to download one, and how the download goes.</summary>
     internal static class ToolModelStrings
     {
         private static string T([CallerMemberName] string key = "") => Loc.Get(nameof(ToolModelStrings), key);
@@ -13,6 +13,7 @@ namespace PhotoLikerUI
         public static string FocusFeature => T();
         public static string ColorizeFeature => T();
         public static string StickerFeature => T();
+        public static string ScanTextFeature => T();
 
         // The question
         public static string DownloadTitle => T();

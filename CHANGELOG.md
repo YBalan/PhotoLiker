@@ -13,7 +13,14 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
-## Unreleased
+## 4.5.12 - 2026-11-23
+
+- Added a Draw window (Ctrl+Shift+D, the last toolbar button, or Draw in Make a book): pen, highlighter, line, text, crop, undo, Save and Save as.
+- Added Scan text to the Draw window: it reads Ukrainian, Russian and English text in a picture with two small models that are downloaded once.
+- Added Rotate left and Rotate right to the Draw window; a JPEG that is only turned is saved by its Exif alone, so its Exif, date taken and file dates stay.
+- Changed Make a book to start on the loaded photos (Current) instead of the Liked folder, as long as some photos are loaded.
+
+## 4.4.12 - 2026-11-23
 
 - Added Telegram sticker: a model on this computer cuts the subject out of the photo and saves a 512 pixel WebP or PNG sticker with an outline.
 

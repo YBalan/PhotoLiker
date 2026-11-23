@@ -75,6 +75,8 @@ namespace PhotoLikerUI
         public static string RotateRight => T();
         public static string RotateLeftTip => T();
         public static string RotateRightTip => T();
+        public static string Draw => T();
+        public static string DrawTip => T();
         public static string PutBack => T();
         public static string Reverse => T();
         public static string Undo => T();

@@ -53,6 +53,8 @@ namespace PhotoLikerUI
 
         internal ToolStripButton RotateRightButton => _rotateRightButton;
 
+        internal ToolStripButton DrawButton => _drawButton;
+
         internal Button OpenButton => _openButton;
 
         internal Button CloseButton => _closeButton;
@@ -136,6 +138,8 @@ namespace PhotoLikerUI
                 MarkDirty();
             };
 
+            _drawButton.Click += (_, _) => DrawPicked();
+            _view.EntryActivated += (_, index) => DrawEntry(index);
             _rotateLeftButton.Click += (_, _) => _view.RotateSelected(-1);
             _rotateRightButton.Click += (_, _) => _view.RotateSelected(1);
             _earlierButton.Click += (_, _) => _view.MoveSelectedBy(-1);
@@ -238,7 +242,8 @@ namespace PhotoLikerUI
         private async Task CountFoldersAsync()
         {
             IReadOnlyList<GroupFolder> groups = [];
-            var likedCount = CountQuietlyAsync(SelectedSource);
+            // The liked folder is counted first, whichever source the window started on (the loaded photos are not read from a folder: they are counted already)
+            var likedCount = CountQuietlyAsync(_sourceCombo.Items.Cast<Source>().First(source => source.Folder is not null));
             try
             {
                 groups = await Task.Run(() => PhotoGroups.FindFolders(_likedFolder));
@@ -432,6 +437,31 @@ namespace PhotoLikerUI
             _countsLabel.Text = entries.Count == 0 ? string.Empty : string.Format(BookStrings.CountsFormat, entries.Count - leftOut, leftOut);
         }
 
+        /// <summary>The Draw window for the photo that has the focus, or the first that is picked.</summary>
+        private void DrawPicked()
+        {
+            var picked = _view.SelectedIndices;
+            if (picked.Count > 0)
+                DrawEntry(picked.Contains(_view.FocusIndex) ? _view.FocusIndex : picked[0]);
+        }
+
+        /// <summary>
+        /// Opens the Draw window for the photo at a place of the list (a double-click does this too). When the window wrote over the photo file, its thumbnail and the picture that is shown for it are made again;
+        /// the book takes each photo from its file when it is made, so it has the drawing.
+        /// </summary>
+        internal void DrawEntry(int index)
+        {
+            if (_drawPhoto is null || _making || index < 0 || index >= _view.Entries.Count)
+                return;
+
+            var path = _view.Entries[index].Path;
+            if (!_drawPhoto(path, this))
+                return;
+
+            _view.ReloadThumbnail(path);
+            RefreshPicked();
+        }
+
         /// <summary>The buttons that change the order work when something is picked; the others when there is something to change.</summary>
         private void UpdateCommands()
         {
@@ -439,6 +469,7 @@ namespace PhotoLikerUI
             var some = picked.Count > 0 && !_making;
             _earlierButton.Enabled = _laterButton.Enabled = _toStartButton.Enabled = _toEndButton.Enabled = _toPlaceButton.Enabled = some;
             _rotateLeftButton.Enabled = _rotateRightButton.Enabled = some;
+            _drawButton.Enabled = some && _drawPhoto is not null;
             _leaveOutButton.Enabled = some;
             _leaveOutButton.Text = some && picked.All(index => _view.Entries[index].LeftOut) ? BookStrings.PutBack : BookStrings.LeaveOut;
             var several = _view.Entries.Count > 1 && !_making;

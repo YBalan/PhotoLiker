@@ -189,4 +189,58 @@ public class WicPhotoDecoderTests
     {
         Assert.ThrowsAny<Exception>(() => WicPhotoDecoder.DecodeToFit([1, 2, 3, 4, 5], 100, 100));
     }
+
+    [Fact]
+    public void DecodeFull_GivesTheWholePhoto_AtItsOwnSize_AsStraightBgra()
+    {
+        var photo = WicPhotoDecoder.DecodeFull(Jpeg(300, 200, 20, 120, 220));
+
+        Assert.Equal(300, photo.Width);
+        Assert.Equal(200, photo.Height);
+        Assert.Equal(300 * 200 * 4, photo.Bgra.Length);
+        var middle = (100 * 300 + 150) * 4;
+        Assert.InRange(photo.Bgra[middle], 10, 30);        // blue
+        Assert.InRange(photo.Bgra[middle + 1], 110, 130);  // green
+        Assert.InRange(photo.Bgra[middle + 2], 210, 230);  // red
+        Assert.Equal(255, photo.Bgra[middle + 3]);         // opaque
+    }
+
+    [Fact]
+    public void DecodeFull_TurnsThePhotoUpright()
+    {
+        // Stored 400 wide and 200 high, marked "rotate 90 degrees to view": upright it is 200 wide and 400 high
+        var photo = WicPhotoDecoder.DecodeFull(Jpeg(400, 200, 10, 10, 10, orientation: 6));
+
+        Assert.Equal(200, photo.Width);
+        Assert.Equal(400, photo.Height);
+    }
+
+    [Fact]
+    public void DecodeFull_KeepsWhatIsSeeThrough_NotMultipliedByItsAlpha()
+    {
+        // A pixel of 50 % blue on nothing: its blue is 255 (straight), not 128 (multiplied by the alpha)
+        var pixels = new byte[4 * 4 * 4];
+        for (var i = 0; i < pixels.Length; i += 4)
+        {
+            pixels[i] = 255;
+            pixels[i + 3] = 128;
+        }
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(BitmapSource.Create(4, 4, 96, 96, PixelFormats.Bgra32, null, pixels, 16)));
+        using var stream = new MemoryStream();
+        encoder.Save(stream);
+
+        var photo = WicPhotoDecoder.DecodeFull(stream.ToArray());
+
+        Assert.Equal(255, photo.Bgra[0]);
+        Assert.InRange(photo.Bgra[3], 126, 130);
+    }
+
+    [Fact]
+    public void DecodeFull_OfAFileThatIsNotAPhoto_Throws()
+    {
+        var ex = Assert.Throws<NotSupportedException>(() => WicPhotoDecoder.DecodeFull([1, 2, 3, 4, 5]));
+
+        Assert.Contains("not a picture", ex.Message);
+    }
 }

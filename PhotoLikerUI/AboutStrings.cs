@@ -44,7 +44,7 @@ namespace PhotoLikerUI
         private static readonly string[] ShortcutIds =
         [
             "Move", "Ends", "Month", "Like", "Delete", "Group", "GroupAll", "Fit", "About", "ManualUk", "ManualEn", "Relist", "Copy",
-            "Rotate", "Date", "Zoom", "Slideshow", "Play", "Seek", "Frame", "Moment", "Close", "Search", "Face", "Thumbnail",
+            "Rotate", "Date", "Draw", "Zoom", "Slideshow", "Play", "Seek", "Frame", "Moment", "Close", "Search", "Face", "Thumbnail",
         ];
     }
 }

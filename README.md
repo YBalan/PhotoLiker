@@ -21,6 +21,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
     - [Trace bitmap](#trace-bitmap)
     - [Video to GIF](#video-to-gif)
     - [Telegram sticker](#telegram-sticker)
+    - [Draw](#draw)
   - [About box](#about-box)
 - [Settings](#settings)
   - [Folder picker](#folder-picker)
@@ -365,6 +366,7 @@ What is kept where:
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> | Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger. |
 | <kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd> | Rotate the photo a quarter clockwise / counterclockwise and save it (see [Rotating photos](#rotating-photos)). The plus of the main keyboard (with or without <kbd>Shift</kbd>) and the numpad keys both work. |
 | <kbd>Ctrl</kbd>+<kbd>D</kbd> | Change the date of the shown file in a small dialog: the **Date Taken (Original)** of a JPEG photo (the dates of its file follow it) or **Recorded** of a video (written into the video, and the dates of its file follow). It is the same dialog and the same saving as the **...** of that row in the metadata grid. A file of another kind has no date to change and the status bar says so. Not in the [slideshow](#slideshow). |
+| <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> | Open the [Draw](#draw) window for the shown photo: draw on it, write text on it, crop it, scan the text in it. A video cannot be drawn on. Not in the [slideshow](#slideshow). |
 | <kbd>Ctrl</kbd>+mouse wheel | Over the photo: zoom, then drag to pan. Over the thumbnail strip: change the size of the thumbnails. |
 | <kbd>Enter</kbd> | On a video: play it, or pause / resume it ([Videos](#videos)). A click on the poster plays it, a click on the playing picture pauses it. |
 | <kbd>Shift</kbd>+<kbd>Right</kbd> / <kbd>Left</kbd>, <kbd>Ctrl</kbd>+<kbd>Right</kbd> / <kbd>Left</kbd> | While a video plays: 5 seconds / 30 seconds ahead or back. |
@@ -407,7 +409,8 @@ ones are behind the arrow at the bottom of the column.
 | **Make a book** (a teal book with a photo on its cover; after Help and a separator) | Make a PDF or an EPUB book of the photos, with a text above and below each photo and the photos in the order you choose, see [Make a book](#make-a-book). |
 | **Trace bitmap** (an orange tile with a curve and two nodes; after Make a book) | Turn the photo that is shown into a vector drawing, an SVG or a DXF file of a size in millimetres, with the scans and the options of the Trace Bitmap of Inkscape, see [Trace bitmap](#trace-bitmap). |
 | **Video to GIF** (a violet tile with a play triangle and a round arrow; after Trace bitmap) | Make an animated GIF of a part of a video, to paste in a README, a chat or a page, see [Video to GIF](#video-to-gif). |
-| **Telegram sticker** (a blue face on a white die-cut sticker with a peeling corner; the very last button) | Cut the subject out of the photo that is shown and save it as a sticker for Telegram, a WebP or PNG of 512 pixels with a see-through background, see [Telegram sticker](#telegram-sticker). |
+| **Telegram sticker** (a blue face on a white die-cut sticker with a peeling corner; after Video to GIF) | Cut the subject out of the photo that is shown and save it as a sticker for Telegram, a WebP or PNG of 512 pixels with a see-through background, see [Telegram sticker](#telegram-sticker). |
+| **Draw** (a pencil that has just drawn a red curve; the very last button) | Draw on the photo that is shown, write text on it, crop it and scan the text in it, see [Draw](#draw). <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> does the same. |
 
 #### The Properties panel
 
@@ -555,7 +558,7 @@ group, and it follows the dark theme of the window.
 
 ![The Make a book window](docs/images/48-make-book.png)
 
-- **Photos from** picks the photos: `Current` (the loaded ones), `Liked`, and each group folder, with the number of photos (counted in the background, so the window opens at
+- **Photos from** picks the photos: `Current` (the loaded ones; the window starts on them, and on `Liked` when nothing is loaded), `Liked`, and each group folder, with the number of photos (counted in the background, so the window opens at
   once). The photos of a folder that has no book yet start in the order of **Sort by** (the order of the folder's setting); **Sort** puts all the photos in an order again.
   Videos are left out.
 - **The thumbnails are the order of the book.** Drag the picked photos to a place (a line shows where they will go; the view scrolls by itself at its top and bottom edge, and
@@ -567,6 +570,8 @@ group, and it follows the dark theme of the window.
   steps) and done again (<kbd>Ctrl</kbd>+<kbd>Y</kbd>). The slider under the list sets the size of the thumbnails (80 to 320 px). Each thumbnail has its number in the book, the file name, and a blue mark for a text
   above it and one for a text below it. The photos are read only when they come on the screen, a few at a time, and only if they are still there when their turn comes, so a list of
   thousands opens at once and scrolling fast does not queue the photos that went by.
+- **Draw.** The **Draw** button next to the two turn buttons (or a **double-click** on a thumbnail) opens the [Draw](#draw) window for the photo that is picked (the one with the focus, when several are), and what **Save** writes over
+  the photo file is what the book is made of: its thumbnail and the picture at the right are read again when the window closes.
 - **Above the photo** and **Below the photo** are two Rich Text Boxes for the photo that is picked (with several picked there is nothing to write to). They look like paper (black on white)
   in either theme. The buttons give **bold, italic, underline, strike-through**, the **size** (4 to 200 points; 12 is the size of text that has none of its own), the **colour**, and the
   alignment: **left, centre, right and justified** (a Rich Text Box has no justification of its own; the paragraph format of Rich Edit is set directly). A pick that is in more than one look
@@ -679,7 +684,7 @@ seconds with a frame every 0.08 seconds and 480 pixels came to 1.2 MB). If a GIF
 
 #### Telegram sticker
 
-The **Telegram sticker** button (a blue face on a white die-cut sticker with a peeling corner; the very last button of the toolbar, after **Video to GIF**) turns the photo that is shown into a
+The **Telegram sticker** button (a blue face on a white die-cut sticker with a peeling corner; after **Video to GIF**; **Draw** comes after it) turns the photo that is shown into a
 **sticker for Telegram**: the subject of the photo is cut out, given the white outline and the soft shadow that stickers have, and saved as a picture with a see-through background that is exactly
 512 pixels on its longer side, in the file Telegram takes (**WebP**, which is what Telegram's own stickers are, or **PNG**; 512 KB at most). The subject is found by a model that runs on this
 computer, so the photo goes nowhere. A video cannot be made into a sticker. The window follows the dark theme of the program.
@@ -721,6 +726,57 @@ computer, so the photo goes nowhere. A video cannot be made into a sticker. The 
 - The library is its own project, `PhotoLiker.Stickers` (the settings, the model wrapper, the cutout, the renderer, the PNG writer, the WebP run and a reader that tells what a sticker file is and what
   Telegram would say of it); it has no window and depends on no other project. The window, the two panes and the toolbar button are in `PhotoLikerUI`; the model is listed with the other
   models of the effects in `PhotoLiker.Effects`.
+
+#### Draw
+
+The **Draw** button (a pencil that has just drawn a red curve; the very last button of the toolbar, after **Telegram sticker**) or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> opens a window to
+**draw on the photo that is shown**, write text on it, crop it and **scan the text in it**, the way the editor of the Windows Snipping Tool works. The window opens around the photo (as large as the
+screen allows) and shows it as large as the window lets it be, never larger than it is; it follows the dark theme of the program. A video cannot be drawn on. The **Make a book** window opens the same
+window for any of its photos: with its **Draw** button (next to the two turn buttons), or with a **double-click** on a thumbnail.
+
+![The Draw window](docs/images/52-drawing.png)
+
+(The picture in the window is a drawing made for this documentation, not a photo.)
+
+- **The tools.** **Pen** (draw freely: press, drag, let go), **Highlighter** (a wider stroke that lets the photo show through; where it crosses itself it is no darker than elsewhere), **Line** (straight, from
+  where the button goes down to where it goes up), **Text** and **Crop**. The eight colours on the bar and **More...** (the colour window of Windows) are the colour of the pen, the highlighter, the line and
+  the text. **Width** is how thick the line is **as it looks on the screen** (1 to 60 pixels): on a large photo that is shown smaller the stroke is made in the pixels of the photo, so it looks the same.
+  With the Text tool the same slider is the **Size** of the letters (8 to 160).
+- **Text.** Click where the text goes and type; it may have several lines. <kbd>Ctrl</kbd>+<kbd>Enter</kbd>, a click elsewhere on the photo, or picking another tool puts it on the photo; <kbd>Esc</kbd> throws it
+  away. The letters are Segoe UI, drawn with smooth edges.
+- **Crop.** The frame is the whole photo at first. Drag a new frame over the part to keep, move the frame by its inside, change it by its edges and corners. **Keep this part** (<kbd>Enter</kbd>) cuts the photo to the
+  frame (it is no smaller than 8 pixels); **Cancel** (<kbd>Esc</kbd>) forgets the frame. What is drawn after a crop is in the pixels of the cropped photo.
+- **Rotate left** and **Rotate right** (the two round arrows after Redo; <kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd>, as in the main window) turn the picture a quarter. A turn is a step like any other: it can be taken back, and what is
+  drawn after it is on the turned picture. Nothing is written until **Save**. A photo that is stored on its side (no turn in its Exif, as with some cameras and scanners) is put right this way.
+- **Undo and Redo** (<kbd>Ctrl</kbd>+<kbd>Z</kbd>, <kbd>Ctrl</kbd>+<kbd>Y</kbd>) take back and bring back the steps, as many as there are. The photo is never changed while you work: what you do is a list of steps that is drawn over it
+  again, so taking one back costs the drawing of the steps that stay, not a copy of the picture for each.
+- **Scan text** finds the lines of text in the picture (or in the frame of the Crop tool, when there is one) and reads them: Ukrainian, Russian, Belarusian, Bulgarian and English. The lines are marked on the photo in
+  blue (a line may be turned a little, as the text of a photograph often is) and the text is shown at the side in reading order, from the top, a row from the left. **Copy** puts the text on the clipboard (the part
+  that is picked in it, or all); **Hide** puts the side away. While it reads, the window is busy (a bar runs at the bottom) and <kbd>Esc</kbd> stops it. It takes about two seconds for a picture of a megapixel on a processor
+  of 12 cores. It does not read text that is upside down, reads letters that look alike with some mistakes (a Ukrainian *І* can come out as *И*, as in the picture below), and is poor with handwriting: look at what
+  it found before you rely on it.
+
+  ![Scan text: the lines that were found are marked, the text is at the side](docs/images/53-drawing-scan-text.png)
+
+- **Save** writes the picture over the photo, in the format of the photo (JPEG at quality 95, PNG, BMP, GIF, TIFF; a photo in WebP or HEIC has no encoder in Windows, so the window says to use Save as). The
+  **dates of the file** stay as they were, and so do the notes of the photo that Windows carries over: the date taken, the camera, the title, the author, the copyright (GPS and other notes are not carried). The
+  file is written under another name first and moved into place, so a photo is whole or as it was. **A JPEG that was only turned** is not written again: the turn goes into its Exif (the orientation, one value), exactly as the
+  Rotate buttons of the main window do it, so the picture is not coded a second time and **everything else stays as it is**: all of the Exif, the date taken, the dates of the file (the faces of the search index are turned with it, nothing is
+  analyzed again). A photo that was drawn on or cropped as well, a photo that is not a JPEG, and a copy made with **Save as...** are written as pixels, with the turn in them. **Save as...** (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>) asks for a name (the name of the photo with ` (edited)`, in its
+  folder); the extension decides the format, and a name with none gets the format of the photo. Closing the window with changes that were not saved asks whether to save them.
+- **What follows a Save over the photo.** (A photo that was only turned is the same picture: see above.) Its pixels, and so its size, are other now: the copies of it in the Liked and group folders (they carry the size and the date in their names) are renamed, the list and the
+  picture on the screen show the new file, and the search index still knows the old picture, so **Update index** analyzes the photo again (the faces and the words of the search are those of the picture that was drawn on). A
+  photo of more than 100 million pixels is not opened.
+- **The models of Scan text.** PP-OCR of PaddleOCR (Baidu, Apache 2.0), exported to ONNX and run by ONNX Runtime on the processor; the photo goes nowhere. Two files in the models folder with the others
+  (`%LocalAppData%\PhotoLiker\models`): `ppocr-v3-det.onnx` (3 MB, finds the lines) and `ppocr-v5-eslav-rec.onnx` (8 MB, reads a line; the East Slavic model, with its dictionary in the program). The first time
+  you press **Scan text** the program asks once for both (what they are, how big, where they come from), downloads them from the Hugging Face repository `monkt/paddleocr-onnx` at a fixed revision and checks them against
+  their SHA-256. If you say no, nothing is scanned and the status line says so; pressing the button asks again. The larger PP-OCRv5 model for finding lines (88 MB) was tried and not taken: four times as slow, and it
+  cuts a line into its words.
+- **How it works.** The finder looks at the picture made at most 1536 pixels on its longer side and gives a map of how likely each point is text; the points that are sure enough are joined into shapes, each shape
+  becomes the smallest rectangle round it (turned as it must be) and is made larger by the distance the model leaves off. Each rectangle is straightened, cut out at 48 pixels high and read by the second model, whose
+  answer for each slice of the line is turned into letters (CTC); a line it is less than 50 % sure of is dropped.
+- **The library.** The drawing is its own project, `PhotoLiker.Drawing` (the strokes drawn with anti-aliasing and round ends, the notes, the crop frame, the steps with Undo and Redo, and the whole of Scan text), with
+  no user interface and nothing of Windows; the window is `DrawingDialog` and `DrawingCanvas` in `PhotoLikerUI`.
 
 ### About box
 
@@ -1810,6 +1866,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.TraceBitmap` | Trace Bitmap, without a user interface: cutting a picture into scans (a brightness cutoff, the edges, reduced colours; steps of brightness, colours or grays, stacked or side by side: `Binarizer`, `ColorQuantizer`), following the outlines of the black along the pixel edges (`ContourTracer`), fitting them with lines and Bezier curves (`CurveFitter`), and the **SVG** and **DXF** writers in millimetres (`SvgWriter`, `DxfWriter`), with the settings of Inkscape's window and the file the dialog keeps them in (`TraceSettings`, `TraceDialogSettings`). Its own tracer, not Potrace (GPL); it depends on no other project. |
 | `PhotoLiker.VideoToGif` | Video to GIF, without a user interface: the settings of a GIF and the file the window keeps them in (`GifSettings`), the plan of what it will be (the part of the video, the frames, the size, the arguments of ffmpeg: `GifRange`, `GifPlan`), the two ffmpeg runs (the palette, then the frames) with progress and stopping, and nothing left behind when it fails (`GifMaker`), and a reader of the blocks of a GIF file (`GifInfo`: size, frames, length, repeats, palettes). It depends on no other project. |
 | `PhotoLiker.Stickers` | Telegram stickers, without a user interface: the subject of a photo found by IS-Net with ONNX Runtime (`SubjectDetector`), the cutout (`Cutout`: the map enlarged, drawn to the photo's edges with a guided filter, cut at the sensitivity, small parts dropped, small holes filled), the sticker (`StickerRenderer`: scaled to 512 pixels on the longer side, the outline from an exact distance transform with the notches closed, the shadow), the files (`PngWriter`, the WebP run of ffmpeg in `StickerEncoder`, `StickerFile` that reads a file's own header and checks it against Telegram's limits) and the settings (`StickerSettings`); the cut line over a photo (`ContourOverlay`). It depends on no other project. |
+| `PhotoLiker.Drawing` | Drawing on a photo and reading its text, without a user interface: the pictures as pixels (`Bitmap32`), the strokes (`Painter`: anti-aliased, round ends, a stroke that crosses itself is not darker), the notes (a mask of the letters made by the window, which has the fonts), the steps with Undo and Redo (`DrawingSession`: the photo is never changed, the steps are drawn over it again), the crop frame (`CropFrame`) and Scan text (`TextScanner`: the PP-OCR models with ONNX Runtime, the lines found in the map of the first (`LineFinder`: shapes, the smallest turned rectangle, the unclip), straightened (`Sampler`) and read by the second (`CharacterSet`: CTC)). It depends on no other project. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only; uses Imaging for decoding photos. |
 | `PhotoLiker.Effects` | What is done to a photo apart from looking at it and searching it, without a user interface. The folders are the namespaces (`PhotoLiker.Effects.<folder>`): `Transitions` (the rules of the effects of the [slideshow](#slideshow): which one is used, how long a change takes, how two photos are drawn in the middle of it), `Motion` (the slow movements of one photo: Ken Burns and the [depth parallax](#depth-parallax)), `Compositing` (`FrameCompositor`, which puts the pictures of an effect together on the pixels, on all the cores, also moving a picture by its depth), `Gpu` (`GpuRenderer`, the same on the graphics chip with Direct3D 11, for the steps that are heavy for the processor, see [The graphics chip](#the-graphics-chip)), `Depth` (the depth of a picture, Depth Anything V2 Small) and `Colorize` (the colours of a black and white photo, DDColor; the copy that is saved next to the photo; how much colour a photo has) and `Models` (the list of the files of the two models, and `EffectModels`, which downloads them and makes the ONNX sessions). It uses Core for the settings (`SlideshowEffect`, the name of the effect, is a setting and stays there) Imaging for decoding a photo, and Search for what the two have in common: downloading model files, and the check that ONNX Runtime can start. |
 | `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form, heard again in a language that is chosen), the table of it for the window and the Excel file (`.xlsx`, written with the zip and XML of the framework) of that table, and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
@@ -1823,6 +1880,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.TraceBitmap.Tests` | xUnit tests of the tracing library: the outlines of known shapes (areas that add up, holes, a chessboard corner), the fit of curves (few nodes for a circle, four sharp corners for a rectangle, no runaway handle, the traced shape filled back into pixels and compared with what was traced), every scan and option, the SVG (parsed as XML, millimetres, a point for the decimals in any language) and the DXF (group codes, closed polylines, the turned-over y, layers), the settings file. Mutation-checked. |
 | `PhotoLiker.VideoToGif.Tests` | xUnit tests of the GIF library: the plan (ranges, frames, sizes, rounding, the arguments of both ffmpeg runs), the settings file, the reader of GIF blocks (on files built byte by byte, also cut off), and real GIFs made by the ffmpeg of the repository from videos made for the test (frames, size, repeat, colours, a video that is shown turned, progress, stopping, a GIF that is kept when the new one fails). |
 | `PhotoLiker.Stickers.Tests` | xUnit tests of the sticker library: the distance transform (against a brute-force search), the parts and holes of a mask, the guided filter, the cutout and its cuts, the sticker (the longer side exactly 512, the outline as wide as asked above, below and beside the subject, notches closed, the shadow, the moved edge, the straight alpha), the PNG writer (read back by another reader and by ffmpeg, every kind of filter), the file reader (WebP made by ffmpeg, hand-built headers) and the limits, the WebP that is written again until it fits, the settings file. The tests that need the model (`PHOTOLIKER_TEST_MODELS`) or ffmpeg do nothing where they are not there. Mutation-checked. |
+| `PhotoLiker.Drawing.Tests` | xUnit tests of the drawing library: the strokes (the edge, the round end, a highlighter that is not darker where it crosses itself, a line that runs off the picture), the notes, the steps and Undo and Redo (a replay gives the same picture as drawing it once), the crop frame (hit tests, edges, corners, the minimum), the dictionary and the CTC reading, the finder of lines (a bar, a turned band, dust, the unclip), the straightening of a line, the reading order. The tests of `PhotoLikerUI.Tests` read real text with the real models where they are in the models folder. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question, the Colorize window and the bar over a black and white photo (when it comes and goes, the colours in the viewer and the sliders, the original, the saved copy, the next photo, what is kept; mutation-checked), the Depth parallax box of Generate Video, the slideshow with the Parallax effect and a video made with it (with the real depth model where it is): which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
@@ -1844,6 +1902,7 @@ dotnet test  PhotoLiker.PhotoBook.Tests\PhotoLiker.PhotoBook.Tests.csproj  # run
 dotnet test  PhotoLiker.TraceBitmap.Tests\PhotoLiker.TraceBitmap.Tests.csproj  # run the tests of the tracing library (the scans, the curves, the SVG and DXF files)
 dotnet test  PhotoLiker.VideoToGif.Tests\PhotoLiker.VideoToGif.Tests.csproj  # run the tests of the GIF library (the plan, the settings, the GIF reader, real GIFs made by ffmpeg)
 dotnet test  PhotoLiker.Stickers.Tests\PhotoLiker.Stickers.Tests.csproj  # run the tests of the sticker library (the cutout, the sticker, the PNG and WebP files, the limits of Telegram)
+dotnet test  PhotoLiker.Drawing.Tests\PhotoLiker.Drawing.Tests.csproj  # run the tests of the drawing library (the strokes, the steps, the crop frame, Scan text)
 dotnet test  PhotoLiker.Imaging.Tests\PhotoLiker.Imaging.Tests.csproj  # run the tests of the picture layer (decoding, resizing, converting a photo to another format)
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
 dotnet test  PhotoLiker.Effects.Tests\PhotoLiker.Effects.Tests.csproj  # run the tests of the effects library (the depth, the colours, the compositor, the slideshow effects)

@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
+    <ProjectReference Include="..\PhotoLiker.Drawing\PhotoLiker.Drawing.csproj" />
     <ProjectReference Include="..\PhotoLiker.Effects\PhotoLiker.Effects.csproj" />
     <ProjectReference Include="..\PhotoLiker.Imaging\PhotoLiker.Imaging.csproj" />
     <ProjectReference Include="..\PhotoLiker.GenerateVideo\PhotoLiker.GenerateVideo.csproj" />

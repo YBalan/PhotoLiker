@@ -84,6 +84,58 @@ namespace PhotoLiker.Imaging
             return new DecodedPixels(pbgra.PixelWidth, pbgra.PixelHeight, pixels);
         }
 
+        /// <summary>The most pixels <see cref="DecodeFull"/> takes on: a picture of 100 million points would be 400 MB, and the same again for each copy that is drawn on.</summary>
+        public const long MaxFullPixels = 100_000_000;
+
+        /// <summary>
+        /// Decodes a photo at its full size, upright, as straight (not multiplied) blue, green, red, alpha: what a picture is drawn on and saved from. Safe to call from any thread.
+        /// </summary>
+        /// <exception cref="NotSupportedException">The bytes are no picture that Windows can read, or it has more than <see cref="MaxFullPixels"/> points.</exception>
+        public static DecodedStraight DecodeFull(byte[] fileBytes)
+        {
+            using var stream = new MemoryStream(fileBytes, writable: false);
+            int width, height, orientation;
+            try
+            {
+                (width, height, orientation) = ReadHeader(stream);
+            }
+            catch (Exception ex) when (IsNotAPicture(ex))
+            {
+                throw new NotSupportedException("This is not a picture that Windows can read.", ex);
+            }
+
+            if ((long)width * height > MaxFullPixels)
+                throw new NotSupportedException($"A picture of {width} by {height} points is too large to draw on.");
+
+            try
+            {
+                stream.Position = 0;
+                var image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+                image.StreamSource = stream;
+                image.EndInit();
+                image.Freeze();
+
+                BitmapSource source = image;
+                if (OrientationTransform(orientation) is { } transform)
+                    source = new TransformedBitmap(source, transform);
+
+                var bgra = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+                var pixels = new byte[checked(bgra.PixelWidth * bgra.PixelHeight * 4)];
+                bgra.CopyPixels(pixels, bgra.PixelWidth * 4, 0);
+                return new DecodedStraight(bgra.PixelWidth, bgra.PixelHeight, pixels);
+            }
+            catch (Exception ex) when (IsNotAPicture(ex))
+            {
+                throw new NotSupportedException("This is not a picture that Windows can read.", ex);
+            }
+        }
+
+        private static bool IsNotAPicture(Exception ex) =>
+            ex is FileFormatException or InvalidOperationException or System.Runtime.InteropServices.COMException or ArgumentException or NotSupportedException;
+
         private static (int Width, int Height, int Orientation) ReadHeader(Stream stream)
         {
             var frame = BitmapFrame.Create(stream, BitmapCreateOptions.DelayCreation | BitmapCreateOptions.IgnoreColorProfile, BitmapCacheOption.None);

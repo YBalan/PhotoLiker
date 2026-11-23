@@ -6,6 +6,9 @@ namespace PhotoLiker.Imaging
     /// </summary>
     public sealed record DecodedPixels(int Width, int Height, byte[] Pbgra);
 
+    /// <summary>A photo decoded at its full size, upright: interleaved B, G, R, A bytes, the colours NOT multiplied by the alpha, no padding (the form a picture is drawn on and saved from).</summary>
+    public sealed record DecodedStraight(int Width, int Height, byte[] Bgra);
+
     /// <summary>A photo decoded to pixels, upright and at most a limited size: interleaved B, G, R bytes, no padding.</summary>
     public sealed record DecodedPhoto(int Width, int Height, byte[] Bgr)
     {

@@ -42,6 +42,7 @@
     <li><a href="#trace">Tracing a photo into a vector drawing</a></li>
     <li><a href="#gif">Making a GIF of a video</a></li>
     <li><a href="#sticker">Making a Telegram sticker</a></li>
+    <li><a href="#draw">Drawing on a photo and reading its text</a></li>
     <li><a href="#videos">Videos in the folder</a></li>
     <li><a href="#theme">Dark and light theme</a></li>
     <li><a href="#files">What PhotoLiker keeps, and where</a></li>
@@ -239,6 +240,7 @@ photo again.</p></div>
     <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>Copy the photo to the clipboard, as a file and as a picture: paste it into Explorer or a messenger.</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd></td><td>Rotate the photo a quarter clockwise / counterclockwise and save it (see <a href="#rotate">Rotating photos</a>).</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>Change the date of the shown file in a small dialog: the <strong>Date Taken (Original)</strong> of a JPEG photo (the dates of its file follow it) or <strong>Recorded</strong> of a video (written into the video, and the dates of its file follow). It is the same dialog and the same saving as the <strong>...</strong> of that row in the metadata grid. A file of another kind has no date to change and the status bar says so. Not in the slideshow.</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></td><td>Open the <a href="#draw">Draw</a> window for the shown photo: draw on it, write text on it, crop it, scan the text in it. A video cannot be drawn on. Not in the slideshow.</td></tr>
     <tr><td><kbd>Ctrl</kbd>+mouse wheel</td><td>Over the photo: zoom, then drag to move the picture. Over the thumbnails: change their size.</td></tr>
     <tr><td><kbd>Enter</kbd></td><td>On a video: play it, or pause / resume it (see <a href="#videos">Videos in the folder</a>). A click on the poster plays it, a click on the playing picture pauses it.</td></tr>
     <tr><td><kbd>Shift</kbd>+<kbd>→</kbd> / <kbd>←</kbd>, <kbd>Ctrl</kbd>+<kbd>→</kbd> / <kbd>←</kbd></td><td>While a video plays: 5 seconds / 30 seconds ahead or back.</td></tr>
@@ -284,7 +286,8 @@ and hide them again; that is kept for the next start. If the window is too low f
   <li><strong>Make a book</strong> (a teal book with a photo on its cover): make a PDF or an EPUB book of your photos, with a text above and below each, see <a href="#book">Making a book</a>.</li>
   <li><strong>Trace bitmap</strong> (an orange tile with a curve and two nodes; after Make a book): turn the photo that is shown into a vector drawing, an SVG or a DXF file of a size in millimetres, see <a href="#trace">Tracing a photo into a vector drawing</a>.</li>
   <li><strong>Video to GIF</strong> (a violet tile with a play triangle and a round arrow; after Trace bitmap): make an animated GIF of a part of a video, to paste in a README, a chat or a page, see <a href="#gif">Making a GIF of a video</a>.</li>
-  <li><strong>Telegram sticker</strong> (a blue face on a white die-cut sticker with a peeling corner; the very last button): cut the subject out of the photo that is shown and save it as a sticker for Telegram, a WebP or PNG of 512 pixels with a see-through background, see <a href="#sticker">Making a Telegram sticker</a>.</li>
+  <li><strong>Telegram sticker</strong> (a blue face on a white die-cut sticker with a peeling corner; after Video to GIF): cut the subject out of the photo that is shown and save it as a sticker for Telegram, a WebP or PNG of 512 pixels with a see-through background, see <a href="#sticker">Making a Telegram sticker</a>.</li>
+  <li><strong>Draw</strong> (a pencil that has just drawn a red curve; the very last button): draw on the photo that is shown, write text on it, crop it and scan the text in it, see <a href="#draw">Drawing on a photo and reading its text</a>. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> does the same.</li>
 </ul>
 
 <h3>The Properties panel</h3>
@@ -872,7 +875,7 @@ screen or for a printer. Nothing else has to be installed.</p>
 
 <ol class="steps">
   <li>
-    <strong>Pick the photos.</strong> <em>Photos from</em> offers the photos that are loaded (<em>Current</em>), the <em>Liked</em> folder and each group, with the number of photos in each.
+    <strong>Pick the photos.</strong> <em>Photos from</em> offers the photos that are loaded (<em>Current</em>, where the window starts; it starts on <em>Liked</em> when nothing is loaded), the <em>Liked</em> folder and each group, with the number of photos in each.
     The photos start in the order of <em>Sort by</em>; <strong>Sort</strong> puts them in an order again at any time.
   </li>
   <li>
@@ -881,6 +884,10 @@ screen or for a printer. Nothing else has to be installed.</p>
     <strong>To place...</strong> asks for a number. <strong>Leave out</strong> (<kbd>Delete</kbd>) keeps a photo in the list but out of the book. The two round arrows turn the picked photos a quarter
     to the left or to the right (<kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd>): only in the book, the photo files are not changed. Everything can be undone
     (<kbd>Ctrl</kbd>+<kbd>Z</kbd>). The slider under the list makes the thumbnails larger or smaller.
+  </li>
+  <li>
+    <strong>Draw on a photo.</strong> The <strong>Draw</strong> button next to the two turn buttons, or a <strong>double-click</strong> on a thumbnail, opens the <a href="#draw">Draw</a> window for the photo that is
+    picked. What <em>Save</em> writes over the photo file is what the book is made of: the thumbnail and the picture at the right are read again when the window closes.
   </li>
   <li>
     <strong>Write.</strong> Pick one photo: it is shown on the right, with two boxes, <em>Above the photo</em> and <em>Below the photo</em>. They are like a small word processor: bold, italic,
@@ -1004,7 +1011,7 @@ the video is shorter than its file says; pick an earlier last frame. <em>A messa
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="sticker">22. Making a Telegram sticker</h2>
 
-<p>The <strong>Telegram sticker</strong> button (a blue face on a white die-cut sticker with a peeling corner; the very last button of the toolbar, after <strong>Video to GIF</strong>) turns the photo that
+<p>The <strong>Telegram sticker</strong> button (a blue face on a white die-cut sticker with a peeling corner; after <strong>Video to GIF</strong>; <strong>Draw</strong> comes after it) turns the photo that
 is shown into a <strong>sticker for Telegram</strong>: the subject of the photo is cut out, given the white outline and the soft shadow that stickers have, and saved as a picture with a see-through background
 that is exactly 512 pixels on its longer side, in the file Telegram takes (<strong>WebP</strong>, which is what Telegram's own stickers are, or <strong>PNG</strong>; 512 KB at most). The subject is found by a
 model that runs on this computer, so the photo goes nowhere.</p>
@@ -1058,7 +1065,63 @@ downloaded:</em> the whole picture is used; check the connection and pick <em>Fi
 
 <!-- ─────────────────────────────────────────────────────────── -->
 
-<h2 id="videos">23. Videos in the folder</h2>
+<h2 id="draw">23. Drawing on a photo and reading its text</h2>
+
+<p>The <strong>Draw</strong> button (a pencil that has just drawn a red curve; the very last button of the toolbar, after <strong>Telegram sticker</strong>) or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> opens a window to
+<strong>draw on the photo that is shown</strong>, write text on it, crop it and <strong>scan the text in it</strong>, the way the editor of the Windows Snipping Tool works. The window opens around the photo and
+shows it as large as the window lets it be, never larger than it is; it follows the dark theme. A video cannot be drawn on. The <a href="#book">Make a book</a> window opens the same window for any of its photos.</p>
+
+<figure><img src="images/52-drawing.png" alt="The Draw window: a drawn lakeside signboard with a red ring drawn round it, a yellow highlighter stroke over one line, a blue arrow and a red note, and above it the bar with the tools, the colours, the width, Undo, Redo, Scan text, Save, Save as and Close" width="1026" height="792"></figure>
+
+<p>(The picture in the window is a drawing made for this manual, not a photo.)</p>
+
+<ol class="steps">
+  <li>
+    <strong>Pick a tool and a colour.</strong> <em>Pen</em> draws freely (press, drag, let go); <em>Highlighter</em> is a wider stroke that lets the photo show through; <em>Line</em> is straight, from where the button
+    goes down to where it goes up. The eight squares and <em>More...</em> (the colour window of Windows) are the colour of the pen, the highlighter, the line and the text. <em>Width</em> is how thick the line is
+    <strong>as it looks on the screen</strong>: on a large photo that is shown smaller, the stroke is made thicker in the photo itself so that it looks the same.
+  </li>
+  <li>
+    <strong>Write.</strong> With <em>Text</em> click where the text goes and type (it may have several lines); the slider is now the <em>Size</em> of the letters. <kbd>Ctrl</kbd>+<kbd>Enter</kbd>, a click
+    elsewhere on the photo, or picking another tool puts the text on the photo; <kbd>Esc</kbd> throws it away.
+  </li>
+  <li>
+    <strong>Crop.</strong> With <em>Crop</em> a frame is on the photo, the whole of it at first. Drag a new frame over the part to keep, move it by its inside, change it by its edges and corners. <em>Keep this part</em>
+    (<kbd>Enter</kbd>) cuts the photo to the frame, <em>Cancel</em> (<kbd>Esc</kbd>) forgets it.
+  </li>
+  <li>
+    <strong>Turn it.</strong> <em>Rotate left</em> and <em>Rotate right</em> (the two round arrows; <kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd>) turn the picture a quarter. It is a step like the others, so
+    <em>Undo</em> takes it back, and what you draw after it is on the turned picture. Use it for a photo that is stored on its side.
+  </li>
+  <li>
+    <strong>Take steps back.</strong> <em>Undo</em> (<kbd>Ctrl</kbd>+<kbd>Z</kbd>) takes back the last step, <em>Redo</em> (<kbd>Ctrl</kbd>+<kbd>Y</kbd>) brings it back, as many steps as there are. The photo itself is not changed
+    until you save.
+  </li>
+  <li>
+    <strong>Scan the text.</strong> <em>Scan text</em> finds the lines of text in the picture (or in the frame of the Crop tool, when there is one) and reads them: Ukrainian, Russian, Belarusian, Bulgarian and English.
+    The lines are marked in blue (they may be turned a little) and the text is shown at the side, from the top, a row from the left. <em>Copy</em> puts it on the clipboard (the part that is picked in it, or all),
+    <em>Hide</em> puts the side away, <kbd>Esc</kbd> stops a scan that is running. It takes about two seconds for a picture of a megapixel.
+    <figure><img src="images/53-drawing-scan-text.png" alt="The Draw window after Scan text: the three lines of the signboard are marked in blue and their text is shown at the right" width="1026" height="792"></figure>
+    The first time the program asks whether to download the two models (the one that finds the lines, 3 MB, and the one that reads them, 8 MB; once, and it says what they are and where they come from). They run on this
+    computer, so the photo goes nowhere.
+  </li>
+  <li>
+    <strong>Save.</strong> <em>Save</em> (<kbd>Ctrl</kbd>+<kbd>S</kbd>) writes the picture <strong>over the photo</strong>, in its own format (JPEG, PNG, BMP, GIF or TIFF); the dates of the file, and the date taken, the camera and the
+    author of the photo, are kept. A JPEG that was only turned is saved by writing the turn into its Exif alone, as the Rotate buttons of the main window do: the picture is not coded again, and all of its Exif, its date taken and the dates of its file stay exactly as they were. A photo in WebP or HEIC cannot be written over: use <em>Save as...</em> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>), which makes another file (the name of the photo with
+    <code>(edited)</code>; the extension you type decides the format). Closing the window with changes that were not saved asks whether to save them.
+  </li>
+</ol>
+
+<div class="tip"><p>After a <strong>Save over the photo</strong> the photo has other pixels, so the program treats it as a changed photo: the copies of it in the Liked and group folders are renamed to match, and <strong>Update index</strong>
+reads it again for the search (the faces and the words of the search are those of the picture that was drawn on).</p></div>
+
+<p><strong>If something is not right.</strong> <em>Scan text found nothing:</em> the text is too small or too blurred, or upside down; crop to the text and scan again. <em>A letter is wrong:</em> letters that look alike are
+sometimes mixed up (a Ukrainian <em>І</em> can come out as <em>И</em>, as in the picture above), and handwriting is read poorly; look at what was found before you rely on it. <em>The models could not be downloaded:</em>
+nothing is scanned; check the connection and press <em>Scan text</em> again. <em>A photo is too large:</em> a photo of more than 100 million pixels is not opened for drawing.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+
+<h2 id="videos">24. Videos in the folder</h2>
 
 <p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. <strong>SupportVideo</strong> is on in the settings
 table by default (turn it off to have a folder look as it did before videos), and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
@@ -1156,7 +1219,7 @@ the first time <strong>SupportVideo</strong> is turned on, or a video is played,
 the status bar, and it stays on your computer, in <code>%LocalAppData%\PhotoLiker\libvlc</code>; nothing else is changed. If you say no, videos open in the program Windows plays them with, and you are asked again when you turn
 <strong>SupportVideo</strong> off and on. When it was turning <strong>SupportVideo</strong> on that started the download, the folder is listed again once the player is there (as <kbd>F5</kbd> does). Its licence and the place to get its source are in the <code>libvlc</code> folder next to the program.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="theme">24. Dark and light theme</h2>
+<h2 id="theme">25. Dark and light theme</h2>
 
 <p>The theme button of the toolbar switches between the two. A folder that is opened for the first time is dark; the choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
@@ -1167,7 +1230,7 @@ see <a href="#language">Language</a>.)</p>
 </figure>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="files">25. What PhotoLiker keeps, and where</h2>
+<h2 id="files">26. What PhotoLiker keeps, and where</h2>
 
 <ul>
   <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
@@ -1182,7 +1245,7 @@ see <a href="#language">Language</a>.)</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="about">26. About box and this manual</h2>
+<h2 id="about">27. About box and this manual</h2>
 
 <p>The <strong>Help</strong> button (the question mark) at the end of the toolbar, or the <kbd>F1</kbd> key, opens the About box: the version and build date of the program, the
 keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and two buttons that open this manual, in English or in Ukrainian.
