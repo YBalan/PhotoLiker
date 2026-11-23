@@ -13,6 +13,10 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
+## Unreleased
+
+- Added Telegram sticker: a model on this computer cuts the subject out of the photo and saves a 512 pixel WebP or PNG sticker with an outline.
+
 ## 4.3.12 - 2026-11-21
 
 - Added Trace bitmap: the photo that is shown becomes a vector drawing, an SVG or a DXF file of a size in millimetres, with the scans and options of Inkscape.

@@ -7,6 +7,7 @@
     <ProjectReference Include="..\PhotoLiker.GenerateVideo\PhotoLiker.GenerateVideo.csproj" />
     <ProjectReference Include="..\PhotoLiker.PhotoBook\PhotoLiker.PhotoBook.csproj" />
     <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />
+    <ProjectReference Include="..\PhotoLiker.Stickers\PhotoLiker.Stickers.csproj" />
     <ProjectReference Include="..\PhotoLiker.TraceBitmap\PhotoLiker.TraceBitmap.csproj" />
     <ProjectReference Include="..\PhotoLiker.Video\PhotoLiker.Video.csproj" />
     <ProjectReference Include="..\PhotoLiker.VideoToGif\PhotoLiker.VideoToGif.csproj" />

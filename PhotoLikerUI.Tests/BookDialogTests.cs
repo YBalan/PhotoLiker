@@ -529,7 +529,7 @@ public sealed class BookDialogTests : IDisposable
     // ── The button of the main window ───────────────────────────────────────
 
     [Fact]
-    public void TheMainWindow_HasTheMakeBookButton_AfterHelpAndASeparator_AndBeforeTheTraceAndGifButtons()
+    public void TheMainWindow_HasTheMakeBookButton_AfterHelpAndASeparator_AndBeforeTheTraceGifAndStickerButtons()
     {
         Ui.Run(() => new MainForm(), async form =>
         {
@@ -538,9 +538,9 @@ public sealed class BookDialogTests : IDisposable
 
             var help = names.IndexOf("helpToolStripButton");
             var book = names.IndexOf("makeBookToolStripButton");
-            Assert.True(help >= 0 && book == names.Count - 3, "the last button but the ones of Trace Bitmap and Video to GIF");
+            Assert.True(help >= 0 && book == names.Count - 4, "the last button but the ones of Trace Bitmap, Video to GIF and the Telegram sticker");
             Assert.Equal("makeBookToolStripSeparator", names[book - 1]);
-            Assert.Equal(help, book - 2); // Help, a separator, Make a book (and then Trace Bitmap and Video to GIF, the last)
+            Assert.Equal(help, book - 2); // Help, a separator, Make a book (and then Trace Bitmap, Video to GIF and the Telegram sticker, the last)
             var button = toolbar.Items["makeBookToolStripButton"]!;
             Assert.Equal(BookStrings.ButtonText, button.Text);
             Assert.Equal(BookStrings.ButtonTooltip, button.ToolTipText);

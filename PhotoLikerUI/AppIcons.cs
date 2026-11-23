@@ -129,6 +129,31 @@ namespace PhotoLikerUI
             g.FillPolygon(play, [new PointF(7.2f, 8.1f), new PointF(9.6f, 7.4f), new PointF(8.6f, 9.6f)]);
         });
 
+        // ── Telegram sticker ──────────────────────────────────────────────
+        // A die-cut sticker: a blue face with a white border all round it, and the corner peeling off
+        public static Bitmap Sticker() => DrawOnBitmap(g =>
+        {
+            using var paper = new SolidBrush(Color.FromArgb(250, 252, 255));
+            using var paperEdge = new Pen(Color.FromArgb(150, 90, 120, 160), 0.7f);
+            g.FillRoundedRectangle(paper, 1, 1, 14, 14, 4f);
+            g.DrawRoundedRectangle(paperEdge, 1, 1, 14, 14, 4f);
+
+            using var face = new LinearGradientBrush(new RectangleF(2.8f, 2.8f, 10.4f, 10.4f), Color.FromArgb(70, 185, 245), Color.FromArgb(25, 120, 205), 90f);
+            g.FillEllipse(face, 2.8f, 2.8f, 10.4f, 10.4f);
+
+            using var feature = new SolidBrush(Color.White);
+            g.FillEllipse(feature, 5.3f, 6.1f, 1.7f, 1.9f);
+            g.FillEllipse(feature, 9f, 6.1f, 1.7f, 1.9f);
+            using var smile = new Pen(Color.White, 1.1f) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+            g.DrawArc(smile, 5.4f, 6.4f, 5.2f, 4.6f, 20, 140);
+
+            // The corner that is peeling: a small fold in the grey of the paper's back
+            using var fold = new SolidBrush(Color.FromArgb(215, 205, 215, 228));
+            g.FillPolygon(fold, [new PointF(15f, 9.4f), new PointF(9.4f, 15f), new PointF(15f, 15f)]);
+            using var foldEdge = new Pen(Color.FromArgb(140, 90, 120, 160), 0.7f);
+            g.DrawLine(foldEdge, 15f, 9.4f, 9.4f, 15f);
+        });
+
         // ── Register / Unregister Context Menu ────────────────────────────
         // Windows-flag quadrants + check-mark
         public static Bitmap RegisterContextMenu() => DrawOnBitmap(g =>
@@ -723,7 +748,7 @@ namespace PhotoLikerUI
     /// </summary>
     internal static class DialogIcons
     {
-        private static Icon? _book, _trace, _videoToGif, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
+        private static Icon? _book, _trace, _videoToGif, _sticker, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
 
         public static Icon GenerateVideo => _generateVideo ??= AppIcons.WindowIcon(AppIcons.GenerateVideo);
 
@@ -732,6 +757,8 @@ namespace PhotoLikerUI
         public static Icon Trace => _trace ??= AppIcons.WindowIcon(AppIcons.Trace);
 
         public static Icon VideoToGif => _videoToGif ??= AppIcons.WindowIcon(AppIcons.VideoToGif);
+
+        public static Icon Sticker => _sticker ??= AppIcons.WindowIcon(AppIcons.Sticker);
 
         public static Icon AlignDates => _alignDates ??= AppIcons.WindowIcon(AppIcons.AlignDates);
 

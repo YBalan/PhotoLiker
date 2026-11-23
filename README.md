@@ -20,6 +20,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
     - [Make a book](#make-a-book)
     - [Trace bitmap](#trace-bitmap)
     - [Video to GIF](#video-to-gif)
+    - [Telegram sticker](#telegram-sticker)
   - [About box](#about-box)
 - [Settings](#settings)
   - [Folder picker](#folder-picker)
@@ -405,7 +406,8 @@ ones are behind the arrow at the bottom of the column.
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
 | **Make a book** (a teal book with a photo on its cover; after Help and a separator) | Make a PDF or an EPUB book of the photos, with a text above and below each photo and the photos in the order you choose, see [Make a book](#make-a-book). |
 | **Trace bitmap** (an orange tile with a curve and two nodes; after Make a book) | Turn the photo that is shown into a vector drawing, an SVG or a DXF file of a size in millimetres, with the scans and the options of the Trace Bitmap of Inkscape, see [Trace bitmap](#trace-bitmap). |
-| **Video to GIF** (a violet tile with a play triangle and a round arrow; the very last button) | Make an animated GIF of a part of a video, to paste in a README, a chat or a page, see [Video to GIF](#video-to-gif). |
+| **Video to GIF** (a violet tile with a play triangle and a round arrow; after Trace bitmap) | Make an animated GIF of a part of a video, to paste in a README, a chat or a page, see [Video to GIF](#video-to-gif). |
+| **Telegram sticker** (a blue face on a white die-cut sticker with a peeling corner; the very last button) | Cut the subject out of the photo that is shown and save it as a sticker for Telegram, a WebP or PNG of 512 pixels with a see-through background, see [Telegram sticker](#telegram-sticker). |
 
 #### The Properties panel
 
@@ -647,7 +649,7 @@ written to `trace-bitmap.json` in the data folder of the program (`%LocalAppData
 
 #### Video to GIF
 
-The **Video to GIF** button (a violet tile with a play triangle and an arrow that goes round; the very last button of the toolbar, after **Trace bitmap**) makes an **animated GIF** of a part of a
+The **Video to GIF** button (a violet tile with a play triangle and an arrow that goes round; after **Trace bitmap**; **Telegram sticker** comes after it) makes an **animated GIF** of a part of a
 video. A GIF plays by itself wherever a picture can be shown (a README on GitHub, a chat, a web page) and a video file cannot, so a few seconds of a screen recording, for instance the video made with
 [Generate Video](#generate-video), can be pasted as it is. The GIF is made by the ffmpeg that comes with the program; nothing else has to be installed. When the video is shown in the window the button
 opens the window for it, otherwise it asks which video first (**Browse...** picks another at any time). The window follows the dark theme of the program.
@@ -675,9 +677,54 @@ seconds with a frame every 0.08 seconds and 480 pixels came to 1.2 MB). If a GIF
 - The library is its own project, `PhotoLiker.VideoToGif` (the settings, the plan of what the GIF will be, the two ffmpeg runs with progress and stopping, and a reader of the blocks of a GIF file that tells what
   was made); it has no window and depends on no other project. The window, the pictures of the frames (read by `PhotoLiker.Video`) and the toolbar button are in `PhotoLikerUI`.
 
+#### Telegram sticker
+
+The **Telegram sticker** button (a blue face on a white die-cut sticker with a peeling corner; the very last button of the toolbar, after **Video to GIF**) turns the photo that is shown into a
+**sticker for Telegram**: the subject of the photo is cut out, given the white outline and the soft shadow that stickers have, and saved as a picture with a see-through background that is exactly
+512 pixels on its longer side, in the file Telegram takes (**WebP**, which is what Telegram's own stickers are, or **PNG**; 512 KB at most). The subject is found by a model that runs on this
+computer, so the photo goes nowhere. A video cannot be made into a sticker. The window follows the dark theme of the program.
+
+![The Telegram Sticker window](docs/images/51-telegram-sticker.png)
+
+(The picture in the window is a drawing made for this manual, not a photo.)
+
+- **The two pictures.** On the left the photo, with what is cut away darkened and the cut line drawn in pink; on the right the sticker, on a checkerboard, a dark chat or a light chat (**Show on**: it is
+  only the view, the file has no background). Under them the window says what the file is, read from the file itself (`454 x 512 pixels, 27 KB, WebP: fits what Telegram takes.`), in red when it is over the limit.
+- **Subject.** **Find the subject (AI)** lets the model look at the photo; **The whole picture** makes no cutout and gives the photo itself, with rounded corners, and needs no model. **Sensitivity**
+  (1 to 99, 50 at first) is how much of what the model is unsure of is kept: higher keeps more of the subject and of the background next to it, lower cuts closer. **Drop small parts** (percent of the
+  biggest part, 10 at first) removes the patches the model found in the background; 0 keeps every part, 100 only the biggest. **Follow edges** (0 to 100, 40 at first) pulls the cut line to the nearest
+  edge that is in the photo, because the model's own mask is soft; 0 leaves it as the model drew it. **Move the edge** (-10 to 10 pixels of the sticker) takes a fringe of the old background off, or keeps
+  what was cut too closely. Small holes in the subject (gaps that are not a fraction of a percent of it) are filled by themselves.
+- **Outline and shadow.** The **outline** is the border all round the subject that die-cut stickers have: white and 8 pixels wide at first (0 to 40; the colour is picked in the colour window of Windows).
+  It runs round fingers and hair as one smooth line, as a blade that cuts a sticker out would leave it: notches narrower than the outline are filled. The **shadow** is a soft shade under the sticker, so that
+  it shows on a light chat as well. The sizes are in pixels of the sticker, so an outline of 8 is the same fraction of every sticker.
+- **File.** **WebP** (at first; **Quality** 1 to 100, 85 at first) is a fifth of the size of a PNG and what Telegram's own stickers are. When a WebP comes out over 512 KB it is written again, ten points
+  of quality lower each time, until it fits. A **PNG** has no quality and is not made smaller: for a busy photo it can be over 512 KB, and the window says so in red; pick WebP then. The size line is
+  worked out from the file that would be saved, and the file that is saved is exactly that one.
+- **Save sticker...** asks for a name (the name of the photo with `-sticker`, in its folder). The extension decides the kind of file (`.webp` or `.png`); a name with none takes the kind picked in the list.
+  The file is written under another name and moved into place when it is whole, so one that was there stays until the new one is complete. The status line says where it went, and says so when the
+  file is over what Telegram allows.
+- **Adding it to Telegram.** Send the file to the `@Stickers` bot of Telegram, start a pack with `/newpack`, give it a name, send the sticker (as a file, so that it is not shrunk) and answer with an
+  emoji for it; `/publish` finishes the pack. Telegram's own guide (core.telegram.org/stickers) has the rest.
+- **The model.** IS-Net "general use" (Apache 2.0, the DIS project of Xuebin Qin and others; ONNX export by the rembg project), `isnet-general-use.onnx`, 179 MB, downloaded the first time a
+  sticker is made, after asking (what it is, how big, where it comes from), from a release of the rembg repository on GitHub at a fixed tag and checked against its SHA-256; it is kept in the models
+  folder with the others (`%LocalAppData%\PhotoLiker\models`). If you say no, the whole picture is the sticker and the window says why; picking **Find the subject** again asks again. It looks at the photo
+  made 1024 by 1024 and takes about two seconds and a gigabyte of memory on a processor of 12 cores, which it gives back at once. U2-Net, which it grew out of, takes a third of the time but leaves the shadow
+  of a car on the road in the cutout, so it was not chosen. A photo with no subject (a fountain, a wall) gives an empty cutout, and the window says nothing was found.
+- **What is kept.** The values of the window are written to `telegram-sticker.json` in the data folder of the program (`%LocalAppData%\PhotoLiker`) when the window closes.
+- **How it is made.** The photo is read upright, at most 1600 pixels on its longer side, so a subject that is a small part of a large photo is enlarged beyond its own pixels (crop the photo first
+  if that shows). The model's map is enlarged to the photo, pulled to the photo's edges with a guided filter, cut at the sensitivity, cleaned (parts that are small beside the biggest dropped with
+  their fringe, small holes filled), and the sticker is made from the photo cut to the subject and scaled so that its longer side is exactly 512 with room round it for the outline and the shadow. The
+  outline is the points that are within its width of the subject, found with an exact distance transform (round in every direction, not square), grown a little more and taken in again by the same
+  little so that the notches close; the shadow is the shape moved 3 pixels down and blurred. The WebP is written by the ffmpeg that comes with the program (libwebp, lossy, the alpha kept exactly);
+  the PNG is written by the library itself, each row with the filter that makes it smallest.
+- The library is its own project, `PhotoLiker.Stickers` (the settings, the model wrapper, the cutout, the renderer, the PNG writer, the WebP run and a reader that tells what a sticker file is and what
+  Telegram would say of it); it has no window and depends on no other project. The window, the two panes and the toolbar button are in `PhotoLikerUI`; the model is listed with the other
+  models of the effects in `PhotoLiker.Effects`.
+
 ### About box
 
-The **Help** button (the question mark; only **Make a book**, after a separator, **Trace bitmap** and **Video to GIF** come after it) or <kbd>F1</kbd> opens the About box: the version (the release, like `2.1.0`; a
+The **Help** button (the question mark; only **Make a book**, after a separator, **Trace bitmap**, **Video to GIF** and **Telegram sticker** come after it) or <kbd>F1</kbd> opens the About box: the version (the release, like `2.1.0`; a
 build that is no release shows its assembly version) and build date, the list of
 keys and mouse moves of the window (the table under [Keyboard and mouse](#keyboard-and-mouse), without the explanations; keep the two
 in step: the list is `AboutStrings.Shortcuts`), the **Check for updates** button (see [Updating](#updating)), and two buttons,
@@ -1762,6 +1809,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.PhotoBook` | Making a book of photos as a PDF or an EPUB, without a user interface: the description above and below each photo (the RTF of a Rich Text Box read into paragraphs and runs: `RtfParser`), the setting of text in lines (`TextLayout`: wrapping, alignment, justification), the PDF writer (PDFsharp, embedded fonts found by `PdfFonts`) and the EPUB 3 writer, the order of the photos and its moves (`BookOrder`), and the `photo-liker-book.json` kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.TraceBitmap` | Trace Bitmap, without a user interface: cutting a picture into scans (a brightness cutoff, the edges, reduced colours; steps of brightness, colours or grays, stacked or side by side: `Binarizer`, `ColorQuantizer`), following the outlines of the black along the pixel edges (`ContourTracer`), fitting them with lines and Bezier curves (`CurveFitter`), and the **SVG** and **DXF** writers in millimetres (`SvgWriter`, `DxfWriter`), with the settings of Inkscape's window and the file the dialog keeps them in (`TraceSettings`, `TraceDialogSettings`). Its own tracer, not Potrace (GPL); it depends on no other project. |
 | `PhotoLiker.VideoToGif` | Video to GIF, without a user interface: the settings of a GIF and the file the window keeps them in (`GifSettings`), the plan of what it will be (the part of the video, the frames, the size, the arguments of ffmpeg: `GifRange`, `GifPlan`), the two ffmpeg runs (the palette, then the frames) with progress and stopping, and nothing left behind when it fails (`GifMaker`), and a reader of the blocks of a GIF file (`GifInfo`: size, frames, length, repeats, palettes). It depends on no other project. |
+| `PhotoLiker.Stickers` | Telegram stickers, without a user interface: the subject of a photo found by IS-Net with ONNX Runtime (`SubjectDetector`), the cutout (`Cutout`: the map enlarged, drawn to the photo's edges with a guided filter, cut at the sensitivity, small parts dropped, small holes filled), the sticker (`StickerRenderer`: scaled to 512 pixels on the longer side, the outline from an exact distance transform with the notches closed, the shadow), the files (`PngWriter`, the WebP run of ffmpeg in `StickerEncoder`, `StickerFile` that reads a file's own header and checks it against Telegram's limits) and the settings (`StickerSettings`); the cut line over a photo (`ContourOverlay`). It depends on no other project. |
 | `PhotoLiker.Search` | Photo search: model download, the indexing pipeline, CLIP text search, face detection and recognition, the SQLite index and the people files (one per folder, one shared by all); the dates of photos (reading them, the rules, and writing them back for **Align dates** with its log and undo). Windows only; uses Imaging for decoding photos. |
 | `PhotoLiker.Effects` | What is done to a photo apart from looking at it and searching it, without a user interface. The folders are the namespaces (`PhotoLiker.Effects.<folder>`): `Transitions` (the rules of the effects of the [slideshow](#slideshow): which one is used, how long a change takes, how two photos are drawn in the middle of it), `Motion` (the slow movements of one photo: Ken Burns and the [depth parallax](#depth-parallax)), `Compositing` (`FrameCompositor`, which puts the pictures of an effect together on the pixels, on all the cores, also moving a picture by its depth), `Gpu` (`GpuRenderer`, the same on the graphics chip with Direct3D 11, for the steps that are heavy for the processor, see [The graphics chip](#the-graphics-chip)), `Depth` (the depth of a picture, Depth Anything V2 Small) and `Colorize` (the colours of a black and white photo, DDColor; the copy that is saved next to the photo; how much colour a photo has) and `Models` (the list of the files of the two models, and `EffectModels`, which downloads them and makes the ONNX sessions). It uses Core for the settings (`SlideshowEffect`, the name of the effect, is a setting and stays there) Imaging for decoding a photo, and Search for what the two have in common: downloading model files, and the check that ONNX Runtime can start. |
 | `PhotoLiker.Video` | Videos in the archive, without a user interface: what a video says about itself (ffmpeg's header, read as text), its poster picture, the dates (the one inside the video, else the file's), the rows for the metadata grid, the times typed to jump to, the catalog of the videos of a folder in an SQLite file of its own, and what is in the videos: the pictures taken out of them (ffmpeg, as raw pixels), their moments (CLIP vectors and faces, chosen by how much they change), the indexing job, the search of moments (words, people, dates) merged with the photos, what is said (Whisper, kept as text and searched in any word form, heard again in a language that is chosen), the table of it for the window and the Excel file (`.xlsx`, written with the zip and XML of the framework) of that table, and saving a picture of a video as a photo. Uses Core and Search (the models and the rules of the dates). Windows only. |
@@ -1774,6 +1822,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.PhotoBook.Tests` | xUnit tests of the book library: the RTF reader (also on what a real Rich Text Box writes: Cyrillic as `\uN?` and as bytes of a code page), the setting of text in lines (on a measurer of fixed widths), the moves of the order, the file kept with a folder, the PDF (pages, paper, orientation, embedded fonts, long texts) and the EPUB (the first file stored, every part well formed, the package, the contents, the look of the text). |
 | `PhotoLiker.TraceBitmap.Tests` | xUnit tests of the tracing library: the outlines of known shapes (areas that add up, holes, a chessboard corner), the fit of curves (few nodes for a circle, four sharp corners for a rectangle, no runaway handle, the traced shape filled back into pixels and compared with what was traced), every scan and option, the SVG (parsed as XML, millimetres, a point for the decimals in any language) and the DXF (group codes, closed polylines, the turned-over y, layers), the settings file. Mutation-checked. |
 | `PhotoLiker.VideoToGif.Tests` | xUnit tests of the GIF library: the plan (ranges, frames, sizes, rounding, the arguments of both ffmpeg runs), the settings file, the reader of GIF blocks (on files built byte by byte, also cut off), and real GIFs made by the ffmpeg of the repository from videos made for the test (frames, size, repeat, colours, a video that is shown turned, progress, stopping, a GIF that is kept when the new one fails). |
+| `PhotoLiker.Stickers.Tests` | xUnit tests of the sticker library: the distance transform (against a brute-force search), the parts and holes of a mask, the guided filter, the cutout and its cuts, the sticker (the longer side exactly 512, the outline as wide as asked above, below and beside the subject, notches closed, the shadow, the moved edge, the straight alpha), the PNG writer (read back by another reader and by ffmpeg, every kind of filter), the file reader (WebP made by ffmpeg, hand-built headers) and the limits, the WebP that is written again until it fits, the settings file. The tests that need the model (`PHOTOLIKER_TEST_MODELS`) or ffmpeg do nothing where they are not there. Mutation-checked. |
 | `PhotoLiker.Search.Tests` | xUnit tests of the search library: tokenizers, image and face geometry, index, people file, search. They need no models; the tests that run a real model do so only if its files are there (in the app's models folder, or in the one named by the environment variable `PHOTOLIKER_TEST_MODELS`) and otherwise pass without doing anything. |
 | `PhotoLikerUI.Tests` | xUnit tests that open the real windows of the app (Windows only, one at a time, a short flash on the desktop): so far the Align dates window and its Use a date question, the Colorize window and the bar over a black and white photo (when it comes and goes, the colours in the viewer and the sliders, the original, the saved copy, the next photo, what is kept; mutation-checked), the Depth parallax box of Generate Video, the slideshow with the Parallax effect and a video made with it (with the real depth model where it is): which answers are on, what the lists and the status line say, that a text fits, and what a run started from the window does to photos and videos, with its Undo. The tests with a video make it with the ffmpeg of the repository and do nothing without it. The rules behind the windows are tested without one (`GivenDatesTests` in the search tests). |
 | `tools/SmokeTour` | Smoke test of the real window in dark mode that also takes the screenshots of this README, see below. |
@@ -1794,6 +1843,7 @@ dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.cspro
 dotnet test  PhotoLiker.PhotoBook.Tests\PhotoLiker.PhotoBook.Tests.csproj  # run the tests of the book library
 dotnet test  PhotoLiker.TraceBitmap.Tests\PhotoLiker.TraceBitmap.Tests.csproj  # run the tests of the tracing library (the scans, the curves, the SVG and DXF files)
 dotnet test  PhotoLiker.VideoToGif.Tests\PhotoLiker.VideoToGif.Tests.csproj  # run the tests of the GIF library (the plan, the settings, the GIF reader, real GIFs made by ffmpeg)
+dotnet test  PhotoLiker.Stickers.Tests\PhotoLiker.Stickers.Tests.csproj  # run the tests of the sticker library (the cutout, the sticker, the PNG and WebP files, the limits of Telegram)
 dotnet test  PhotoLiker.Imaging.Tests\PhotoLiker.Imaging.Tests.csproj  # run the tests of the picture layer (decoding, resizing, converting a photo to another format)
 dotnet test  PhotoLiker.Search.Tests\PhotoLiker.Search.Tests.csproj  # run the tests of the search library
 dotnet test  PhotoLiker.Effects.Tests\PhotoLiker.Effects.Tests.csproj  # run the tests of the effects library (the depth, the colours, the compositor, the slideshow effects)

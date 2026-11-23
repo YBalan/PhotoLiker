@@ -35,7 +35,7 @@ namespace PhotoLiker.Effects.Models
         public bool IsPresentIn(string modelsFolder) => System.IO.File.Exists(PathIn(modelsFolder));
     }
 
-    /// <summary>The models of the features that edit or move a photo: the depth of a picture (the parallax effect) and its colours (Colorize).</summary>
+    /// <summary>The models of the features that edit or move a photo: the depth of a picture (the parallax effect), its colours (Colorize) and its subject (the Telegram stickers).</summary>
     public static class ToolModels
     {
         /// <summary>
@@ -71,6 +71,23 @@ namespace PhotoLiker.Effects.Models
                 135),
             Sha256 = "2653da00dc15e54a45e5200b61dbf82ee9ceaf56b02bb9b9657569ac775e82e6",
             Origin = "DDColor tiny (paper) by the DAMO Academy (Alibaba), Apache 2.0",
+        };
+
+        /// <summary>
+        /// IS-Net "general use" (Apache 2.0, the DIS project of Xuebin Qin and others): which parts of a photo are its subject, 1024 by 1024, for the Telegram stickers. The ONNX file is the one
+        /// the rembg project publishes (a release of its repository, at a fixed tag). U2-Net is a third of the size in time but leaves the shadow of a car on the road in the cutout.
+        /// </summary>
+        public static ToolModel Cutout { get; } = new()
+        {
+            Id = "isnet-general-use",
+            Title = "IS-Net general use",
+            FolderName = "isnet-general-use",
+            File = new ModelFile(
+                "isnet-general-use.onnx",
+                "https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx",
+                179),
+            Sha256 = "60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a",
+            Origin = "IS-Net general use (DIS) by Xuebin Qin and others, Apache 2.0, as exported by the rembg project",
         };
     }
 }

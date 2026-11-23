@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Telegram stickers: a photo becomes a sticker, a picture with a see-through background that is 512 pixels on its longer side, in the file Telegram takes (WebP, or PNG).
+    The subject of the photo is found by a model that runs on this computer (IS-Net, with ONNX Runtime), the mask it gives is cleaned (small parts dropped, holes filled, the edge snapped
+    to the edge in the photo), the subject is cut out and given the white outline and the soft shadow that stickers have, and the file is written under the limits Telegram has for a
+    static sticker (512 pixels, 512 KB). The WebP is written by the ffmpeg that comes with the program (libwebp); the PNG is written here.
+
+    No user interface and nothing of Windows, so any front end can use it: the photo arrives as plain pixels (PhotoLikerUI decodes it with PhotoLiker.Imaging) and what leaves is the bytes of
+    a file. It does not depend on any other project of the solution. The messages of an error are English; the front end words them for the person.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PhotoLiker.Stickers</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLiker.Stickers.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLikerUI.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>
