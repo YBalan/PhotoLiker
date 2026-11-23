@@ -114,6 +114,9 @@ namespace PhotoLikerUI
         /// <summary>Raised when the order, or which photos are left out, has changed (by a person, or by undo).</summary>
         public event EventHandler? OrderChanged;
 
+        /// <summary>Raised when a photo is double-clicked: its place in the list.</summary>
+        public event EventHandler<int>? EntryActivated;
+
         /// <summary>The photos to show, in the order they have. The list is kept (and changed by the moves); nothing is picked, and what could be undone is forgotten.</summary>
         public void SetEntries(List<BookEntry> entries)
         {
@@ -479,6 +482,28 @@ namespace PhotoLikerUI
                 DragTo(e.Location);
             else
                 ShowTip(e.Location);
+        }
+
+        protected override void OnMouseDoubleClick(MouseEventArgs e)
+        {
+            base.OnMouseDoubleClick(e);
+            if (e.Button == MouseButtons.Left)
+                Activate(e.Location);
+        }
+
+        /// <summary>The double-click of the left button at a point (the mouse does this; a test does it without a mouse): the photo there is opened.</summary>
+        internal void Activate(Point point)
+        {
+            var index = IndexAt(point);
+            if (index >= 0)
+                EntryActivated?.Invoke(this, index);
+        }
+
+        /// <summary>The file of a photo was changed: its thumbnail is read again from it.</summary>
+        public void ReloadThumbnail(string path)
+        {
+            _cache.Forget(path);
+            Invalidate();
         }
 
         protected override void OnMouseUp(MouseEventArgs e)

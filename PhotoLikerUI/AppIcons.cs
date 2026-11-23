@@ -154,6 +154,32 @@ namespace PhotoLikerUI
             g.DrawLine(foldEdge, 15f, 9.4f, 9.4f, 15f);
         });
 
+        /// <summary>Draw: a pencil that has just drawn a red curve.</summary>
+        public static Bitmap Drawing() => DrawOnBitmap(g =>
+        {
+            using var curve = new Pen(Color.FromArgb(235, 55, 65), 1.6f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
+            g.DrawCurve(curve, [new PointF(1.4f, 13.2f), new PointF(3.6f, 10.4f), new PointF(5.8f, 13.4f), new PointF(8f, 11.2f)], 0.6f);
+
+            // The pencil lies along a diagonal with its point at the lower left: drawn along a line and turned a quarter of a half turn
+            var state = g.Save();
+            g.TranslateTransform(7.6f, 11.4f);
+            g.RotateTransform(-45f);
+
+            using var wood = new SolidBrush(Color.FromArgb(232, 196, 148));
+            g.FillPolygon(wood, [new PointF(0f, 0f), new PointF(2.6f, -1.55f), new PointF(2.6f, 1.55f)]);
+            using var lead = new SolidBrush(Color.FromArgb(60, 60, 70));
+            g.FillPolygon(lead, [new PointF(0f, 0f), new PointF(0.9f, -0.55f), new PointF(0.9f, 0.55f)]);
+            using var shaft = new LinearGradientBrush(new RectangleF(2.6f, -1.55f, 6.4f, 3.1f), Color.FromArgb(255, 214, 70), Color.FromArgb(232, 160, 20), 90f);
+            g.FillRectangle(shaft, 2.6f, -1.55f, 6.4f, 3.1f);
+            using var band = new SolidBrush(Color.FromArgb(170, 175, 185));
+            g.FillRectangle(band, 9f, -1.55f, 1.3f, 3.1f);
+            using var eraser = new SolidBrush(Color.FromArgb(236, 118, 132));
+            g.FillRectangle(eraser, 10.3f, -1.55f, 1.8f, 3.1f);
+            using var edge = new Pen(Color.FromArgb(150, 90, 70, 30), 0.5f);
+            g.DrawRectangle(edge, 2.6f, -1.55f, 9.5f, 3.1f);
+            g.Restore(state);
+        });
+
         // ── Register / Unregister Context Menu ────────────────────────────
         // Windows-flag quadrants + check-mark
         public static Bitmap RegisterContextMenu() => DrawOnBitmap(g =>
@@ -748,7 +774,7 @@ namespace PhotoLikerUI
     /// </summary>
     internal static class DialogIcons
     {
-        private static Icon? _book, _trace, _videoToGif, _sticker, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
+        private static Icon? _book, _trace, _videoToGif, _sticker, _drawing, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
 
         public static Icon GenerateVideo => _generateVideo ??= AppIcons.WindowIcon(AppIcons.GenerateVideo);
 
@@ -759,6 +785,8 @@ namespace PhotoLikerUI
         public static Icon VideoToGif => _videoToGif ??= AppIcons.WindowIcon(AppIcons.VideoToGif);
 
         public static Icon Sticker => _sticker ??= AppIcons.WindowIcon(AppIcons.Sticker);
+
+        public static Icon Drawing => _drawing ??= AppIcons.WindowIcon(AppIcons.Drawing);
 
         public static Icon AlignDates => _alignDates ??= AppIcons.WindowIcon(AppIcons.AlignDates);
 

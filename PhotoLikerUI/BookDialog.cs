@@ -45,6 +45,8 @@ namespace PhotoLikerUI
         private readonly ToolStripButton _undoButton = new();
         private readonly ToolStripButton _redoButton = new();
         private readonly ToolStripButton _pickAllButton = new();
+        private readonly ToolStripButton _drawButton = new();
+        private readonly Func<string, IWin32Window, bool>? _drawPhoto;
         private readonly TrackBar _zoom = new();
         private readonly Label _countsLabel = new();
 
@@ -68,16 +70,19 @@ namespace PhotoLikerUI
         private readonly bool _dark;
 
         /// <param name="defaultOutputFolder">The folder of the loaded photos: where the book is saved while the loaded photos are the source.</param>
-        /// <param name="currentPhotos">The photos that are loaded. The other sources (the liked folder, each group folder) are listed and counted in the background, so the window opens at once; the liked folder is the one that is picked.</param>
+        /// <param name="currentPhotos">The photos that are loaded. The other sources (the liked folder, each group folder) are listed and counted in the background, so the window opens at once; the loaded photos are the source that is picked (the liked folder when none are loaded).</param>
         /// <param name="defaultSortOrder">The order the photos of a folder that has no book yet start in.</param>
+        /// <param name="drawPhoto">Opens the Draw window for a photo (its file, the window it is a modal window of) and says whether the photo file was written over; null: the window has no Draw button.</param>
         public BookDialog(
             string defaultOutputFolder,
             IReadOnlyList<PhotoFile> currentPhotos,
             string likedFolder,
             IReadOnlyCollection<string> extensions,
             PhotoSortOrder defaultSortOrder,
-            bool dark)
+            bool dark,
+            Func<string, IWin32Window, bool>? drawPhoto = null)
         {
+            _drawPhoto = drawPhoto;
             _likedFolder = likedFolder;
             _extensions = extensions;
             _dark = dark;
@@ -85,7 +90,10 @@ namespace PhotoLikerUI
 
             var current = new Source(BookStrings.SourceCurrent, null, defaultOutputFolder, BookStrings.NoPhotosLoaded) { Photos = [.. currentPhotos] };
             var liked = new Source(BookStrings.SourceLiked, likedFolder, likedFolder, BookStrings.EmptyFolder);
-            _automaticOutputFolder = liked.OutputFolder;
+
+            // The photos the person is looking at are where a book starts; with none loaded there is nothing to make it of, and the liked folder is the place to start
+            var start = currentPhotos.Count > 0 ? current : liked;
+            _automaticOutputFolder = start.OutputFolder;
 
             Text = BookStrings.DialogTitle;
             FormBorderStyle = FormBorderStyle.Sizable;
@@ -96,7 +104,7 @@ namespace PhotoLikerUI
             ShowInTaskbar = false;
             MinimizeBox = false;
 
-            BuildSettings(current, liked, defaultSortOrder);
+            BuildSettings(current, liked, start, defaultSortOrder);
             var settings = BuildSettingsPanel();
             var main = BuildMain();
             var bottom = BuildBottom();
@@ -150,14 +158,14 @@ namespace PhotoLikerUI
             return panel;
         }
 
-        private void BuildSettings(Source current, Source liked, PhotoSortOrder defaultSortOrder)
+        private void BuildSettings(Source current, Source liked, Source start, PhotoSortOrder defaultSortOrder)
         {
             _sourceCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _sourceCombo.Width = 230;
             _sourceCombo.DropDownWidth = 420; // a group folder can carry the search it was made for in its name
             _sourceCombo.Items.Add(current);
             _sourceCombo.Items.Add(liked);
-            _sourceCombo.SelectedItem = liked;
+            _sourceCombo.SelectedItem = start;
 
             _countLabel.AutoSize = true;
             _countLabel.Margin = new Padding(8, 5, 0, 0);
@@ -230,7 +238,7 @@ namespace PhotoLikerUI
             _qualityCombo.SelectedIndex = 1;
 
             _outputFolderBox.Width = 340;
-            _outputFolderBox.Text = liked.OutputFolder;
+            _outputFolderBox.Text = start.OutputFolder;
             _fileNameBox.Width = 260;
             _fileNameBox.Text = NewAutomaticFileName(BookFormat.Pdf);
             _browseButton.Text = BookStrings.Browse;
@@ -322,6 +330,10 @@ namespace PhotoLikerUI
             _rotateLeftButton.Image = AppIcons.RotateCounterClockwise();
             _rotateRightButton.Image = AppIcons.RotateClockwise();
             _rotateLeftButton.DisplayStyle = _rotateRightButton.DisplayStyle = ToolStripItemDisplayStyle.Image; // the text is still the accessible name
+            Configure(_drawButton, BookStrings.Draw, BookStrings.DrawTip);
+            _drawButton.Name = "drawBookButton";
+            _drawButton.Image = AppIcons.Drawing();
+            _drawButton.DisplayStyle = ToolStripItemDisplayStyle.Image; // the text is still the accessible name
             Configure(_leaveOutButton, BookStrings.LeaveOut, BookStrings.LeaveOutHint);
             Configure(_reverseButton, BookStrings.Reverse, BookStrings.Reverse);
             Configure(_undoButton, "↶ " + BookStrings.Undo, BookStrings.Undo + " (Ctrl+Z)");
@@ -343,6 +355,8 @@ namespace PhotoLikerUI
                 _earlierButton, _laterButton, _toStartButton, _toEndButton, _toPlaceButton, new ToolStripSeparator(), _rotateLeftButton, _rotateRightButton, new ToolStripSeparator(), _leaveOutButton, _reverseButton, new ToolStripSeparator(),
                 _undoButton, _redoButton, new ToolStripSeparator(), _pickAllButton,
             ]);
+            if (_drawPhoto is not null)
+                _viewTools.Items.Insert(_viewTools.Items.IndexOf(_rotateRightButton) + 1, _drawButton);
 
             _view.Dock = DockStyle.Fill;
             _view.Margin = new Padding(0);

@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Drawing on a photo, and reading the text in it. The photo is plain pixels (PhotoLikerUI decodes it with PhotoLiker.Imaging); what is drawn on it is a list of steps (a stroke, a note of text, a crop) that
+    is replayed over the photo, so every step can be taken back and brought back (Undo and Redo) without keeping a copy of the picture for each. The strokes are drawn here, anti-aliased; the text is
+    drawn by the front end (it has the fonts) and arrives as a mask of how much of each pixel the letters cover.
+
+    Scanning text is a PaddleOCR pipeline that runs on this computer with ONNX Runtime (PP-OCR: a model that finds the lines of text in a picture, and one that reads each line; the East Slavic reader
+    knows Ukrainian, Russian and English). The models are downloaded by the front end the first time they are needed.
+
+    No user interface and nothing of Windows, so any front end can use it. It does not depend on any other project of the solution. The messages of an error are English; the front end words them for the person.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PhotoLiker.Drawing</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The characters the reader of the text knows, one per line (PP-OCRv5 East Slavic); the file goes with the model it was exported with -->
+    <EmbeddedResource Include="Ocr\eslav_dict.txt" LogicalName="PhotoLiker.Drawing.Ocr.eslav_dict.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLiker.Drawing.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLikerUI.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

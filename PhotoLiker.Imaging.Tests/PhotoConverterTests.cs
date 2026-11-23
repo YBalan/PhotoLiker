@@ -362,4 +362,133 @@ public sealed class PhotoConverterTests : IDisposable
 
         Assert.False(File.Exists(destination));
     }
+
+    // ── a picture that was made from the photo (drawn on, cropped) ─────────
+
+    /// <summary>The pixels of a picture of one colour (blue, green, red, alpha).</summary>
+    private static byte[] Plain(int width, int height, byte blue, byte green, byte red)
+    {
+        var pixels = new byte[width * height * 4];
+        for (var i = 0; i < pixels.Length; i += 4)
+        {
+            pixels[i] = blue;
+            pixels[i + 1] = green;
+            pixels[i + 2] = red;
+            pixels[i + 3] = 255;
+        }
+        return pixels;
+    }
+
+    [Fact]
+    public void AnEditedPicture_IsWrittenAtItsOwnSizeWithItsOwnPixels()
+    {
+        var original = Picture(60, 40, PhotoFormat.Jpeg);
+
+        var saved = PhotoConverter.EncodeEdited(original, 20, 10, Plain(20, 10, blue: 0, green: 200, red: 0), PhotoFormat.Jpeg);
+
+        var frame = Open(saved);
+        Assert.Equal(20, frame.PixelWidth);
+        Assert.Equal(10, frame.PixelHeight);
+        var (blue, green, red) = Pixel(saved, 10, 5);
+        Assert.InRange(green, 180, 220);
+        Assert.InRange(blue, 0, 30);
+        Assert.InRange(red, 0, 30);
+    }
+
+    [Fact]
+    public void AnEditedPicture_KeepsTheDatesAndTheCameraOfThePhoto()
+    {
+        var original = Picture(60, 40, PhotoFormat.Jpeg, metadata: Notes());
+
+        var saved = PhotoConverter.EncodeEdited(original, 30, 20, Plain(30, 20, 255, 255, 255), PhotoFormat.Jpeg);
+
+        Assert.Equal("1925:06:01 09:00:00", Text(saved, "/app1/ifd/exif/{ushort=36867}"));
+        Assert.Equal("Canon EOS 5D", Text(saved, "/app1/ifd/{ushort=272}"));
+        Assert.Equal("Uncle Ivan", Text(saved, "/app1/ifd/{ushort=315}"));
+    }
+
+    [Fact]
+    public void AnEditedPicture_IsNotTurnedAgainByTheOrientationOfThePhoto()
+    {
+        // The photo says "turn me a quarter" (6); the edited picture was made from the turned photo, so it is written as it is and says nothing of a turn
+        var original = Picture(60, 40, PhotoFormat.Jpeg, orientation: 6);
+
+        var saved = PhotoConverter.EncodeEdited(original, 40, 60, Plain(40, 60, 0, 0, 255), PhotoFormat.Jpeg);
+
+        var frame = Open(saved);
+        Assert.Equal(40, frame.PixelWidth);
+        Assert.Equal(60, frame.PixelHeight);
+        var metadata = frame.Metadata as BitmapMetadata;
+        Assert.True(metadata is null || !metadata.ContainsQuery("/app1/ifd/{ushort=274}") || Convert.ToInt32(metadata.GetQuery("/app1/ifd/{ushort=274}")) == 1, "the file still says to turn it");
+    }
+
+    [Fact]
+    public void AnEditedPicture_CanBeWrittenInAnotherFormat()
+    {
+        var original = Picture(60, 40, PhotoFormat.Jpeg);
+
+        var saved = PhotoConverter.EncodeEdited(original, 20, 10, Plain(20, 10, 0, 0, 255), PhotoFormat.Png);
+
+        Assert.True(Starts(saved, 0x89, 0x50, 0x4E, 0x47));
+        Assert.Equal(20, Open(saved).PixelWidth);
+    }
+
+    [Fact]
+    public void AnEditedPicture_WithTheWrongNumberOfBytes_IsRefused()
+    {
+        var original = Picture(60, 40, PhotoFormat.Jpeg);
+
+        Assert.Throws<ArgumentException>(() => PhotoConverter.EncodeEdited(original, 20, 10, new byte[10], PhotoFormat.Jpeg));
+    }
+
+    [Fact]
+    public void AnEditedPicture_OfAFileThatIsNoPicture_IsRefused()
+    {
+        Assert.Throws<NotSupportedException>(() => PhotoConverter.EncodeEdited([1, 2, 3], 2, 2, Plain(2, 2, 0, 0, 0), PhotoFormat.Jpeg));
+    }
+
+    [Fact]
+    public void ASavedEditedPicture_IsWrittenOverThePhoto_WhichKeepsItsDatesAndItsNotes()
+    {
+        var photo = Path_("granny.jpg");
+        File.WriteAllBytes(photo, Picture(60, 40, PhotoFormat.Jpeg, metadata: Notes()));
+        var created = new DateTime(2010, 5, 6, 7, 8, 9, DateTimeKind.Utc);
+        var written = new DateTime(2011, 6, 7, 8, 9, 10, DateTimeKind.Utc);
+        File.SetCreationTimeUtc(photo, created);
+        File.SetLastWriteTimeUtc(photo, written);
+
+        PhotoConverter.SaveEdited(photo, photo, 30, 20, Plain(30, 20, 0, 0, 255));
+
+        var saved = File.ReadAllBytes(photo);
+        Assert.Equal(30, Open(saved).PixelWidth);
+        Assert.Equal("1925:06:01 09:00:00", Text(saved, "/app1/ifd/exif/{ushort=36867}"));
+        Assert.Equal(created, File.GetCreationTimeUtc(photo));
+        Assert.Equal(written, File.GetLastWriteTimeUtc(photo));
+        Assert.False(File.Exists(photo + ".part"));
+    }
+
+    [Fact]
+    public void ASavedEditedPicture_CanBeAnotherFile_AndTheFormatIsTheOneTheNameSays()
+    {
+        var photo = Path_("granny.jpg");
+        File.WriteAllBytes(photo, Picture(60, 40, PhotoFormat.Jpeg));
+        var copy = Path_("granny edited.png");
+
+        PhotoConverter.SaveEdited(photo, copy, 30, 20, Plain(30, 20, 0, 0, 255));
+
+        Assert.True(Starts(File.ReadAllBytes(copy), 0x89, 0x50, 0x4E, 0x47));
+        Assert.Equal(60, Open(File.ReadAllBytes(photo)).PixelWidth); // the photo is as it was
+    }
+
+    [Fact]
+    public void ASavedEditedPicture_ToAnExtensionThatIsNoFormat_IsRefused_AndTheFileIsNotTouched()
+    {
+        var photo = Path_("granny.jpg");
+        var bytes = Picture(60, 40, PhotoFormat.Jpeg);
+        File.WriteAllBytes(photo, bytes);
+
+        Assert.Throws<NotSupportedException>(() => PhotoConverter.SaveEdited(photo, Path_("granny.webp"), 30, 20, Plain(30, 20, 0, 0, 255)));
+
+        Assert.Equal(bytes, File.ReadAllBytes(photo));
+    }
 }

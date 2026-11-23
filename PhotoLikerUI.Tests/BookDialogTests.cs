@@ -88,14 +88,54 @@ public sealed class BookDialogTests : IDisposable
 
             var names = dialog.SourceCombo.Items.Cast<object>().Select(item => item.ToString()).ToList();
             Assert.Equal(["Current (1)", "Liked (1)", "A - Group Family (2)"], names);
+            Assert.Equal(0, dialog.SourceCombo.SelectedIndex); // the loaded photos are the source the window starts on
+            Assert.Equal("x", Names(dialog));
 
             dialog.SourceCombo.SelectedIndex = 2;
             await Loaded(dialog, 2);
             Assert.Equal("g1 g2", Names(dialog));
 
+            dialog.SourceCombo.SelectedIndex = 1;
+            await Loaded(dialog, 1);
+            Assert.Equal("l1", Names(dialog));
+
             dialog.SourceCombo.SelectedIndex = 0;
             await Loaded(dialog, 1);
             Assert.Equal("x", Names(dialog));
+        });
+    }
+
+    [Fact]
+    public void TheWindow_StartsOnTheLoadedPhotos_AndPutsTheBookInTheirFolder()
+    {
+        Photo("l1.jpg", 1); // a liked photo, which is not what the window starts on
+        var loadedPath = Photo("x.jpg", 4, _folder.Path);
+        PhotoFile[] loaded = [new(loadedPath, string.Empty) { Length = new FileInfo(loadedPath).Length, LastWriteTimeUtc = File.GetLastWriteTimeUtc(loadedPath), CreationTimeUtc = File.GetCreationTimeUtc(loadedPath) }];
+
+        Ui.Run(() => Create(loaded), async form =>
+        {
+            var dialog = (BookDialog)form;
+            await Loaded(dialog, 1);
+
+            Assert.Equal(0, dialog.SourceCombo.SelectedIndex);
+            Assert.Equal("x", Names(dialog));
+            Assert.Equal(_folder.Path, dialog.OutputFolderBox.Text);
+        });
+    }
+
+    [Fact]
+    public void WithNoPhotosLoaded_TheWindowStartsOnTheLikedFolder()
+    {
+        Photo("l1.jpg", 1);
+
+        Ui.Run(() => Create(), async form =>
+        {
+            var dialog = (BookDialog)form;
+            await Loaded(dialog, 1);
+
+            Assert.Equal(1, dialog.SourceCombo.SelectedIndex);
+            Assert.Equal("l1", Names(dialog));
+            Assert.Equal(_folder.Liked, dialog.OutputFolderBox.Text);
         });
     }
 
@@ -353,6 +393,8 @@ public sealed class BookDialogTests : IDisposable
         Ui.Run(() => Create(loaded), async form =>
         {
             var dialog = (BookDialog)form;
+            await Loaded(dialog, 1); // the window starts on the loaded photos
+            dialog.SourceCombo.SelectedIndex = 1; // the liked folder
             await Loaded(dialog, 2);
             dialog.View.Select(0);
             dialog.View.MoveSelectedToEnd();
@@ -529,7 +571,7 @@ public sealed class BookDialogTests : IDisposable
     // ── The button of the main window ───────────────────────────────────────
 
     [Fact]
-    public void TheMainWindow_HasTheMakeBookButton_AfterHelpAndASeparator_AndBeforeTheTraceGifAndStickerButtons()
+    public void TheMainWindow_HasTheMakeBookButton_AfterHelpAndASeparator_AndBeforeTheTraceGifStickerAndDrawButtons()
     {
         Ui.Run(() => new MainForm(), async form =>
         {
@@ -538,9 +580,9 @@ public sealed class BookDialogTests : IDisposable
 
             var help = names.IndexOf("helpToolStripButton");
             var book = names.IndexOf("makeBookToolStripButton");
-            Assert.True(help >= 0 && book == names.Count - 4, "the last button but the ones of Trace Bitmap, Video to GIF and the Telegram sticker");
+            Assert.True(help >= 0 && book == names.Count - 5, "the last button but the ones of Trace Bitmap, Video to GIF, the Telegram sticker and Draw");
             Assert.Equal("makeBookToolStripSeparator", names[book - 1]);
-            Assert.Equal(help, book - 2); // Help, a separator, Make a book (and then Trace Bitmap, Video to GIF and the Telegram sticker, the last)
+            Assert.Equal(help, book - 2); // Help, a separator, Make a book (and then Trace Bitmap, Video to GIF, the Telegram sticker and Draw, the last)
             var button = toolbar.Items["makeBookToolStripButton"]!;
             Assert.Equal(BookStrings.ButtonText, button.Text);
             Assert.Equal(BookStrings.ButtonTooltip, button.ToolTipText);

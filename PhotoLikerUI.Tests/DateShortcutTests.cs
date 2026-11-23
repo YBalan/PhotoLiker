@@ -126,7 +126,7 @@ public sealed class DateShortcutTests : IDisposable
     }
 
     [Fact]
-    public void OnlyCtrlD_OpensTheDialog_WithShiftAlsoPressedItDoesNot()
+    public void OnlyCtrlD_OpensTheDateDialog_WithShiftAlsoPressed_ItIsTheDrawWindowThatOpensInstead()
     {
         RealJpeg("a.jpg");
 
@@ -135,9 +135,10 @@ public sealed class DateShortcutTests : IDisposable
             Assert.True(await Ui.Until(() => RowText(form, TakenName) is not null), "the grid shows the rows of the photo");
 
             Press(form, Keys.Control | Keys.Shift | Keys.D);
-            await Task.Delay(500);
+            Assert.True(await Ui.Until(() => Ui.Find("DrawingDialog") is not null), "Ctrl+Shift+D is the Draw window");
 
             Assert.Null(Ui.Find("DateEditDialog"));
+            Ui.Find("DrawingDialog")!.Close();
         }, seconds: 60);
     }
 

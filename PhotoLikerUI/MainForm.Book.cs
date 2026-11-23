@@ -60,6 +60,7 @@ namespace PhotoLikerUI
             _currentConfig.LikedFolder,
             _currentConfig.Extensions,
             _currentConfig.SortOrder,
-            _currentConfig.IsDarkTheme);
+            _currentConfig.IsDarkTheme,
+            DrawPhoto);
     }
 }

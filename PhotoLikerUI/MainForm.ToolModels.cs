@@ -25,7 +25,15 @@ namespace PhotoLikerUI
         /// True when the model of a feature is there, after asking and downloading it if it was not. <paramref name="askAgain"/> asks again even when the person has said no before during this run
         /// (a button they pressed themselves), which the start of a slideshow does not: it does without the model.
         /// </summary>
-        private Task<bool> EnsureToolModelAsync(ToolModel model, string feature, bool askAgain)
+        private Task<bool> EnsureToolModelAsync(ToolModel model, string feature, bool askAgain) => StartToolModelAsync(model, feature, askAgain, alreadyApproved: false);
+
+        /// <summary>
+        /// The same for the second model of a feature whose first one the person has said yes to the download of: that yes covers it, so it is not asked about again (and it is a button they pressed
+        /// themselves, so a no said earlier in this run does not count).
+        /// </summary>
+        private Task<bool> EnsureApprovedToolModelAsync(ToolModel model, string feature) => StartToolModelAsync(model, feature, askAgain: true, alreadyApproved: true);
+
+        private Task<bool> StartToolModelAsync(ToolModel model, string feature, bool askAgain, bool alreadyApproved)
         {
             // Registered before anything is asked: the question is a message box, which lets the window go on working, and whoever asks for the same model meanwhile (a second click, the start of
             // a slideshow) waits for this one's answer instead of asking again and downloading the same file to the same place
@@ -39,11 +47,11 @@ namespace PhotoLikerUI
                 _toolModelDownloads[model.Id] = mine.Task;
             }
 
-            _ = EnsureToolModelCoreAsync(model, feature, askAgain, mine);
+            _ = EnsureToolModelCoreAsync(model, feature, askAgain, alreadyApproved, mine);
             return mine.Task;
         }
 
-        private async Task EnsureToolModelCoreAsync(ToolModel model, string feature, bool askAgain, TaskCompletionSource<bool> answer)
+        private async Task EnsureToolModelCoreAsync(ToolModel model, string feature, bool askAgain, bool alreadyApproved, TaskCompletionSource<bool> answer)
         {
             try
             {
@@ -63,7 +71,7 @@ namespace PhotoLikerUI
                     return;
                 }
 
-                answer.SetResult(await DownloadToolModelAsync(model, feature));
+                answer.SetResult(await DownloadToolModelAsync(model, feature, alreadyApproved));
             }
             catch (Exception ex)
             {
@@ -115,9 +123,10 @@ namespace PhotoLikerUI
                 new ParallaxVideoPictures(_effects, appendOutput), still, appendOutput, reportProgress);
         }
 
-        private async Task<bool> DownloadToolModelAsync(ToolModel model, string feature)
+        private async Task<bool> DownloadToolModelAsync(ToolModel model, string feature, bool alreadyApproved = false)
         {
-            if (!ConfirmToolModelDownload(feature, model))
+            // A feature with more than one model asks once, for the first; the person who said yes to that has said yes to the rest
+            if (!alreadyApproved && !ConfirmToolModelDownload(feature, model))
             {
                 lock (_toolModelGate)
                     _toolModelsDeclined.Add(model.Id);

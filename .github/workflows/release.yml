@@ -70,6 +70,9 @@ jobs:
       - name: Test the Telegram Stickers library
         run: dotnet test PhotoLiker.Stickers.Tests/PhotoLiker.Stickers.Tests.csproj --configuration Release
 
+      - name: Test the Drawing library
+        run: dotnet test PhotoLiker.Drawing.Tests/PhotoLiker.Drawing.Tests.csproj --configuration Release
+
       - name: Test the library of videos in the archive
         run: dotnet test PhotoLiker.Video.Tests/PhotoLiker.Video.Tests.csproj --configuration Release
 

@@ -35,7 +35,7 @@ namespace PhotoLiker.Effects.Models
         public bool IsPresentIn(string modelsFolder) => System.IO.File.Exists(PathIn(modelsFolder));
     }
 
-    /// <summary>The models of the features that edit or move a photo: the depth of a picture (the parallax effect), its colours (Colorize) and its subject (the Telegram stickers).</summary>
+    /// <summary>The models of the features that edit or move a photo: the depth of a picture (the parallax effect), its colours (Colorize), its subject (the Telegram stickers) and its text (Scan text in the Drawing window).</summary>
     public static class ToolModels
     {
         /// <summary>
@@ -88,6 +88,40 @@ namespace PhotoLiker.Effects.Models
                 179),
             Sha256 = "60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a",
             Origin = "IS-Net general use (DIS) by Xuebin Qin and others, Apache 2.0, as exported by the rembg project",
+        };
+
+        /// <summary>
+        /// PP-OCRv3 text detection (Apache 2.0, PaddleOCR by Baidu): where the lines of text in a picture are, for Scan text in the Drawing window. Small (2.4 MB) and quick; the PP-OCRv5 server model of the same
+        /// repository is 88 MB, takes four times as long and splits a line into its words. ONNX export of the monkt/paddleocr-onnx repository, at a fixed revision. The reader is <see cref="OcrReader"/>.
+        /// </summary>
+        public static ToolModel OcrFinder { get; } = new()
+        {
+            Id = "ppocr-v3-det",
+            Title = "PP-OCR text finder",
+            FolderName = "ppocr-v3-det",
+            File = new ModelFile(
+                "ppocr-v3-det.onnx",
+                "https://huggingface.co/monkt/paddleocr-onnx/resolve/7b02d0a30a07ba2b92ad1ff5a8941ae2c633de65/detection/v3/det.onnx",
+                3),
+            Sha256 = "ee40e80071ba3a320d4efda75f3e22047a7d049e9bf7bcaaf9daea23fc21b935",
+            Origin = "PP-OCRv3 text detection by PaddleOCR (Baidu), Apache 2.0",
+        };
+
+        /// <summary>
+        /// PP-OCRv5 East Slavic text recognition (Apache 2.0, PaddleOCR by Baidu): reads a line of text in Ukrainian, Russian, Belarusian, Bulgarian or English, for Scan text in the Drawing window.
+        /// 3 by 48 by any width in, one chance for each of 519 characters for each slice of the line out; its dictionary is in PhotoLiker.Drawing. ONNX export of the monkt/paddleocr-onnx repository.
+        /// </summary>
+        public static ToolModel OcrReader { get; } = new()
+        {
+            Id = "ppocr-v5-eslav-rec",
+            Title = "PP-OCR text reader (Ukrainian, Russian, English)",
+            FolderName = "ppocr-v5-eslav-rec",
+            File = new ModelFile(
+                "ppocr-v5-eslav-rec.onnx",
+                "https://huggingface.co/monkt/paddleocr-onnx/resolve/7b02d0a30a07ba2b92ad1ff5a8941ae2c633de65/languages/eslav/rec.onnx",
+                8),
+            Sha256 = "dc6bf0e855247decce214ba6dae5bc135fa0ad725a5918a7fcfb59fad6c9cdee",
+            Origin = "PP-OCRv5 East Slavic text recognition by PaddleOCR (Baidu), Apache 2.0",
         };
     }
 }

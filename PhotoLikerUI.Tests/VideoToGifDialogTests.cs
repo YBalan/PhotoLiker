@@ -947,15 +947,16 @@ public sealed class VideoToGifDialogTests : IDisposable
         Ui.Controls<ToolStrip>(form).Single(strip => strip is not StatusStrip && strip.Items.Cast<ToolStripItem>().Any(item => item.Name == "colorizeToolStripButton"));
 
     [Fact]
-    public void TheMainWindow_HasTheVideoToGifButton_AfterTraceBitmap_AndBeforeTheSticker()
+    public void TheMainWindow_HasTheVideoToGifButton_AfterTraceBitmap_AndBeforeTheStickerAndDraw()
     {
         Ui.Run(() => new MainForm(), async form =>
         {
             var names = Toolbar(form).Items.Cast<ToolStripItem>().Select(item => item.Name).ToList();
 
-            Assert.Equal("stickerToolStripButton", names[^1]);
-            Assert.Equal("videoToGifToolStripButton", names[^2]);
-            Assert.Equal("traceBitmapToolStripButton", names[^3]);
+            Assert.Equal("drawToolStripButton", names[^1]);
+            Assert.Equal("stickerToolStripButton", names[^2]);
+            Assert.Equal("videoToGifToolStripButton", names[^3]);
+            Assert.Equal("traceBitmapToolStripButton", names[^4]);
             var button = Toolbar(form).Items["videoToGifToolStripButton"]!;
             Assert.Equal(VideoToGifStrings.ButtonText, button.Text);
             Assert.Equal(VideoToGifStrings.ButtonTooltip, button.ToolTipText);

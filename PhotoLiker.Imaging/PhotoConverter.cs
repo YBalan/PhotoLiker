@@ -76,7 +76,28 @@ namespace PhotoLiker.Imaging
         {
             var format = PhotoFormats.ForPath(destination) ?? throw new NotSupportedException($"A picture cannot be saved as {Path.GetExtension(destination)}.");
             var picture = Encode(File.ReadAllBytes(source), format);
+            Place(picture, destination, File.GetCreationTimeUtc(source), File.GetLastWriteTimeUtc(source));
+            return destination;
+        }
 
+        /// <summary>
+        /// Saves a picture that was made from the photo <paramref name="photo"/> (drawn on, cropped; straight blue, green, red, alpha pixels) as the file <paramref name="destination"/>, of the format its extension says
+        /// (the photo itself when the two are the same: the picture is written over it), with the notes of the photo and its file dates. Written under another name first and moved into place, so a picture is whole or not there.
+        /// Returns <paramref name="destination"/>.
+        /// </summary>
+        /// <exception cref="NotSupportedException">The extension is no format that can be written, or the photo is no picture that Windows can read.</exception>
+        /// <exception cref="IOException">The file could not be read or written.</exception>
+        public static string SaveEdited(string photo, string destination, int width, int height, byte[] bgra)
+        {
+            var format = PhotoFormats.ForPath(destination) ?? throw new NotSupportedException($"A picture cannot be saved as {Path.GetExtension(destination)}.");
+            var picture = EncodeEdited(File.ReadAllBytes(photo), width, height, bgra, format);
+            Place(picture, destination, File.GetCreationTimeUtc(photo), File.GetLastWriteTimeUtc(photo));
+            return destination;
+        }
+
+        /// <summary>Writes the file under another name and moves it into place (over a file that is there), then gives it the dates it is to have.</summary>
+        private static void Place(byte[] picture, string destination, DateTime createdUtc, DateTime writtenUtc)
+        {
             var partial = destination + ".part";
             try
             {
@@ -91,24 +112,39 @@ namespace PhotoLiker.Imaging
 
             try
             {
-                var created = File.GetCreationTimeUtc(source);
-                var written = File.GetLastWriteTimeUtc(source);
                 Retry(() =>
                 {
-                    File.SetCreationTimeUtc(destination, created);
-                    File.SetLastWriteTimeUtc(destination, written);
+                    File.SetCreationTimeUtc(destination, createdUtc);
+                    File.SetLastWriteTimeUtc(destination, writtenUtc);
                 });
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // the picture is there; it only keeps the date it was made
             }
-            return destination;
         }
 
         /// <summary>The bytes of the photo (a file of any format Windows reads) as a file of <paramref name="format"/>.</summary>
         /// <exception cref="NotSupportedException">The bytes are no picture that Windows can read.</exception>
-        public static byte[] Encode(byte[] original, PhotoFormat format)
+        public static byte[] Encode(byte[] original, PhotoFormat format) => Encode(original, format, null);
+
+        /// <summary>
+        /// A picture that was made from the photo (drawn on, cropped) as a file of <paramref name="format"/>, with the notes and the colour profile of the photo it was made from: the date taken, the camera,
+        /// the author. The pixels are straight blue, green, red, alpha, upright (the orientation of the photo is not carried over: it would turn the picture again).
+        /// </summary>
+        /// <exception cref="NotSupportedException"><paramref name="original"/> is no picture that Windows can read.</exception>
+        public static byte[] EncodeEdited(byte[] original, int width, int height, byte[] bgra, PhotoFormat format)
+        {
+            ArgumentNullException.ThrowIfNull(bgra);
+            if (bgra.Length != width * height * 4)
+                throw new ArgumentException($"A picture of {width} by {height} has {width * height * 4} bytes, not {bgra.Length}.", nameof(bgra));
+
+            var edited = BitmapSource.Create(width, height, 96, 96, PixelFormats.Bgra32, null, bgra, width * 4);
+            edited.Freeze();
+            return Encode(original, format, edited);
+        }
+
+        private static byte[] Encode(byte[] original, PhotoFormat format, BitmapSource? edited)
         {
             using var input = new MemoryStream(original, writable: false);
             BitmapFrame frame;
@@ -121,9 +157,9 @@ namespace PhotoLiker.Imaging
                 throw new NotSupportedException("This is not a picture that Windows can read.", ex);
             }
 
-            // The orientation is done on the pixels: the new file says nothing of it (it would be turned twice)
-            BitmapSource picture = frame;
-            if (WicPhotoDecoder.OrientationTransform(WicPhotoDecoder.OrientationOf(frame)) is { } turn)
+            // The orientation is done on the pixels: the new file says nothing of it (it would be turned twice); a picture that was made from the photo has been turned upright already
+            BitmapSource picture = edited ?? frame;
+            if (edited is null && WicPhotoDecoder.OrientationTransform(WicPhotoDecoder.OrientationOf(frame)) is { } turn)
                 picture = new TransformedBitmap(frame, turn);
 
             // A format with no room for transparency shows it as white, not black

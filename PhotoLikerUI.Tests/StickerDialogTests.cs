@@ -895,14 +895,15 @@ public sealed class StickerDialogTests : IDisposable
         Ui.Controls<ToolStrip>(form).Single(strip => strip is not StatusStrip && strip.Items.Cast<ToolStripItem>().Any(item => item.Name == "colorizeToolStripButton"));
 
     [Fact]
-    public void TheMainWindow_HasTheStickerButton_LastOnTheToolbar_AfterVideoToGif()
+    public void TheMainWindow_HasTheStickerButton_BeforeDraw_AfterVideoToGif()
     {
         Ui.Run(() => new MainForm(), async form =>
         {
             var names = Toolbar(form).Items.Cast<ToolStripItem>().Select(item => item.Name).ToList();
 
-            Assert.Equal("stickerToolStripButton", names[^1]);
-            Assert.Equal("videoToGifToolStripButton", names[^2]);
+            Assert.Equal("drawToolStripButton", names[^1]);
+            Assert.Equal("stickerToolStripButton", names[^2]);
+            Assert.Equal("videoToGifToolStripButton", names[^3]);
             var button = Toolbar(form).Items["stickerToolStripButton"]!;
             Assert.Equal(StickerStrings.ButtonText, button.Text);
             Assert.Equal(StickerStrings.ButtonTooltip, button.ToolTipText);
