@@ -13,7 +13,7 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
-## Unreleased
+## 4.5.12 - 2026-11-23
 
 - Added a Draw window (Ctrl+Shift+D, the last toolbar button, or Draw in Make a book): pen, highlighter, line, text, crop, undo, Save and Save as.
 - Added Scan text to the Draw window: it reads Ukrainian, Russian and English text in a picture with two small models that are downloaded once.
