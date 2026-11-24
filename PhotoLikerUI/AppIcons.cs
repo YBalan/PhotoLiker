@@ -180,6 +180,28 @@ namespace PhotoLikerUI
             g.Restore(state);
         });
 
+        /// <summary>Scan manuscripts: a sheet of paper with lines of handwriting in blue ink, one line short, and a green check mark where the text was read.</summary>
+        public static Bitmap Manuscript() => DrawOnBitmap(g =>
+        {
+            using var paper = new LinearGradientBrush(new RectangleF(2f, 1f, 10.5f, 14f), Color.FromArgb(255, 252, 240), Color.FromArgb(232, 224, 200), 90f);
+            g.FillRectangle(paper, 2f, 1f, 10.5f, 14f);
+            using var edge = new Pen(Color.FromArgb(150, 130, 100), 0.8f);
+            g.DrawRectangle(edge, 2f, 1f, 10.5f, 14f);
+
+            using var ink = new Pen(Color.FromArgb(35, 80, 200), 0.95f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
+            for (var i = 0; i < 4; i++)
+            {
+                var y = 4f + i * 2.5f;
+                var end = i == 3 ? 7.6f : 10.6f;
+                g.DrawCurve(ink, [new PointF(3.8f, y), new PointF(4.9f, y - 1.0f), new PointF(6.0f, y + 0.8f), new PointF(7.1f, y - 0.9f), new PointF(8.2f, y + 0.7f), new PointF(end, y - 0.3f)], 0.5f);
+            }
+
+            using var disc = new SolidBrush(Color.FromArgb(40, 170, 80));
+            g.FillEllipse(disc, 9.2f, 9.6f, 6f, 6f);
+            using var check = new Pen(Color.White, 1.3f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
+            g.DrawLines(check, [new PointF(10.5f, 12.7f), new PointF(11.9f, 14f), new PointF(14f, 11.2f)]);
+        });
+
         // ── Register / Unregister Context Menu ────────────────────────────
         // Windows-flag quadrants + check-mark
         public static Bitmap RegisterContextMenu() => DrawOnBitmap(g =>
@@ -774,7 +796,7 @@ namespace PhotoLikerUI
     /// </summary>
     internal static class DialogIcons
     {
-        private static Icon? _book, _trace, _videoToGif, _sticker, _drawing, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
+        private static Icon? _book, _trace, _videoToGif, _sticker, _drawing, _manuscript, _generateVideo, _alignDates, _findDuplicates, _removeEmptyFolders, _people, _faceRecognition, _help, _videoSpeech, _colorize, _refocus;
 
         public static Icon GenerateVideo => _generateVideo ??= AppIcons.WindowIcon(AppIcons.GenerateVideo);
 
@@ -787,6 +809,8 @@ namespace PhotoLikerUI
         public static Icon Sticker => _sticker ??= AppIcons.WindowIcon(AppIcons.Sticker);
 
         public static Icon Drawing => _drawing ??= AppIcons.WindowIcon(AppIcons.Drawing);
+
+        public static Icon Manuscript => _manuscript ??= AppIcons.WindowIcon(AppIcons.Manuscript);
 
         public static Icon AlignDates => _alignDates ??= AppIcons.WindowIcon(AppIcons.AlignDates);
 

@@ -72,7 +72,7 @@ public sealed class EpubBookWriterTests : IDisposable
     [Fact]
     public void ThePackage_ListsEveryFile_AndTheSpineIsInTheOrderOfThePhotos()
     {
-        var path = Write(Options("Summer", "Yurii", "uk"), _files.Page("a"), _files.Page("b"), _files.Page("c"));
+        var path = Write(Options("Summer", "Yurii", "ua"), _files.Page("a"), _files.Page("b"), _files.Page("c"));
 
         using var zip = ZipFile.OpenRead(path);
         var package = Xml(zip, "OEBPS/content.opf").Root!;
@@ -93,7 +93,7 @@ public sealed class EpubBookWriterTests : IDisposable
         var metadata = package.Element(Opf + "metadata")!;
         Assert.Equal("Summer", metadata.Element(Dc + "title")!.Value);
         Assert.Equal("Yurii", metadata.Element(Dc + "creator")!.Value);
-        Assert.Equal("uk", metadata.Element(Dc + "language")!.Value);
+        Assert.Equal("ua", metadata.Element(Dc + "language")!.Value);
         Assert.StartsWith("urn:uuid:", metadata.Element(Dc + "identifier")!.Value);
         Assert.Contains(metadata.Elements(Opf + "meta"), meta => meta.Attribute("property")?.Value == "dcterms:modified");
         Assert.Equal("book-id", package.Attribute("unique-identifier")!.Value);
@@ -246,11 +246,11 @@ public sealed class EpubBookWriterTests : IDisposable
     [Fact]
     public void TheLanguage_IsOnEveryPage()
     {
-        var path = Write(Options("T", language: "uk"), _files.Page("a"));
+        var path = Write(Options("T", language: "ua"), _files.Page("a"));
 
         using var zip = ZipFile.OpenRead(path);
         foreach (var name in new[] { "OEBPS/title.xhtml", "OEBPS/photo0001.xhtml", "OEBPS/nav.xhtml" })
-            Assert.Equal("uk", Xml(zip, name).Root!.Attribute("lang")!.Value);
+            Assert.Equal("ua", Xml(zip, name).Root!.Attribute("lang")!.Value);
     }
 
     [Fact]
@@ -307,5 +307,137 @@ public sealed class EpubBookWriterTests : IDisposable
 
         Assert.Equal(100, reported.Values.Max());
         Assert.Equal(reported.Values.Order(), reported.Values); // it only goes up
+    }
+
+    [Fact]
+    public void APageThatIsOnlyText_HasNoPicture_AndTheFirstPictureThereIsIsTheCover()
+    {
+        var path = Write(Options("Manuscript"), BookPage.TextOnly(RichDocument.FromPlainText("First page"), "one"), _files.Page("b", below: "Second page"), BookPage.TextOnly(RichDocument.FromPlainText("Third page"), "three"));
+
+        using var zip = ZipFile.OpenRead(path);
+        Assert.Null(zip.GetEntry("OEBPS/images/photo0001.jpg"));
+        Assert.NotNull(zip.GetEntry("OEBPS/images/photo0002.jpg"));
+        Assert.Null(zip.GetEntry("OEBPS/images/photo0003.jpg"));
+
+        Assert.Empty(Xml(zip, "OEBPS/photo0001.xhtml").Descendants(Xhtml + "img"));
+        Assert.Single(Xml(zip, "OEBPS/photo0002.xhtml").Descendants(Xhtml + "img"));
+        Assert.Contains("First page", Text(zip, "OEBPS/photo0001.xhtml"));
+
+        // Every file the package lists is in the zip, and only the picture that exists is listed
+        var package = Xml(zip, "OEBPS/content.opf").Root!;
+        var manifest = package.Element(Opf + "manifest")!.Elements(Opf + "item").ToList();
+        foreach (var item in manifest)
+            Assert.NotNull(zip.GetEntry("OEBPS/" + item.Attribute("href")!.Value));
+        Assert.Single(manifest, item => item.Attribute("media-type")!.Value == "image/jpeg");
+        Assert.Single(manifest, item => item.Attribute("properties")?.Value == "cover-image");
+    }
+
+    [Fact]
+    public void PicturesSetInTheTextOfAPage_AreFilesOfTheBook_WhereTheyStandInTheText()
+    {
+        var bottom = BookFiles.Picture(0.4, TextAlign.Right);
+        var page = BookPage.TextOnly(BookFiles.Text(BookFiles.Picture(0.3, TextAlign.Left), "First line", "Second line", bottom), "page");
+
+        var path = Write(Options(), page);
+
+        using var zip = ZipFile.OpenRead(path);
+        Assert.NotNull(zip.GetEntry("OEBPS/images/picture0001_001.png"));
+        Assert.NotNull(zip.GetEntry("OEBPS/images/picture0001_002.png"));
+        Assert.Equal(bottom.Picture!.Data, ReadBytes(zip, "OEBPS/images/picture0001_002.png")); // the bytes as they were: the see-through background stays
+
+        var body = Xml(zip, "OEBPS/photo0001.xhtml").Descendants(Xhtml + "div").First(div => div.Attribute("class")?.Value == "page");
+        var order = body.Elements().Select(e => e.Name.LocalName == "div" ? "picture:" + e.Attribute("class")!.Value : e.Name.LocalName).ToList();
+        Assert.Equal(["picture:picture left", "p", "p", "picture:picture right"], order);
+
+        var imgs = body.Descendants(Xhtml + "img").ToList();
+        Assert.Equal("images/picture0001_001.png", imgs[0].Attribute("src")!.Value);
+        Assert.Equal("width: 30%", imgs[0].Attribute("style")!.Value);
+        Assert.Equal("width: 40%", imgs[1].Attribute("style")!.Value);
+        Assert.Equal("page", imgs[0].Attribute("alt")!.Value);
+
+        // The package lists them as PNG, and no picture of them is the cover (there is no photo in the book)
+        var manifest = Xml(zip, "OEBPS/content.opf").Root!.Element(Opf + "manifest")!.Elements(Opf + "item").ToList();
+        Assert.Equal(2, manifest.Count(item => item.Attribute("media-type")!.Value == "image/png"));
+        Assert.DoesNotContain(manifest, item => item.Attribute("properties")?.Value == "cover-image");
+        foreach (var item in manifest)
+            Assert.NotNull(zip.GetEntry("OEBPS/" + item.Attribute("href")!.Value));
+        Assert.Equal(manifest.Count, manifest.Select(item => item.Attribute("id")!.Value).Distinct().Count());
+    }
+
+    [Fact]
+    public void PicturesOfSeveralPages_HaveNamesOfTheirOwn_AndAJpegPictureIsAJpeg()
+    {
+        var jpeg = RichParagraph.OfPicture(RichPicture.FromFile(TestImages.LandscapeJpeg(), 0.5)!);
+        var first = BookPage.TextOnly(BookFiles.Text("one", BookFiles.Picture()), "one");
+        var second = BookPage.TextOnly(BookFiles.Text("two", jpeg), "two");
+
+        var path = Write(Options(), first, second);
+
+        using var zip = ZipFile.OpenRead(path);
+        Assert.NotNull(zip.GetEntry("OEBPS/images/picture0001_001.png"));
+        Assert.NotNull(zip.GetEntry("OEBPS/images/picture0002_002.jpg"));
+        var manifest = Xml(zip, "OEBPS/content.opf").Root!.Element(Opf + "manifest")!.Elements(Opf + "item").ToList();
+        Assert.Single(manifest, item => item.Attribute("media-type")!.Value == "image/png");
+        Assert.Single(manifest, item => item.Attribute("media-type")!.Value == "image/jpeg");
+        Assert.DoesNotContain(manifest, item => item.Attribute("properties")?.Value == "cover-image");
+    }
+
+    [Fact]
+    public void APageThatHasItsPhoto_CanHaveAPictureInItsTextToo()
+    {
+        var page = _files.Page("a", below: "text") with { Below = BookFiles.Text("text", BookFiles.Picture()) };
+
+        var path = Write(Options(), page);
+
+        using var zip = ZipFile.OpenRead(path);
+        Assert.NotNull(zip.GetEntry("OEBPS/images/photo0001.jpg"));
+        Assert.NotNull(zip.GetEntry("OEBPS/images/picture0001_001.png"));
+        Assert.Equal(2, Xml(zip, "OEBPS/photo0001.xhtml").Descendants(Xhtml + "img").Count());
+    }
+
+    [Fact]
+    public void AnIndent_IsAShareOfTheColumn_AndAFirstLineIndentIsTheTextIndent()
+    {
+        // 108 points of the 432 of the reference column are a quarter; the first line starts 36 further in, and the next paragraph hangs
+        var indented = new RichParagraph(TextAlign.Left, [new RichRun("Indented", default)]) { LeftIndent = 108, FirstLineIndent = 36 };
+        var hanging = new RichParagraph(TextAlign.Left, [new RichRun("Hanging", default)]) { LeftIndent = 72, FirstLineIndent = -36 };
+
+        var path = Write(Options(), BookPage.TextOnly(new RichDocument([indented, hanging]), "page"));
+
+        using var zip = ZipFile.OpenRead(path);
+        var paragraphs = Xml(zip, "OEBPS/photo0001.xhtml").Descendants(Xhtml + "p").ToList();
+        Assert.Equal("margin-left: 25%; text-indent: 8.33%", paragraphs[0].Attribute("style")!.Value);
+        Assert.Equal("margin-left: 16.67%; text-indent: -8.33%", paragraphs[1].Attribute("style")!.Value);
+    }
+
+    [Fact]
+    public void ATab_IsTheGapToTheNextTabStop_AsABlockThatIsAtLeastThatWide()
+    {
+        // Two columns: the first stop is 144 points (a third of the column) from the left side, the text starts there, the second stop is 360 (five sixths)
+        var row = new RichParagraph(TextAlign.Left, [new RichRun("cat\tкіт\tnoun", default)]) { TabStops = [144, 360] };
+
+        var path = Write(Options(), BookPage.TextOnly(new RichDocument([row]), "page"));
+
+        using var zip = ZipFile.OpenRead(path);
+        var paragraph = Xml(zip, "OEBPS/photo0001.xhtml").Descendants(Xhtml + "p").Single();
+        var cells = paragraph.Elements(Xhtml + "span").ToList();
+        Assert.Equal(2, cells.Count);
+        Assert.Equal("min-width: 33.33%", cells[0].Attribute("style")!.Value); // from the left side to the first stop
+        Assert.Equal("min-width: 50%", cells[1].Attribute("style")!.Value);    // from the first stop to the second
+        Assert.Equal("cat", cells[0].Value);
+        Assert.Equal("кіт", cells[1].Value);
+        Assert.EndsWith("noun", paragraph.Value);
+        Assert.DoesNotContain('\t', paragraph.Value);
+    }
+
+    [Fact]
+    public void ABookOfTextOnly_HasNoPictureAtAll()
+    {
+        var path = Write(Options(), BookPage.TextOnly(RichDocument.FromPlainText("Only text"), "one"));
+
+        using var zip = ZipFile.OpenRead(path);
+        Assert.DoesNotContain(zip.Entries, entry => entry.FullName.StartsWith("OEBPS/images/", StringComparison.Ordinal));
+        var package = Xml(zip, "OEBPS/content.opf").Root!;
+        Assert.DoesNotContain(package.Element(Opf + "manifest")!.Elements(Opf + "item"), item => item.Attribute("media-type")!.Value == "image/jpeg");
     }
 }

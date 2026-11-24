@@ -16,6 +16,9 @@ namespace PhotoLiker.PhotoBook
         /// <summary>The room between the text and the photo, in points.</summary>
         private const double Gap = 8;
 
+        /// <summary>A picture that is set in the text is drawn no taller than this share of the height of the text on a page.</summary>
+        private const double MaxPictureShare = 0.7;
+
         /// <summary>The fonts tried, in this order, when the one asked for is not on this computer.</summary>
         private static readonly string[] FallbackFonts = ["Segoe UI", "Arial", "Calibri", "Tahoma", "Times New Roman"];
 
@@ -41,6 +44,7 @@ namespace PhotoLiker.PhotoBook
 
             var pageNumber = 0;
             var images = new List<XImage>();
+            using var pictures = new PictureCache(); // the pictures that are set in the text, made once each and let go of after the file is written
             try
             {
                 if (!string.IsNullOrWhiteSpace(options.Title))
@@ -50,10 +54,14 @@ namespace PhotoLiker.PhotoBook
                 {
                     cancellation.ThrowIfCancellationRequested();
                     var page = pages[i];
-                    var image = XImage.FromFile(page.ImageFile);
-                    images.Add(image);
+                    XImage? image = null;
+                    if (page.HasImage)
+                    {
+                        image = XImage.FromFile(page.ImageFile);
+                        images.Add(image);
+                    }
 
-                    pageNumber = AddPhotoPages(document, options, margin, measurer, fonts, page, image, pageNumber);
+                    pageNumber = AddPhotoPages(document, options, margin, measurer, fonts, pictures, page, image, pageNumber);
                     progress?.Report((i + 1) * 90 / pages.Count);
                 }
 
@@ -119,18 +127,20 @@ namespace PhotoLiker.PhotoBook
             var contentWidth = Math.Max(40, width - 2 * margin);
             var lines = TextLayout.Layout(new RichDocument(paragraphs), contentWidth, measurer);
             using var graphics = XGraphics.FromPdfPage(page);
-            DrawLines(graphics, fonts, lines, margin, Math.Max(margin, height * 0.35 - TextLayout.Height(lines) / 2));
+            DrawLines(graphics, fonts, null, lines, margin, Math.Max(margin, height * 0.35 - TextLayout.Height(lines) / 2));
         }
 
         /// <summary>Adds the page of a photo (more than one if its text is long); returns the number of the last page.</summary>
-        private static int AddPhotoPages(PdfDocument document, BookOptions options, double margin, PdfMeasurer measurer, FontCache fonts, BookPage book, XImage image, int pageNumber)
+        private static int AddPhotoPages(
+            PdfDocument document, BookOptions options, double margin, PdfMeasurer measurer, FontCache fonts, PictureCache pictures, BookPage book, XImage? image, int pageNumber)
         {
-            var (pageWidth, pageHeight) = PageSizes.Points(options.Format, options.Orientation, photoIsPortrait: book.ImageHeight > book.ImageWidth);
+            var (pageWidth, pageHeight) = PageSizes.Points(options.Format, options.Orientation, photoIsPortrait: !book.HasImage || book.ImageHeight > book.ImageWidth);
             var contentWidth = Math.Max(40, pageWidth - 2 * margin);
             var contentHeight = Math.Max(40, pageHeight - 2 * margin);
 
-            var above = TextLayout.Layout(book.Above, contentWidth, measurer);
-            var below = TextLayout.Layout(book.Below, contentWidth, measurer);
+            // A picture in the text is drawn no taller than most of a page
+            var above = TextLayout.Layout(book.Above, contentWidth, measurer, contentHeight * MaxPictureShare);
+            var below = TextLayout.Layout(book.Below, contentWidth, measurer, contentHeight * MaxPictureShare);
             var aboveHeight = TextLayout.Height(above);
             var belowHeight = TextLayout.Height(below);
             var gapAbove = above.Count > 0 ? Gap : 0;
@@ -148,6 +158,20 @@ namespace PhotoLiker.PhotoBook
                 return created;
             }
 
+            if (image is null)
+            {
+                // A page that is only text: it flows from page to page as far as it goes
+                var textFlow = new Flow(NewPage, document, options, fonts, pictures, pageWidth, pageHeight, margin);
+                textFlow.Start();
+                foreach (var line in above)
+                    textFlow.Line(line);
+                foreach (var line in below)
+                    textFlow.Line(line);
+
+                textFlow.Finish();
+                return pageNumber;
+            }
+
             if (room >= contentHeight * MinPhotoShare)
             {
                 // Everything on one page: the photo is the largest that fits the width and what the text leaves of the height, and the whole is in the middle of the page
@@ -159,15 +183,15 @@ namespace PhotoLiker.PhotoBook
                 var page = NewPage();
                 using var graphics = XGraphics.FromPdfPage(page);
                 var top = margin + (contentHeight - blockHeight) / 2;
-                DrawLines(graphics, fonts, above, margin, top);
+                DrawLines(graphics, fonts, pictures, above, margin, top);
                 graphics.DrawImage(image, margin + (contentWidth - photoWidth) / 2, top + aboveHeight + gapAbove, photoWidth, photoHeight);
-                DrawLines(graphics, fonts, below, margin, top + aboveHeight + gapAbove + photoHeight + gapBelow);
+                DrawLines(graphics, fonts, pictures, below, margin, top + aboveHeight + gapAbove + photoHeight + gapBelow);
                 DrawPageNumber(graphics, options, fonts, pageWidth, pageHeight, margin, pageNumber);
                 return pageNumber;
             }
 
             // The text is too long to leave the photo room on the page: it all flows on from page to page, the photo (at most a share of a page) where it comes
-            var flow = new Flow(NewPage, document, options, fonts, pageWidth, pageHeight, margin);
+            var flow = new Flow(NewPage, document, options, fonts, pictures, pageWidth, pageHeight, margin);
             flow.Start();
             foreach (var line in above)
                 flow.Line(line);
@@ -182,8 +206,36 @@ namespace PhotoLiker.PhotoBook
             return pageNumber;
         }
 
+        /// <summary>The pictures of the text as images of the PDF: one for each, made when it is first drawn (from the bytes of its file) and let go of with the cache.</summary>
+        private sealed class PictureCache : IDisposable
+        {
+            private readonly Dictionary<RichPicture, (XImage Image, MemoryStream Stream)> _images = new(ReferenceEqualityComparer.Instance);
+
+            public XImage Get(RichPicture picture)
+            {
+                if (_images.TryGetValue(picture, out var made))
+                    return made.Image;
+
+                var stream = new MemoryStream(picture.Data, writable: false);
+                var image = XImage.FromStream(stream);
+                _images[picture] = (image, stream);
+                return image;
+            }
+
+            public void Dispose()
+            {
+                foreach (var (image, stream) in _images.Values)
+                {
+                    image.Dispose();
+                    stream.Dispose();
+                }
+
+                _images.Clear();
+            }
+        }
+
         /// <summary>Lays things one under the other, from page to page: a thing that does not fit what is left of a page starts the next.</summary>
-        private sealed class Flow(Func<PdfPage> newPage, PdfDocument document, BookOptions options, FontCache fonts, double pageWidth, double pageHeight, double margin)
+        private sealed class Flow(Func<PdfPage> newPage, PdfDocument document, BookOptions options, FontCache fonts, PictureCache pictures, double pageWidth, double pageHeight, double margin)
         {
             private XGraphics? _graphics;
             private double _y;
@@ -222,7 +274,7 @@ namespace PhotoLiker.PhotoBook
             public void Line(TextLine line)
             {
                 Ensure(line.Height);
-                DrawLines(_graphics!, fonts, [line], margin, _y);
+                DrawLines(_graphics!, fonts, pictures, [line], margin, _y);
                 _y += line.Height;
             }
 
@@ -237,11 +289,14 @@ namespace PhotoLiker.PhotoBook
             public void Finish() => Close();
         }
 
-        private static void DrawLines(XGraphics graphics, FontCache fonts, IReadOnlyList<TextLine> lines, double left, double top)
+        private static void DrawLines(XGraphics graphics, FontCache fonts, PictureCache? pictures, IReadOnlyList<TextLine> lines, double left, double top)
         {
             var y = top;
             foreach (var line in lines)
             {
+                if (line.Picture is { } picture && pictures is not null)
+                    graphics.DrawImage(pictures.Get(picture), left + line.PictureX, y + line.PictureTop, line.PictureWidth, line.PictureHeight);
+
                 foreach (var piece in line.Pieces)
                 {
                     var brush = new XSolidBrush(piece.Style.Color is { } color

@@ -953,10 +953,11 @@ public sealed class VideoToGifDialogTests : IDisposable
         {
             var names = Toolbar(form).Items.Cast<ToolStripItem>().Select(item => item.Name).ToList();
 
-            Assert.Equal("drawToolStripButton", names[^1]);
-            Assert.Equal("stickerToolStripButton", names[^2]);
-            Assert.Equal("videoToGifToolStripButton", names[^3]);
-            Assert.Equal("traceBitmapToolStripButton", names[^4]);
+            Assert.Equal("manuscriptToolStripButton", names[^1]);
+            Assert.Equal("drawToolStripButton", names[^2]);
+            Assert.Equal("stickerToolStripButton", names[^3]);
+            Assert.Equal("videoToGifToolStripButton", names[^4]);
+            Assert.Equal("traceBitmapToolStripButton", names[^5]);
             var button = Toolbar(form).Items["videoToGifToolStripButton"]!;
             Assert.Equal(VideoToGifStrings.ButtonText, button.Text);
             Assert.Equal(VideoToGifStrings.ButtonTooltip, button.ToolTipText);

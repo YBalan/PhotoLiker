@@ -227,4 +227,82 @@ public sealed class PdfBookWriterTests : IDisposable
         // A page with a number has a text on it, so it holds a font and the other does not (the pages have no other text)
         Assert.True(CountText(with, "/Font") > CountText(without, "/Font"));
     }
+
+    [Fact]
+    public void APageThatIsOnlyText_HasNoPhotoAndNoPhotoIsInTheFile()
+    {
+        var path = _files.Path_("text.pdf");
+
+        var count = PdfBookWriter.Write(path, Options(), [BookPage.TextOnly(RichDocument.FromPlainText("Magiya golosu\nSpochatku buv brehunec"), "page 1")]);
+
+        Assert.Equal(1, count);
+        using var document = Open(path);
+        Assert.Equal(1, document.PageCount);
+        Assert.Equal(0, CountText(path, "/Subtype/Image") + CountText(path, "/Subtype /Image")); // no picture in the file
+    }
+
+    [Fact]
+    public void ALongTextWithNoPhoto_FlowsOverAsManyPagesAsItNeeds_AndEachPageOfTheBookStartsOnANewOne()
+    {
+        var path = _files.Path_("long.pdf");
+        var paragraph = string.Join(" ", Enumerable.Repeat("a line of the manuscript that is read", 12));
+        var longText = string.Join("\n", Enumerable.Repeat(paragraph, 40));
+
+        var count = PdfBookWriter.Write(path, Options(), [BookPage.TextOnly(RichDocument.FromPlainText(longText), "long"), BookPage.TextOnly(RichDocument.FromPlainText("short"), "short")]);
+
+        Assert.True(count >= 3, $"A page of text is more than one page of paper, and the next page of the book starts on its own: {count}");
+        using var document = Open(path);
+        Assert.Equal(count, document.PageCount);
+    }
+
+    [Fact]
+    public void PicturesSetInTheTextOfAPageThatHasNoPhoto_AreInTheFile_WithTheirSeeThroughBackground()
+    {
+        var path = _files.Path_("pictures.pdf");
+        var page = BookPage.TextOnly(BookFiles.Text(BookFiles.Picture(0.3, TextAlign.Left), "Smorodom smerti", BookFiles.Picture(0.4, TextAlign.Right)), "page");
+
+        var count = PdfBookWriter.Write(path, Options(), [page]);
+
+        Assert.Equal(1, count);
+        // The two pictures are the same pixels, which the writer keeps once: the picture and its mask are two image objects of the file
+        Assert.True(CountText(path, "/Subtype/Image") + CountText(path, "/Subtype /Image") >= 2);
+        Assert.True(CountText(path, "/SMask") >= 1, "the see-through part of the pictures is a mask in the file");
+    }
+
+    [Fact]
+    public void APictureThatDoesNotFitWhatIsLeftOfThePage_StartsTheNextOne()
+    {
+        var path = _files.Path_("flow.pdf");
+        var longText = string.Join("\n", Enumerable.Repeat("a line of the manuscript that is read, and a few more words to fill it", 38));
+        var page = BookPage.TextOnly(BookFiles.Text(longText, BookFiles.Picture(1.0)), "long");
+
+        var count = PdfBookWriter.Write(path, Options(), [page]);
+
+        using var document = Open(path);
+        Assert.Equal(count, document.PageCount);
+        Assert.True(count >= 2, "a picture as wide as the text and a page of text do not fit on one page");
+    }
+
+    [Fact]
+    public void APageThatHasItsPhoto_CanHaveAPictureInItsTextToo()
+    {
+        var path = _files.Path_("photo.pdf");
+        var page = _files.Page("a", below: "text") with { Below = BookFiles.Text("text", BookFiles.Picture()) };
+
+        PdfBookWriter.Write(path, Options(), [page]);
+
+        // The photo, and the picture with its mask: three image objects
+        Assert.True(CountText(path, "/Subtype/Image") + CountText(path, "/Subtype /Image") >= 3);
+    }
+
+    [Fact]
+    public void TextOnlyPages_AreAPortraitPageEvenWhenTheBookFollowsItsPhotos()
+    {
+        var path = _files.Path_("portrait.pdf");
+
+        PdfBookWriter.Write(path, Options(orientation: PageOrientation.FollowPhoto), [BookPage.TextOnly(RichDocument.FromPlainText("text"), "page")]);
+
+        using var document = Open(path);
+        Assert.True(document.Pages[0].Height.Point > document.Pages[0].Width.Point);
+    }
 }

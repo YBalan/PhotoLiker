@@ -91,7 +91,7 @@ namespace PhotoLiker.PhotoBook
     /// <summary>What the book as a whole is set up as.</summary>
     /// <param name="Title">The title of the book; when it is not empty it has a page of its own at the start.</param>
     /// <param name="Author">Who made the book, under the title.</param>
-    /// <param name="Language">The language of the text, as a code of two letters ("en", "uk"): an EPUB says it.</param>
+    /// <param name="Language">The language of the text, as a code of two letters ("en", "ua"): an EPUB says it.</param>
     /// <param name="Format">The paper of a PDF. An EPUB has none: its readers set the text to the screen.</param>
     /// <param name="MarginMillimetres">The white round the text and the photo on a page of a PDF.</param>
     /// <param name="FontFamily">The font a PDF is set in; the EPUB leaves the font to the reader of the book.</param>
@@ -106,8 +106,18 @@ namespace PhotoLiker.PhotoBook
         string FontFamily = "Segoe UI",
         bool PageNumbers = true);
 
-    /// <summary>A page of the book: a photo as a JPEG file (upright, at the size the book needs), and what is written above and below it.</summary>
-    public sealed record BookPage(string ImageFile, int ImageWidth, int ImageHeight, RichDocument Above, RichDocument Below, string Description);
+    /// <summary>
+    /// A page of the book: a photo as a JPEG file (upright, at the size the book needs), and what is written above and below it. A page whose <paramref name="ImageFile"/> is empty has no photo: it is
+    /// only the text (a digitized manuscript is a book of its text, with or without the photos of its pages). The text can have pictures in it (<see cref="RichPicture"/>: paragraphs of their own).
+    /// </summary>
+    public sealed record BookPage(string ImageFile, int ImageWidth, int ImageHeight, RichDocument Above, RichDocument Below, string Description)
+    {
+        /// <summary>A page that is only text, as one document (what is written below the first line is on the same page flow as what is written above).</summary>
+        public static BookPage TextOnly(RichDocument text, string description) =>
+            new(string.Empty, 0, 0, text, RichDocument.Empty, description);
+
+        public bool HasImage => !string.IsNullOrEmpty(ImageFile);
+    }
 
     /// <summary>How much a photo is turned in the book, on top of the way it is upright: only in quarters of a turn, clockwise. The photo file is not touched.</summary>
     public static class BookRotation

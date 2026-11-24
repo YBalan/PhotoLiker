@@ -41,6 +41,7 @@ namespace PhotoLikerUI
             InitializeVideoToGif();
             InitializeSticker();
             InitializeDrawing();
+            InitializeManuscript();
             InitializeEmptyFolders();
             InitializeDuplicates();
             InitializeColorize();
@@ -840,6 +841,11 @@ namespace PhotoLikerUI
             else if (IsDrawKey(keyData))
             {
                 DrawCurrentPhoto();
+                return true;
+            }
+            else if (IsManuscriptKey(keyData))
+            {
+                OpenManuscripts();
                 return true;
             }
             else if (keyData == Keys.Space)

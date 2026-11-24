@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Reading a handwritten or printed page: the lines of a page of handwriting are found, each line is read by a small neural network (a CNN with a bidirectional LSTM, CTC decoded: the Ukrainian
+    and Russian handwriting models of the Polyscriptor project, Apache 2.0) that runs on this computer with ONNX Runtime, and what was read is kept with the page so that the work goes on the next day.
+    Printed text is read by the PaddleOCR pipeline of PhotoLiker.Drawing. The handwriting models are published as PyTorch checkpoints, which no program of this solution can run, so the checkpoint
+    that was downloaded is turned into an ONNX file on this computer, once (TorchCheckpoint reads the PyTorch file without running anything of it, CrnnConverter writes the ONNX graph).
+
+    Turning the text into a PDF or an EPUB is done by PhotoLiker.PhotoBook. No user interface and nothing of Windows, so any front end can use it. The messages of an error are English;
+    the front end words them for the person.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>PhotoLiker.Manuscripts</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PhotoLiker.Core\PhotoLiker.Core.csproj" />
+    <ProjectReference Include="..\PhotoLiker.Drawing\PhotoLiker.Drawing.csproj" />
+    <ProjectReference Include="..\PhotoLiker.PhotoBook\PhotoLiker.PhotoBook.csproj" />
+    <ProjectReference Include="..\PhotoLiker.Stickers\PhotoLiker.Stickers.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLiker.Manuscripts.Tests</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>PhotoLikerUI.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

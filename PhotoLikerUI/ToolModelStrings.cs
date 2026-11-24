@@ -14,6 +14,10 @@ namespace PhotoLikerUI
         public static string ColorizeFeature => T();
         public static string StickerFeature => T();
         public static string ScanTextFeature => T();
+        public static string ScanManuscriptFeature => T();
+        public static string CutManuscriptPagesFeature => T();
+        public static string FindPicturesFeature => T();
+        public static string FixTextFeature => T();
 
         // The question
         public static string DownloadTitle => T();

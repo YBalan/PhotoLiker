@@ -60,6 +60,8 @@ namespace PhotoLiker.PhotoBook
                 pageFiles.Add(("title.xhtml", title));
             }
 
+            var imageNumbers = new List<int>(); // a page that is only text has no photo in the file
+            var pictureItems = new List<(string Id, string Href, string MediaType)>(); // the pictures that are set in the text of such a page
             for (var i = 0; i < pages.Count; i++)
             {
                 cancellation.ThrowIfCancellationRequested();
@@ -68,18 +70,38 @@ namespace PhotoLiker.PhotoBook
                 var imageName = $"images/photo{number:D4}.jpg";
                 var pageName = $"photo{number:D4}.xhtml";
 
-                var entry = zip.CreateEntry("OEBPS/" + imageName, CompressionLevel.NoCompression); // a JPEG does not get smaller
-                using (var target = entry.Open())
-                using (var source = File.OpenRead(page.ImageFile))
-                    source.CopyTo(target);
+                if (page.HasImage)
+                {
+                    var entry = zip.CreateEntry("OEBPS/" + imageName, CompressionLevel.NoCompression); // a JPEG does not get smaller
+                    using (var target = entry.Open())
+                    using (var source = File.OpenRead(page.ImageFile))
+                        source.CopyTo(target);
+                    imageNumbers.Add(number);
+                }
 
-                AddText(zip, "OEBPS/" + pageName, PhotoPage(page, number, imageName, language, title));
+                // The pictures that are set in the text of the page, each a file of its own
+                var names = new Dictionary<RichPicture, string>(ReferenceEqualityComparer.Instance);
+                foreach (var picture in page.Above.Paragraphs.Concat(page.Below.Paragraphs).Select(paragraph => paragraph.Picture).OfType<RichPicture>())
+                {
+                    if (names.ContainsKey(picture))
+                        continue;
+
+                    var name = $"images/picture{number:D4}_{pictureItems.Count + 1:D3}{picture.Extension}";
+                    var entry = zip.CreateEntry("OEBPS/" + name, CompressionLevel.NoCompression); // a picture is already squeezed
+                    using (var target = entry.Open())
+                        target.Write(picture.Data, 0, picture.Data.Length);
+
+                    pictureItems.Add(($"picture{pictureItems.Count + 1:D3}", name, picture.MediaType));
+                    names[picture] = name;
+                }
+
+                AddText(zip, "OEBPS/" + pageName, PhotoPage(page, number, page.HasImage ? imageName : null, names, language, title));
                 pageFiles.Add((pageName, Label(page, number)));
                 progress?.Report((i + 1) * 95 / pages.Count);
             }
 
             AddText(zip, "OEBPS/nav.xhtml", NavigationPage(pageFiles, language, title));
-            AddText(zip, "OEBPS/content.opf", PackageFile(options, title, language, pageFiles, pages.Count));
+            AddText(zip, "OEBPS/content.opf", PackageFile(options, title, language, pageFiles, imageNumbers, pictureItems));
         }
 
         /// <summary>The words that name a photo in the contents: the first line written above it (or below it), else "Photo 3".</summary>
@@ -99,8 +121,11 @@ namespace PhotoLiker.PhotoBook
             "body { margin: 0; padding: 0; }\n" +
             ".page { text-align: center; page-break-after: always; break-after: page; padding: 0.5em 0; }\n" +
             ".page p { margin: 0 0 0.4em 0; text-align: left; line-height: 1.3; }\n" +
+            ".cell { display: inline-block; vertical-align: top; }\n" +
             ".picture { margin: 0.6em 0; }\n" +
             ".picture img { max-width: 100%; max-height: 80vh; height: auto; width: auto; }\n" +
+            ".picture.left { text-align: left; }\n" +
+            ".picture.right { text-align: right; }\n" +
             ".title { margin-top: 30%; }\n" +
             ".title h1 { font-size: 2.2em; margin: 0 0 0.6em 0; }\n" +
             ".title p.author { font-size: 1.3em; color: #606060; text-align: center; }\n";
@@ -120,33 +145,61 @@ namespace PhotoLiker.PhotoBook
             writer.WriteEndElement();
         });
 
-        private static string PhotoPage(BookPage page, int number, string imageName, string language, string bookTitle) => Document(language, bookTitle, writer =>
+        private static string PhotoPage(BookPage page, int number, string? imageName, IReadOnlyDictionary<RichPicture, string> pictureNames, string language, string bookTitle) =>
+            Document(language, bookTitle, writer =>
         {
             writer.WriteStartElement("div", Xhtml);
             writer.WriteAttributeString("class", "page");
-            WriteDescription(writer, page.Above);
+            WriteDescription(writer, page.Above, pictureNames, page.Description);
 
-            writer.WriteStartElement("div", Xhtml);
-            writer.WriteAttributeString("class", "picture");
-            writer.WriteStartElement("img", Xhtml);
-            writer.WriteAttributeString("src", imageName);
-            writer.WriteAttributeString("alt", string.IsNullOrWhiteSpace(page.Description) ? string.Format(CultureInfo.CurrentCulture, PhotoBookStrings.PhotoNumberFormat, number) : page.Description);
-            writer.WriteEndElement();
-            writer.WriteEndElement();
+            if (imageName is not null)
+            {
+                writer.WriteStartElement("div", Xhtml);
+                writer.WriteAttributeString("class", "picture");
+                writer.WriteStartElement("img", Xhtml);
+                writer.WriteAttributeString("src", imageName);
+                writer.WriteAttributeString("alt", string.IsNullOrWhiteSpace(page.Description) ? string.Format(CultureInfo.CurrentCulture, PhotoBookStrings.PhotoNumberFormat, number) : page.Description);
+                writer.WriteEndElement();
+                writer.WriteEndElement();
+            }
 
-            WriteDescription(writer, page.Below);
+            WriteDescription(writer, page.Below, pictureNames, page.Description);
             writer.WriteEndElement();
         });
 
-        /// <summary>The paragraphs of a description: each as a paragraph with its alignment, the runs as spans that carry their look.</summary>
-        private static void WriteDescription(XmlWriter writer, RichDocument document)
+        /// <summary>A picture set in the text: a block that holds it at the left, the middle or the right, as wide as the share it was asked to be (the reader can still make it no wider than the screen).</summary>
+        private static void WritePicture(XmlWriter writer, RichParagraph paragraph, RichPicture picture, string name, string description)
+        {
+            writer.WriteStartElement("div", Xhtml);
+            writer.WriteAttributeString("class", paragraph.Align switch { TextAlign.Center => "picture", TextAlign.Right => "picture right", _ => "picture left" });
+            writer.WriteStartElement("img", Xhtml);
+            writer.WriteAttributeString("src", name);
+            writer.WriteAttributeString("alt", Printable(description));
+            writer.WriteAttributeString("style", "width: " + Percent(picture.WidthShare * RichDocument.ReferenceWidth));
+            writer.WriteEndElement();
+            writer.WriteEndElement();
+        }
+
+        /// <summary>A distance in points of the reference column as a share of the width of the reader's column, which is how the indents and the sizes of pictures are kept.</summary>
+        private static string Percent(double points) =>
+            (Math.Clamp(points, -RichDocument.ReferenceWidth, 2 * RichDocument.ReferenceWidth) / RichDocument.ReferenceWidth * 100).ToString("0.##", CultureInfo.InvariantCulture) + "%";
+
+        /// <summary>The paragraphs of a description: each as a paragraph with its alignment and indent, the runs as spans that carry their look, a tab as the gap to the next column; a picture as a block.</summary>
+        private static void WriteDescription(XmlWriter writer, RichDocument document, IReadOnlyDictionary<RichPicture, string> pictureNames, string description)
         {
             foreach (var paragraph in document.WithoutTrailingBlank().Paragraphs)
             {
+                if (paragraph.Picture is { } picture && pictureNames.TryGetValue(picture, out var name))
+                {
+                    WritePicture(writer, paragraph, picture, name, description);
+                    continue;
+                }
+
                 writer.WriteStartElement("p", Xhtml);
+                var css = new List<string>();
                 if (paragraph.Align != TextAlign.Left)
                 {
-                    writer.WriteAttributeString("style", "text-align: " + paragraph.Align switch
+                    css.Add("text-align: " + paragraph.Align switch
                     {
                         TextAlign.Center => "center",
                         TextAlign.Right => "right",
@@ -154,17 +207,66 @@ namespace PhotoLiker.PhotoBook
                     });
                 }
 
+                if (paragraph.LeftIndent > 0)
+                    css.Add("margin-left: " + Percent(paragraph.LeftIndent));
+                if (paragraph.FirstLineIndent != 0)
+                    css.Add("text-indent: " + Percent(paragraph.FirstLineIndent));
+                if (css.Count > 0)
+                    writer.WriteAttributeString("style", string.Join("; ", css));
+
                 if (paragraph.IsBlank && paragraph.Runs.Count == 0)
-                {
                     writer.WriteString("\x00A0"); // an empty paragraph has no height in a reader: it is a line of space
-                }
+                else if (paragraph.Runs.Any(run => run.Text.Contains('\t')))
+                    WriteCells(writer, paragraph);
                 else
-                {
                     foreach (var run in paragraph.Runs)
                         WriteRun(writer, run);
-                }
 
                 writer.WriteEndElement();
+            }
+        }
+
+        /// <summary>
+        /// A paragraph with tabs as columns: the text between two tabs is a block that is at least as wide as the way to the next tab stop of the paragraph (every half inch past the last), so that
+        /// what follows starts where it would in the Rich Text Box; the last is just text.
+        /// </summary>
+        private static void WriteCells(XmlWriter writer, RichParagraph paragraph)
+        {
+            var cells = new List<List<RichRun>> { new() };
+            foreach (var run in paragraph.Runs)
+            {
+                var parts = run.Text.Split('\t');
+                for (var i = 0; i < parts.Length; i++)
+                {
+                    if (i > 0)
+                        cells.Add([]);
+                    if (parts[i].Length > 0)
+                        cells[^1].Add(run with { Text = parts[i] });
+                }
+            }
+
+            var stops = paragraph.TabStops.Order().ToList();
+            var position = Math.Max(0, paragraph.LeftIndent + paragraph.FirstLineIndent);
+            for (var k = 0; k < cells.Count; k++)
+            {
+                if (k == cells.Count - 1)
+                {
+                    foreach (var run in cells[k])
+                        WriteRun(writer, run);
+                    break;
+                }
+
+                var next = stops.FirstOrDefault(stop => stop > position + 0.5);
+                if (next <= 0)
+                    next = (Math.Floor(position / TextLayout.DefaultTabWidth) + 1) * TextLayout.DefaultTabWidth;
+
+                writer.WriteStartElement("span", Xhtml);
+                writer.WriteAttributeString("class", "cell");
+                writer.WriteAttributeString("style", "min-width: " + Percent(next - position));
+                foreach (var run in cells[k])
+                    WriteRun(writer, run);
+                writer.WriteEndElement();
+                position = next;
             }
         }
 
@@ -249,7 +351,8 @@ namespace PhotoLiker.PhotoBook
             return Encoding.UTF8.GetString(buffer.ToArray()).TrimStart('\xFEFF');
         }
 
-        private static string PackageFile(BookOptions options, string title, string language, List<(string File, string Label)> pageFiles, int photoCount)
+        private static string PackageFile(
+            BookOptions options, string title, string language, List<(string File, string Label)> pageFiles, List<int> imageNumbers, List<(string Id, string Href, string MediaType)> pictureItems)
         {
             var settings = new XmlWriterSettings { Indent = true, Encoding = new UTF8Encoding(false) };
             using var buffer = new MemoryStream();
@@ -285,8 +388,10 @@ namespace PhotoLiker.PhotoBook
                 ManifestItem(writer, Opf, "style", "style.css", "text/css", null);
                 foreach (var (file, _) in pageFiles)
                     ManifestItem(writer, Opf, Path.GetFileNameWithoutExtension(file), file, "application/xhtml+xml", null);
-                for (var number = 1; number <= photoCount; number++)
-                    ManifestItem(writer, Opf, $"image{number:D4}", $"images/photo{number:D4}.jpg", "image/jpeg", number == 1 ? "cover-image" : null);
+                foreach (var number in imageNumbers)
+                    ManifestItem(writer, Opf, $"image{number:D4}", $"images/photo{number:D4}.jpg", "image/jpeg", number == imageNumbers[0] ? "cover-image" : null);
+                foreach (var (id, href, mediaType) in pictureItems)
+                    ManifestItem(writer, Opf, id, href, mediaType, null);
                 writer.WriteEndElement();
 
                 writer.WriteStartElement("spine", Opf);

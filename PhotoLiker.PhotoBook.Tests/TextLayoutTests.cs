@@ -215,12 +215,201 @@ public class TextLayoutTests
         Assert.Equal(48, line.Pieces[1].Width, 6);
     }
 
-    [Fact]
-    public void ATab_IsFourSpaces()
-    {
-        var line = Assert.Single(Set(Doc("a\tb"), 500));
+    // The reference column is 432 points wide: in a column of that width the indents and the tab stops are in the points they are written in
+    private const double Column = RichDocument.ReferenceWidth;
 
-        Assert.Equal(60, line.Pieces[^1].X + line.Pieces[^1].Width, 6);
+    private static RichDocument Para(string text, double left = 0, double first = 0, double[]? stops = null, TextAlign align = TextAlign.Left) =>
+        new([new RichParagraph(align, [new RichRun(text, default)]) { LeftIndent = left, FirstLineIndent = first, TabStops = stops ?? [] }]);
+
+    [Fact]
+    public void ATab_GoesToTheNextHalfInch_WhenTheParagraphHasNoStops()
+    {
+        var line = Assert.Single(Set(Para("a\tb"), Column));
+
+        Assert.Equal(["a", "b"], line.Pieces.Select(piece => piece.Text)); // the gap is not drawn, and the two are not one text
+        Assert.Equal(0, line.Pieces[0].X, 6);
+        Assert.Equal(TextLayout.DefaultTabWidth, line.Pieces[1].X, 6); // "a" is 10 wide: the stop is at 36
+    }
+
+    [Fact]
+    public void ATabThatStartsOnAHalfInch_GoesToTheNextOne_NotToWhereItIs()
+    {
+        // "abc" in bold is 36 wide: it ends on a half inch, and the tab goes on to the next, it is not a gap of nothing
+        var document = new RichDocument([new RichParagraph(TextAlign.Left, [new RichRun("abc", new RichStyle(Bold: true)), new RichRun("\tx", default)])]);
+
+        var line = Assert.Single(Set(document, Column));
+
+        Assert.Equal(72, line.Pieces[^1].X, 6);
+    }
+
+    [Fact]
+    public void TheIndentOfTheOtherLines_IsTheSameShareOfAWiderColumn()
+    {
+        var lines = Set(Para(string.Join(" ", Enumerable.Repeat("abcd", 40)), left: 50), 2 * Column);
+
+        Assert.True(lines.Count > 1);
+        Assert.All(lines, line => Assert.Equal(100, line.Pieces[0].X, 6));
+    }
+
+    [Fact]
+    public void ATabPastTheLastStopOfTheParagraph_GoesOnByHalfInches()
+    {
+        // "cat" is 30 wide, the stop is at 20: past it, the next stop is the half inch after 30, which is 36; "a" then ends at 46, the next is 72
+        var line = Assert.Single(Set(Para("cat\ta\tb", stops: [20]), Column));
+
+        Assert.Equal([0, 36, 72], line.Pieces.Select(piece => piece.X));
+    }
+
+    [Fact]
+    public void ATab_GoesToTheStopsTheParagraphHas()
+    {
+        var line = Assert.Single(Set(Para("a\tb\tc", stops: [100, 250]), Column));
+
+        Assert.Equal([0, 100, 250], line.Pieces.Select(piece => piece.X));
+    }
+
+    [Fact]
+    public void TheTabStops_AreTheSameShareOfAWiderOrNarrowerColumn()
+    {
+        var wide = Assert.Single(Set(Para("a\tb", stops: [100]), 2 * Column));
+        var narrow = Assert.Single(Set(Para("a\tb", stops: [100]), Column / 2));
+
+        Assert.Equal(200, wide.Pieces[1].X, 6);
+        Assert.Equal(50, narrow.Pieces[1].X, 6);
+    }
+
+    [Fact]
+    public void ATabAtTheStartOfALine_IsAnIndent()
+    {
+        var line = Assert.Single(Set(Para("\ttext", stops: [60]), Column));
+
+        Assert.Equal("text", Assert.Single(line.Pieces).Text);
+        Assert.Equal(60, line.Pieces[0].X, 6);
+    }
+
+    [Fact]
+    public void ATabThatWouldGoPastTheEndOfTheLine_IsASpace()
+    {
+        var line = Assert.Single(Set(Para("ab\tcd", stops: [500]), Column));
+
+        Assert.Equal(30, line.Pieces[1].X, 6); // "ab" is 20 wide and a space is 10
+    }
+
+    [Fact]
+    public void AJustifiedLineWithATab_KeepsItsColumns()
+    {
+        var long_ = string.Join(" ", Enumerable.Repeat("word", 30));
+        var document = Para("x\t" + long_, stops: [50], align: TextAlign.Justify);
+
+        var lines = Set(document, Column);
+
+        Assert.True(lines.Count > 1);
+        Assert.Equal(50, lines[0].Pieces[1].X, 6); // not stretched: the first line has the tab
+        Assert.Equal(2, lines[0].Pieces.Count); // "x", and the words after the tab as they are: a line that is spread has a piece for each word
+    }
+
+    [Fact]
+    public void TheIndent_MovesEveryLine_AndTheFirstLineHasItsOwn()
+    {
+        // 300 points are 30 characters; with 50 of indent 25 characters fit a line, and the first line is 20 further in
+        var words = string.Join(" ", Enumerable.Repeat("abcd", 30));
+        var lines = Set(Para(words, left: 50, first: 20), Column);
+
+        Assert.True(lines.Count > 2);
+        Assert.Equal(70, lines[0].Pieces[0].X, 6);
+        Assert.All(lines.Skip(1), line => Assert.Equal(50, line.Pieces[0].X, 6));
+        Assert.All(lines.Skip(1), line => Assert.True(line.Pieces[^1].X + line.Pieces[^1].Width <= Column + 0.01));
+        Assert.True(lines[0].Pieces.Sum(piece => piece.Width) <= Column - 70 + 0.01, "the first line has room only for what is left after its start");
+    }
+
+    [Fact]
+    public void AHangingIndent_StartsTheFirstLineBeforeTheOthers()
+    {
+        var lines = Set(Para(string.Join(" ", Enumerable.Repeat("abcd", 40)), left: 60, first: -40), Column);
+
+        Assert.Equal(20, lines[0].Pieces[0].X, 6);
+        Assert.Equal(60, lines[1].Pieces[0].X, 6);
+    }
+
+    [Fact]
+    public void AnIndentThatLeavesNoRoom_IsCutSoThatTheTextStillIsSet()
+    {
+        var lines = Set(Para("abc def", left: 10_000), Column);
+
+        Assert.Equal("abc def", string.Join(" ", lines.Select(line => line.Text)));
+        Assert.All(lines, line => Assert.True(line.Pieces[0].X <= Column * 0.8 + 0.01));
+    }
+
+    [Fact]
+    public void TheIndentIsTheSameShareOfAnyColumn_AndCentreAndRightWorkInsideIt()
+    {
+        var wide = Assert.Single(Set(Para("abc", left: 100), 2 * Column));
+        var centred = Assert.Single(Set(Para("abc", left: 100, align: TextAlign.Center), Column));
+        var right = Assert.Single(Set(Para("abc", left: 100, align: TextAlign.Right), Column));
+
+        Assert.Equal(200, wide.Pieces[0].X, 6);
+        Assert.Equal(100 + (Column - 100 - 30) / 2, centred.Pieces[0].X, 6);
+        Assert.Equal(Column - 30, right.Pieces[0].X, 6);
+    }
+
+    private static RichPicture Picture(double share, int width = 40, int height = 30) => new([1], true, width, height, share);
+
+    [Fact]
+    public void APicture_IsALineOfItsOwn_AsWideAsItsShareOfTheColumn_AndAsTallAsItsShape()
+    {
+        var document = new RichDocument([RichParagraph.OfPicture(Picture(0.5, 40, 30), TextAlign.Left), new RichParagraph(TextAlign.Left, [new RichRun("text", default)])]);
+
+        var lines = Set(document, 400);
+
+        Assert.Equal(2, lines.Count);
+        Assert.Same(document.Paragraphs[0].Picture, lines[0].Picture);
+        Assert.Equal(200, lines[0].PictureWidth, 6);
+        Assert.Equal(150, lines[0].PictureHeight, 6);
+        Assert.Equal(150 + 2 * TextLayout.PictureGap, lines[0].Height, 6);
+        Assert.Equal(TextLayout.PictureGap, lines[0].PictureTop, 6);
+        Assert.Empty(lines[0].Pieces);
+        Assert.Null(lines[1].Picture);
+    }
+
+    [Theory]
+    [InlineData(TextAlign.Left, 0)]
+    [InlineData(TextAlign.Center, 100)]
+    [InlineData(TextAlign.Right, 200)]
+    [InlineData(TextAlign.Justify, 0)]
+    public void APicture_IsAtTheLeftTheMiddleOrTheRight(TextAlign align, double expected)
+    {
+        var line = Assert.Single(Set(new RichDocument([RichParagraph.OfPicture(Picture(0.5), align)]), 400));
+
+        Assert.Equal(expected, line.PictureX, 6);
+    }
+
+    [Fact]
+    public void APictureThatIsTallerThanTheMaximum_IsMadeSmaller_KeepingItsShape()
+    {
+        var document = new RichDocument([RichParagraph.OfPicture(Picture(1.0, 40, 30))]);
+
+        var line = Assert.Single(TextLayout.Layout(document, 400, new Fixed(), maximumPictureHeight: 150));
+
+        Assert.Equal(150, line.PictureHeight, 6);
+        Assert.Equal(200, line.PictureWidth, 6);
+    }
+
+    [Fact]
+    public void ALeftPicture_StartsAtTheIndentOfItsParagraph()
+    {
+        var paragraph = RichParagraph.OfPicture(Picture(0.25), TextAlign.Left) with { LeftIndent = 108 };
+
+        var line = Assert.Single(Set(new RichDocument([paragraph]), 2 * Column));
+
+        Assert.Equal(216, line.PictureX, 6);
+    }
+
+    [Fact]
+    public void ThePicturesAtTheEnd_AreNotBlankLinesToBeCut()
+    {
+        var document = new RichDocument([new RichParagraph(TextAlign.Left, [new RichRun("a", default)]), RichParagraph.OfPicture(Picture(0.5))]);
+
+        Assert.Equal(2, Set(document, 400).Count);
     }
 
     [Fact]

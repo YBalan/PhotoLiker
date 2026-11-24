@@ -5,6 +5,7 @@
     <ProjectReference Include="..\PhotoLiker.Drawing\PhotoLiker.Drawing.csproj" />
     <ProjectReference Include="..\PhotoLiker.Effects\PhotoLiker.Effects.csproj" />
     <ProjectReference Include="..\PhotoLiker.Imaging\PhotoLiker.Imaging.csproj" />
+    <ProjectReference Include="..\PhotoLiker.Manuscripts\PhotoLiker.Manuscripts.csproj" />
     <ProjectReference Include="..\PhotoLiker.GenerateVideo\PhotoLiker.GenerateVideo.csproj" />
     <ProjectReference Include="..\PhotoLiker.PhotoBook\PhotoLiker.PhotoBook.csproj" />
     <ProjectReference Include="..\PhotoLiker.Search\PhotoLiker.Search.csproj" />

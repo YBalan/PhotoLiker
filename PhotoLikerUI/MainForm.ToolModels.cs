@@ -16,6 +16,15 @@ namespace PhotoLikerUI
         private readonly HashSet<string> _toolModelsVerified = [];         // "id|size|time" of the files that were found to be the ones that were tested
         private readonly CancellationTokenSource _toolModelStop = new();
 
+        /// <summary>Raised with what the status bar says about a model that is asked for, downloaded, ready or failed, for a window that covers the status bar and wants to show it (Scan manuscripts).</summary>
+        internal event Action<string>? ToolModelStatus;
+
+        private void SetToolModelStatus(string text)
+        {
+            SetStatus(text);
+            ToolModelStatus?.Invoke(text);
+        }
+
         /// <summary>Asked before a model is downloaded. A test answers it.</summary>
         protected virtual bool ConfirmToolModelDownload(string feature, ToolModel model) =>
             MessageBox.Show(this, string.Format(ToolModelStrings.DownloadQuestionFormat, feature, model.Title, model.Megabytes, model.Origin, new Uri(model.File.Url).Host),
@@ -130,7 +139,7 @@ namespace PhotoLikerUI
             {
                 lock (_toolModelGate)
                     _toolModelsDeclined.Add(model.Id);
-                SetStatus(string.Format(ToolModelStrings.StatusDeclinedFormat, model.Title));
+                SetToolModelStatus(string.Format(ToolModelStrings.StatusDeclinedFormat, model.Title));
                 return false;
             }
 
@@ -141,11 +150,11 @@ namespace PhotoLikerUI
                 var progress = new Progress<DownloadProgress>(p =>
                 {
                     if (!IsDisposed)
-                        SetStatus(string.Format(ToolModelStrings.StatusDownloadingFormat, model.Title, p.Done / 1_000_000, Math.Max(p.Total, model.Megabytes * 1_000_000L) / 1_000_000));
+                        SetToolModelStatus(string.Format(ToolModelStrings.StatusDownloadingFormat, model.Title, p.Done / 1_000_000, Math.Max(p.Total, model.Megabytes * 1_000_000L) / 1_000_000));
                 });
                 await _effects.EnsureDownloadedAsync(model, progress, _toolModelStop.Token);
                 if (!IsDisposed)
-                    SetStatus(string.Format(ToolModelStrings.StatusReadyFormat, model.Title));
+                    SetToolModelStatus(string.Format(ToolModelStrings.StatusReadyFormat, model.Title));
                 return true;
             }
             catch (OperationCanceledException)
@@ -156,7 +165,7 @@ namespace PhotoLikerUI
             {
                 // Whatever went wrong (the network, the disk, a file that is not the one that was tested, something not thought of): this is called from handlers that have nobody to catch an exception
                 if (!IsDisposed)
-                    SetStatus(string.Format(ToolModelStrings.StatusFailedFormat, model.Title, ex.Message));
+                    SetToolModelStatus(string.Format(ToolModelStrings.StatusFailedFormat, model.Title, ex.Message));
                 return false;
             }
         }

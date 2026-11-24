@@ -109,6 +109,64 @@ public sealed class CharacterSetTests
     }
 
     [Fact]
+    public void A_letter_that_is_not_allowed_is_never_taken_the_likeliest_of_the_others_is()
+    {
+        var set = new CharacterSet("a\nb\nc\n"); // 0 nothing, 1 a, 2 b, 3 c, 4 space
+        var allowed = set.Allowing(letter => letter != "b");
+
+        // The model is surest of b in the middle slice, and next surest of c
+        float[] answers =
+        [
+            0.01f, 0.90f, 0.02f, 0.03f, 0.04f,
+            0.01f, 0.02f, 0.60f, 0.30f, 0.07f,
+            0.01f, 0.01f, 0.02f, 0.90f, 0.06f,
+        ];
+
+        Assert.Equal("abc", set.Decode(answers, 3).Text);
+        var (text, confidence) = set.Decode(answers, 3, allowed);
+
+        Assert.Equal("ac", text); // b is not allowed: c is taken in its place, and the c after it is the same answer again
+        Assert.InRange(confidence, 0.5f, 1f);
+    }
+
+    [Fact]
+    public void Nothing_and_the_space_cannot_be_forbidden_away_the_model_has_to_be_able_to_say_nothing()
+    {
+        var set = new CharacterSet("a\nb\n");
+
+        var allowed = set.Allowing(_ => false);
+
+        Assert.True(allowed[0]);
+        Assert.False(allowed[1]);
+        Assert.Equal(string.Empty, set.Decode(new float[] { 0.1f, 0.8f, 0.05f, 0.05f }, 1, allowed).Text);
+    }
+
+    [Fact]
+    public void The_allowed_letters_must_be_one_for_each_answer()
+    {
+        var set = new CharacterSet("a\nb\n");
+
+        Assert.Throws<ArgumentException>(() => set.Decode(new float[4], 1, new bool[3]));
+    }
+
+    [Fact]
+    public void A_language_keeps_the_east_slavic_reader_from_the_letters_it_does_not_have()
+    {
+        var set = CharacterSet.EastSlavic;
+        var ukrainian = set.Allowing(letter => !"ыэъё".Contains(letter));
+
+        var answers = new float[set.Count];
+        var yeru = Enumerable.Range(1, set.Count - 2).First(i => set.Decode(Answers(set.Count, i), 1).Text == "ы");
+        var ukrainianI = Enumerable.Range(1, set.Count - 2).First(i => set.Decode(Answers(set.Count, i), 1).Text == "и");
+        answers[yeru] = 0.7f;
+        answers[ukrainianI] = 0.2f;
+        answers[0] = 0.1f;
+
+        Assert.Equal("ы", set.Decode(answers, 1).Text);
+        Assert.Equal("и", set.Decode(answers, 1, ukrainian).Text);
+    }
+
+    [Fact]
     public void The_dictionary_that_comes_with_the_program_fits_the_model_and_has_the_ukrainian_letters()
     {
         var set = CharacterSet.EastSlavic;

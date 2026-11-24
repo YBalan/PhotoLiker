@@ -123,6 +123,7 @@ namespace PhotoLikerUI
             ApplyVideoToGifLanguage();
             ApplyStickerLanguage();
             ApplyDrawingLanguage();
+            ApplyManuscriptLanguage();
             ApplyVideoSpeechLanguage();
             ApplyColorizeLanguage();
             ApplyRefocusLanguage();

@@ -32,6 +32,16 @@ namespace PhotoLiker.Drawing.Ocr
         /// <summary>How many answers the model gives for each slice: "nothing", every letter, and the space.</summary>
         public int Count => _symbols.Length;
 
+        /// <summary>For each answer of the model, whether <paramref name="allow"/> accepts its character; "nothing" (the first answer) is always allowed, the model has to be able to say it.</summary>
+        public bool[] Allowing(Func<string, bool> allow)
+        {
+            var allowed = new bool[_symbols.Length];
+            allowed[0] = true;
+            for (var i = 1; i < _symbols.Length; i++)
+                allowed[i] = allow(_symbols[i]);
+            return allowed;
+        }
+
         private static CharacterSet FromResource(string name)
         {
             using var stream = typeof(CharacterSet).Assembly.GetManifestResourceStream(name) ?? throw new InvalidOperationException($"The dictionary {name} is not in the program.");
@@ -43,8 +53,12 @@ namespace PhotoLiker.Drawing.Ocr
         /// The text that the answers of the model make, and how sure it is (the mean of how likely the letters that were taken are). <paramref name="answers"/> is slices by <see cref="Count"/> numbers;
         /// a model that gives scores that are not chances (that do not add up to one for a slice) is turned into chances first.
         /// </summary>
-        public (string Text, float Confidence) Decode(ReadOnlySpan<float> answers, int slices)
+        /// <param name="allowed">For each answer, whether the model may take it (see <see cref="Allowing"/>); null for all. The likeliest answer of the ones that are allowed is the one that is taken.</param>
+        public (string Text, float Confidence) Decode(ReadOnlySpan<float> answers, int slices, bool[]? allowed = null)
         {
+            if (allowed is not null && allowed.Length != Count)
+                throw new ArgumentException($"{Count} answers can be allowed or not, not {allowed.Length}.", nameof(allowed));
+
             if (answers.Length != slices * Count)
                 throw new ArgumentException($"{slices} slices of {Count} answers are {slices * Count} numbers, not {answers.Length}.", nameof(answers));
 
@@ -57,22 +71,23 @@ namespace PhotoLiker.Drawing.Ocr
                 var row = answers.Slice(t * Count, Count);
                 var best = 0;
                 var sum = 0f;
+                var largest = row[0];
                 for (var c = 0; c < row.Length; c++)
                 {
                     sum += row[c];
-                    if (row[c] > row[best])
-                        best = c;
+                    largest = Math.Max(largest, row[c]);
+                    if ((allowed is null || allowed[c]) && row[c] > row[best])
+                        best = c; // the answer 0 is where it starts and is always allowed
                 }
 
                 // A softmax adds up to one; anything else is scores that have to be made into chances (their largest is the likeliest the same way)
                 var chance = row[best];
                 if (sum is < 0.98f or > 1.02f)
                 {
-                    var largest = row[best];
                     double total = 0;
                     for (var c = 0; c < row.Length; c++)
                         total += Math.Exp(row[c] - largest);
-                    chance = (float)(1 / total);
+                    chance = (float)(Math.Exp(row[best] - largest) / total);
                 }
 
                 if (best != 0 && best != last)

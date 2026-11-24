@@ -37,6 +37,14 @@ internal sealed class BookFiles : IDisposable
             name);
     }
 
+    /// <summary>A picture with a see-through background (a PNG of 40 by 30), which is a paragraph of the text of a page.</summary>
+    public static RichParagraph Picture(double share = 0.5, TextAlign align = TextAlign.Center) =>
+        RichParagraph.OfPicture(RichPicture.FromFile(TestImages.SeeThroughPng(40, 30), share)!, align);
+
+    /// <summary>A text as paragraphs of plain text, each a line, with pictures among them: a string is a line of text, a paragraph is kept as it is.</summary>
+    public static RichDocument Text(params object[] parts) =>
+        new([.. parts.Select(part => part as RichParagraph ?? new RichParagraph(TextAlign.Left, [new RichRun((string)part, default)]))]);
+
     public BookPage Page(string name, RichDocument above, RichDocument below, bool portrait = false) =>
         Page(name, portrait: portrait) with { Above = above, Below = below };
 }

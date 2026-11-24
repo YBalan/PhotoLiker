@@ -28,6 +28,8 @@ namespace PhotoLikerUI
         private readonly ToolStripButton _right = new();
         private readonly ToolStripButton _justify = new();
         private readonly ToolStripButton _clear = new();
+        private readonly ToolStripSeparator _fixSeparator = new() { Available = false };
+        private readonly ToolStripButton _fix = new() { Name = "fixTextButton", Available = false };
         private bool _updatingTools;
         private Color _lastColor = Color.Red;
 
@@ -98,7 +100,13 @@ namespace PhotoLikerUI
             _clear.DisplayStyle = ToolStripItemDisplayStyle.Text;
             _clear.Click += (_, _) => ClearFormatting();
 
-            _tools.Items.AddRange([_bold, _italic, _underline, _strike, new ToolStripSeparator(), _size, _color, new ToolStripSeparator(), _left, _center, _right, _justify, new ToolStripSeparator(), _clear]);
+            // The button of the AI (a host that has something to correct the text with shows it, see FixVisible): it only says it was pressed
+            _fix.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            _fix.AutoToolTip = false;
+            _fix.Image = SparklePicture(false);
+            _fix.Click += (_, _) => FixRequested?.Invoke(this, EventArgs.Empty);
+
+            _tools.Items.AddRange([_bold, _italic, _underline, _strike, new ToolStripSeparator(), _size, _color, new ToolStripSeparator(), _left, _center, _right, _justify, new ToolStripSeparator(), _clear, _fixSeparator, _fix]);
 
             Controls.Add(_box);
             Controls.Add(_tools);
@@ -108,6 +116,20 @@ namespace PhotoLikerUI
         /// <summary>Raised when the text or its look changes.</summary>
         public new event EventHandler? TextChanged;
 
+        /// <summary>Raised when the AI button is pressed (it is shown when <see cref="FixVisible"/> is true).</summary>
+        public event EventHandler? FixRequested;
+
+        /// <summary>The button of the AI that corrects the text: the host words its tip.</summary>
+        public ToolStripButton FixButton => _fix;
+
+        /// <summary>Whether the AI button is shown at the end of the buttons (a book's descriptions have none).</summary>
+        [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public bool FixVisible
+        {
+            get => _fix.Available; // what was set, whether or not the window is on the screen yet
+            set => _fix.Available = _fixSeparator.Available = value;
+        }
+
         /// <summary>The text as RTF.</summary>
         [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Rtf
@@ -115,13 +137,26 @@ namespace PhotoLikerUI
             get => _box.Rtf ?? string.Empty;
             set
             {
-                // Not RTF (an empty text, or plain text): it is put in as it is; the text typed after it is in the look of the box
-                if (string.IsNullOrWhiteSpace(value))
-                    _box.Clear();
-                else if (value.AsSpan().TrimStart().StartsWith(@"{\rtf", StringComparison.Ordinal))
-                    _box.Rtf = value;
-                else
-                    _box.Text = value;
+                // A box that cannot be edited (a scan is at work on it) takes no picture from RTF, which it takes as an object put into the text: it can be edited while the text is put in
+                var readOnly = _box.ReadOnly;
+                if (readOnly)
+                    _box.ReadOnly = false;
+
+                try
+                {
+                    // Not RTF (an empty text, or plain text): it is put in as it is; the text typed after it is in the look of the box
+                    if (string.IsNullOrWhiteSpace(value))
+                        _box.Clear();
+                    else if (value.AsSpan().TrimStart().StartsWith(@"{\rtf", StringComparison.Ordinal))
+                        _box.Rtf = value;
+                    else
+                        _box.Text = value;
+                }
+                finally
+                {
+                    if (readOnly)
+                        _box.ReadOnly = true;
+                }
 
                 UpdateTools(); // the buttons show the look of the text at the start of what was put in
             }
@@ -130,8 +165,8 @@ namespace PhotoLikerUI
         /// <summary>The text of the box with nothing of its look.</summary>
         public string PlainText => _box.Text;
 
-        /// <summary>True when there is no text, or only blanks.</summary>
-        public bool IsEmpty => string.IsNullOrWhiteSpace(_box.Text);
+        /// <summary>True when there is no text, or only blanks, and no picture (the text of a box shows a picture as a blank).</summary>
+        public bool IsEmpty => string.IsNullOrWhiteSpace(_box.Text) && !(_box.TextLength > 0 && (_box.Rtf ?? string.Empty).Contains(@"\pict", StringComparison.Ordinal));
 
         public RichTextBox Box => _box;
 
@@ -159,6 +194,10 @@ namespace PhotoLikerUI
                 button.Image = AlignmentPicture(alignment, dark ? ThemeManager.DarkFore : SystemColors.ControlText);
                 old?.Dispose();
             }
+
+            var oldSparkle = _fix.Image;
+            _fix.Image = SparklePicture(dark);
+            oldSparkle?.Dispose();
 
             _tools.BackColor = dark ? ThemeManager.DarkBackAlt : ThemeManager.LightBack;
             _tools.ForeColor = dark ? ThemeManager.DarkFore : ThemeManager.LightFore;
@@ -245,6 +284,62 @@ namespace PhotoLikerUI
             }
 
             return bitmap;
+        }
+
+        /// <summary>The picture of the AI button: a big four-pointed star with two small ones, the way an AI is drawn; in violet, a lighter one on the dark theme.</summary>
+        private static Bitmap SparklePicture(bool dark)
+        {
+            var bitmap = new Bitmap(16, 16);
+            using var graphics = Graphics.FromImage(bitmap);
+            graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using var big = new SolidBrush(dark ? Color.FromArgb(190, 160, 255) : Color.FromArgb(110, 60, 200));
+            using var small = new SolidBrush(dark ? Color.FromArgb(255, 205, 90) : Color.FromArgb(225, 150, 20));
+            Star(graphics, big, 6.2f, 9.2f, 6f);
+            Star(graphics, small, 12.8f, 3.4f, 3f);
+            Star(graphics, small, 13f, 12.8f, 2.2f);
+            return bitmap;
+        }
+
+        /// <summary>A star of four points with hollow sides, <paramref name="radius"/> from its centre to a point.</summary>
+        private static void Star(Graphics graphics, Brush brush, float x, float y, float radius)
+        {
+            var waist = radius * 0.28f;
+            PointF[] points =
+            [
+                new(x, y - radius), new(x + waist, y - waist), new(x + radius, y), new(x + waist, y + waist),
+                new(x, y + radius), new(x - waist, y + waist), new(x - radius, y), new(x - waist, y - waist),
+            ];
+            graphics.FillPolygon(brush, points);
+        }
+
+        /// <summary>
+        /// Replaces words of the text, from the last to the first so that the places of the others stay right, and keeps the look of the rest: a replaced word has the look of its first letter. A box that
+        /// cannot be edited (the host is working on it) takes them too: the changes are made by the program, not typed. The caret stays where it was.
+        /// </summary>
+        public void ApplyEdits(IEnumerable<PhotoLiker.Manuscripts.TextEdit> edits)
+        {
+            var ordered = edits.OrderByDescending(edit => edit.Index).ToList();
+            if (ordered.Count == 0)
+                return;
+
+            var caret = _box.SelectionStart;
+            SendMessage(_box.Handle, WM_SETREDRAW, 0, 0);
+            using var undo = new UndoGroup(_box); // one Ctrl+Z takes all the changes back
+            try
+            {
+                foreach (var edit in ordered)
+                {
+                    _box.Select(edit.Index, edit.Length);
+                    _box.SelectedText = edit.Replacement;
+                }
+
+                _box.Select(Math.Min(caret, _box.TextLength), 0);
+            }
+            finally
+            {
+                SendMessage(_box.Handle, WM_SETREDRAW, 1, 0);
+                _box.Invalidate();
+            }
         }
 
         // ── The look of the text ────────────────────────────────────────────
@@ -393,7 +488,7 @@ namespace PhotoLikerUI
             _color.DropDownItems.Add(more);
         }
 
-        /// <summary>Takes the formatting off what is picked (the whole text when nothing is): the plain look, the usual size, left.</summary>
+        /// <summary>Takes the formatting off what is picked (the whole text when nothing is): the plain look, the usual size, left, no indent.</summary>
         internal void ClearFormatting()
         {
             if (_box.SelectionLength == 0)
@@ -401,6 +496,8 @@ namespace PhotoLikerUI
 
             _box.SelectionFont = new Font(EditorFamily, (float)RichStyle.DefaultSize, FontStyle.Regular);
             _box.SelectionColor = Color.Black;
+            _box.SelectionIndent = 0;
+            _box.SelectionHangingIndent = 0;
             SetAlignment(RichAlignment.Left);
             _box.Focus();
             UpdateTools();
@@ -507,6 +604,95 @@ namespace PhotoLikerUI
             SendMessage(_box.Handle, EM_SETPARAFORMAT, 0, ref format);
             UpdateTools();
             TextChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        // ── One step of undo for many changes ───────────────────────────────
+
+        private const int EM_GETOLEINTERFACE = 0x043C;
+
+        /// <summary>
+        /// The Text Object Model of Rich Edit, which can group the changes that are made while a group is open into one step of Undo. Only the two methods that are used are given their names; the
+        /// others are there to keep their places in the table of methods of the interface.
+        /// </summary>
+        [ComImport, Guid("8CC497C0-A1DF-11CE-8098-00AA0047BE5D"), InterfaceType(ComInterfaceType.InterfaceIsDual)]
+        private interface ITextDocument
+        {
+            void GetName();
+            void GetSelection();
+            void GetStoryCount();
+            void GetStoryRanges();
+            void GetSaved();
+            void SetSaved();
+            void GetDefaultTabStop();
+            void SetDefaultTabStop();
+            void New();
+            void Open();
+            void Save();
+            void Freeze();
+            void Unfreeze();
+
+            [PreserveSig]
+            int BeginEditCollection();
+
+            [PreserveSig]
+            int EndEditCollection();
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr window, int message, IntPtr wParam, out IntPtr lParam);
+
+        /// <summary>
+        /// While it is open, what is done to the text of the box is one step of Undo (a fix with thirty words changed is taken back by one Ctrl+Z, not thirty). When the box has no Text Object Model to
+        /// ask, the changes are separate steps, as they are without a group.
+        /// </summary>
+        private sealed class UndoGroup : IDisposable
+        {
+            private ITextDocument? _document;
+
+            public UndoGroup(RichTextBox box)
+            {
+                IntPtr ole = IntPtr.Zero, document = IntPtr.Zero;
+                try
+                {
+                    SendMessage(box.Handle, EM_GETOLEINTERFACE, IntPtr.Zero, out ole);
+                    var id = typeof(ITextDocument).GUID;
+                    if (ole == IntPtr.Zero || Marshal.QueryInterface(ole, in id, out document) != 0 || document == IntPtr.Zero)
+                        return;
+
+                    var opened = (ITextDocument)Marshal.GetObjectForIUnknown(document);
+                    if (opened.BeginEditCollection() == 0)
+                        _document = opened;
+                    else
+                        Marshal.ReleaseComObject(opened);
+                }
+                catch (Exception ex) when (ex is COMException or InvalidCastException or MarshalDirectiveException)
+                {
+                    _document = null; // no group: the changes are steps of their own
+                }
+                finally
+                {
+                    if (document != IntPtr.Zero)
+                        Marshal.Release(document);
+                    if (ole != IntPtr.Zero)
+                        Marshal.Release(ole);
+                }
+            }
+
+            public void Dispose()
+            {
+                if (_document is not { } open)
+                    return;
+
+                _document = null;
+                try
+                {
+                    open.EndEditCollection();
+                }
+                finally
+                {
+                    Marshal.ReleaseComObject(open);
+                }
+            }
         }
     }
 }
