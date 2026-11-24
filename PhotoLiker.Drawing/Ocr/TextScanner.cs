@@ -23,6 +23,12 @@ namespace PhotoLiker.Drawing.Ocr
         public int MaximumLines { get; init; } = 300;
 
         public FinderSettings Finder { get; init; } = new();
+
+        /// <summary>
+        /// Which characters the reader may answer with (it is asked about each of its characters, as written: a letter, a digit, a mark); null for all of them. A language of the text is
+        /// a limit like this: Ukrainian text has no "ы" and English text no Cyrillic, so the reader cannot choose them, whatever the writing looks like.
+        /// </summary>
+        public Func<string, bool>? AllowCharacter { get; init; }
     }
 
     /// <summary>
@@ -32,15 +38,13 @@ namespace PhotoLiker.Drawing.Ocr
     /// </summary>
     public sealed class TextScanner : IDisposable
     {
-        private static readonly float[] FinderMean = [0.485f, 0.456f, 0.406f];
-        private static readonly float[] FinderDeviation = [0.229f, 0.224f, 0.225f];
         private static readonly float[] ReaderMean = [0.5f, 0.5f, 0.5f];
         private static readonly float[] ReaderDeviation = [0.5f, 0.5f, 0.5f];
 
-        private readonly InferenceSession _finder;
+        private readonly TextFinder _finder;
         private readonly InferenceSession _reader;
-        private readonly string _finderInput;
         private readonly string _readerInput;
+        private readonly bool[]? _allowed;
         private readonly CharacterSet _characters;
         private readonly ScanSettings _settings;
         private readonly object _gate = new();
@@ -54,31 +58,18 @@ namespace PhotoLiker.Drawing.Ocr
 
         internal TextScanner(string finderPath, string readerPath, CharacterSet characters, int threads, ScanSettings? settings)
         {
-            foreach (var path in new[] { finderPath, readerPath })
-            {
-                if (!File.Exists(path))
-                    throw new FileNotFoundException("A model that reads text is not on this computer.", path);
-            }
+            // The finder checks its own file; the first model that is not there is the one that is named
+            if (!File.Exists(finderPath))
+                throw new FileNotFoundException("A model that reads text is not on this computer.", finderPath);
+            if (!File.Exists(readerPath))
+                throw new FileNotFoundException("A model that reads text is not on this computer.", readerPath);
 
             _characters = characters;
             _settings = settings ?? new ScanSettings();
-            _finder = Open(finderPath, threads);
-            _reader = Open(readerPath, threads);
-            _finderInput = _finder.InputMetadata.Keys.First();
+            _allowed = _settings.AllowCharacter is { } allow ? characters.Allowing(allow) : null;
+            _finder = new TextFinder(finderPath, threads);
+            _reader = OnnxSessions.Open(readerPath, threads);
             _readerInput = _reader.InputMetadata.Keys.First();
-        }
-
-        private static InferenceSession Open(string path, int threads)
-        {
-            using var options = new SessionOptions { GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL, LogSeverityLevel = OrtLoggingLevel.ORT_LOGGING_LEVEL_ERROR };
-            if (threads > 0)
-                options.IntraOpNumThreads = threads;
-            options.AddSessionConfigEntry("session.intra_op.allow_spinning", "0"); // the program has other things to do with the processor
-
-            // No memory arena: with it a session keeps for good what its busiest moment used, and the window that asked for the scan gives the memory back to nobody until the program ends
-            options.EnableCpuMemArena = false;
-            options.EnableMemoryPattern = false;
-            return new InferenceSession(path, options);
         }
 
         /// <summary>
@@ -86,7 +77,8 @@ namespace PhotoLiker.Drawing.Ocr
         /// </summary>
         /// <exception cref="OperationCanceledException">The scan was cancelled.</exception>
         /// <exception cref="ObjectDisposedException">The scanner was let go of.</exception>
-        public ScanResult Scan(Bitmap32 picture, Rectangle? area = null, CancellationToken cancel = default)
+        /// <param name="progress">Told, from the thread that scans, how many lines are read of how many were found.</param>
+        public ScanResult Scan(Bitmap32 picture, Rectangle? area = null, CancellationToken cancel = default, IProgress<(int Done, int Total)>? progress = null)
         {
             ArgumentNullException.ThrowIfNull(picture);
 
@@ -108,12 +100,14 @@ namespace PhotoLiker.Drawing.Ocr
             {
                 ObjectDisposedException.ThrowIf(_disposed, this);
 
-                var boxes = FindLines(picture, cancel);
+                var boxes = _finder.Find(picture, _settings.FinderSide, _settings.Finder, _settings.MaximumLines, cancel);
                 var lines = new List<TextLine>();
+                var done = 0;
                 foreach (var (box, _) in boxes)
                 {
                     cancel.ThrowIfCancellationRequested();
                     var (text, confidence) = Read(picture, box);
+                    progress?.Report((++done, boxes.Count));
                     if (text.Trim().Length == 0 || confidence < _settings.MinimumConfidence)
                         continue;
 
@@ -122,35 +116,6 @@ namespace PhotoLiker.Drawing.Ocr
 
                 return new ScanResult(InReadingOrder(lines));
             }
-        }
-
-        /// <summary>The lines of text in the picture as boxes in its pixels, the surest first.</summary>
-        private List<(TextRegion Box, float Score)> FindLines(Bitmap32 picture, CancellationToken cancel)
-        {
-            var scale = Math.Min(1f, (float)_settings.FinderSide / Math.Max(picture.Width, picture.Height));
-            var width = Math.Max(32, (int)Math.Round(picture.Width * scale / 32f) * 32);
-            var height = Math.Max(32, (int)Math.Round(picture.Height * scale / 32f) * 32);
-
-            var input = Sampler.Resized(picture, width, height, FinderMean, FinderDeviation);
-            cancel.ThrowIfCancellationRequested();
-
-            float[] map;
-            using (var results = _finder.Run([NamedOnnxValue.CreateFromTensor(_finderInput, new DenseTensor<float>(input, [1, 3, height, width]))]))
-            {
-                var output = results.First().AsTensor<float>();
-                map = output.ToArray();
-                if (map.Length != width * height)
-                    throw new InvalidDataException($"The model gave {map.Length} numbers for a picture of {width} by {height}.");
-            }
-
-            cancel.ThrowIfCancellationRequested();
-            var scaleX = (float)picture.Width / width;
-            var scaleY = (float)picture.Height / height;
-            return LineFinder.Find(map, width, height, _settings.Finder)
-                .OrderByDescending(found => found.Score)
-                .Take(_settings.MaximumLines)
-                .Select(found => (found.Box.Transformed(scaleX, scaleY, 0, 0), found.Score))
-                .ToList();
         }
 
         /// <summary>What one line of text says, and how sure the reader is.</summary>
@@ -163,7 +128,7 @@ namespace PhotoLiker.Drawing.Ocr
             if (dimensions.Length != 3 || dimensions[2] != _characters.Count)
                 throw new InvalidDataException($"The reading model gives {string.Join(" by ", dimensions.ToArray())} answers; {_characters.Count} for each slice of a line were expected.");
 
-            return _characters.Decode(output.ToArray(), dimensions[1]);
+            return _characters.Decode(output.ToArray(), dimensions[1], _allowed);
         }
 
         /// <summary>The lines as they are read: from the top; the lines that are on one row of the picture from its left.</summary>

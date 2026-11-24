@@ -62,15 +62,16 @@ public sealed class DrawingIntegrationTests : IDisposable
     // ── The main window ─────────────────────────────────────────────────────
 
     [Fact]
-    public void TheDrawButton_IsTheLastButtonOfTheToolbar_AfterTheTelegramSticker()
+    public void TheDrawButton_IsTheSecondToLastButtonOfTheToolbar_AfterTheTelegramSticker_AndBeforeScanManuscripts()
     {
         Ui.Run(() => new MainForm(), async form =>
         {
             var toolbar = Ui.Controls<ToolStrip>(form).Single(strip => strip is not StatusStrip && strip.Items.Cast<ToolStripItem>().Any(item => item.Name == "colorizeToolStripButton"));
             var names = toolbar.Items.Cast<ToolStripItem>().Select(item => item.Name).ToList();
 
-            Assert.Equal("drawToolStripButton", names[^1]);
-            Assert.Equal("stickerToolStripButton", names[^2]);
+            Assert.Equal("manuscriptToolStripButton", names[^1]);
+            Assert.Equal("drawToolStripButton", names[^2]);
+            Assert.Equal("stickerToolStripButton", names[^3]);
             var button = toolbar.Items["drawToolStripButton"]!;
             Assert.Equal(DrawingStrings.ButtonText, button.Text);
             Assert.Equal(DrawingStrings.ButtonTooltip, button.ToolTipText);

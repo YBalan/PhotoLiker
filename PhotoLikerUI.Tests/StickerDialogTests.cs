@@ -901,9 +901,10 @@ public sealed class StickerDialogTests : IDisposable
         {
             var names = Toolbar(form).Items.Cast<ToolStripItem>().Select(item => item.Name).ToList();
 
-            Assert.Equal("drawToolStripButton", names[^1]);
-            Assert.Equal("stickerToolStripButton", names[^2]);
-            Assert.Equal("videoToGifToolStripButton", names[^3]);
+            Assert.Equal("manuscriptToolStripButton", names[^1]);
+            Assert.Equal("drawToolStripButton", names[^2]);
+            Assert.Equal("stickerToolStripButton", names[^3]);
+            Assert.Equal("videoToGifToolStripButton", names[^4]);
             var button = Toolbar(form).Items["stickerToolStripButton"]!;
             Assert.Equal(StickerStrings.ButtonText, button.Text);
             Assert.Equal(StickerStrings.ButtonTooltip, button.ToolTipText);

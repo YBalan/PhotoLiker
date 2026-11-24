@@ -43,6 +43,7 @@
     <li><a href="#gif">Making a GIF of a video</a></li>
     <li><a href="#sticker">Making a Telegram sticker</a></li>
     <li><a href="#draw">Drawing on a photo and reading its text</a></li>
+    <li><a href="#manuscripts">Reading handwritten and printed pages</a></li>
     <li><a href="#videos">Videos in the folder</a></li>
     <li><a href="#theme">Dark and light theme</a></li>
     <li><a href="#files">What PhotoLiker keeps, and where</a></li>
@@ -241,6 +242,7 @@ photo again.</p></div>
     <tr><td><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd></td><td>Rotate the photo a quarter clockwise / counterclockwise and save it (see <a href="#rotate">Rotating photos</a>).</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>Change the date of the shown file in a small dialog: the <strong>Date Taken (Original)</strong> of a JPEG photo (the dates of its file follow it) or <strong>Recorded</strong> of a video (written into the video, and the dates of its file follow). It is the same dialog and the same saving as the <strong>...</strong> of that row in the metadata grid. A file of another kind has no date to change and the status bar says so. Not in the slideshow.</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></td><td>Open the <a href="#draw">Draw</a> window for the shown photo: draw on it, write text on it, crop it, scan the text in it. A video cannot be drawn on. Not in the slideshow.</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></td><td>Open the <a href="#manuscripts">Scan manuscripts</a> window, starting with the shown photo as its first page: read handwritten or printed pages into text beside the photo, correct it, turn the photos, save the text as a PDF or an EPUB. Not in the slideshow.</td></tr>
     <tr><td><kbd>Ctrl</kbd>+mouse wheel</td><td>Over the photo: zoom, then drag to move the picture. Over the thumbnails: change their size.</td></tr>
     <tr><td><kbd>Enter</kbd></td><td>On a video: play it, or pause / resume it (see <a href="#videos">Videos in the folder</a>). A click on the poster plays it, a click on the playing picture pauses it.</td></tr>
     <tr><td><kbd>Shift</kbd>+<kbd>→</kbd> / <kbd>←</kbd>, <kbd>Ctrl</kbd>+<kbd>→</kbd> / <kbd>←</kbd></td><td>While a video plays: 5 seconds / 30 seconds ahead or back.</td></tr>
@@ -287,7 +289,8 @@ and hide them again; that is kept for the next start. If the window is too low f
   <li><strong>Trace bitmap</strong> (an orange tile with a curve and two nodes; after Make a book): turn the photo that is shown into a vector drawing, an SVG or a DXF file of a size in millimetres, see <a href="#trace">Tracing a photo into a vector drawing</a>.</li>
   <li><strong>Video to GIF</strong> (a violet tile with a play triangle and a round arrow; after Trace bitmap): make an animated GIF of a part of a video, to paste in a README, a chat or a page, see <a href="#gif">Making a GIF of a video</a>.</li>
   <li><strong>Telegram sticker</strong> (a blue face on a white die-cut sticker with a peeling corner; after Video to GIF): cut the subject out of the photo that is shown and save it as a sticker for Telegram, a WebP or PNG of 512 pixels with a see-through background, see <a href="#sticker">Making a Telegram sticker</a>.</li>
-  <li><strong>Draw</strong> (a pencil that has just drawn a red curve; the very last button): draw on the photo that is shown, write text on it, crop it and scan the text in it, see <a href="#draw">Drawing on a photo and reading its text</a>. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> does the same.</li>
+  <li><strong>Draw</strong> (a pencil that has just drawn a red curve; after Telegram sticker): draw on the photo that is shown, write text on it, crop it and scan the text in it, see <a href="#draw">Drawing on a photo and reading its text</a>. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> does the same.</li>
+  <li><strong>Scan manuscripts</strong> (a sheet of paper with lines of blue handwriting and a green check mark; the very last button): read handwritten or printed pages into text you can correct beside the photo, and save it as a PDF or an EPUB, see <a href="#manuscripts">Reading handwritten and printed pages</a>. <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> does the same.</li>
 </ul>
 
 <h3>The Properties panel</h3>
@@ -1067,7 +1070,7 @@ downloaded:</em> the whole picture is used; check the connection and pick <em>Fi
 
 <h2 id="draw">23. Drawing on a photo and reading its text</h2>
 
-<p>The <strong>Draw</strong> button (a pencil that has just drawn a red curve; the very last button of the toolbar, after <strong>Telegram sticker</strong>) or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> opens a window to
+<p>The <strong>Draw</strong> button (a pencil that has just drawn a red curve; after <strong>Telegram sticker</strong>, before <strong>Scan manuscripts</strong>) or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> opens a window to
 <strong>draw on the photo that is shown</strong>, write text on it, crop it and <strong>scan the text in it</strong>, the way the editor of the Windows Snipping Tool works. The window opens around the photo and
 shows it as large as the window lets it be, never larger than it is; it follows the dark theme. A video cannot be drawn on. The <a href="#book">Make a book</a> window opens the same window for any of its photos.</p>
 
@@ -1121,7 +1124,78 @@ nothing is scanned; check the connection and press <em>Scan text</em> again. <em
 
 <!-- ─────────────────────────────────────────────────────────── -->
 
-<h2 id="videos">24. Videos in the folder</h2>
+<h2 id="manuscripts">24. Reading handwritten and printed pages</h2>
+
+<p>The <strong>Scan manuscripts</strong> button (a sheet of paper with lines of blue handwriting and a green check mark; the very last button of the toolbar, after <strong>Draw</strong>) or
+<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> opens a window that <strong>reads handwritten and printed pages into text</strong>. You read the text beside the photo and correct it, the program keeps your work with the folder so that you can go on another day, and the text
+becomes a <strong>PDF or an EPUB</strong>. It is made for what a family has in notebooks and letters: to read them, search them, print them and keep them. The pages are <strong>all the photos that are loaded</strong>, as in the <a href="#book">book</a> window (videos and files that are not pictures are left out), and the photo that is shown is open. The window follows the dark theme.</p>
+
+<figure><img src="images/54-manuscripts.png" alt="The Scan manuscripts window in the dark theme: the list of three pages with thumbnails on the left, the photo of a faded typewritten card with a green or orange box round each line, one line selected in blue and a blue-green outline round a sticker of flowers, and at the right the text of the page laid out like the page, with the sticker cut out and standing in it, between the paragraph and a table of two columns, and the AI button at the end of the buttons of the text" width="1302" height="832"></figure>
+
+<p>(The page in the picture was made for this manual: a <strong>faded typewritten card in English</strong>, with a sticker drawn on it and a table of two columns, read as printed text, because English handwriting is not read well, see the end of this section. The reader misread nine words (the orange boxes are where it was least sure); then the <strong>AI button was pressed: it put seven right</strong> and left two, as the status line says. The text at the right is laid out like the page: the heading and the first line of the paragraph are indented, the sticker stands between the paragraph and the table, and a tab separates the two columns of the table.)</p>
+
+<ol class="steps">
+  <li>
+    <strong>Add the pages.</strong> All the photos that are loaded are pages already (at most 1,000: a folder of more is a folder of photos, not of a manuscript); the window opens at once, however many there are, and the thumbnails are read in the background, for the pages you can see. <em>Add pages...</em> takes more photos from files (they are put in the order of their names). The list at the left shows each page with a thumbnail and a mark: nothing (not scanned yet),
+    a check mark (scanned, not changed) or a pencil (you changed the text). <em>Remove</em> takes a page out of the manuscript (it asks first when the page has text; the photo file is not touched; the page stays out when you open the window again, until <em>Add pages...</em> brings it back) and the two arrows move it up or down.
+  </li>
+  <li>
+    <strong>Say what is written.</strong> <em>Writing</em> is <em>Handwriting</em> or <em>Printed text</em>; <em>Language</em> is <em>Ukrainian</em>, <em>Russian</em>, <em>English</em> or <em>Multilanguage</em> (a page with Ukrainian, Russian and English together, like a vocabulary table), for both. The language keeps out the letters it does not have
+    (no <em>ы</em> in Ukrainian, no <em>і</em> in Russian, no Cyrillic in English; <em>Multilanguage</em> keeps nothing out). There is no model of English handwriting: English and mixed pages are read by the Ukrainian one, which knows the Latin letters but was not trained on English, so expect them to read worse. <strong>The kind of writing and the language each page was scanned in are remembered, and picked again in the two boxes when you open the page.</strong>
+  </li>
+  <li>
+    <strong>Scan.</strong> <em>Scan page</em> reads the page that is open; <em>Scan all pages</em> reads, one after the other, every page that has no text yet and leaves the others as they are; <em>Stop</em> ends it after the line that is being read. The first time the program asks once whether to download the
+    models (what they are, how big, where they come from); they run on this computer, so the photos go nowhere. A page of 20 lines takes a few seconds. The text is <strong>laid out like the page</strong>: a line that starts further in than the others is indented as far as it is on the page, lines side by side on a row (the columns of a table) are one line with a tab between them, and a blank line stands where the page has more room than usual. A box is drawn round each line on the photo: <strong>green where the reader is sure, orange where it is not, red where it hardly is</strong>. Look at the orange and the red ones first.
+    <em>Show lines</em> turns the boxes off and on. <em>Find pictures when scanning</em> (under the text, on unless you turn it off) looks for the pictures on the pages too, see below.
+  </li>
+  <li>
+    <strong>Read the photo against the text.</strong> The wheel of the mouse zooms the photo, dragging moves it, a double-click fits it to the window. <strong>A click on a box selects its row in the text</strong>, and the cursor in a row of the text selects its box on the photo (as long as the text has one line for each row of the photo). The pictures and the blank lines are no rows.
+    The text is a box with the tools of the <a href="#book">book</a> window: bold, italic, underline, strike-through, size, colour and alignment (<em>T✕</em> takes the formatting off, the indents too). Type over what is wrong, or let the AI do it, see below.
+  </li>
+  <li>
+    <strong>Join the lines.</strong> <em>Join lines</em> makes one line of each paragraph: a line break between two lines becomes a space, a blank line stays where it is (the scan puts one wherever the page has more room than usual between two lines), a word that is split by a hyphen at the end of a line is joined.
+    It works on the selected text, or on all of it when nothing is selected, and the look of the text stays.
+  </li>
+  <li>
+    <strong>Fix the text with AI.</strong> The button with the stars at the right end of the buttons of the text corrects what the scan misread, with <strong>a language model that runs on this computer</strong> (Qwen2.5 1.5B Instruct): nothing leaves it. It works on the selected text, or on all of it when nothing is selected, a paragraph at a time; <em>Stop</em> ends it and changes nothing.
+    The first time the program asks once whether to download the model (1.8 GB, and its list of words, 7 MB). <strong>What the model answers is not taken as the text</strong>: only a word that it put in the place of a word that is much like it (the way a scan misreads) is taken, so the lines, the tabs, the indents, the pictures and the numbers stay, and a word it added or lost is ignored.
+    <strong>One <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes all the changes back.</strong> It is sure in English and Russian (<em>lbrary</em> becomes <em>library</em>, <em>гриоов</em> becomes <em>грибов</em>; on the card above it put seven of nine right) and less sure in Ukrainian: it mends slips such as <em>недилю</em>, but may give another wrong word for one that is misread beyond recognition.
+    It cannot guess what the scan lost altogether (<em>saths</em> stayed <em>saths</em>), so read what it did against the photo. A page of 100 Ukrainian words takes about a minute.
+  </li>
+  <li>
+    <strong>Turn a photo that lies on its side.</strong> <em>Turn left</em> and <em>Turn right</em> (the two round arrows; <kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd>) <strong>turn the photo itself</strong>, in its file: a JPEG by its Exif (nothing is coded again, the Exif and the date taken stay), another photo by its pixels; the dates of the file are kept.
+    The boxes turn with it, so the page needs no new scan.
+  </li>
+  <li>
+    <strong>Find the pictures.</strong> A page can have a picture on it: a sticker, a drawing, a pasted photo, a stamp. <em>Find pictures</em> looks for them on the page that is open with the model of the <a href="#sticker">Telegram sticker</a> (it draws a contour round what stands out; the lines of text are painted over first, so that only the pictures stand out)
+    and outlines each in blue-green on the photo (<em>Show lines</em> turns the outlines off with the boxes). <strong>Each picture is cut out of the photo along its outline</strong> (what is outside it is see-through) <strong>and put into the text</strong>, between the lines where it is on the page, at the left, in the middle or at the right as it was and as wide as it was.
+    It is part of the text: <strong>delete it, or cut and paste it elsewhere, like a word</strong>, and the book has it where it stands. <em>Find pictures</em> again puts the pictures in again, in place of those that were there. <em>Find pictures when scanning</em> does the same for every page you scan; the first time the program asks to download the model (179 MB, once, the same file as the Telegram sticker),
+    and when you say no the scan goes on with the text only. Pictures in colour and solid are found; a pencil sketch among pencil writing is not.
+  </li>
+  <li>
+    <strong>Make the book.</strong> <em>Save as PDF or EPUB...</em> asks for a name; the extension decides the format. The <em>Title</em> and the <em>Author</em> are on the first page, and the language of the book is the one most of its pages were scanned in. <em>Photo of each page above its text</em> puts the photo of the page in the book (a page with no text is only its photo); without it the book is only the text, with the pictures that stand in it, indents and tabs as in the text box.
+    <em>Cut each page out of its photo</em> finds the sheet in the photo, takes the desk away and straightens the sheet, so that each page is upright and fills its page in the book. It uses the model of the <a href="#sticker">Telegram sticker</a> (179 MB, downloaded once, if you have not used it already) and takes about two seconds a photo; a photo in which no sheet can be found stays as it was
+    photographed, and the status line says how many did not get cut. <strong>Look at the pages of the book</strong>: a page of an odd shape can come out cut short.
+  </li>
+</ol>
+
+<div class="tip"><p>Everything you do is <strong>kept with the folder</strong> of the photos, in <code>photo-liker-manuscript.json</code>: the pages and their order, what was read, what you typed and how it looks, the boxes of the lines, the outlines of the pictures and the pictures in the text (each a few hundred kilobytes), the kind of writing and the language of each page, the title and the author.
+It is written a second and a half after your last change and when the window closes. Open the window again in the same folder and it is all there. The paths in the file are relative, so the folder can be moved.</p></div>
+
+<p><strong>How well it reads.</strong> The handwriting models were made for pages of the 19th and 20th century and a clean pen line. On their authors' own test pages Ukrainian is read with about 5 in 100 characters wrong. On pages photographed with a phone it read neat pen writing with about 10 in 100 wrong, and school work and exam sheets with 20 to 60 in 100 wrong;
+faint or cramped pencil on squared paper, and words in two languages (the Ukrainian model knows the Latin letters but was not trained on English), read far worse. A family's letters and diaries are in between: expect a text you can read and correct, not one you can trust. That is why the text is shown beside the photo and the boxes are coloured by how sure the reader is.
+Printed text reads far better, with a few mistakes between <em>и</em> and <em>і</em> in Ukrainian, which the reader sees as alike.</p>
+
+<figure><img src="images/55-manuscripts-print.png" alt="The Scan manuscripts window with a printed page in English: a green box round each line, and at the right the text in paragraphs after Join lines" width="1302" height="832"></figure>
+
+<p>(The printed page was typeset for this manual.)</p>
+
+<p><strong>If something is not right.</strong> <em>Nothing was found:</em> try the other kind of writing, or turn the photo the right way up. <em>The text is full of wrong letters:</em> the writing is outside what the model learned (see above); correct it against the photo, or write the page out by hand and scan it as printed text.
+<em>The models could not be downloaded:</em> nothing is scanned; check the connection and press <em>Scan page</em> again. <em>The book has a page cut short:</em> turn off <em>Cut each page out of its photo</em> and make it again. <em>A picture is missing, or a piece of writing was taken for one:</em> delete the wrong one in the text and press <em>Find pictures</em> again, or turn off <em>Find pictures when scanning</em>; a pencil sketch is not found, and a scrap of writing is seldom taken for a picture. <em>The AI changed a word wrongly:</em> press <kbd>Ctrl</kbd>+<kbd>Z</kbd> (one press takes back all it did) and correct by hand, or select only the lines you want it to look at.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+
+<h2 id="videos">25. Videos in the folder</h2>
 
 <p>A folder of an old family archive holds videos next to its photos: the AVI of a camera, the MP4 and MOV of a phone. <strong>SupportVideo</strong> is on in the settings
 table by default (turn it off to have a folder look as it did before videos), and the videos of the folder are listed with its photos, in the same order, also in the subfolders if
@@ -1219,7 +1293,7 @@ the first time <strong>SupportVideo</strong> is turned on, or a video is played,
 the status bar, and it stays on your computer, in <code>%LocalAppData%\PhotoLiker\libvlc</code>; nothing else is changed. If you say no, videos open in the program Windows plays them with, and you are asked again when you turn
 <strong>SupportVideo</strong> off and on. When it was turning <strong>SupportVideo</strong> on that started the download, the folder is listed again once the player is there (as <kbd>F5</kbd> does). Its licence and the place to get its source are in the <code>libvlc</code> folder next to the program.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="theme">25. Dark and light theme</h2>
+<h2 id="theme">26. Dark and light theme</h2>
 
 <p>The theme button of the toolbar switches between the two. A folder that is opened for the first time is dark; the choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
@@ -1230,13 +1304,13 @@ see <a href="#language">Language</a>.)</p>
 </figure>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="files">26. What PhotoLiker keeps, and where</h2>
+<h2 id="files">27. What PhotoLiker keeps, and where</h2>
 
 <ul>
   <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
   photo you stopped at), so every folder opens the way you left it, on any computer. The paths in it are relative, so the folder can be moved or shared.
   <code>photo-liker-people.json</code> holds the names you gave to faces, and <code>photo-liker-groups.json</code> the groups you sorted the people into (a copy of the groups of this computer,
-  so that they travel with the photos; the one that was saved later is the one that counts when you open the folder). These are the only files PhotoLiker adds to your folder, besides the logs of Align
+  so that they travel with the photos; the one that was saved later is the one that counts when you open the folder). <code>photo-liker-book.json</code> and <code>photo-liker-manuscript.json</code> keep the work of the Make a book and the Scan manuscripts windows. These are the only files PhotoLiker adds to your folder, besides the logs of Align
   dates and Find duplicates.</li>
   <li><strong>The Liked folder</strong> (by default inside the photo folder) and its group folders: your copies.</li>
   <li><strong>The <code>Deleted</code> folder</strong> inside the photo folder: the photos you removed, and the duplicates and unreadable photos that were moved.</li>
@@ -1245,7 +1319,7 @@ see <a href="#language">Language</a>.)</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="about">27. About box and this manual</h2>
+<h2 id="about">28. About box and this manual</h2>
 
 <p>The <strong>Help</strong> button (the question mark) at the end of the toolbar, or the <kbd>F1</kbd> key, opens the About box: the version and build date of the program, the
 keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and two buttons that open this manual, in English or in Ukrainian.

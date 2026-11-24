@@ -189,6 +189,104 @@ public sealed class RichDescriptionEditorTests
     }
 
     [Fact]
+    public void ClearFormatting_TakesTheIndentOff_Too()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Rtf = RtfWriter.Write(new RichDocument([new RichParagraph(TextAlign.Left, [new RichRun("indented text", default)]) { LeftIndent = 72, FirstLineIndent = 36 }]));
+            Assert.Equal(72, Assert.Single(Read(editor).Paragraphs).LeftIndent);
+
+            editor.Box.Select(2, 0);
+            editor.ClearFormatting();
+
+            var paragraph = Assert.Single(Read(editor).Paragraphs);
+            Assert.Equal((0.0, 0.0), (paragraph.LeftIndent, paragraph.FirstLineIndent));
+            await Task.CompletedTask;
+        });
+    }
+
+    private static RichPicture Picture() => RichPicture.FromFile(SeeThroughPng(), 0.4)!;
+
+    /// <summary>A small PNG with a see-through half (made here: the tests of the book library have their own).</summary>
+    private static byte[] SeeThroughPng()
+    {
+        using var bitmap = new Bitmap(40, 30, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        for (var y = 0; y < 30; y++)
+        {
+            for (var x = 0; x < 40; x++)
+                bitmap.SetPixel(x, y, x < 20 ? Color.FromArgb(0, 0, 0, 0) : Color.FromArgb(255, 200, 30, 30));
+        }
+
+        using var stream = new MemoryStream();
+        bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+        return stream.ToArray();
+    }
+
+    [Fact]
+    public void APictureInTheRtf_IsShown_AndGivenBackWithItsPlaceItsWidthIndentsAndTabs()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            var document = new RichDocument([
+                RichParagraph.OfPicture(Picture(), TextAlign.Right),
+                new RichParagraph(TextAlign.Left, [new RichRun("cat\tкіт", default)]) { LeftIndent = 36, TabStops = [150] },
+                new RichParagraph(TextAlign.Left, [new RichRun("after", default)])]);
+
+            editor.Rtf = RtfWriter.Write(document);
+
+            var back = Read(editor);
+            Assert.Equal(3, back.Paragraphs.Count);
+            var picture = back.Paragraphs[0].Picture!;
+            Assert.True(picture.IsPng);
+            Assert.Equal((40, 30), (picture.PixelWidth, picture.PixelHeight));
+            Assert.Equal(0.4, picture.WidthShare, 2);
+            Assert.Equal(TextAlign.Right, back.Paragraphs[0].Align);
+            Assert.Equal("cat\tкіт", back.Paragraphs[1].PlainText);
+            Assert.Equal(36.0, back.Paragraphs[1].LeftIndent);
+            Assert.Equal([150.0], back.Paragraphs[1].TabStops);
+            Assert.False(editor.IsEmpty, "a picture is no blank");
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ABoxThatCannotBeEdited_StillTakesTheRtfWithItsPictures_AndStaysReadOnly()
+    {
+        // A scan is at work on the box: it is read-only, and a read-only Rich Edit takes no picture of an RTF unless it is let to
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.SetEditable(false);
+
+            editor.Rtf = RtfWriter.Write(new RichDocument([RichParagraph.OfPicture(Picture()), new RichParagraph(TextAlign.Left, [new RichRun("text", default)])]));
+
+            Assert.True(editor.Box.ReadOnly);
+            Assert.Equal(2, Read(editor).Paragraphs.Count);
+            Assert.NotNull(Read(editor).Paragraphs[0].Picture);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ABoxWithOnlyAPicture_IsNotEmpty_AndOneWithNothingIs()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            Assert.True(editor.IsEmpty);
+            editor.Rtf = RtfWriter.Write(new RichDocument([RichParagraph.OfPicture(Picture())]));
+            Assert.False(editor.IsEmpty);
+            Assert.Equal("text", PhotoLiker.Manuscripts.ManuscriptText.PlainOf(RtfWriter.Write(RichDocument.FromPlainText("text"))));
+
+            editor.Rtf = string.Empty;
+            Assert.True(editor.IsEmpty);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
     public void WhatIsSetAsRtf_IsGivenBackAsItWas()
     {
         RichDescriptionEditor editor = null!;
@@ -283,6 +381,151 @@ public sealed class RichDescriptionEditorTests
             editor.SetEditable(true);
             Assert.False(editor.Box.ReadOnly);
             Assert.Equal(Color.White, editor.Box.BackColor);
+            await Task.CompletedTask;
+        });
+    }
+
+    // ── The AI button, and the words it changes ─────────────────────────────
+
+    [Fact]
+    public void TheAiButton_IsNotThereUntilTheHostShowsIt_AndPressingItIsToldToTheHost()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            Assert.False(editor.FixVisible); // the descriptions of a book have no AI
+            Assert.False(editor.FixButton.Visible);
+            Assert.NotNull(editor.FixButton.Image);
+
+            var raised = 0;
+            editor.FixRequested += (_, _) => raised++;
+            editor.FixVisible = true;
+            Assert.True(editor.FixButton.Visible);
+
+            editor.FixButton.PerformClick();
+            Assert.Equal(1, raised);
+
+            editor.SetEditable(false); // while the window works on the text, the button does nothing
+            Assert.False(editor.FixButton.Enabled);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheAiButtonHasAPictureOfItsOwn_ForEachTheme(bool dark)
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.ApplyTheme(dark);
+
+            var picture = Assert.IsType<Bitmap>(editor.FixButton.Image);
+            var coloured = Enumerable.Range(0, picture.Width).SelectMany(x => Enumerable.Range(0, picture.Height).Select(y => picture.GetPixel(x, y))).Count(pixel => pixel.A > 128);
+            Assert.InRange(coloured, 20, 120); // stars, not a filled square and not nothing
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheWordsThatAreReplaced_AreReplacedAtTheirPlaces_AndTheLookOfTheRestStays()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one wen two lbrary three";
+            editor.Box.Select(21, 3); // "ree" of three: bold
+            editor.ToggleStyle(FontStyle.Bold);
+            editor.Box.Select(0, 0);
+
+            editor.ApplyEdits([new PhotoLiker.Manuscripts.TextEdit(4, 3, "went"), new PhotoLiker.Manuscripts.TextEdit(12, 6, "library")]);
+
+            Assert.Equal("one went two library three", editor.PlainText);
+            var runs = Read(editor).Paragraphs.Single().Runs;
+            Assert.Equal("ree", runs.Single(run => run.Style.Bold).Text);
+            Assert.Equal(0, editor.Box.SelectionStart); // the caret stays
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void AReplacedWord_HasTheLookOfItsFirstLetter()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one wen two";
+            editor.Box.Select(4, 3);
+            editor.ToggleStyle(FontStyle.Bold);
+
+            editor.ApplyEdits([new PhotoLiker.Manuscripts.TextEdit(4, 3, "went")]);
+
+            var runs = Read(editor).Paragraphs.Single().Runs;
+            Assert.Equal("went", runs.Single(run => run.Style.Bold).Text);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void AllTheChanges_AreOneStepOfUndo_AndRedoBringsThemBack()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            const string original = "one wen two lbrary three borowed four";
+            editor.Box.Text = original;
+            editor.Box.ClearUndo();
+
+            editor.ApplyEdits([new PhotoLiker.Manuscripts.TextEdit(4, 3, "went"), new PhotoLiker.Manuscripts.TextEdit(12, 6, "library"), new PhotoLiker.Manuscripts.TextEdit(25, 7, "borrowed")]);
+            Assert.Equal("one went two library three borrowed four", editor.PlainText);
+
+            editor.Box.Undo();
+            Assert.Equal(original, editor.PlainText); // one Ctrl+Z, not three
+            editor.Box.Redo();
+            Assert.Equal("one went two library three borrowed four", editor.PlainText);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ABoxThatCannotBeEdited_TakesTheChanges_AndStaysThat()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one wen two";
+            editor.SetEditable(false);
+
+            editor.ApplyEdits([new PhotoLiker.Manuscripts.TextEdit(4, 3, "went")]);
+
+            Assert.Equal("one went two", editor.PlainText);
+            Assert.True(editor.Box.ReadOnly);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheTabsTheIndentsAndThePictures_StayWhenWordsAreReplaced()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Rtf = RtfWriter.Write(new RichDocument(
+            [
+                new RichParagraph(TextAlign.Left, [new RichRun("Wensday\tpainting", default)]) { LeftIndent = 36 },
+                RichParagraph.OfPicture(Picture()),
+                new RichParagraph(TextAlign.Left, [new RichRun("the lbrary", default)]),
+            ]));
+            var text = editor.PlainText;
+
+            editor.ApplyEdits([new PhotoLiker.Manuscripts.TextEdit(text.IndexOf("Wensday", StringComparison.Ordinal), 7, "Wednesday"), new PhotoLiker.Manuscripts.TextEdit(text.IndexOf("lbrary", StringComparison.Ordinal), 6, "library")]);
+
+            var document = Read(editor);
+            Assert.Equal("Wednesday\tpainting", document.Paragraphs[0].PlainText);
+            Assert.Equal(36, document.Paragraphs[0].LeftIndent, 1);
+            Assert.NotNull(document.Paragraphs[1].Picture);
+            Assert.Equal("the library", document.Paragraphs[2].PlainText);
             await Task.CompletedTask;
         });
     }

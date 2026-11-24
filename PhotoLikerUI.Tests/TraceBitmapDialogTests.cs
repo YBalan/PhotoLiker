@@ -811,11 +811,12 @@ public sealed class TraceBitmapDialogTests : IDisposable
         {
             var names = Toolbar(form).Items.Cast<ToolStripItem>().Select(item => item.Name).ToList();
 
-            Assert.Equal("drawToolStripButton", names[^1]);
-            Assert.Equal("stickerToolStripButton", names[^2]);
-            Assert.Equal("videoToGifToolStripButton", names[^3]);
-            Assert.Equal("traceBitmapToolStripButton", names[^4]);
-            Assert.Equal("makeBookToolStripButton", names[^5]);
+            Assert.Equal("manuscriptToolStripButton", names[^1]);
+            Assert.Equal("drawToolStripButton", names[^2]);
+            Assert.Equal("stickerToolStripButton", names[^3]);
+            Assert.Equal("videoToGifToolStripButton", names[^4]);
+            Assert.Equal("traceBitmapToolStripButton", names[^5]);
+            Assert.Equal("makeBookToolStripButton", names[^6]);
             var button = Toolbar(form).Items["traceBitmapToolStripButton"]!;
             Assert.Equal(TraceStrings.ButtonText, button.Text);
             Assert.Equal(TraceStrings.ButtonTooltip, button.ToolTipText);

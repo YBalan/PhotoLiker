@@ -61,8 +61,9 @@ namespace PhotoLikerUI
                 return null;
             }
 
+            // On a thread of the pool: the semaphore is free when few photos are loading, which would let the decoding run right here, on the thread that asks (the window's), once for each photo asked for
             if (_loading.Add(path))
-                _ = LoadAsync(path);
+                _ = Task.Run(() => LoadAsync(path));
             return null;
         }
 

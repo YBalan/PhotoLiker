@@ -43,6 +43,56 @@ public class ToolModelTests : IDisposable
         Assert.Contains("Apache 2.0", model.Origin); // what the weights are licensed under, shown when the person is asked
     }
 
+    [Theory]
+    [InlineData("ua")]
+    [InlineData("ru")]
+    public void TheHandwritingModels_AreAtAFixedRevision_AsAPyTorchCheckpoint_UnderAFreeLicence(string which)
+    {
+        var model = which == "ua" ? ToolModels.HandwritingUkrainian : ToolModels.HandwritingRussian;
+
+        Assert.StartsWith("https://huggingface.co/achimrabus/", model.File.Url);
+        Assert.Matches("/resolve/[0-9a-f]{40}/best_model\\.pt$", model.File.Url);
+        Assert.Matches("^[0-9a-f]{64}$", model.Sha256);
+        Assert.Equal("best_model.pt", model.File.Name); // the ONNX file made from it is kept beside it
+        Assert.InRange(model.Megabytes, 40, 50);
+        Assert.Contains("Apache 2.0", model.Origin);
+    }
+
+    [Fact]
+    public void TheHandwritingModels_AreNotTheSameModel_NorShareAFolder_WithTheOthers()
+    {
+        ToolModel[] all = [ToolModels.Depth, ToolModels.Colorizer, ToolModels.Cutout, ToolModels.OcrFinder, ToolModels.OcrReader, ToolModels.HandwritingUkrainian, ToolModels.HandwritingRussian, ToolModels.TextFixer];
+
+        Assert.Equal(all.Length, all.Select(model => model.Id).Distinct().Count());
+        Assert.Equal(all.Length, all.Select(model => model.FolderName).Distinct().Count()); // two checkpoints both called best_model.pt must not meet in one folder
+        Assert.Equal(all.Length, all.Select(model => model.Sha256).Distinct().Count());
+    }
+
+    [Fact]
+    public void TheTextCorrector_IsAtAFixedRevision_UnderAFreeLicence_AndItsTokenizerIsBesideIt()
+    {
+        foreach (var model in new[] { ToolModels.TextFixer, ToolModels.TextFixerTokenizer })
+        {
+            Assert.StartsWith("https://huggingface.co/onnx-community/Qwen2.5-1.5B-Instruct/resolve/", model.File.Url);
+            Assert.Matches("/resolve/[0-9a-f]{40}/", model.File.Url);
+            Assert.Matches("^[0-9a-f]{64}$", model.Sha256);
+            Assert.Contains("Apache 2.0", model.Origin); // the licence of the weights, shown when the person is asked
+        }
+
+        // The model reads the words from the file beside it, at the same revision
+        Assert.Equal(ToolModels.TextFixer.FolderName, ToolModels.TextFixerTokenizer.FolderName);
+        Assert.Equal(Path.GetDirectoryName(ToolModels.TextFixer.PathIn(_models.Path)), Path.GetDirectoryName(ToolModels.TextFixerTokenizer.PathIn(_models.Path)));
+        Assert.Equal(Revision(ToolModels.TextFixer), Revision(ToolModels.TextFixerTokenizer));
+        Assert.NotEqual(ToolModels.TextFixer.Id, ToolModels.TextFixerTokenizer.Id);
+        Assert.NotEqual(ToolModels.TextFixer.Sha256, ToolModels.TextFixerTokenizer.Sha256);
+        Assert.Equal("model_q4.onnx", ToolModels.TextFixer.File.Name);
+        Assert.Equal("tokenizer.json", ToolModels.TextFixerTokenizer.File.Name);
+        Assert.InRange(ToolModels.TextFixer.Megabytes, 1700, 1900); // the person is told how big it is
+        Assert.InRange(ToolModels.TextFixerTokenizer.Megabytes, 5, 10);
+    }
+
+    private static string Revision(ToolModel model) => System.Text.RegularExpressions.Regex.Match(model.File.Url, "/resolve/([0-9a-f]{40})/").Groups[1].Value;
+
     [Fact]
     public void TheModels_HaveTheirOwnFolders_AndNames()
     {

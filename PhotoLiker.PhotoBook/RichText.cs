@@ -27,20 +27,60 @@ namespace PhotoLiker.PhotoBook
     /// <summary>A piece of text that is all in one style. A line break inside a paragraph (Shift+Enter) is a <c>\n</c> in the text.</summary>
     public sealed record RichRun(string Text, RichStyle Style);
 
-    /// <summary>A paragraph: what was typed up to Enter. One with no runs is an empty line.</summary>
+    /// <summary>
+    /// A picture that stands in the text as a paragraph of its own: a PNG (which can have a see-through background, as a picture cut out of a photo has) or a JPEG, as the bytes of the file, and how
+    /// wide it is as a share of the width of the text.
+    /// </summary>
+    public sealed record RichPicture(byte[] Data, bool IsPng, int PixelWidth, int PixelHeight, double WidthShare)
+    {
+        /// <summary>The height as a number of times the width.</summary>
+        public double Ratio => PixelWidth > 0 && PixelHeight > 0 ? (double)PixelHeight / PixelWidth : 0.75;
+
+        public string Extension => IsPng ? ".png" : ".jpg";
+
+        public string MediaType => IsPng ? "image/png" : "image/jpeg";
+
+        /// <summary>The picture of the bytes of a PNG or a JPEG file; null when they are neither.</summary>
+        public static RichPicture? FromFile(byte[] data, double widthShare) =>
+            ImageHeader.TryRead(data, out var png, out var width, out var height) ? new RichPicture(data, png, width, height, Math.Clamp(widthShare, 0.05, 1.0)) : null;
+    }
+
+    /// <summary>
+    /// A paragraph: what was typed up to Enter. One with no runs is an empty line. It can be indented (<see cref="LeftIndent"/>, <see cref="FirstLineIndent"/>), have tab stops, or be a picture
+    /// and nothing else (<see cref="Picture"/>). Distances are in points of a column that is <see cref="RichDocument.ReferenceWidth"/> wide: a column of another width has them in the same share
+    /// of it, so a page that is indented a quarter of its width is that in a PDF of any paper and in an EPUB of any screen.
+    /// </summary>
     public sealed record RichParagraph(TextAlign Align, IReadOnlyList<RichRun> Runs)
     {
         public string PlainText => string.Concat(Runs.Select(run => run.Text));
 
-        public bool IsBlank => string.IsNullOrWhiteSpace(PlainText);
+        public bool IsBlank => Picture is null && string.IsNullOrWhiteSpace(PlainText);
+
+        /// <summary>How far the lines of the paragraph start from the left side of the column.</summary>
+        public double LeftIndent { get; init; }
+
+        /// <summary>How far the first line starts from where the others do (negative: it starts further left, a hanging indent).</summary>
+        public double FirstLineIndent { get; init; }
+
+        /// <summary>Where a tab character stops, from the left side of the column, from the nearest to the farthest; beyond the last the stops are every half inch.</summary>
+        public IReadOnlyList<double> TabStops { get; init; } = [];
+
+        /// <summary>The picture this paragraph is, when it is one (it has no text then).</summary>
+        public RichPicture? Picture { get; init; }
+
+        /// <summary>A paragraph that is only a picture.</summary>
+        public static RichParagraph OfPicture(RichPicture picture, TextAlign align = TextAlign.Center) => new(align, []) { Picture = picture };
     }
 
     /// <summary>
     /// The description of a photo as the book has it: paragraphs of runs. It is what the Rich Text Box of the dialog holds, read from its RTF by <see cref="RtfParser"/>; nothing of the Rich Text
-    /// Box (fonts, bullets, pictures) is kept that the PDF and the EPUB could not both show.
+    /// Box (fonts, bullets) is kept that the PDF and the EPUB could not both show. Pictures (PNG and JPEG) are kept as paragraphs of their own, indents and tab stops with the paragraph.
     /// </summary>
     public sealed class RichDocument
     {
+        /// <summary>The width in points of the column that the indents, the tab stops and the sizes of the pictures of a paragraph are measured against (six inches).</summary>
+        public const double ReferenceWidth = 432;
+
         public static RichDocument Empty { get; } = new([]);
 
         public RichDocument(IReadOnlyList<RichParagraph> paragraphs) => Paragraphs = paragraphs;
@@ -51,6 +91,12 @@ namespace PhotoLiker.PhotoBook
         public bool IsEmpty => Paragraphs.All(paragraph => paragraph.IsBlank);
 
         public string PlainText => string.Join("\n", Paragraphs.Select(paragraph => paragraph.PlainText));
+
+        /// <summary>True when a paragraph of the document is a picture.</summary>
+        public bool HasPictures => Paragraphs.Any(paragraph => paragraph.Picture is not null);
+
+        /// <summary>The document with its pictures taken out.</summary>
+        public RichDocument WithoutPictures() => HasPictures ? new RichDocument([.. Paragraphs.Where(paragraph => paragraph.Picture is null)]) : this;
 
         /// <summary>
         /// The document without the empty lines at its end: a Rich Text Box that was left with a few Enters at the end would otherwise push the photo down the page. The ones at the
@@ -78,12 +124,13 @@ namespace PhotoLiker.PhotoBook
 
     /// <summary>
     /// Reads the RTF of a Rich Text Box. It knows what that writes for the formatting the dialog offers (bold, italic, underline, strike-through, size, colour, alignment) and for text: the
-    /// characters of the languages of Windows as <c>\uN?</c>, or as <c>\'hh</c> bytes in the code page of the font. It skips what it does not know (pictures, tables, fonts, styles) and never throws:
-    /// RTF that is broken gives the text that could be read.
+    /// characters of the languages of Windows as <c>\uN?</c>, or as <c>\'hh</c> bytes in the code page of the font, indents (<c>\li</c>, <c>\fi</c>), tab stops (<c>\tx</c>) and pictures that are PNG or
+    /// JPEG (<c>\pngblip</c>, <c>\jpegblip</c>). It skips what it does not know (the other kinds of picture, tables, fonts, styles) and never throws: RTF that is broken gives the text that could be read.
     /// </summary>
     public static class RtfParser
     {
-        public static RichDocument Parse(string? rtf)
+        /// <param name="readPictures">False: the pictures are skipped (as the other things the parser does not know), which is much quicker for a text that holds some and is wanted only for its words.</param>
+        public static RichDocument Parse(string? rtf, bool readPictures = true)
         {
             if (string.IsNullOrWhiteSpace(rtf))
                 return RichDocument.Empty;
@@ -94,7 +141,7 @@ namespace PhotoLiker.PhotoBook
 
             try
             {
-                return new Reader(rtf).Read();
+                return new Reader(rtf, readPictures).Read();
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IndexOutOfRangeException or NotSupportedException)
             {
@@ -108,7 +155,7 @@ namespace PhotoLiker.PhotoBook
         /// <summary>The state RTF keeps per group: what the characters look like, and how many characters follow a <c>\uN</c> that stand for it for readers that do not know Unicode.</summary>
         private sealed record State(RichStyle Style, int Font, int SkipAfterUnicode, bool Skip);
 
-        private sealed class Reader(string text)
+        private sealed class Reader(string text, bool readPictures)
         {
             private int _position;
             private readonly Stack<State> _stack = new();
@@ -119,6 +166,12 @@ namespace PhotoLiker.PhotoBook
             private readonly StringBuilder _pending = new();
             private RichStyle _pendingStyle;
             private TextAlign _align = TextAlign.Left;
+            private double _leftIndent, _firstIndent;
+            private readonly List<double> _tabs = [];
+
+            // A picture that is being read (its control words and its hex digits), and whether the paragraph mark that ends the paragraph the picture was in is yet to come
+            private PictureCapture? _picture;
+            private bool _afterPicture;
 
             // The tables of the head: the code page each font is in (for \'hh), the colours
             private readonly Dictionary<int, int> _fontCodePages = [];
@@ -166,6 +219,12 @@ namespace PhotoLiker.PhotoBook
 
                         default:
                             _position++;
+                            if (_picture is not null && _stack.Count == _picture.Depth)
+                            {
+                                if (char.IsAsciiHexDigit(c))
+                                    _picture.Hex.Append(c); // the bytes of the picture
+                                break;
+                            }
                             if (_unicodeSkip > 0)
                             {
                                 _unicodeSkip--; // the stand-in for a \uN
@@ -173,8 +232,8 @@ namespace PhotoLiker.PhotoBook
                             }
                             if (_table is not null)
                                 ReadTableCharacter(c);
-                            else
-                                Append(c.ToString());
+                            else if (!_state.Skip)
+                                Append(c.ToString()); // (the bytes of a picture that is skipped are the bulk of an RTF: they are not looked at)
                             break;
                     }
                 }
@@ -188,6 +247,9 @@ namespace PhotoLiker.PhotoBook
 
             private void CloseGroup()
             {
+                if (_picture is not null && _stack.Count == _picture.Depth)
+                    EndPicture();
+
                 var wasTable = _table is not null && _tableDepth == 0;
                 if (_table is not null && _tableDepth > 0)
                     _tableDepth--;
@@ -329,7 +391,12 @@ namespace PhotoLiker.PhotoBook
                         _colourRed = _colourGreen = _colourBlue = -1;
                         _colourAny = false;
                         return;
-                    case "stylesheet" or "info" or "pict" or "object" or "header" or "footer" or "headerl" or "headerr" or "footerl" or "footerr" or "xmlnstbl" or "listtable" or "listoverridetable" or
+                    case "pict":
+                        if (readPictures && !_state.Skip && _table is null)
+                            _picture = new PictureCapture(_stack.Count);
+                        _state = _state with { Skip = true };
+                        return;
+                    case "stylesheet" or "info" or "object" or "header" or "footer" or "headerl" or "headerr" or "footerl" or "footerr" or "xmlnstbl" or "listtable" or "listoverridetable" or
                          "rsidtbl" or "generator" or "latentstyles" or "datastore" or "themedata" or "colorschememapping" or "revtbl" or "fldinst" or "bkmkstart" or "bkmkend" or "pntxtb" or "pntxta":
                         _state = _state with { Skip = true };
                         return;
@@ -374,6 +441,12 @@ namespace PhotoLiker.PhotoBook
                             _colourAny = true;
                             break;
                     }
+                    return;
+                }
+
+                if (_picture is not null && _stack.Count == _picture.Depth)
+                {
+                    _picture.Control(word, parameter);
                     return;
                 }
 
@@ -427,6 +500,18 @@ namespace PhotoLiker.PhotoBook
                         break;
                     case "pard":
                         _align = TextAlign.Left;
+                        _leftIndent = _firstIndent = 0;
+                        _tabs.Clear();
+                        break;
+                    case "li":
+                        _leftIndent = Math.Max(0, (parameter ?? 0) / 20.0); // twips to points
+                        break;
+                    case "fi":
+                        _firstIndent = (parameter ?? 0) / 20.0;
+                        break;
+                    case "tx":
+                        if (parameter is { } stop && stop > 0 && _tabs.Count < 32)
+                            _tabs.Add(stop / 20.0);
                         break;
                     case "ql":
                         _align = TextAlign.Left;
@@ -482,6 +567,7 @@ namespace PhotoLiker.PhotoBook
                 if (_state.Skip || value.Length == 0)
                     return;
 
+                _afterPicture = false;
                 if (_pending.Length > 0 && _pendingStyle != _state.Style)
                     FlushRun();
 
@@ -501,11 +587,99 @@ namespace PhotoLiker.PhotoBook
             private void EndParagraph(bool keepEmpty)
             {
                 FlushRun();
+
+                // The paragraph mark after a picture ends the paragraph the picture was the whole of: the picture is that paragraph already
+                if (_afterPicture && keepEmpty && _runs.Count == 0)
+                {
+                    _afterPicture = false;
+                    return;
+                }
+
+                _afterPicture = false;
                 if (_runs.Count == 0 && !keepEmpty)
                     return;
 
-                _paragraphs.Add(new RichParagraph(_align, _runs));
+                _paragraphs.Add(NewParagraph(_runs));
                 _runs = [];
+            }
+
+            private RichParagraph NewParagraph(IReadOnlyList<RichRun> runs) =>
+                new(_align, runs) { LeftIndent = _leftIndent, FirstLineIndent = _firstIndent, TabStops = [.. _tabs.Order()] };
+
+            /// <summary>The picture is done: when it is a kind that is read and its bytes are those of one, it is a paragraph of its own.</summary>
+            private void EndPicture()
+            {
+                var capture = _picture!;
+                _picture = null;
+                if (capture.Kind <= 0 || capture.Hex.Length < 16 || capture.Hex.Length % 2 != 0)
+                    return;
+
+                byte[] data;
+                try
+                {
+                    data = Convert.FromHexString(capture.Hex.ToString());
+                }
+                catch (FormatException)
+                {
+                    return;
+                }
+
+                if (!ImageHeader.TryRead(data, out var png, out var pixelWidth, out var pixelHeight) || png != (capture.Kind == 1))
+                    return;
+
+                // How wide it is shown: the goal the Rich Text Box writes (twips), else its size in hundredths of a millimetre, else its pixels at 96 to the inch
+                var points = capture.GoalWidth > 0 ? capture.GoalWidth / 20.0 : capture.Width > 0 ? capture.Width * 72.0 / 2540.0 : pixelWidth * 0.75;
+                points *= capture.ScaleX / 100.0;
+
+                FlushRun();
+                if (_runs.Count > 0)
+                    EndParagraph(keepEmpty: false);
+
+                _paragraphs.Add(NewParagraph([]) with { Picture = new RichPicture(data, png, pixelWidth, pixelHeight, Math.Clamp(points / RichDocument.ReferenceWidth, 0.05, 1.0)) });
+                _afterPicture = true;
+            }
+
+            /// <summary>The control words and the digits of a picture while it is read.</summary>
+            private sealed class PictureCapture(int depth)
+            {
+                /// <summary>How many groups are open round the picture's own.</summary>
+                public int Depth { get; } = depth;
+
+                /// <summary>1: PNG, 2: JPEG, -1: a kind that is not read (a metafile, a bitmap).</summary>
+                public int Kind { get; private set; }
+
+                public int Width { get; private set; }
+
+                public int GoalWidth { get; private set; }
+
+                public int ScaleX { get; private set; } = 100;
+
+                public StringBuilder Hex { get; } = new();
+
+                public void Control(string word, int? parameter)
+                {
+                    switch (word)
+                    {
+                        case "pngblip":
+                            Kind = 1;
+                            break;
+                        case "jpegblip":
+                            Kind = 2;
+                            break;
+                        case "wmetafile" or "emfblip" or "dibitmap" or "wbitmap" or "macpict" or "pmmetafile" or "bin":
+                            Kind = -1;
+                            break;
+                        case "picw":
+                            Width = parameter ?? 0;
+                            break;
+                        case "picwgoal":
+                            GoalWidth = parameter ?? 0;
+                            break;
+                        case "picscalex":
+                            ScaleX = parameter is > 0 ? parameter.Value : 100;
+                            break;
+                    }
+                }
             }
 
             // The head tables are read as text: a font table has the name of each font (which is not wanted), a colour table has ;-separated colours

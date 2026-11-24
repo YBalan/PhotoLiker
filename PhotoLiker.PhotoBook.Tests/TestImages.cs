@@ -13,5 +13,46 @@ internal static class TestImages
 
     public static byte[] PortraitJpeg() => Convert.FromBase64String(Portrait);
 
+    /// <summary>A PNG with a see-through background (the left half is red and solid, the right half is see-through), as a picture cut out of a photo is; the tests have no picture library to make one.</summary>
+    public static byte[] SeeThroughPng(int width = 40, int height = 30)
+    {
+        using var raw = new MemoryStream();
+        for (var y = 0; y < height; y++)
+        {
+            raw.WriteByte(0); // no filter on this row
+            for (var x = 0; x < width; x++)
+                raw.Write([200, 30, 30, x < width / 2 ? (byte)255 : (byte)0]);
+        }
+
+        using var packed = new MemoryStream();
+        using (var zlib = new System.IO.Compression.ZLibStream(packed, System.IO.Compression.CompressionLevel.Optimal, leaveOpen: true))
+            zlib.Write(raw.ToArray());
+
+        using var png = new MemoryStream();
+        png.Write([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        Chunk(png, "IHDR", [.. BigEndian(width), .. BigEndian(height), 8, 6, 0, 0, 0]); // 8 bits, colour with alpha
+        Chunk(png, "IDAT", packed.ToArray());
+        Chunk(png, "IEND", []);
+        return png.ToArray();
+    }
+
+    private static byte[] BigEndian(int value) => [(byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value];
+
+    private static void Chunk(Stream png, string type, byte[] data)
+    {
+        var typed = System.Text.Encoding.ASCII.GetBytes(type).Concat(data).ToArray();
+        png.Write(BigEndian(data.Length));
+        png.Write(typed);
+        var crc = 0xFFFFFFFFu;
+        foreach (var b in typed)
+        {
+            crc ^= b;
+            for (var k = 0; k < 8; k++)
+                crc = (crc & 1) != 0 ? (crc >> 1) ^ 0xEDB88320u : crc >> 1;
+        }
+
+        png.Write(BigEndian((int)~crc));
+    }
+
     public const int LandscapeWidth = 64, LandscapeHeight = 48, PortraitWidth = 48, PortraitHeight = 64;
 }
