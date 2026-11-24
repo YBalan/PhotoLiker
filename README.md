@@ -107,6 +107,10 @@ PhotoLiker needs Windows 10/11 (x64) and the [.NET 10 Desktop Runtime](https://d
 The **Register Context Menu** button of the toolbar adds *Open in Photo Liker* to the right-click menu of folders (current
 user only, no administrator rights). The same button removes it again.
 
+The folders you opened last are also in the *Recent folders* list of the taskbar button: right-click the PhotoLiker icon on the taskbar (it is there when the icon
+is pinned and the program is not running too) and click a folder to start PhotoLiker on it in a new window. Windows lets you pin a folder there to keep it on the list;
+*Remove from this list* takes it off the list of the program as well.
+
 The installer and the zip also carry the [user manual](#user-manual), in English and Ukrainian: it opens from the **About** box.
 
 `ffmpeg.exe` (Generate Video) is not part of PhotoLiker: it is GPL v3 software by the [FFmpeg](https://ffmpeg.org/) project (the
@@ -393,7 +397,7 @@ ones are behind the arrow at the bottom of the column.
 |---|---|
 | **three bars** (top) | Show or hide the names of the buttons. |
 | **Properties** (a small window with a title bar) | Fold the panel with the two grids into a thin tab at the edge, and bring it back; it is lit while the panel is shown. See [The Properties panel](#the-properties-panel). |
-| **Open** | Open a photo folder. |
+| **Open** | Open a photo folder. A right-click on it lists the ten folders opened last (the open one is ticked): click one to open it, or **Clear the list**. |
 | **Save** (a floppy disk) | **Save As**: asks where, and saves a copy of the shown photo or video under the name and in the place you choose (it keeps the dates of the file; a file that is there is written over only after you said yes). **A photo can be given another format as it is saved**: pick the type in the *Save as type* list (the photo's own format is the first, then JPEG, PNG, BMP, GIF and TIFF) or type the extension, and the photo is converted, whole, at its full size and upright, with the dates of the file; a JPEG and a TIFF take its Exif dates, the camera, the description, the artist and the copyright along (a PNG the date taken and the camera, BMP and GIF nothing: they have no room for them), and transparent parts become white where the format has none (JPEG, BMP). The same format (also as `.jpeg` for `.jpg`) is a copy of the bytes, as before; a name that says no format gets the extension of the photo (`x.xyz` becomes `x.xyz.jpg`, and a file of that name that is there is not touched). A WebP or HEIC photo can be converted to any of the five where Windows can read it (it needs its WebP / HEIF image extension), but is never saved as such (Windows has no encoder for them); a picture with several frames (a moving GIF, a TIFF of pages) is converted by its first frame. A video is copied as it is. With the **Colorize** bar showing colours, or the **Refocus** bar working, it saves the picture as it looks on the screen now, as a JPEG with the Exif of the photo and its dates unless you pick another type (the same five), and the name it suggests is the one the bar's own **Save a copy** would give. The photo that is shown is never changed. |
 | **Copy** | Copy the shown photo to the clipboard (the same as <kbd>Ctrl</kbd>+<kbd>C</kbd>). |
 | **Dark** / **Light** (a moon / a sun) | Switch the theme, see [Dark and light theme](#dark-and-light-theme). |

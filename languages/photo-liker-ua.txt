@@ -1336,6 +1336,7 @@ DialogStrings.LanguageFileProblem = {0} рядків не вдалося про�
 
 # ──────────── ToolbarStrings ────────────
 ToolbarStrings.Open = Відкрити
+ToolbarStrings.OpenTooltip = Відкрити папку з фото; права кнопка миші — папки, відкриті останніми
 ToolbarStrings.Save = Зберегти
 ToolbarStrings.SaveTooltip = Зберегти як: зберегти показане фото чи відео під назвою й у місці, які ви оберете; оберіть інший тип (JPEG, PNG, BMP, GIF, TIFF) — і фото перетворюється під час збереження; коли працює панель розфарбування чи перефокусування, — картинку такою, як вона зараз виглядає
 ToolbarStrings.SaveAsTitleFormat = Зберегти {0} як
@@ -1896,3 +1897,9 @@ ManuscriptStrings.StatusFixNoText = Немає тексту для виправ�
 ManuscriptStrings.StatusFixDeclined = Модель ШІ не завантажено, тож текст не виправляли.
 ManuscriptStrings.StatusFixStopped = Виправлення тексту зупинено; нічого не змінено.
 ManuscriptStrings.StatusFixFailedFormat = Не вдалося виправити текст: {0}
+
+# ──────────── RecentStrings ────────────
+RecentStrings.MenuNone = Нещодавніх папок ще немає
+RecentStrings.MenuClear = Очистити список
+RecentStrings.JumpListCategory = Нещодавні папки
+RecentStrings.StatusFolderGoneFormat = «{0}» більше немає: її прибрано зі списку нещодавніх папок.

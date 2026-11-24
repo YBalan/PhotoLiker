@@ -12,6 +12,10 @@ internal static class TestEnvironment
     internal static void KeepTheRealAppDataUntouched() =>
         Environment.SetEnvironmentVariable(AppPaths.DataFolderVariable, Path.Combine(Path.GetTempPath(), "PhotoLikerUiTests_AppData"));
 
+    /// <summary>The windows write the Jump List of their taskbar button (the folders opened last); a test must not change the one of the person who runs it.</summary>
+    [ModuleInitializer]
+    internal static void KeepTheRealJumpListUntouched() => RecentJumpList.Writer = (_, _) => JumpListResult.Nothing;
+
     internal static string RepositoryRoot { get; } = FindRoot();
 
     private static string FindRoot()

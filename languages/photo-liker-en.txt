@@ -1350,6 +1350,7 @@ DialogStrings.LanguageFileProblem = {0} lines that could not be read
 
 # ──────────── ToolbarStrings ────────────
 ToolbarStrings.Open = &Open
+ToolbarStrings.OpenTooltip = Open a folder of photos; right-click for the folders that were opened last
 ToolbarStrings.Save = &Save
 ToolbarStrings.SaveTooltip = Save as: save the photo or video that is shown under a name and in a place you choose; pick another type (JPEG, PNG, BMP, GIF, TIFF) and a photo is converted as it is saved; with the Colorize or Refocus bar working, the picture as it looks now
 ToolbarStrings.SaveAsTitleFormat = Save {0} as
@@ -1910,3 +1911,9 @@ ManuscriptStrings.StatusFixNoText = There is no text to correct.
 ManuscriptStrings.StatusFixDeclined = The AI model was not downloaded, so the text was not corrected.
 ManuscriptStrings.StatusFixStopped = Fixing the text was stopped; nothing was changed.
 ManuscriptStrings.StatusFixFailedFormat = The text could not be corrected: {0}
+
+# ──────────── RecentStrings ────────────
+RecentStrings.MenuNone = No recent folders yet
+RecentStrings.MenuClear = Clear the list
+RecentStrings.JumpListCategory = Recent folders
+RecentStrings.StatusFolderGoneFormat = {0} is not there any more: it was taken off the list of recent folders.
