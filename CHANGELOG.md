@@ -13,7 +13,7 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
-## Unreleased
+## 4.6.12 - 2026-11-24
 
 - Added Scan manuscripts: handwritten and printed pages are read into text with their pictures, corrected with AI, and saved as a PDF or an EPUB.
 
