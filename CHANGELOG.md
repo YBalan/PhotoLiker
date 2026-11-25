@@ -13,7 +13,7 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
-## Unreleased
+## 4.6.13 - 2026-11-25
 
 - Added recent folders: right-click Open for the ten folders opened last; the taskbar icon lists them too, and Windows lets you pin one there.
 - Improved Scan manuscripts: ChatGPT, Gemini or Claude can fix and read pages, pages can come from liked photos or a group, and the text has Undo and Redo.
