@@ -7,7 +7,13 @@ namespace PhotoLikerUI.Tests;
 public sealed class AiServicesStringsTests
 {
     /// <summary>The new texts that sit in the class of the Scan manuscripts window.</summary>
-    private static readonly string[] ManuscriptNames = ["LabelAi", "HintAi", "AiLocal", "AiServices", "AiServicesTip", "StatusFixAskingFormat"];
+    private static readonly string[] ManuscriptNames =
+    [
+        "LabelAi", "HintAi", "AiLocal", "AiServices", "AiServicesTip", "StatusFixAskingFormat",
+        "HintPhotosFrom", "StatusSourceOpenedFormat", "UseContext", "HintUseContext",
+        "KindAi", "StatusAiScanNoService", "ConfirmSendPhotoFormat", "StatusAiScanDeclined", "StatusAiReadingFormat", "StatusAiReadFormat", "StatusAiReadNothingFormat",
+        "StatusAiScanAllDoneFormat", "StatusAiScanFailedFormat",
+    ];
 
     private static IEnumerable<string> Names() =>
         typeof(AiServicesStrings).GetProperties(BindingFlags.Public | BindingFlags.Static).Select(property => $"{nameof(AiServicesStrings)}.{property.Name}")

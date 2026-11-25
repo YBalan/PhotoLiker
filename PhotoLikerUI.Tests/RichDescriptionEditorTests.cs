@@ -385,6 +385,241 @@ public sealed class RichDescriptionEditorTests
         });
     }
 
+    // ── Undo and Redo ───────────────────────────────────────────────────────
+
+    [Fact]
+    public void UndoAndRedo_AreTheFirstButtons_AndOffWhileThereIsNothingToTakeBackOrBring()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            var tools = Ui.Controls<ToolStrip>(editor).Single();
+
+            Assert.Same(editor.UndoButton, tools.Items[0]);
+            Assert.Same(editor.RedoButton, tools.Items[1]);
+            Assert.IsType<ToolStripSeparator>(tools.Items[2]);
+            Assert.Equal(BookStrings.Undo, editor.UndoButton.ToolTipText);
+            Assert.Equal(BookStrings.Redo, editor.RedoButton.ToolTipText);
+            Assert.True(editor.UndoVisible);
+            Assert.False(editor.UndoButton.Enabled);
+            Assert.False(editor.RedoButton.Enabled);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void WhatIsTyped_IsTakenBackByUndo_AndBroughtAgainByRedo()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "start";
+            editor.ClearHistory();
+            editor.Box.Select(5, 0);
+            editor.Box.SelectedText = " and more";
+            Assert.True(editor.UndoButton.Enabled);
+            Assert.False(editor.RedoButton.Enabled);
+
+            editor.UndoButton.PerformClick();
+
+            Assert.Equal("start", editor.PlainText);
+            Assert.False(editor.UndoButton.Enabled);
+            Assert.True(editor.RedoButton.Enabled);
+
+            editor.RedoButton.PerformClick();
+
+            Assert.Equal("start and more", editor.PlainText);
+            Assert.True(editor.UndoButton.Enabled);
+            Assert.False(editor.RedoButton.Enabled);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheLookOfTheText_IsTakenBackToo()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one two";
+            editor.ClearHistory();
+            editor.Box.Select(0, 3);
+            editor.ToggleStyle(FontStyle.Bold);
+            Assert.Contains(Read(editor).Paragraphs.Single().Runs, run => run.Style.Bold);
+
+            editor.UndoButton.PerformClick();
+
+            Assert.DoesNotContain(Read(editor).Paragraphs.Single().Runs, run => run.Style.Bold);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void AnUndoButtonPressed_GivesTheFocusBackToTheText_SoTheTypingGoesOn()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "a";
+            editor.ClearHistory();
+            editor.Box.Select(1, 0);
+            editor.Box.SelectedText = "b";
+
+            editor.UndoButton.PerformClick();
+
+            Assert.True(await Ui.Until(() => editor.Box.Focused));
+        });
+    }
+
+    [Fact]
+    public void ATextThatIsPutIn_IsNotSomethingToUndo_AndTheTextOfBeforeIsNotBroughtBack()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Rtf = RtfWriter.Write(new RichDocument([new RichParagraph(TextAlign.Left, [new RichRun("the first page", default)])]));
+            editor.Box.Select(0, 0);
+            editor.Box.SelectedText = "typed ";
+            Assert.True(editor.UndoButton.Enabled);
+
+            // Another page is put in: nothing of the first can be undone into it
+            editor.Rtf = RtfWriter.Write(new RichDocument([new RichParagraph(TextAlign.Left, [new RichRun("the second page", default)])]));
+
+            Assert.False(editor.UndoButton.Enabled);
+            Assert.False(editor.RedoButton.Enabled);
+            editor.UndoButton.PerformClick(); // does nothing
+            Assert.Equal("the second page", editor.PlainText);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ClearHistory_ForgetsWhatCanBeUndoneAndWhatCanBeBroughtAgain()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one";
+            editor.ClearHistory();
+            editor.Box.Select(3, 0);
+            editor.Box.SelectedText = " two";
+            editor.Box.Undo();
+            Assert.True(editor.RedoButton.Enabled);
+
+            editor.ClearHistory();
+
+            Assert.False(editor.UndoButton.Enabled);
+            Assert.False(editor.RedoButton.Enabled);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ManyChangesInOneStep_AreTakenBackByOneUndo_AndBroughtAgainByOneRedo()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "aa bb cc";
+            editor.ClearHistory();
+
+            using (editor.UndoStep())
+            {
+                editor.Box.Select(6, 2);
+                editor.Box.SelectedText = "CC";
+                editor.Box.Select(3, 2);
+                editor.Box.SelectedText = "BB";
+                editor.Box.Select(0, 2);
+                editor.Box.SelectedText = "AA";
+            }
+
+            Assert.Equal("AA BB CC", editor.PlainText);
+
+            editor.UndoButton.PerformClick();
+            Assert.Equal("aa bb cc", editor.PlainText);
+
+            editor.RedoButton.PerformClick();
+            Assert.Equal("AA BB CC", editor.PlainText);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheWordsTheHostReplaces_AreTakenBackByOneUndoButton_AndBroughtAgainByRedo()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one wen two lbrary";
+            editor.ClearHistory();
+
+            editor.ApplyEdits([new PhotoLiker.Manuscripts.TextEdit(4, 3, "went"), new PhotoLiker.Manuscripts.TextEdit(12, 6, "library")]);
+            Assert.Equal("one went two library", editor.PlainText);
+
+            editor.UndoButton.PerformClick();
+            Assert.Equal("one wen two lbrary", editor.PlainText);
+
+            editor.RedoButton.PerformClick();
+            Assert.Equal("one went two library", editor.PlainText);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheButtonsCanBeLeftOut_ByAHost()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.UndoVisible = false;
+
+            Assert.False(editor.UndoButton.Visible);
+            Assert.False(editor.RedoButton.Visible);
+            Assert.False(Ui.Controls<ToolStrip>(editor).Single().Items.OfType<ToolStripSeparator>().First().Visible);
+
+            editor.UndoVisible = true;
+            Assert.True(editor.UndoButton.Visible);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void WhileTheWindowWorksOnTheText_UndoAndRedoAreOff_WithTheOtherButtons()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "a";
+            editor.ClearHistory();
+            editor.Box.Select(1, 0);
+            editor.Box.SelectedText = "b";
+            Assert.True(editor.UndoButton.Enabled);
+
+            editor.SetEditable(false);
+
+            Assert.False(editor.UndoButton.Enabled && Ui.Controls<ToolStrip>(editor).Single().Enabled);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheArrowsAreInTheColoursOfTheTheme(bool dark)
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.ApplyTheme(dark);
+
+            Assert.Equal(dark ? ThemeManager.DarkFore : ThemeManager.LightFore, editor.UndoButton.ForeColor);
+            Assert.Equal(editor.UndoButton.ForeColor, editor.RedoButton.ForeColor);
+            Assert.Equal("↶", editor.UndoButton.Text);
+            Assert.Equal("↷", editor.RedoButton.Text);
+            await Task.CompletedTask;
+        });
+    }
+
     // ── The AI button, and the words it changes ─────────────────────────────
 
     [Fact]

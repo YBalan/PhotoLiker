@@ -13,16 +13,29 @@ namespace PhotoLiker.Manuscripts.Cloud
         private readonly string _system;
         private readonly List<ChatTurn> _examples = [];
 
-        public CloudCorrector(CloudChat chat, ScanLanguage language)
+        /// <param name="chat">The service, with its key and its model.</param>
+        /// <param name="language">The language of the text, which the instructions say.</param>
+        /// <param name="context">The text of the pages before the one that is corrected, to go by, or null for none.</param>
+        public CloudCorrector(CloudChat chat, ScanLanguage language, string? context = null)
         {
             _chat = chat;
-            _system = LlmCorrector.SystemText(language);
+            _system = LlmCorrector.SystemText(language) + ContextText(context);
             foreach (var (wrong, right) in LlmCorrector.Examples(language))
             {
                 _examples.Add(new ChatTurn(false, wrong));
                 _examples.Add(new ChatTurn(true, right));
             }
         }
+
+        /// <summary>
+        /// What is added to the instructions when the pages before the text are given: they are for the service to go by (a name that is spelled one way there is spelled so here; a word the writer
+        /// uses), and are not to be corrected, repeated or answered with. Nothing when there is no context.
+        /// </summary>
+        internal static string ContextText(string? context) =>
+            string.IsNullOrWhiteSpace(context)
+                ? string.Empty
+                : "\n\nFor reference only, here is the text of the pages that come before the text you are given (the names, the words and the way things are spelled in this manuscript). "
+                  + "Do not correct it, do not repeat it, and do not put it in your answer; correct only the text you are given.\n\n" + context;
 
         /// <exception cref="AiServiceException">The service did not give a text.</exception>
         public string Correct(string text, CancellationToken cancel)

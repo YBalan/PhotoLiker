@@ -1140,7 +1140,11 @@ becomes a <strong>PDF or an EPUB</strong>. It is made for what a family has in n
     a check mark (scanned, not changed) or a pencil (you changed the text). <em>Remove</em> takes a page out of the manuscript (it asks first when the page has text; the photo file is not touched; the page stays out when you open the window again, until <em>Add pages...</em> brings it back) and the two arrows move it up or down.
   </li>
   <li>
-    <strong>Say what is written.</strong> <em>Writing</em> is <em>Handwriting</em> or <em>Printed text</em>; <em>Language</em> is <em>Ukrainian</em>, <em>Russian</em>, <em>English</em> or <em>Multilanguage</em> (a page with Ukrainian, Russian and English together, like a vocabulary table), for both. The language keeps out the letters it does not have
+    <strong>Pick where the pages come from.</strong> The box <em>Photos from</em> over the list says it, as in the <a href="#book">book</a> window: <em>Current</em> (the photos that are loaded; it is picked when the window opens), <em>Liked</em> or one of the groups, each with its number of photos.
+    <strong>Each place has a manuscript of its own, kept in its own folder.</strong> Picking another place saves the one that is open and opens the other, with its pages, its texts, its title and its settings; the photos that are new in a folder are added as pages. A place you only looked at writes nothing. The box is off while a scan works.
+  </li>
+  <li>
+    <strong>Say what is written.</strong> <em>Writing</em> is <em>Handwriting</em>, <em>Printed text</em> or <em>AI service</em> (see below); <em>Language</em> is <em>Ukrainian</em>, <em>Russian</em>, <em>English</em> or <em>Multilanguage</em> (a page with Ukrainian, Russian and English together, like a vocabulary table), for both. The language keeps out the letters it does not have
     (no <em>ы</em> in Ukrainian, no <em>і</em> in Russian, no Cyrillic in English; <em>Multilanguage</em> keeps nothing out). There is no model of English handwriting: English and mixed pages are read by the Ukrainian one, which knows the Latin letters but was not trained on English, so expect them to read worse. <strong>The kind of writing and the language each page was scanned in are remembered, and picked again in the two boxes when you open the page.</strong>
   </li>
   <li>
@@ -1151,6 +1155,7 @@ becomes a <strong>PDF or an EPUB</strong>. It is made for what a family has in n
   <li>
     <strong>Read the photo against the text.</strong> The wheel of the mouse zooms the photo, dragging moves it, a double-click fits it to the window. <strong>A click on a box selects its row in the text</strong>, and the cursor in a row of the text selects its box on the photo (as long as the text has one line for each row of the photo). The pictures and the blank lines are no rows.
     The text is a box with the tools of the <a href="#book">book</a> window: bold, italic, underline, strike-through, size, colour and alignment (<em>T✕</em> takes the formatting off, the indents too). Type over what is wrong, or let the AI do it, see below.
+    The two arrows at the start of the buttons, <em>Undo</em> and <em>Redo</em> (<kbd>Ctrl</kbd>+<kbd>Z</kbd> and <kbd>Ctrl</kbd>+<kbd>Y</kbd>), take back and bring again what you typed or did with the buttons; joining the lines and every change of the AI button are one step each. The text of another page that is opened is not a step: Undo never goes back into it.
   </li>
   <li>
     <strong>Join the lines.</strong> <em>Join lines</em> makes one line of each paragraph: a line break between two lines becomes a space, a blank line stays where it is (the scan puts one wherever the page has more room than usual between two lines), a word that is split by a hyphen at the end of a line is joined.
@@ -1166,8 +1171,18 @@ becomes a <strong>PDF or an EPUB</strong>. It is made for what a family has in n
     <strong>Use ChatGPT, Gemini or Claude instead.</strong> The <em>AI</em> box in the row above the text (by the AI button) says which AI the AI button uses: <em>This computer</em> (the model above), or an AI service you gave a key for.
     <em>AI services...</em> opens the window of the keys: a box each for <strong>OpenAI (ChatGPT)</strong>, <strong>Google Gemini</strong> and <strong>Anthropic Claude</strong>, with the <em>Key</em> (hidden until you tick <em>Show</em>; <em>Get a key</em> opens the page where the service makes one) and the <em>Model</em> to ask.
     <em>Check key</em> asks the service for its list of models: it costs nothing, says whether the key is accepted and fills the list (the services rename their models every few months, so any name can be typed). A service with no key is not in the AI box; the first key you give is picked for you.
-    <strong>A key is kept on this computer, encrypted for your Windows account, and goes only to its own service.</strong> <strong>The text of the page goes to the service, a paragraph at a time (not the photo)</strong>, so what the company does with it is in its terms and in your plan: for what is private, keep <em>This computer</em>.
+    <strong>A key is kept on this computer, encrypted for your Windows account, and goes only to its own service.</strong> <strong>The AI button sends the text of the page to the service, a paragraph at a time (never the photo)</strong>, so what the company does with it is in its terms and in your plan: for what is private, keep <em>This computer</em>.
     Its answer is taken word by word, as the model’s is, and one <kbd>Ctrl</kbd>+<kbd>Z</kbd> takes it back. Nothing is downloaded. If the key is not accepted, a limit is reached or there is no connection, the status line says so with the words of the service (never the key) and the text stays.
+  </li>
+  <li>
+    <strong>Let an AI service read the photo.</strong> The third kind in the <em>Writing</em> box, <em>AI service</em>, sends the photo of the page to the service that is picked in the <em>AI</em> box and puts the text it writes back into the page. A service that can see reads handwriting and print in any of the languages
+    far better than the models of this computer do (cursive, a table of words and their translations, English handwriting). <strong>The photo leaves your computer</strong>: the program asks the first time for each service, as long as the window is open. It is sent shrunk (2,000 pixels on a side at most), and the service is told to write exactly what is on the page, line by line,
+    with a blank line where the page has more room, a tab between columns and <em>[?]</em> for a word it cannot read. <strong>A page read this way has no boxes on the photo</strong> (a service says what is written, not where); the pictures on the page are still looked for. <em>Scan page</em> and <em>Scan all pages</em> work as before;
+    a service that fails ends the scan with its words in the status line, and the pages already read stay read.
+  </li>
+  <li>
+    <strong>Give the AI the pages before.</strong> The check box <em>Use context of previous pages</em> (next to the <em>AI</em> box; off until you turn it on, and kept with the manuscript) gives the service the end of the text of the pages before the page, up to 3 pages, to go by: the names, the words and the spelling of this manuscript.
+    It goes with the AI button and with <em>AI service</em> reading, and <strong>that text is sent to the service too</strong>. It is for a service; the model on this computer is not given it.
   </li>
   <li>
     <strong>Turn a photo that lies on its side.</strong> <em>Turn left</em> and <em>Turn right</em> (the two round arrows; <kbd>Ctrl</kbd>+<kbd>-</kbd> and <kbd>Ctrl</kbd>+<kbd>+</kbd>) <strong>turn the photo itself</strong>, in its file: a JPEG by its Exif (nothing is coded again, the Exif and the date taken stay), another photo by its pixels; the dates of the file are kept.

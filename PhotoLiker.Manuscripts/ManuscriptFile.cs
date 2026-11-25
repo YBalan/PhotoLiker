@@ -134,6 +134,9 @@ namespace PhotoLiker.Manuscripts
         /// <summary>Whether a scan looks for the pictures on the page too, and puts them into its text (the Find pictures button does that whatever this says).</summary>
         public bool? FindPictures { get; set; }
 
+        /// <summary>Whether an AI service that corrects or reads a page is given the text of the pages before it, to go by (names, words, the way things are spelled in this manuscript).</summary>
+        public bool? UseContext { get; set; }
+
         public string? OutputFolder { get; set; }
 
         public string? OutputFileName { get; set; }

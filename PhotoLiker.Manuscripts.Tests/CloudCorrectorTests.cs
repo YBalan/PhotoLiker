@@ -33,6 +33,36 @@ namespace PhotoLiker.Manuscripts.Tests
         }
 
         [Fact]
+        public void TheContext_IsInTheInstructionsOfEveryPiece_NotInTheMessages_WhenItIsGiven()
+        {
+            var service = new FakeAiService()
+                .Answer(HttpStatusCode.OK, ClaudeSays("Wednesday painting"))
+                .Answer(HttpStatusCode.OK, ClaudeSays("the library"));
+            var corrector = new CloudCorrector(new CloudChat(AiVendor.Claude, "key-1", "model-1", new HttpClient(service), (_, _) => Task.CompletedTask), ScanLanguage.English, "Granny Olha went to Lviv.");
+
+            TextFixer.Fix("Wensday painting\n\nthe lbrary", corrector, cancel: CancellationToken.None);
+
+            Assert.Equal(2, service.Requests.Count);
+            foreach (var request in service.Requests)
+            {
+                var system = (string?)request.Json["system"];
+                Assert.StartsWith(LlmCorrector.SystemText(ScanLanguage.English), system);
+                Assert.EndsWith("Granny Olha went to Lviv.", system);
+                Assert.DoesNotContain("Granny", string.Join(" ", request.Json["messages"]!.AsArray().Select(message => (string?)message!["content"]))); // the messages are the examples and the piece
+            }
+        }
+
+        [Fact]
+        public void WithoutContext_TheInstructionsAreTheOnesOfTheModelOnThisComputer()
+        {
+            var service = new FakeAiService().Answer(HttpStatusCode.OK, ClaudeSays("ok"));
+
+            Corrector(service).Correct("Wensday", CancellationToken.None);
+
+            Assert.Equal(LlmCorrector.SystemText(ScanLanguage.English), (string?)service.Requests[0].Json["system"]);
+        }
+
+        [Fact]
         public void TheAnswer_IsTrimmed()
         {
             var service = new FakeAiService().Answer(HttpStatusCode.OK, ClaudeSays("\n  Wednesday  \n"));

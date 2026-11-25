@@ -47,6 +47,9 @@ namespace PhotoLikerUI
 
             // Who corrects: the AI service that is picked (its key is looked at now, so a change made later does not change this run), or the language model on this computer (which a test's stand-in replaces)
             var account = FixerOverride is null ? _ai.Active : null;
+
+            // The end of the text of the pages before this one, when the person wants the service to go by it (it is sent too)
+            var context = account is not null && UseContextCheck.Checked ? ManuscriptContext.Before(_pages, _current) : null;
             var source = new CancellationTokenSource();
             _scan = source;
             SetBusy(true);
@@ -84,7 +87,7 @@ namespace PhotoLikerUI
                     _progress.Value = Math.Min(step.Done, _progress.Maximum);
                 });
 
-                var edits = await Task.Run(() => TextFixer.Fix(text, CorrectorFor(language, account), progress, source.Token), source.Token);
+                var edits = await Task.Run(() => TextFixer.Fix(text, CorrectorFor(language, account, context), progress, source.Token), source.Token);
                 if (IsDisposed)
                     return;
 
@@ -123,7 +126,7 @@ namespace PhotoLikerUI
         }
 
         /// <summary>The corrector for a language: the stand-in of a test, the AI service that is picked, or the language model (made when it is first needed). Runs on a thread of its own.</summary>
-        private ITextCorrector CorrectorFor(ScanLanguage language, AiAccount? account)
+        private ITextCorrector CorrectorFor(ScanLanguage language, AiAccount? account, string? context)
         {
             if (_corrector is not null)
                 return _corrector;
@@ -132,7 +135,7 @@ namespace PhotoLikerUI
                 return _corrector = new StandInCorrector(standIn, language);
 
             if (account is not null)
-                return _corrector = new CloudCorrector(new CloudChat(account.Vendor, account.ApiKey, account.Model, CloudClient), language);
+                return _corrector = new CloudCorrector(new CloudChat(account.Vendor, account.ApiKey, account.Model, CloudClient), language, context);
 
             var folder = _models.ModelsFolder;
             return _corrector = new LlmCorrector(ToolModels.TextFixer.PathIn(folder), ToolModels.TextFixerTokenizer.PathIn(folder), language);

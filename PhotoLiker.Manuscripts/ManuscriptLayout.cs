@@ -122,6 +122,29 @@ namespace PhotoLiker.Manuscripts
             return rows;
         }
 
+        /// <summary>
+        /// Rows for a text that was not read from boxes (an AI service gave it): a row for each line that is not blank, spread evenly over the height of the page. Nothing says where on the page
+        /// each line really is, but pictures that were found on the page are put between the lines by where they are, and this is the best guess there is: a picture low on the page comes after most of the text.
+        /// </summary>
+        public static IReadOnlyList<LayoutRow> EvenRows(string text, double pageHeight)
+        {
+            var lines = new List<(string Text, bool BlankBefore)>();
+            var blank = false;
+            foreach (var line in text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+            {
+                if (line.Trim().Length == 0)
+                {
+                    blank = lines.Count > 0;
+                    continue;
+                }
+
+                lines.Add((line, blank));
+                blank = false;
+            }
+
+            return [.. lines.Select((line, i) => new LayoutRow([], line.Text, 0, [], line.BlankBefore, pageHeight * (i + 0.5) / lines.Count))];
+        }
+
         /// <summary>The text of the rows, a row to a line, with a blank line where the page has more room than usual.</summary>
         public static string TextOf(IReadOnlyList<LayoutRow> rows)
         {

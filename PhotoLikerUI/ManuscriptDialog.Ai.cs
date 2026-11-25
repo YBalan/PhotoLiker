@@ -59,6 +59,7 @@ namespace PhotoLikerUI
 
             _ai.Engine = choice.Value;
             SaveAiSettings();
+            UpdateButtons(); // the context of the pages is for a service
         }
 
         private void SaveAiSettings()
@@ -98,6 +99,7 @@ namespace PhotoLikerUI
             }
 
             FillAiCombo();
+            UpdateButtons();
         }
 
         private DialogResult ShowRealAiServices()

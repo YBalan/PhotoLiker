@@ -41,6 +41,7 @@ namespace PhotoLikerUI
             _manuscriptButton.Enabled = false;
             try
             {
+                _currentConfig.ApplyDefaultLikedFolder(); // the "Photos from" box offers the liked folder, as Make a book does
                 SetStatus(ManuscriptStrings.StatusOpening);
                 using var dialog = CreateManuscriptDialog();
 
@@ -79,7 +80,7 @@ namespace PhotoLikerUI
             var loaded = _currentConfig.Files.Where(file => !file.IsVideo).Select(file => file.OriginalFilePath).ToList();
             return new ManuscriptDialog(
                 _currentConfig.CurrentFolder, start, _effects, _currentConfig.IsDarkTheme, EnsureManuscriptModelsAsync, FollowDrawnPhoto, EnsureManuscriptCutModelAsync, loaded, EnsureManuscriptPictureModelsAsync,
-                EnsureManuscriptFixModelAsync);
+                EnsureManuscriptFixModelAsync, likedFolder: _currentConfig.LikedFolder, extensions: _currentConfig.Extensions);
         }
 
         /// <summary>The model of the AI that corrects the text: the language model, and the list of words it reads with (the person is asked once, for the first that is not there).</summary>

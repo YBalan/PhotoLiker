@@ -16,7 +16,7 @@ Releases before 4.0.1, and the ones since that changed only tests, are not liste
 ## Unreleased
 
 - Added recent folders: right-click Open for the ten folders opened last; the taskbar icon lists them too, and Windows lets you pin one there.
-- Added AI services: keys for ChatGPT, Gemini and Claude, so the AI button of Scan manuscripts can correct the text with one of them.
+- Improved Scan manuscripts: ChatGPT, Gemini or Claude can fix and read pages, pages can come from liked photos or a group, and the text has Undo and Redo.
 
 ## 4.6.12 - 2026-11-24
 

@@ -18,7 +18,7 @@ namespace PhotoLikerUI
         private const int SaveDelayMilliseconds = 1500;
         private const int ViewMaximumSide = 2600;
 
-        private readonly string _folder;
+        private string _folder; // the folder whose manuscript is open (it changes with the "Photos from" box)
         private readonly bool _dark;
         private readonly EffectModels _models;
         private readonly Func<ScanKind, ScanLanguage, Task<bool>> _ensureModelsAsync;
@@ -64,6 +64,7 @@ namespace PhotoLikerUI
         internal readonly Label AiLabel = new();
         internal readonly ComboBox AiCombo = new();
         internal readonly Button AiServicesButton = new();
+        internal readonly CheckBox UseContextCheck = new();
         private readonly FlowLayoutPanel _aiRow = new();
 
         // The pages, the photo and the text
@@ -105,6 +106,8 @@ namespace PhotoLikerUI
         /// <param name="ensurePicturesAsync">Makes sure the models that find the pictures on a page (the finder of lines and the model of the Telegram stickers) are on this computer; null: they are taken to be there.</param>
         /// <param name="ensureFixAsync">Makes sure the model of the AI that corrects the text (the language model and its tokenizer) is on this computer; null: it is taken to be there.</param>
         /// <param name="aiServices">The keys of the AI services (ChatGPT, Gemini, Claude) and which of them corrects the text; null: the ones the program keeps (<see cref="AiServiceSettings.DefaultPath"/>).</param>
+        /// <param name="likedFolder">The folder of the liked photos: the "Photos from" box offers it, and the groups in it, besides the photos that are loaded; null or empty: the box has the loaded photos only.</param>
+        /// <param name="extensions">The extensions of the photos of a folder (with the dot); null: those of <see cref="PhotoExtensions"/>.</param>
         public ManuscriptDialog(
             string folder,
             IReadOnlyList<string> startPhotos,
@@ -116,9 +119,13 @@ namespace PhotoLikerUI
             IReadOnlyList<string>? loadedPhotos = null,
             Func<Task<bool>>? ensurePicturesAsync = null,
             Func<Task<bool>>? ensureFixAsync = null,
-            AiServiceSettings? aiServices = null)
+            AiServiceSettings? aiServices = null,
+            string? likedFolder = null,
+            IReadOnlyCollection<string>? extensions = null)
         {
             _ai = aiServices ?? AiServiceSettings.Load();
+            _likedFolder = likedFolder;
+            _extensions = extensions ?? PhotoExtensions;
             _ensureCutoutAsync = ensureCutoutAsync;
             _ensurePicturesAsync = ensurePicturesAsync;
             _ensureFixAsync = ensureFixAsync;
@@ -127,6 +134,7 @@ namespace PhotoLikerUI
             _ensureModelsAsync = ensureModelsAsync;
             _photoChanged = photoChanged;
             _folder = !string.IsNullOrWhiteSpace(folder) ? folder : startPhotos.Count > 0 ? Path.GetDirectoryName(startPhotos[0]) ?? string.Empty : string.Empty;
+            _currentFolder = _folder;
 
             Text = ManuscriptStrings.DialogTitle;
             FormBorderStyle = FormBorderStyle.Sizable;
@@ -143,6 +151,7 @@ namespace PhotoLikerUI
             BuildBar();
             BuildBody();
             FillAiCombo();
+            FillSources(loadedPhotos ?? []);
             var bottom = BuildBottom();
             BuildStatusBar();
 
@@ -222,8 +231,13 @@ namespace PhotoLikerUI
             KindCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             KindCombo.AutoSize = false;
             KindCombo.Width = 140;
+            KindCombo.DropDownWidth = 200;
             KindCombo.ToolTipText = ManuscriptStrings.HintKind;
-            KindCombo.Items.AddRange([new Choice<ScanKind>(ScanKind.Handwriting, ManuscriptStrings.KindHandwriting), new Choice<ScanKind>(ScanKind.Printed, ManuscriptStrings.KindPrinted)]);
+            KindCombo.Items.AddRange(
+            [
+                new Choice<ScanKind>(ScanKind.Handwriting, ManuscriptStrings.KindHandwriting), new Choice<ScanKind>(ScanKind.Printed, ManuscriptStrings.KindPrinted),
+                new Choice<ScanKind>(ScanKind.AiService, ManuscriptStrings.KindAi),
+            ]);
             KindCombo.SelectedIndex = 0;
 
             LanguageLabel.Text = ManuscriptStrings.LabelLanguage;
@@ -309,8 +323,11 @@ namespace PhotoLikerUI
             _pagesTitle.AutoSize = true;
             _pagesTitle.Font = new Font(Font, FontStyle.Bold);
 
+            // Where the pages are from: over the list, under its title
+            BuildSourceRow();
             var pages = new Panel { Dock = DockStyle.Fill };
             pages.Controls.Add(PageList);
+            pages.Controls.Add(_sourceRow);
             pages.Controls.Add(_pagesTitle);
 
             // The photo
@@ -358,6 +375,11 @@ namespace PhotoLikerUI
             AiServicesButton.Padding = new Padding(6, 1, 6, 1);
             AiServicesButton.Margin = new Padding(0, 1, 0, 0);
             _toolTip.SetToolTip(AiServicesButton, ManuscriptStrings.AiServicesTip);
+            UseContextCheck.Name = "useContextCheck";
+            UseContextCheck.Text = ManuscriptStrings.UseContext;
+            UseContextCheck.AutoSize = true;
+            UseContextCheck.Margin = new Padding(12, 4, 0, 0);
+            _toolTip.SetToolTip(UseContextCheck, ManuscriptStrings.HintUseContext);
             _aiRow.Name = "aiRow";
             _aiRow.Dock = DockStyle.Top;
             _aiRow.AutoSize = true;
@@ -365,7 +387,7 @@ namespace PhotoLikerUI
             _aiRow.FlowDirection = FlowDirection.LeftToRight;
             _aiRow.WrapContents = true;
             _aiRow.Padding = new Padding(6, 0, 6, 4);
-            _aiRow.Controls.AddRange([AiLabel, AiCombo, AiServicesButton]);
+            _aiRow.Controls.AddRange([AiLabel, AiCombo, AiServicesButton, UseContextCheck]);
 
             var text = new Panel { Dock = DockStyle.Fill };
             text.Controls.Add(Editor);

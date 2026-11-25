@@ -6,8 +6,11 @@ using System.Text.Json.Nodes;
 
 namespace PhotoLiker.Manuscripts.Cloud
 {
-    /// <summary>One turn of a chat: what the person (or the program for them) said, or what the AI answered.</summary>
-    public sealed record ChatTurn(bool FromAssistant, string Text);
+    /// <summary>A picture that goes with a turn of a chat (a page to read): the bytes of a JPEG or PNG file, and its media type ("image/jpeg").</summary>
+    public sealed record ChatImage(string MediaType, byte[] Data);
+
+    /// <summary>One turn of a chat: what the person (or the program for them) said, or what the AI answered. A turn of the person can have a picture with it.</summary>
+    public sealed record ChatTurn(bool FromAssistant, string Text, ChatImage? Image = null);
 
     /// <summary>
     /// An AI service did not do what was asked: the key was not accepted, a limit was reached, the service is down, it refused, or it could not be reached. The message is English and says which service;
@@ -110,7 +113,17 @@ namespace PhotoLiker.Manuscripts.Cloud
                 {
                     var messages = new JsonArray { new JsonObject { ["role"] = "system", ["content"] = system } };
                     foreach (var turn in turns)
-                        messages.Add(new JsonObject { ["role"] = turn.FromAssistant ? "assistant" : "user", ["content"] = turn.Text });
+                    {
+                        // A turn with a picture is a list of parts, the text and the picture (as a data address); one without is the text
+                        JsonNode content = turn.Image is { } image
+                            ? new JsonArray
+                            {
+                                new JsonObject { ["type"] = "text", ["text"] = turn.Text },
+                                new JsonObject { ["type"] = "image_url", ["image_url"] = new JsonObject { ["url"] = $"data:{image.MediaType};base64,{Convert.ToBase64String(image.Data)}", ["detail"] = "high" } },
+                            }
+                            : JsonValue.Create(turn.Text)!;
+                        messages.Add(new JsonObject { ["role"] = turn.FromAssistant ? "assistant" : "user", ["content"] = content });
+                    }
 
                     var request = Post(OpenAiChat, new JsonObject { ["model"] = _model, ["messages"] = messages });
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _key);
@@ -121,7 +134,13 @@ namespace PhotoLiker.Manuscripts.Cloud
                 {
                     var contents = new JsonArray();
                     foreach (var turn in turns)
-                        contents.Add(new JsonObject { ["role"] = turn.FromAssistant ? "model" : "user", ["parts"] = new JsonArray { new JsonObject { ["text"] = turn.Text } } });
+                    {
+                        var parts = new JsonArray { new JsonObject { ["text"] = turn.Text } };
+                        if (turn.Image is { } image)
+                            parts.Add(new JsonObject { ["inline_data"] = new JsonObject { ["mime_type"] = image.MediaType, ["data"] = Convert.ToBase64String(image.Data) } });
+
+                        contents.Add(new JsonObject { ["role"] = turn.FromAssistant ? "model" : "user", ["parts"] = parts });
+                    }
 
                     var body = new JsonObject { ["systemInstruction"] = new JsonObject { ["parts"] = new JsonArray { new JsonObject { ["text"] = system } } }, ["contents"] = contents };
                     var request = Post($"{GeminiBase}/{Uri.EscapeDataString(GeminiModel())}:generateContent", body);
@@ -133,7 +152,17 @@ namespace PhotoLiker.Manuscripts.Cloud
                 {
                     var messages = new JsonArray();
                     foreach (var turn in turns)
-                        messages.Add(new JsonObject { ["role"] = turn.FromAssistant ? "assistant" : "user", ["content"] = turn.Text });
+                    {
+                        // A turn with a picture is a list of blocks, the picture first (as Claude is best asked) and then the text; one without is the text
+                        JsonNode content = turn.Image is { } image
+                            ? new JsonArray
+                            {
+                                new JsonObject { ["type"] = "image", ["source"] = new JsonObject { ["type"] = "base64", ["media_type"] = image.MediaType, ["data"] = Convert.ToBase64String(image.Data) } },
+                                new JsonObject { ["type"] = "text", ["text"] = turn.Text },
+                            }
+                            : JsonValue.Create(turn.Text)!;
+                        messages.Add(new JsonObject { ["role"] = turn.FromAssistant ? "assistant" : "user", ["content"] = content });
+                    }
 
                     var body = new JsonObject { ["model"] = _model, ["max_tokens"] = ClaudeMaxTokens, ["system"] = system, ["messages"] = messages };
                     var request = Post(ClaudeMessages, body);

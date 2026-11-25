@@ -67,6 +67,12 @@ namespace PhotoLikerUI
         private async Task ScanPagesAsync(IReadOnlyList<int> indexes)
         {
             var kind = Kind;
+            if (kind == ScanKind.AiService)
+            {
+                await ScanWithAiAsync(indexes); // the photo goes to an AI service: no models of this computer, no boxes
+                return;
+            }
+
             var language = Language;
             var source = new CancellationTokenSource();
             _scan = source;
@@ -346,11 +352,14 @@ namespace PhotoLikerUI
                 return;
             }
 
-            // From the last change to the first, so that the places of the others are still right
-            foreach (var edit in edits)
+            // From the last change to the first, so that the places of the others are still right; one Undo takes all of them back
+            using (Editor.UndoStep())
             {
-                box.Select(edit.Index, edit.Length);
-                box.SelectedText = edit.Replacement;
+                foreach (var edit in edits)
+                {
+                    box.Select(edit.Index, edit.Length);
+                    box.SelectedText = edit.Replacement;
+                }
             }
 
             box.Select(Math.Min(edits[^1].Index, box.TextLength), 0);

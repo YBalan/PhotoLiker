@@ -335,6 +335,8 @@ namespace PhotoLikerUI
             Editor.FixRequested += async (_, _) => await FixTextAsync();
             AiCombo.SelectedIndexChanged += (_, _) => OnAiPicked();
             AiServicesButton.Click += (_, _) => OpenAiServices();
+            UseContextCheck.CheckedChanged += (_, _) => ScheduleSave();
+            SourceCombo.SelectedIndexChanged += (_, _) => OnSourcePicked();
 
             PageList.SelectedIndexChanged += OnPageListSelection;
             View.LineClicked += OnViewLineClicked;
@@ -375,6 +377,7 @@ namespace PhotoLikerUI
             {
                 ShowPage();
                 Editor.Focus();
+                _ = CountSourcesAsync(); // the liked folder and its groups, counted with the window open
             };
         }
 
