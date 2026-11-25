@@ -17,6 +17,9 @@ namespace PhotoLikerUI
 
         private readonly RichTextBox _box = new();
         private readonly ToolStrip _tools = new();
+        private readonly ToolStripButton _undo = new() { Name = "undoTextButton" };
+        private readonly ToolStripButton _redo = new() { Name = "redoTextButton" };
+        private readonly ToolStripSeparator _undoSeparator = new();
         private readonly ToolStripButton _bold = new();
         private readonly ToolStripButton _italic = new();
         private readonly ToolStripButton _underline = new();
@@ -48,13 +51,25 @@ namespace PhotoLikerUI
             _box.HideSelection = false;
             _box.Multiline = true;
             _box.ScrollBars = RichTextBoxScrollBars.Vertical;
-            _box.TextChanged += (_, _) => TextChanged?.Invoke(this, EventArgs.Empty);
-            _box.SelectionChanged += (_, _) => UpdateTools();
+            _box.TextChanged += (_, _) =>
+            {
+                UpdateUndoButtons();
+                TextChanged?.Invoke(this, EventArgs.Empty);
+            };
+            _box.SelectionChanged += (_, _) =>
+            {
+                UpdateTools();
+                UpdateUndoButtons();
+            };
 
             _tools.GripStyle = ToolStripGripStyle.Hidden;
             _tools.Dock = DockStyle.Top;
             _tools.ImageScalingSize = new Size(16, 16);
             _tools.CanOverflow = true;
+
+            // Undo and redo take back and bring again what was typed or done with the buttons (the Rich Text Box keeps the steps; Ctrl+Z and Ctrl+Y are the same)
+            SetupHistory(_undo, "↶", BookStrings.Undo, () => _box.Undo());
+            SetupHistory(_redo, "↷", BookStrings.Redo, () => _box.Redo());
 
             Setup(_bold, "B", BookStrings.Bold, FontStyle.Bold, () => ToggleStyle(FontStyle.Bold));
             Setup(_italic, "I", BookStrings.Italic, FontStyle.Italic, () => ToggleStyle(FontStyle.Italic));
@@ -106,12 +121,42 @@ namespace PhotoLikerUI
             _fix.Image = SparklePicture(false);
             _fix.Click += (_, _) => FixRequested?.Invoke(this, EventArgs.Empty);
 
-            _tools.Items.AddRange([_bold, _italic, _underline, _strike, new ToolStripSeparator(), _size, _color, new ToolStripSeparator(), _left, _center, _right, _justify, new ToolStripSeparator(), _clear, _fixSeparator, _fix]);
+            _tools.Items.AddRange([_undo, _redo, _undoSeparator, _bold, _italic, _underline, _strike, new ToolStripSeparator(), _size, _color, new ToolStripSeparator(), _left, _center, _right, _justify, new ToolStripSeparator(), _clear, _fixSeparator, _fix]);
 
             Controls.Add(_box);
             Controls.Add(_tools);
             UpdateTools();
+            UpdateUndoButtons();
         }
+
+        /// <summary>The Undo button (the arrow that turns left).</summary>
+        public ToolStripButton UndoButton => _undo;
+
+        /// <summary>The Redo button (the arrow that turns right).</summary>
+        public ToolStripButton RedoButton => _redo;
+
+        /// <summary>Whether the Undo and Redo buttons are at the start of the buttons.</summary>
+        [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public bool UndoVisible
+        {
+            get => _undo.Available;
+            set => _undo.Available = _redo.Available = _undoSeparator.Available = value;
+        }
+
+        /// <summary>
+        /// Forgets what can be undone: what the host put in the box (the text of another page) is not something the person typed, and undoing it would take the page away. Called when a text is put in.
+        /// </summary>
+        public void ClearHistory()
+        {
+            _box.ClearUndo();
+            UpdateUndoButtons();
+        }
+
+        /// <summary>
+        /// A step of the history that many changes belong to: what is changed in the box until the result is disposed is taken back (and brought again) by one Undo. For a host that changes the
+        /// text in many places at once.
+        /// </summary>
+        public IDisposable UndoStep() => new UndoGroup(_box);
 
         /// <summary>Raised when the text or its look changes.</summary>
         public new event EventHandler? TextChanged;
@@ -158,6 +203,7 @@ namespace PhotoLikerUI
                         _box.ReadOnly = true;
                 }
 
+                ClearHistory(); // what is put in is the start of the text, not a change of the person: Undo does not go back past it
                 UpdateTools(); // the buttons show the look of the text at the start of what was put in
             }
         }
@@ -236,6 +282,29 @@ namespace PhotoLikerUI
                 click();
                 _box.Focus();
             };
+        }
+
+        /// <summary>A button of the history: pressing it goes one step back or forward, and the buttons are on while there is a step to go.</summary>
+        private void SetupHistory(ToolStripButton button, string glyph, string tip, Action step)
+        {
+            button.Text = glyph;
+            button.ToolTipText = tip;
+            button.AccessibleName = tip;
+            button.AutoToolTip = false;
+            button.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            button.Font = new Font("Segoe UI Symbol", 13f, FontStyle.Bold); // the arrows are not in every font, and are small at the size of the text
+            button.Click += (_, _) =>
+            {
+                step();
+                _box.Focus();
+                UpdateUndoButtons();
+            };
+        }
+
+        private void UpdateUndoButtons()
+        {
+            _undo.Enabled = _box.CanUndo;
+            _redo.Enabled = _box.CanRedo;
         }
 
         private void UpdateTools()

@@ -46,6 +46,7 @@ namespace PhotoLikerUI
                 CutPagesCheck.Checked = stored.CutPages == true;
                 CutPagesCheck.Enabled = IncludePhotosCheck.Checked;
                 ScanPicturesCheck.Checked = stored.FindPictures != false; // on, unless it was turned off
+                UseContextCheck.Checked = stored.UseContext == true; // off, unless it was turned on: the text of the pages goes to the service with it
             }
 
             TitleBox.Text = !string.IsNullOrWhiteSpace(stored?.Title) ? stored!.Title : _folder.Length > 0 ? new DirectoryInfo(_folder).Name : string.Empty;
@@ -126,6 +127,9 @@ namespace PhotoLikerUI
 
         private void ScheduleSave()
         {
+            if (_switchingSource)
+                return; // a manuscript is being read into the window: what the boxes say is what it had, not a change
+
             _touched = true;
             _saveTimer.Stop();
             _saveTimer.Start();
@@ -152,6 +156,7 @@ namespace PhotoLikerUI
                 IncludePhotos = IncludePhotosCheck.Checked,
                 CutPages = CutPagesCheck.Checked,
                 FindPictures = ScanPicturesCheck.Checked,
+                UseContext = UseContextCheck.Checked,
                 RemovedPages = _removed.Count > 0 ? [.. _removed] : null,
                 OutputFolder = _work.OutputFolder,
                 OutputFileName = _work.OutputFileName,
@@ -656,6 +661,10 @@ namespace PhotoLikerUI
             RotateLeftButton.Enabled = idle && hasPage;
             RotateRightButton.Enabled = idle && hasPage;
             JoinLinesButton.Enabled = hasPage;
+            AiCombo.Enabled = idle;
+            AiServicesButton.Enabled = idle;
+            SourceCombo.Enabled = idle;
+            UseContextCheck.Enabled = idle && _ai.Active is not null; // the model on this computer reads a piece at a time and is not given the pages before it
             SaveBookButton.Enabled = idle && _pages.Count > 0;
         }
 

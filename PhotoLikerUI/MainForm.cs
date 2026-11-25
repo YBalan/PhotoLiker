@@ -49,6 +49,7 @@ namespace PhotoLikerUI
             InitializeVideoSpeech();
             InitializeRotate();
             InitializeTaskbarProgress();
+            InitializeRecentFolders();
             InitializeLanguage();
             ApplyControlTexts(); // the designer writes English into the buttons it makes
             Text = WithDebugPrefix(Text);
@@ -92,7 +93,12 @@ namespace PhotoLikerUI
 
             // If a folder is known, also try loading its folder-specific config
             if (!string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder))
+            {
                 LoadFolderSettings(_currentConfig.CurrentFolder);
+                // A folder the program was started on, or left on, is one that was opened. Written at once: another window may close and save before this one does
+                if (PutOnRecentList(_currentConfig.CurrentFolder))
+                    _globalConfig.Save();
+            }
 
             RestoreWindowPosition();
             LoadFolder();
@@ -246,6 +252,8 @@ namespace PhotoLikerUI
             SaveWindowPosition();
             SaveSettingsToJson();
             _globalConfig.LastFolder = _currentConfig.CurrentFolder;
+            LoadRecentFolders(); // what another window added is not taken away
+            _recentMenu?.Dispose();
             _globalConfig.Save();
             base.OnFormClosed(e);
             RunSetupAfterClose(); // after everything is saved: the setup of a new version replaces the files of this one
@@ -418,21 +426,7 @@ namespace PhotoLikerUI
             using var folderBrowserDialog = new FolderBrowserDialog();
             folderBrowserDialog.Description = AppStrings.FolderBrowserSelectPhotos;
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
-            {
-                SaveSettingsToJson();
-                ClearDisplay();
-                LoadFolderSettings(folderBrowserDialog.SelectedPath);
-                _globalConfig.LastFolder = folderBrowserDialog.SelectedPath;
-                _globalConfig.Save();
-                settingsPropertyGrid.SelectedObject = _currentConfig;
-                LoadFolder();
-
-                RestoreWindowPosition();
-                UpdateContextMenuButton();
-
-                AdjustRulerWidth();
-                ApplyTheme(_currentConfig.IsDarkTheme);
-            }
+                SwitchToFolder(folderBrowserDialog.SelectedPath);
         }
 
         // CurrentIndex jumps to that photo; the settings that decide which photos are listed, and in what order, relist the current folder
@@ -502,19 +496,7 @@ namespace PhotoLikerUI
                 return;
             }
 
-            SaveSettingsToJson();
-            ClearDisplay();
-            LoadFolderSettings(likedFolder);
-            _globalConfig.LastFolder = likedFolder;
-            _globalConfig.Save();
-            settingsPropertyGrid.SelectedObject = _currentConfig;
-            LoadFolder();
-
-            RestoreWindowPosition();
-            UpdateContextMenuButton();
-
-            AdjustRulerWidth();
-            ApplyTheme(_currentConfig.IsDarkTheme);
+            SwitchToFolder(likedFolder);
         }
 
         private void GenerateVideoToolStripButton_Click(object? sender, EventArgs e)

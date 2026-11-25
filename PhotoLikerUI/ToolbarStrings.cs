@@ -8,6 +8,7 @@ namespace PhotoLikerUI
         private static string T([CallerMemberName] string key = "") => Loc.Get(nameof(ToolbarStrings), key);
 
         public static string Open => T();
+        public static string OpenTooltip => T();
         public static string Save => T();
         public static string SaveTooltip => T();
         public static string SaveAsTitleFormat => T();

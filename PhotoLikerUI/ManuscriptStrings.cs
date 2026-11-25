@@ -134,5 +134,30 @@ namespace PhotoLikerUI
         public static string StatusFixDeclined => T();
         public static string StatusFixStopped => T();
         public static string StatusFixFailedFormat => T();
+
+        // Which AI does it: the model on this computer, or a service with a key
+        public static string LabelAi => T();
+        public static string HintAi => T();
+        public static string AiLocal => T();
+        public static string AiServices => T();
+        public static string AiServicesTip => T();
+        public static string StatusFixAskingFormat => T();
+
+        // Where the pages are from, and the context of the pages before
+        public static string HintPhotosFrom => T();
+        public static string StatusSourceOpenedFormat => T();
+        public static string UseContext => T();
+        public static string HintUseContext => T();
+
+        // Reading the photo with an AI service
+        public static string KindAi => T();
+        public static string StatusAiScanNoService => T();
+        public static string ConfirmSendPhotoFormat => T();
+        public static string StatusAiScanDeclined => T();
+        public static string StatusAiReadingFormat => T();
+        public static string StatusAiReadFormat => T();
+        public static string StatusAiReadNothingFormat => T();
+        public static string StatusAiScanAllDoneFormat => T();
+        public static string StatusAiScanFailedFormat => T();
     }
 }

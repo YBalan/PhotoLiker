@@ -1,6 +1,7 @@
 using PhotoLiker.Drawing;
 using PhotoLiker.Effects.Models;
 using PhotoLiker.Manuscripts;
+using PhotoLiker.Manuscripts.Cloud;
 using PhotoLiker.Manuscripts.Pages;
 
 namespace PhotoLikerUI
@@ -17,7 +18,7 @@ namespace PhotoLikerUI
         private const int SaveDelayMilliseconds = 1500;
         private const int ViewMaximumSide = 2600;
 
-        private readonly string _folder;
+        private string _folder; // the folder whose manuscript is open (it changes with the "Photos from" box)
         private readonly bool _dark;
         private readonly EffectModels _models;
         private readonly Func<ScanKind, ScanLanguage, Task<bool>> _ensureModelsAsync;
@@ -59,6 +60,13 @@ namespace PhotoLikerUI
         internal readonly ToolStripButton ShowLinesButton = new();
         internal readonly ToolStripButton JoinLinesButton = new();
 
+        // Which AI the AI button of the text uses: a row over the text, by the AI button (the toolbar is wider than the window as it is)
+        internal readonly Label AiLabel = new();
+        internal readonly ComboBox AiCombo = new();
+        internal readonly Button AiServicesButton = new();
+        internal readonly CheckBox UseContextCheck = new();
+        private readonly FlowLayoutPanel _aiRow = new();
+
         // The pages, the photo and the text
         internal readonly ListView PageList = new();
         private readonly ImageList _pageImages = new() { ImageSize = new Size(72, 96), ColorDepth = ColorDepth.Depth32Bit };
@@ -97,6 +105,9 @@ namespace PhotoLikerUI
         /// <param name="loadedPhotos">The photos the program has loaded, in its order: they are the pages of a manuscript that has none yet (as the book of the program starts with them), and are added to one that has, except the photos that were taken out of it on purpose. Photos that are not pictures are skipped, and no more than <see cref="MaximumLoadedPages"/> are taken.</param>
         /// <param name="ensurePicturesAsync">Makes sure the models that find the pictures on a page (the finder of lines and the model of the Telegram stickers) are on this computer; null: they are taken to be there.</param>
         /// <param name="ensureFixAsync">Makes sure the model of the AI that corrects the text (the language model and its tokenizer) is on this computer; null: it is taken to be there.</param>
+        /// <param name="aiServices">The keys of the AI services (ChatGPT, Gemini, Claude) and which of them corrects the text; null: the ones the program keeps (<see cref="AiServiceSettings.DefaultPath"/>).</param>
+        /// <param name="likedFolder">The folder of the liked photos: the "Photos from" box offers it, and the groups in it, besides the photos that are loaded; null or empty: the box has the loaded photos only.</param>
+        /// <param name="extensions">The extensions of the photos of a folder (with the dot); null: those of <see cref="PhotoExtensions"/>.</param>
         public ManuscriptDialog(
             string folder,
             IReadOnlyList<string> startPhotos,
@@ -107,8 +118,14 @@ namespace PhotoLikerUI
             Func<Task<bool>>? ensureCutoutAsync = null,
             IReadOnlyList<string>? loadedPhotos = null,
             Func<Task<bool>>? ensurePicturesAsync = null,
-            Func<Task<bool>>? ensureFixAsync = null)
+            Func<Task<bool>>? ensureFixAsync = null,
+            AiServiceSettings? aiServices = null,
+            string? likedFolder = null,
+            IReadOnlyCollection<string>? extensions = null)
         {
+            _ai = aiServices ?? AiServiceSettings.Load();
+            _likedFolder = likedFolder;
+            _extensions = extensions ?? PhotoExtensions;
             _ensureCutoutAsync = ensureCutoutAsync;
             _ensurePicturesAsync = ensurePicturesAsync;
             _ensureFixAsync = ensureFixAsync;
@@ -117,6 +134,7 @@ namespace PhotoLikerUI
             _ensureModelsAsync = ensureModelsAsync;
             _photoChanged = photoChanged;
             _folder = !string.IsNullOrWhiteSpace(folder) ? folder : startPhotos.Count > 0 ? Path.GetDirectoryName(startPhotos[0]) ?? string.Empty : string.Empty;
+            _currentFolder = _folder;
 
             Text = ManuscriptStrings.DialogTitle;
             FormBorderStyle = FormBorderStyle.Sizable;
@@ -132,6 +150,8 @@ namespace PhotoLikerUI
 
             BuildBar();
             BuildBody();
+            FillAiCombo();
+            FillSources(loadedPhotos ?? []);
             var bottom = BuildBottom();
             BuildStatusBar();
 
@@ -211,8 +231,13 @@ namespace PhotoLikerUI
             KindCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             KindCombo.AutoSize = false;
             KindCombo.Width = 140;
+            KindCombo.DropDownWidth = 200;
             KindCombo.ToolTipText = ManuscriptStrings.HintKind;
-            KindCombo.Items.AddRange([new Choice<ScanKind>(ScanKind.Handwriting, ManuscriptStrings.KindHandwriting), new Choice<ScanKind>(ScanKind.Printed, ManuscriptStrings.KindPrinted)]);
+            KindCombo.Items.AddRange(
+            [
+                new Choice<ScanKind>(ScanKind.Handwriting, ManuscriptStrings.KindHandwriting), new Choice<ScanKind>(ScanKind.Printed, ManuscriptStrings.KindPrinted),
+                new Choice<ScanKind>(ScanKind.AiService, ManuscriptStrings.KindAi),
+            ]);
             KindCombo.SelectedIndex = 0;
 
             LanguageLabel.Text = ManuscriptStrings.LabelLanguage;
@@ -298,8 +323,11 @@ namespace PhotoLikerUI
             _pagesTitle.AutoSize = true;
             _pagesTitle.Font = new Font(Font, FontStyle.Bold);
 
+            // Where the pages are from: over the list, under its title
+            BuildSourceRow();
             var pages = new Panel { Dock = DockStyle.Fill };
             pages.Controls.Add(PageList);
+            pages.Controls.Add(_sourceRow);
             pages.Controls.Add(_pagesTitle);
 
             // The photo
@@ -329,8 +357,41 @@ namespace PhotoLikerUI
             Editor.FixVisible = true; // the AI button at the end of the buttons of the text
             Editor.FixButton.ToolTipText = ManuscriptStrings.FixTextTip;
             Editor.FixButton.AccessibleName = ManuscriptStrings.FixText;
+
+            // Which AI the AI button uses (the model on this computer, or a service with a key), and the window of the keys; wraps when the text is narrow
+            AiLabel.Name = "aiLabel";
+            AiLabel.Text = ManuscriptStrings.LabelAi;
+            AiLabel.AutoSize = true;
+            AiLabel.Margin = new Padding(0, 6, 4, 0);
+            AiCombo.Name = "aiCombo";
+            AiCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+            AiCombo.Width = 230;
+            AiCombo.DropDownWidth = 340; // the name of a service with its model is longer than the box
+            AiCombo.Margin = new Padding(0, 2, 8, 0);
+            _toolTip.SetToolTip(AiCombo, ManuscriptStrings.HintAi);
+            AiServicesButton.Name = "aiServicesButton";
+            AiServicesButton.Text = ManuscriptStrings.AiServices;
+            AiServicesButton.AutoSize = true;
+            AiServicesButton.Padding = new Padding(6, 1, 6, 1);
+            AiServicesButton.Margin = new Padding(0, 1, 0, 0);
+            _toolTip.SetToolTip(AiServicesButton, ManuscriptStrings.AiServicesTip);
+            UseContextCheck.Name = "useContextCheck";
+            UseContextCheck.Text = ManuscriptStrings.UseContext;
+            UseContextCheck.AutoSize = true;
+            UseContextCheck.Margin = new Padding(12, 4, 0, 0);
+            _toolTip.SetToolTip(UseContextCheck, ManuscriptStrings.HintUseContext);
+            _aiRow.Name = "aiRow";
+            _aiRow.Dock = DockStyle.Top;
+            _aiRow.AutoSize = true;
+            _aiRow.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            _aiRow.FlowDirection = FlowDirection.LeftToRight;
+            _aiRow.WrapContents = true;
+            _aiRow.Padding = new Padding(6, 0, 6, 4);
+            _aiRow.Controls.AddRange([AiLabel, AiCombo, AiServicesButton, UseContextCheck]);
+
             var text = new Panel { Dock = DockStyle.Fill };
             text.Controls.Add(Editor);
+            text.Controls.Add(_aiRow);
             text.Controls.Add(_textHint);
             text.Controls.Add(_textTitle);
 

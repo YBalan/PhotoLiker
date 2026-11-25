@@ -11,6 +11,9 @@ namespace PhotoLiker.Core
 
         public string LastFolder { get; set; } = string.Empty;
 
+        /// <summary>The folders that were opened last, newest first (at most <see cref="PhotoLiker.Core.RecentFolders.Capacity"/>): the right-click menu of the Open button and the Jump List of the taskbar button list them.</summary>
+        public List<string> RecentFolders { get; set; } = [];
+
         /// <summary>The language of the program, by <see cref="AppLanguage.Code"/> ("en", "ua"). One for the whole program, so it is kept here and not in the settings of a photo folder. A language whose file is gone is English.</summary>
         public string Language { get; set; } = AppLanguage.EnglishCode;
 

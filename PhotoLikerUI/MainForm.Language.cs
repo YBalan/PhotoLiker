@@ -50,6 +50,7 @@ namespace PhotoLikerUI
                 ApplyTheme(_currentConfig.IsDarkTheme);
                 UpdateContextMenuButton();
                 RefreshContextMenuEntry();
+                SyncRecentJumpList(); // its heading is in the language that is on
             }
             finally
             {
@@ -94,6 +95,7 @@ namespace PhotoLikerUI
         {
             // The buttons of the designer
             openToolStripButton.Text = ToolbarStrings.Open;
+            openToolStripButton.ToolTipText = ToolbarStrings.OpenTooltip;
             saveToolStripButton.Text = ToolbarStrings.Save;
             saveToolStripButton.ToolTipText = ToolbarStrings.SaveTooltip;
             copyToolStripButton.Text = ToolbarStrings.Copy;

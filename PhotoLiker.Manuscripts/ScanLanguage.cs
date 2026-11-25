@@ -1,10 +1,13 @@
 namespace PhotoLiker.Manuscripts
 {
-    /// <summary>What kind of writing a page is: written by hand, or printed (a typed or a typeset page).</summary>
+    /// <summary>What kind of writing a page is, and who reads it: written by hand or printed (read by the models of this computer), or either, read by an AI service over the Internet.</summary>
     public enum ScanKind
     {
         Handwriting,
         Printed,
+
+        /// <summary>The photo is sent to an AI service that can see (see <c>CloudReader</c>), which writes the text of the page back: handwriting or print, any language, no boxes on the photo.</summary>
+        AiService,
     }
 
     /// <summary>

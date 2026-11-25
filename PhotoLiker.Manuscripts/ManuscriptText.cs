@@ -31,6 +31,19 @@ namespace PhotoLiker.Manuscripts
         /// </summary>
         public static string FromLines(IEnumerable<PhotoLiker.Drawing.Ocr.TextLine> lines) => ManuscriptLayout.TextOf(ManuscriptLayout.Rows([.. lines]));
 
+        /// <summary>
+        /// A plain text (a line to a line, a blank line between paragraphs, tabs between columns) as a document of the book: a paragraph to a line, an empty paragraph for a blank line, as the text of a
+        /// scan is laid out (see <see cref="ManuscriptLayout.ToDocument"/>), with nothing of how far the line is from the left side of the page, which only a scan that has boxes knows.
+        /// </summary>
+        public static RichDocument DocumentOf(string text)
+        {
+            var paragraphs = new List<RichParagraph>();
+            foreach (var line in text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                paragraphs.Add(new RichParagraph(TextAlign.Left, line.Length == 0 ? [] : [new RichRun(line, default)]));
+
+            return new RichDocument(paragraphs);
+        }
+
         /// <summary>The text of an RTF as plain text, a paragraph to a line; empty for no text (its pictures are not looked at).</summary>
         public static string PlainOf(string? rtf) =>
             string.IsNullOrWhiteSpace(rtf) ? string.Empty : string.Join("\n", RtfParser.Parse(rtf, readPictures: false).Paragraphs.Select(paragraph => paragraph.PlainText));
