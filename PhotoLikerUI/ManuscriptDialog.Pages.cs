@@ -656,6 +656,8 @@ namespace PhotoLikerUI
             RotateLeftButton.Enabled = idle && hasPage;
             RotateRightButton.Enabled = idle && hasPage;
             JoinLinesButton.Enabled = hasPage;
+            AiCombo.Enabled = idle;
+            AiServicesButton.Enabled = idle;
             SaveBookButton.Enabled = idle && _pages.Count > 0;
         }
 

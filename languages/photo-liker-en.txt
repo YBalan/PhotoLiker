@@ -1902,7 +1902,7 @@ ManuscriptStrings.StatusPreparingPictureModel = Preparing the model that finds p
 ManuscriptStrings.StatusPicturesInTextFormat = {0} picture(s) put into the texts.
 ManuscriptStrings.StatusLoadingPagesFormat = Loading the pages: {0} of {1}...
 ManuscriptStrings.FixText = Fix the text with AI
-ManuscriptStrings.FixTextTip = Fix the text with AI: a language model that runs on this computer reads it and corrects, word by word, the letters the scan misread and the spelling. It works on the selected text, or on the whole page when nothing is selected; the lines, tabs and pictures stay, and Ctrl+Z takes the changes back. It knows English and Russian well and Ukrainian less well, and it cannot guess what the scan lost altogether. The first time it asks to download the model (1.8 GB).
+ManuscriptStrings.FixTextTip = Fix the text with AI: a language model that runs on this computer reads it and corrects, word by word, the letters the scan misread and the spelling. It works on the selected text, or on the whole page when nothing is selected; the lines, tabs and pictures stay, and Ctrl+Z takes the changes back. It knows English and Russian well and Ukrainian less well, and it cannot guess what the scan lost altogether. The first time it asks to download the model (1.8 GB). Instead of that model, the AI box can pick an AI service you gave a key for (ChatGPT, Gemini, Claude): it is far bigger, but the text of the page is sent to it over the Internet.
 ManuscriptStrings.StatusFixPreparing = Loading the AI model...
 ManuscriptStrings.StatusFixingFormat = Fixing the text with AI: part {0} of {1}...
 ManuscriptStrings.StatusFixedFormat = The AI corrected {0} word(s). Ctrl+Z takes the changes back.
@@ -1911,6 +1911,36 @@ ManuscriptStrings.StatusFixNoText = There is no text to correct.
 ManuscriptStrings.StatusFixDeclined = The AI model was not downloaded, so the text was not corrected.
 ManuscriptStrings.StatusFixStopped = Fixing the text was stopped; nothing was changed.
 ManuscriptStrings.StatusFixFailedFormat = The text could not be corrected: {0}
+ManuscriptStrings.LabelAi = AI:
+ManuscriptStrings.HintAi = Which AI the AI button of the text uses: the language model on this computer, or an AI service you have given a key for (see AI services). A service gets the text of the page, not the photo.
+ManuscriptStrings.AiLocal = This computer
+ManuscriptStrings.AiServices = AI services...
+ManuscriptStrings.AiServicesTip = Keys for ChatGPT (OpenAI), Gemini and Claude, so that the AI button can correct the text with one of them instead of the model on this computer.
+ManuscriptStrings.StatusFixAskingFormat = Asking {0}...
+
+# ──────────── AiServicesStrings ────────────
+AiServicesStrings.Title = AI services
+AiServicesStrings.Intro = Give a key for the AI services you use. In the Scan manuscripts window the AI button can then correct the text with one of them instead of the model on this computer: pick it in the AI box. A service without a key is not offered.
+AiServicesStrings.Privacy = A key is kept on this computer, encrypted for your Windows account, and is sent only to its own service. What a service gets is the text of the page you fix (not the photo); its terms and your plan say what it does with it. Leave a key empty to keep that service off.
+AiServicesStrings.LabelKey = Key:
+AiServicesStrings.ShowKey = Show
+AiServicesStrings.LabelModel = Model:
+AiServicesStrings.CheckKey = Check key
+AiServicesStrings.HintCheckKey = Asks the service for its list of models with this key: shows whether the key is accepted and fills the list of models. It costs nothing.
+AiServicesStrings.GetKey = Get a key
+AiServicesStrings.HintGetKey = Opens the page of the service where a key is made.
+AiServicesStrings.RemoveKey = Remove
+AiServicesStrings.HintRemoveKey = Forgets the key of this service (when OK is pressed).
+AiServicesStrings.Ok = OK
+AiServicesStrings.Cancel = Cancel
+AiServicesStrings.StatusChecking = Asking the service...
+AiServicesStrings.StatusCheckedFormat = The key is accepted. Models in the list: {0}.
+AiServicesStrings.StatusCheckFailedFormat = Not accepted: {0}
+AiServicesStrings.StatusNoKey = Type the key first.
+AiServicesStrings.StatusKeyBad = A key is one line of letters, digits and signs, without spaces.
+AiServicesStrings.StatusModelBad = A model name has letters, digits and . - _ : / only.
+AiServicesStrings.StatusRemoved = The key will be forgotten when OK is pressed.
+AiServicesStrings.SaveFailedFormat = The keys could not be saved: {0}
 
 # ──────────── RecentStrings ────────────
 RecentStrings.MenuNone = No recent folders yet

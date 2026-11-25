@@ -1,11 +1,13 @@
 using PhotoLiker.Effects.Models;
 using PhotoLiker.Manuscripts;
+using PhotoLiker.Manuscripts.Cloud;
 using PhotoLiker.Manuscripts.Fixing;
 
 namespace PhotoLikerUI
 {
     /// <summary>
-    /// The AI button of the text box in the Scan manuscripts window: a language model that runs on this computer (<see cref="LlmCorrector"/>) corrects what the scan misread, word by word. It works on the
+    /// The AI button of the text box in the Scan manuscripts window: a language model that runs on this computer (<see cref="LlmCorrector"/>), or an AI service over the Internet the person gave a key
+    /// for (<see cref="CloudCorrector"/>, see <see cref="AiServicesDialog"/>), corrects what the scan misread, word by word. It works on the
     /// text that is selected, or on all the text of the page; what it gives back is taken word by word (<see cref="TextFixer"/>) and put into the text box, which keeps the lines, the tabs, the pictures and the
     /// look of the words, and the changes can be taken back with Ctrl+Z.
     /// </summary>
@@ -21,8 +23,9 @@ namespace PhotoLikerUI
         internal Func<string, ScanLanguage, CancellationToken, string>? FixerOverride { get; set; }
 
         /// <summary>
-        /// Corrects the text with the AI (the button at the end of the buttons of the text box): the text that is selected, or all of it. The model is asked for (and downloaded) when it is not on this
-        /// computer; it is let go of when the work is done, as it holds more than a gigabyte of memory.
+        /// Corrects the text with the AI (the button at the end of the buttons of the text box): the text that is selected, or all of it. The AI is the one picked in the AI box: an AI service
+        /// that has a key (ChatGPT, Gemini, Claude; the text of the page is sent to it, one piece at a time), or the language model on this computer, which is asked for (and downloaded) when it
+        /// is not here, and let go of when the work is done, as it holds more than a gigabyte of memory.
         /// </summary>
         internal async Task FixTextAsync()
         {
@@ -41,25 +44,36 @@ namespace PhotoLikerUI
             }
 
             var language = Language;
+
+            // Who corrects: the AI service that is picked (its key is looked at now, so a change made later does not change this run), or the language model on this computer (which a test's stand-in replaces)
+            var account = FixerOverride is null ? _ai.Active : null;
             var source = new CancellationTokenSource();
             _scan = source;
             SetBusy(true);
             StopButton.Enabled = true;
             try
             {
-                // Said first: looking at a file of 1.8 GB (its SHA-256) takes some seconds, and the download of it minutes, the main window says how far it is (see ShowModelStatus)
-                SetStatus(ManuscriptStrings.StatusFixPreparing);
-                if (FixerOverride is null && _ensureFixAsync is not null && !await _ensureFixAsync())
+                if (account is not null)
                 {
-                    if (!IsDisposed)
-                        SetStatus(ManuscriptStrings.StatusFixDeclined);
-                    return;
+                    SetStatus(string.Format(ManuscriptStrings.StatusFixAskingFormat, AiVendors.Name(account.Vendor)));
+                }
+                else
+                {
+                    // Said first: looking at a file of 1.8 GB (its SHA-256) takes some seconds, and the download of it minutes, the main window says how far it is (see ShowModelStatus)
+                    SetStatus(ManuscriptStrings.StatusFixPreparing);
+                    if (FixerOverride is null && _ensureFixAsync is not null && !await _ensureFixAsync())
+                    {
+                        if (!IsDisposed)
+                            SetStatus(ManuscriptStrings.StatusFixDeclined);
+                        return;
+                    }
+
+                    if (IsDisposed)
+                        return;
+
+                    SetStatus(ManuscriptStrings.StatusFixPreparing);
                 }
 
-                if (IsDisposed)
-                    return;
-
-                SetStatus(ManuscriptStrings.StatusFixPreparing);
                 var progress = new Progress<(int Done, int Total)>(step =>
                 {
                     if (IsDisposed)
@@ -70,7 +84,7 @@ namespace PhotoLikerUI
                     _progress.Value = Math.Min(step.Done, _progress.Maximum);
                 });
 
-                var edits = await Task.Run(() => TextFixer.Fix(text, CorrectorFor(language), progress, source.Token), source.Token);
+                var edits = await Task.Run(() => TextFixer.Fix(text, CorrectorFor(language, account), progress, source.Token), source.Token);
                 if (IsDisposed)
                     return;
 
@@ -89,7 +103,8 @@ namespace PhotoLikerUI
                     SetStatus(ManuscriptStrings.StatusFixStopped);
             }
             catch (Exception ex) when (ex is IOException or InvalidDataException or NotSupportedException or FileNotFoundException or UnauthorizedAccessException or InvalidOperationException
-                or Microsoft.ML.OnnxRuntime.OnnxRuntimeException or DllNotFoundException or BadImageFormatException or OutOfMemoryException)
+                or Microsoft.ML.OnnxRuntime.OnnxRuntimeException or DllNotFoundException or BadImageFormatException or OutOfMemoryException
+                or AiServiceException or ArgumentException)
             {
                 if (!IsDisposed)
                     SetStatus(string.Format(ManuscriptStrings.StatusFixFailedFormat, ex.Message));
@@ -107,14 +122,17 @@ namespace PhotoLikerUI
             }
         }
 
-        /// <summary>The corrector for a language: the stand-in of a test, or the language model (made when it is first needed). Runs on a thread of its own.</summary>
-        private ITextCorrector CorrectorFor(ScanLanguage language)
+        /// <summary>The corrector for a language: the stand-in of a test, the AI service that is picked, or the language model (made when it is first needed). Runs on a thread of its own.</summary>
+        private ITextCorrector CorrectorFor(ScanLanguage language, AiAccount? account)
         {
             if (_corrector is not null)
                 return _corrector;
 
             if (FixerOverride is { } standIn)
                 return _corrector = new StandInCorrector(standIn, language);
+
+            if (account is not null)
+                return _corrector = new CloudCorrector(new CloudChat(account.Vendor, account.ApiKey, account.Model, CloudClient), language);
 
             var folder = _models.ModelsFolder;
             return _corrector = new LlmCorrector(ToolModels.TextFixer.PathIn(folder), ToolModels.TextFixerTokenizer.PathIn(folder), language);

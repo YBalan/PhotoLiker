@@ -1888,7 +1888,7 @@ ManuscriptStrings.StatusPreparingPictureModel = Готую модель, що ш
 ManuscriptStrings.StatusPicturesInTextFormat = Малюнків, вставлених у тексти: {0}.
 ManuscriptStrings.StatusLoadingPagesFormat = Завантажую сторінки: {0} з {1}...
 ManuscriptStrings.FixText = Виправити текст за допомогою ШІ
-ManuscriptStrings.FixTextTip = Виправити текст за допомогою ШІ: мовна модель, що працює на цьому комп'ютері, читає його й слово за словом виправляє літери, які скан прочитав хибно, та правопис. Вона працює з виділеним текстом, а коли нічого не виділено - з усією сторінкою; рядки, табуляції та малюнки лишаються, а Ctrl+Z повертає зміни. Англійську й російську вона знає добре, українську гірше, а те, що скан загубив зовсім, вгадати не може. Перший раз вона питає, чи завантажити модель (1,8 ГБ).
+ManuscriptStrings.FixTextTip = Виправити текст за допомогою ШІ: мовна модель, що працює на цьому комп'ютері, читає його й слово за словом виправляє літери, які скан прочитав хибно, та правопис. Вона працює з виділеним текстом, а коли нічого не виділено - з усією сторінкою; рядки, табуляції та малюнки лишаються, а Ctrl+Z повертає зміни. Англійську й російську вона знає добре, українську гірше, а те, що скан загубив зовсім, вгадати не може. Перший раз вона питає, чи завантажити модель (1,8 ГБ). Замість цієї моделі у списку «ШІ» можна обрати сервіс, для якого ви ввели ключ (ChatGPT, Gemini, Claude): він набагато більший, але текст сторінки надсилається йому через Інтернет.
 ManuscriptStrings.StatusFixPreparing = Завантажую модель ШІ...
 ManuscriptStrings.StatusFixingFormat = Виправляю текст за допомогою ШІ: частина {0} з {1}...
 ManuscriptStrings.StatusFixedFormat = ШІ виправив слів: {0}. Ctrl+Z повертає зміни.
@@ -1897,6 +1897,36 @@ ManuscriptStrings.StatusFixNoText = Немає тексту для виправ�
 ManuscriptStrings.StatusFixDeclined = Модель ШІ не завантажено, тож текст не виправляли.
 ManuscriptStrings.StatusFixStopped = Виправлення тексту зупинено; нічого не змінено.
 ManuscriptStrings.StatusFixFailedFormat = Не вдалося виправити текст: {0}
+ManuscriptStrings.LabelAi = ШІ:
+ManuscriptStrings.HintAi = Яким ШІ користується кнопка ШІ біля тексту: мовною моделлю на цьому комп'ютері чи сервісом ШІ, для якого ви ввели ключ (див. «Сервіси ШІ»). Сервіс отримує текст сторінки, а не фото.
+ManuscriptStrings.AiLocal = Цей комп'ютер
+ManuscriptStrings.AiServices = Сервіси ШІ...
+ManuscriptStrings.AiServicesTip = Ключі для ChatGPT (OpenAI), Gemini і Claude, щоб кнопка ШІ могла виправляти текст одним із них замість моделі на цьому комп'ютері.
+ManuscriptStrings.StatusFixAskingFormat = Звертаюся до {0}...
+
+# ──────────── AiServicesStrings ────────────
+AiServicesStrings.Title = Сервіси ШІ
+AiServicesStrings.Intro = Введіть ключ для сервісів ШІ, якими користуєтесь. Тоді у вікні «Сканувати рукописи» кнопка ШІ зможе виправляти текст одним із них замість моделі на цьому комп'ютері: оберіть його у списку «ШІ». Сервіс без ключа не пропонується.
+AiServicesStrings.Privacy = Ключ зберігається на цьому комп'ютері в зашифрованому для вашого облікового запису Windows вигляді й надсилається лише власному сервісу. Сервіс отримує текст сторінки, яку ви виправляєте (не фото); що він з ним робить, залежить від його умов і вашого тарифу. Залиште ключ порожнім, щоб вимкнути цей сервіс.
+AiServicesStrings.LabelKey = Ключ:
+AiServicesStrings.ShowKey = Показати
+AiServicesStrings.LabelModel = Модель:
+AiServicesStrings.CheckKey = Перевірити ключ
+AiServicesStrings.HintCheckKey = Просить у сервісу список його моделей із цим ключем: показує, чи ключ прийнято, і заповнює список моделей. Це безкоштовно.
+AiServicesStrings.GetKey = Отримати ключ
+AiServicesStrings.HintGetKey = Відкриває сторінку сервісу, де створюють ключ.
+AiServicesStrings.RemoveKey = Прибрати
+AiServicesStrings.HintRemoveKey = Забуває ключ цього сервісу (після натискання OK).
+AiServicesStrings.Ok = OK
+AiServicesStrings.Cancel = Скасувати
+AiServicesStrings.StatusChecking = Звертаюся до сервісу...
+AiServicesStrings.StatusCheckedFormat = Ключ прийнято. Моделей у списку: {0}.
+AiServicesStrings.StatusCheckFailedFormat = Не прийнято: {0}
+AiServicesStrings.StatusNoKey = Спершу введіть ключ.
+AiServicesStrings.StatusKeyBad = Ключ - це один рядок із літер, цифр і знаків, без пробілів.
+AiServicesStrings.StatusModelBad = Назва моделі містить лише літери, цифри та . - _ : /
+AiServicesStrings.StatusRemoved = Ключ буде забуто після натискання OK.
+AiServicesStrings.SaveFailedFormat = Не вдалося зберегти ключі: {0}
 
 # ──────────── RecentStrings ────────────
 RecentStrings.MenuNone = Нещодавніх папок ще немає
