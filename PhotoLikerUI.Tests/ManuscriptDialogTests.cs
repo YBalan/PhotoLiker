@@ -53,6 +53,7 @@ public sealed class ManuscriptDialogTests : IDisposable
         dialog.AskPagePaths = () => null;
         dialog.AskRemovePage = _ => false;
         dialog.AskReplaceText = () => false;
+        dialog.AskRescanAll = (_, _, _) => false;
         dialog.AskBookPath = () => null;
     }
 
@@ -333,6 +334,184 @@ public sealed class ManuscriptDialogTests : IDisposable
             await dialog.ScanAllAsync();
 
             Assert.Equal(ManuscriptStrings.StatusScanAllNothing, dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void RescanAll_ReadsEveryPageAgain_WithTheKindAndLanguagePickedNow_AndReplacesTheirText()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AddPagePaths([b]);
+            StandIn(dialog);
+            await dialog.ScanAllAsync();
+            Assert.All(dialog.Pages, page => Assert.Equal("Handwriting", page.Kind));
+
+            // The writing is changed, and the pages are read again
+            dialog.KindCombo.SelectedIndex = 1; // Printed
+            dialog.LanguageCombo.SelectedIndex = 2; // English
+            var seen = new List<(ScanKind, ScanLanguage)>();
+            dialog.ScanOverride = (_, kind, language, _, _) =>
+            {
+                seen.Add((kind, language));
+                return new ScanResult([Line("new text", 160, 40)]);
+            };
+            (int Pages, int WithText, int Edited)? asked = null;
+            dialog.AskRescanAll = (pages, withText, edited) =>
+            {
+                asked = (pages, withText, edited);
+                return true;
+            };
+
+            await dialog.RescanAllAsync();
+
+            Assert.Equal((2, 2, 0), asked); // both pages had text, and none was written by hand
+            Assert.Equal([(ScanKind.Printed, ScanLanguage.English), (ScanKind.Printed, ScanLanguage.English)], seen);
+            Assert.All(dialog.Pages, page =>
+            {
+                Assert.Equal("Printed", page.Kind);
+                Assert.Equal("English", page.Language);
+                Assert.Equal("new text", ManuscriptText.PlainOf(page.Rtf));
+                Assert.Equal(PageState.Scanned, ManuscriptText.StateOf(page));
+            });
+            Assert.Equal("new text", TextOf(dialog)); // the page that is open shows it
+            Assert.Contains("2", dialog.StatusText);
+            Assert.False(dialog.IsBusy);
+        });
+    }
+
+    [Fact]
+    public void RescanAll_AsksFirst_AndANoLeavesEveryPageAsItWas()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AddPagePaths([b]);
+            StandIn(dialog);
+            await dialog.ScanAllAsync();
+            var read = 0;
+            dialog.ScanOverride = (_, _, _, _, _) => { read++; return new ScanResult([Line("other", 160, 40)]); };
+            var asked = 0;
+            dialog.AskRescanAll = (_, _, _) => { asked++; return false; };
+
+            await dialog.RescanAllAsync();
+
+            Assert.Equal(1, asked);
+            Assert.Equal(0, read);
+            Assert.All(dialog.Pages, page => Assert.Equal("перший рядок\nдругий рядок\nтретій рядок", page.Scanned));
+            Assert.Equal("перший рядок\nдругий рядок\nтретій рядок", TextOf(dialog));
+            Assert.False(dialog.IsBusy);
+        });
+    }
+
+    [Fact]
+    public void RescanAll_TellsHowManyPagesHaveTextThePersonWroteOrChanged_ASeparateCountInTheQuestion()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var c = Photo("c.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AddPagePaths([b, c]);
+            StandIn(dialog);
+            dialog.SelectPage(0);
+            await dialog.ScanPageAsync(); // a is read; b has text of its own; c has none
+            dialog.SelectPage(1);
+            dialog.Editor.Box.Text = "my own words";
+            dialog.SelectPage(0);
+            (int Pages, int WithText, int Edited)? asked = null;
+            dialog.AskRescanAll = (pages, withText, edited) =>
+            {
+                asked = (pages, withText, edited);
+                return false;
+            };
+
+            await dialog.RescanAllAsync();
+
+            Assert.Equal((3, 2, 1), asked);
+            var plain = ManuscriptDialog.RescanAllQuestion(3, 2, 0);
+            var edited = ManuscriptDialog.RescanAllQuestion(3, 2, 1);
+            Assert.NotEqual(plain, edited);
+            Assert.Contains("1", edited);
+            Assert.DoesNotContain("wrote", plain);
+        });
+    }
+
+    [Fact]
+    public void RescanAll_OnPagesThatHaveNoText_ReadsThemAtOnce_WithoutAQuestion_AndSkipsPagesThatAreLeftOut()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var c = Photo("c.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AddPagePaths([b, c]);
+            dialog.Pages[2].LeftOut = true;
+            var read = 0;
+            dialog.ScanOverride = (_, _, _, _, _) => { read++; return Three(); };
+            dialog.AskRescanAll = (_, _, _) => throw new InvalidOperationException("nothing is replaced, so nothing is asked");
+
+            await dialog.RescanAllAsync();
+
+            Assert.Equal(2, read);
+            Assert.True(dialog.Pages[0].IsScanned);
+            Assert.True(dialog.Pages[1].IsScanned);
+            Assert.False(dialog.Pages[2].IsScanned);
+        });
+    }
+
+    [Fact]
+    public void RescanAll_WhenEveryPageIsLeftOut_SaysThereIsNothingToRead()
+    {
+        var a = Photo("a.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.Pages[0].LeftOut = true;
+            var read = 0;
+            dialog.ScanOverride = (_, _, _, _, _) => { read++; return Three(); };
+
+            await dialog.RescanAllAsync();
+
+            Assert.Equal(0, read);
+            Assert.Equal(ManuscriptStrings.StatusRescanAllNothing, dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void TheRescanAllButton_IsNextToScanAll_ReadsEveryPageWhenPressed_AndIsOffWhileTheWindowIsBusy()
+    {
+        var a = Photo("a.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            StandIn(dialog);
+            await dialog.ScanPageAsync();
+            var items = dialog.Bar.Items.Cast<ToolStripItem>().ToList();
+            Assert.Equal(items.IndexOf(dialog.ScanAllButton) + 1, items.IndexOf(dialog.RescanAllButton));
+            Assert.Equal(ManuscriptStrings.RescanAll, dialog.RescanAllButton.Text);
+            Assert.True(dialog.RescanAllButton.Enabled);
+
+            var read = 0;
+            dialog.ScanOverride = (_, _, _, _, _) => { read++; return Three(); };
+            dialog.AskRescanAll = (_, _, _) => true;
+            dialog.RescanAllButton.PerformClick();
+
+            Assert.True(await Ui.Until(() => read == 1 && !dialog.IsBusy), "the page was read again");
+            Assert.True(dialog.RescanAllButton.Enabled);
         });
     }
 
@@ -1053,6 +1232,7 @@ public sealed class ManuscriptDialogTests : IDisposable
 
             Assert.Equal(ManuscriptStrings.ScanPage, dialog.ScanPageButton.Text);
             Assert.Equal(ManuscriptStrings.ScanAll, dialog.ScanAllButton.Text);
+            Assert.Equal(ManuscriptStrings.RescanAll, dialog.RescanAllButton.Text);
             Assert.Equal(ManuscriptStrings.AddPages, dialog.AddPagesButton.Text);
             Assert.Equal(ManuscriptStrings.SaveBook, dialog.SaveBookButton.Text);
             Assert.Equal(ManuscriptStrings.IncludePhotos, dialog.IncludePhotosCheck.Text);

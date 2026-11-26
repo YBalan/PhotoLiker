@@ -25,6 +25,10 @@ namespace PhotoLikerUI
         [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
         internal Func<bool>? AskReplaceText { get; set; }
 
+        /// <summary>Asked before every page is read again (the number of pages, how many have text, how many of those have text the person wrote or changed); a test answers it.</summary>
+        [System.ComponentModel.Browsable(false), System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        internal Func<int, int, int, bool>? AskRescanAll { get; set; }
+
         /// <summary>The model of the handwriting a language is read with: the Russian one for Russian, the Ukrainian one for the others (see <see cref="ScanLanguages.HandwritingModelOf"/>).</summary>
         internal static PhotoLiker.Effects.Models.ToolModel HandwritingModel(ScanLanguage language) =>
             ScanLanguages.HandwritingModelOf(language) == ScanLanguage.Russian ? PhotoLiker.Effects.Models.ToolModels.HandwritingRussian : PhotoLiker.Effects.Models.ToolModels.HandwritingUkrainian;
@@ -60,6 +64,43 @@ namespace PhotoLikerUI
 
             await ScanPagesAsync(todo);
         }
+
+        /// <summary>
+        /// Reads every page again with the kind of writing and the language that are picked now (the Rescan all pages button), also the pages that have text: for when they were changed after the pages
+        /// were read. The text of the pages is replaced, so the person is asked first when any page has text, and told how many pages and how many of them have text they wrote or changed.
+        /// </summary>
+        internal async Task RescanAllAsync()
+        {
+            if (_busy)
+                return;
+
+            FlushText();
+            var todo = Enumerable.Range(0, _pages.Count).Where(index => _pages[index].LeftOut != true).ToList();
+            if (todo.Count == 0)
+            {
+                SetStatus(ManuscriptStrings.StatusRescanAllNothing);
+                return;
+            }
+
+            var withText = todo.Count(index => ManuscriptText.HasText(_pages[index]));
+            if (withText > 0)
+            {
+                var edited = todo.Count(index => ManuscriptText.HasText(_pages[index]) && ManuscriptText.StateOf(_pages[index]) == PageState.Edited);
+                if (!(AskRescanAll?.Invoke(todo.Count, withText, edited) ?? ConfirmRescanAll(todo.Count, withText, edited)))
+                    return;
+            }
+
+            await ScanPagesAsync(todo);
+        }
+
+        private bool ConfirmRescanAll(int pages, int withText, int edited) =>
+            MessageBox.Show(this, RescanAllQuestion(pages, withText, edited), ManuscriptStrings.DialogTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+
+        /// <summary>What the person is asked before the pages are read again: how many pages, how many have text that is replaced, and how many of those have text they wrote or changed.</summary>
+        internal static string RescanAllQuestion(int pages, int withText, int edited) =>
+            edited > 0
+                ? string.Format(ManuscriptStrings.ConfirmRescanAllEditedFormat, pages, withText, edited)
+                : string.Format(ManuscriptStrings.ConfirmRescanAllFormat, pages, withText);
 
         private bool ConfirmReplace() =>
             MessageBox.Show(this, ManuscriptStrings.ConfirmReplaceText, ManuscriptStrings.DialogTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;

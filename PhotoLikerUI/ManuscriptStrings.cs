@@ -52,6 +52,11 @@ namespace PhotoLikerUI
         public static string ScanPageTip => T();
         public static string ScanAll => T();
         public static string ScanAllTip => T();
+        public static string RescanAll => T();
+        public static string RescanAllTip => T();
+        public static string ConfirmRescanAllFormat => T();
+        public static string ConfirmRescanAllEditedFormat => T();
+        public static string StatusRescanAllNothing => T();
         public static string Stop => T();
         public static string StopTip => T();
         public static string ShowLines => T();

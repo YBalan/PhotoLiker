@@ -326,6 +326,7 @@ namespace PhotoLikerUI
             };
             ScanPageButton.Click += async (_, _) => await ScanPageAsync();
             ScanAllButton.Click += async (_, _) => await ScanAllAsync();
+            RescanAllButton.Click += async (_, _) => await RescanAllAsync();
             StopButton.Click += (_, _) => _scan?.Cancel();
             RotateLeftButton.Click += async (_, _) => await RotateCurrentAsync(-1);
             RotateRightButton.Click += async (_, _) => await RotateCurrentAsync(1);

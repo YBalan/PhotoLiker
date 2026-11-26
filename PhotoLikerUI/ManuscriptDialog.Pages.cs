@@ -656,6 +656,7 @@ namespace PhotoLikerUI
             LanguageCombo.Enabled = idle;
             ScanPageButton.Enabled = idle && hasPage;
             ScanAllButton.Enabled = idle && _pages.Count > 0;
+            RescanAllButton.Enabled = idle && _pages.Count > 0;
             FindPicturesButton.Enabled = idle && hasPage;
             StopButton.Enabled = _busy && _scan is not null;
             RotateLeftButton.Enabled = idle && hasPage;

@@ -53,6 +53,7 @@ namespace PhotoLikerUI
         internal readonly ToolStripComboBox LanguageCombo = new();
         internal readonly ToolStripButton ScanPageButton = new();
         internal readonly ToolStripButton ScanAllButton = new();
+        internal readonly ToolStripButton RescanAllButton = new();
         internal readonly ToolStripButton StopButton = new();
         internal readonly ToolStripButton FindPicturesButton = new();
         internal readonly ToolStripButton RotateLeftButton = new();
@@ -251,6 +252,7 @@ namespace PhotoLikerUI
 
             Plain(ScanPageButton, "scanPageButton", ManuscriptStrings.ScanPage, ManuscriptStrings.ScanPageTip);
             Plain(ScanAllButton, "scanAllButton", ManuscriptStrings.ScanAll, ManuscriptStrings.ScanAllTip);
+            Plain(RescanAllButton, "rescanAllButton", ManuscriptStrings.RescanAll, ManuscriptStrings.RescanAllTip);
             Plain(StopButton, "stopScanButton", ManuscriptStrings.Stop, ManuscriptStrings.StopTip);
             Plain(FindPicturesButton, "findPicturesButton", ManuscriptStrings.FindPictures, ManuscriptStrings.FindPicturesTip);
             ScanPageButton.Font = new Font(Bar.Font, FontStyle.Bold);
@@ -270,7 +272,7 @@ namespace PhotoLikerUI
             [
                 AddPagesButton, RemovePageButton, MoveUpButton, MoveDownButton, new ToolStripSeparator(),
                 KindLabel, KindCombo, LanguageLabel, LanguageCombo, new ToolStripSeparator(),
-                ScanPageButton, ScanAllButton, StopButton, FindPicturesButton, new ToolStripSeparator(),
+                ScanPageButton, ScanAllButton, RescanAllButton, StopButton, FindPicturesButton, new ToolStripSeparator(),
                 RotateLeftButton, RotateRightButton, new ToolStripSeparator(),
                 ShowLinesButton, JoinLinesButton,
             ]);

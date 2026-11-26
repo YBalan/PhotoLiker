@@ -13,6 +13,10 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
+## Unreleased
+
+- Added Rescan all pages to Scan manuscripts: after you change the kind of writing or the language, every page can be read again, also those that have text.
+
 ## 4.6.13 - 2026-11-25
 
 - Added recent folders: right-click Open for the ten folders opened last; the taskbar icon lists them too, and Windows lets you pin one there.
