@@ -45,7 +45,8 @@ public sealed class BookDialogTests : IDisposable
 
     private static void PickFormat(BookDialog dialog, BookFormat format)
     {
-        var index = dialog.FormatCombo.Items.Cast<object>().ToList().FindIndex(item => item.ToString()!.StartsWith(format == BookFormat.Pdf ? "PDF" : "EPUB"));
+        var prefix = format switch { BookFormat.Pdf => "PDF", BookFormat.Docx => "DOCX", _ => "EPUB" };
+        var index = dialog.FormatCombo.Items.Cast<object>().ToList().FindIndex(item => item.ToString()!.StartsWith(prefix));
         dialog.FormatCombo.SelectedIndex = index;
     }
 
@@ -442,6 +443,62 @@ public sealed class BookDialogTests : IDisposable
             PickFormat(dialog, BookFormat.Pdf);
             Assert.Equal("holiday.pdf", dialog.FileNameBox.Text);
             Assert.All(dialog.PdfOnlyFields, field => Assert.True(field.Enabled));
+        });
+    }
+
+    [Fact]
+    public void TheFormats_AreAPdfAnEpubAndAWordDocument_AWordDocumentIsPagedLikeAPdf_AndTheNameFollowsIt()
+    {
+        Photo("a.jpg", 1);
+        Ui.Run(() => Create(), async form =>
+        {
+            var dialog = (BookDialog)form;
+            await Loaded(dialog, 1);
+            Assert.Equal([BookStrings.FormatPdf, BookStrings.FormatEpub, BookStrings.FormatDocx], dialog.FormatCombo.Items.Cast<object>().Select(item => item.ToString() ?? string.Empty).ToArray());
+
+            PickFormat(dialog, BookFormat.Docx);
+            Assert.EndsWith(".docx", dialog.FileNameBox.Text);
+            Assert.All(dialog.PdfOnlyFields, field => Assert.True(field.Enabled)); // the paper, the margins, the font and the numbers are those of a Word document too
+
+            dialog.FileNameBox.Text = "holiday.docx";
+            PickFormat(dialog, BookFormat.Epub);
+            Assert.Equal("holiday.epub", dialog.FileNameBox.Text);
+            Assert.All(dialog.PdfOnlyFields, field => Assert.False(field.Enabled));
+
+            PickFormat(dialog, BookFormat.Docx);
+            Assert.Equal("holiday.docx", dialog.FileNameBox.Text);
+            Assert.All(dialog.PdfOnlyFields, field => Assert.True(field.Enabled));
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void AWordDocument_IsMade_WithTheTextsOfThePhotosInTheirOrder_AndThePaperThatWasPicked()
+    {
+        Photo("a.jpg", 1);
+        Photo("b.jpg", 2, width: 160, height: 240);
+        Ui.Run(() => Create(), async form =>
+        {
+            var dialog = (BookDialog)form;
+            await Loaded(dialog, 2);
+            dialog.AboveEditor.Box.Text = "about a";
+            dialog.View.Select(1);
+            dialog.BelowEditor.Box.Text = "about b";
+            dialog.View.MoveSelectedToStart(); // b a
+            dialog.TitleBox.Text = "Книга";
+            PickFormat(dialog, BookFormat.Docx);
+
+            dialog.MakeButton.PerformClick();
+            Assert.True(await Ui.Until(() => dialog.MadeBookPath is not null && dialog.MakeButton.Enabled, 60000), "the book was made: " + dialog.StatusText);
+
+            Assert.EndsWith(".docx", dialog.MadeBookPath);
+            using var zip = ZipFile.OpenRead(dialog.MadeBookPath!);
+            var document = System.Xml.Linq.XDocument.Load(zip.GetEntry("word/document.xml")!.Open());
+            var w = System.Xml.Linq.XNamespace.Get("http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+            var texts = document.Descendants(w + "t").Select(element => element.Value).Where(text => text.StartsWith("about", StringComparison.Ordinal)).ToArray();
+            Assert.Equal(["about b", "about a"], texts);
+            Assert.Equal(3, document.Descendants(w + "sectPr").Count()); // the title, b and a
+            Assert.Contains("Done", dialog.StatusText);
         });
     }
 

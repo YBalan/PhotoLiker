@@ -4,9 +4,9 @@ using System.Runtime.InteropServices;
 namespace PhotoLikerUI
 {
     /// <summary>
-    /// A Rich Text Box with the buttons for what a book can show: bold, italic, underline, strike-through, the size and the colour of the text, and where the lines go (left, centre, right,
-    /// spread to both sides). It looks like the paper of the book (black on white) whatever the theme of the program is, and it keeps its text as RTF (<see cref="Rtf"/>), which
-    /// <see cref="RtfParser"/> reads for the PDF and the EPUB.
+    /// A Rich Text Box with the buttons for what a book can show: bold, italic, underline, strike-through, the size and the colour of the text, where the lines go (left, centre, right,
+    /// spread to both sides), lists with bullets and with numbers, and a button that shows the spaces, the tabs and the ends of lines (¶). It looks like the paper of the book (black on white)
+    /// whatever the theme of the program is, and it keeps its text as RTF (<see cref="Rtf"/>), which <see cref="RtfParser"/> reads for the PDF, the EPUB and the Word document.
     /// </summary>
     internal sealed class RichDescriptionEditor : Panel
     {
@@ -15,7 +15,7 @@ namespace PhotoLikerUI
 
         private static readonly float[] Sizes = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48];
 
-        private readonly RichTextBox _box = new();
+        private readonly MarkedRichTextBox _box = new();
         private readonly ToolStrip _tools = new();
         private readonly ToolStripButton _undo = new() { Name = "undoTextButton" };
         private readonly ToolStripButton _redo = new() { Name = "redoTextButton" };
@@ -30,6 +30,9 @@ namespace PhotoLikerUI
         private readonly ToolStripButton _center = new();
         private readonly ToolStripButton _right = new();
         private readonly ToolStripButton _justify = new();
+        private readonly ToolStripButton _bullets = new() { Name = "bulletsButton" };
+        private readonly ToolStripButton _numbers = new() { Name = "numbersButton" };
+        private readonly ToolStripButton _marks = new() { Name = "showCharactersButton" };
         private readonly ToolStripButton _clear = new();
         private readonly ToolStripSeparator _fixSeparator = new() { Available = false };
         private readonly ToolStripButton _fix = new() { Name = "fixTextButton", Available = false };
@@ -60,6 +63,12 @@ namespace PhotoLikerUI
             {
                 UpdateTools();
                 UpdateUndoButtons();
+            };
+            _box.KeyDown += (_, e) =>
+            {
+                // Enter in an item that has nothing written in it ends the list (as in a word processor), instead of making one more empty item
+                if (e.KeyCode == Keys.Enter && !e.Shift && !e.Control && !e.Alt && EndListHere())
+                    e.Handled = e.SuppressKeyPress = true;
             };
 
             _tools.GripStyle = ToolStripGripStyle.Hidden;
@@ -110,6 +119,19 @@ namespace PhotoLikerUI
                 button.Image = AlignmentPicture(alignment, SystemColors.ControlText);
             }
 
+            // The lists: a bullet or a number before each paragraph (Rich Edit numbers them, and goes on with the list when Enter is pressed)
+            Setup(_bullets, "•", BookStrings.BulletList, null, () => SetList(RichList.Bullet));
+            Setup(_numbers, "1.", BookStrings.NumberedList, null, () => SetList(RichList.Number));
+            foreach (var (button, list) in ListButtons)
+            {
+                button.DisplayStyle = ToolStripItemDisplayStyle.Image;
+                button.Image = ListPicture(list, SystemColors.ControlText);
+            }
+
+            // Shows where the spaces, the tabs and the ends of lines are, for as long as it is on
+            Setup(_marks, "¶", BookStrings.ShowCharacters, null, ToggleMarks);
+            _marks.Font = new Font("Segoe UI", 12f, FontStyle.Bold);
+
             _clear.Text = "T✕";
             _clear.ToolTipText = BookStrings.ClearFormatting;
             _clear.DisplayStyle = ToolStripItemDisplayStyle.Text;
@@ -121,12 +143,33 @@ namespace PhotoLikerUI
             _fix.Image = SparklePicture(false);
             _fix.Click += (_, _) => FixRequested?.Invoke(this, EventArgs.Empty);
 
-            _tools.Items.AddRange([_undo, _redo, _undoSeparator, _bold, _italic, _underline, _strike, new ToolStripSeparator(), _size, _color, new ToolStripSeparator(), _left, _center, _right, _justify, new ToolStripSeparator(), _clear, _fixSeparator, _fix]);
+            _tools.Items.AddRange([_undo, _redo, _undoSeparator, _bold, _italic, _underline, _strike, new ToolStripSeparator(), _size, _color, new ToolStripSeparator(), _left, _center, _right, _justify, new ToolStripSeparator(), _bullets, _numbers, _marks, new ToolStripSeparator(), _clear, _fixSeparator, _fix]);
 
             Controls.Add(_box);
             Controls.Add(_tools);
             UpdateTools();
             UpdateUndoButtons();
+        }
+
+        /// <summary>The button of the list with bullets.</summary>
+        public ToolStripButton BulletsButton => _bullets;
+
+        /// <summary>The button of the list with numbers.</summary>
+        public ToolStripButton NumbersButton => _numbers;
+
+        /// <summary>The button (¶) that shows the spaces, the tabs and the ends of lines.</summary>
+        public ToolStripButton ShowCharactersButton => _marks;
+
+        /// <summary>Whether the spaces, the tabs and the ends of lines and paragraphs are shown in the text (they are not a part of it: only drawn).</summary>
+        [Browsable(false), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public bool ShowAllCharacters
+        {
+            get => _box.ShowMarks;
+            set
+            {
+                _box.ShowMarks = value;
+                _marks.Checked = value;
+            }
         }
 
         /// <summary>The Undo button (the arrow that turns left).</summary>
@@ -226,6 +269,8 @@ namespace PhotoLikerUI
         private IEnumerable<(ToolStripButton Button, RichAlignment Alignment)> AlignmentButtons =>
             [(_left, RichAlignment.Left), (_center, RichAlignment.Center), (_right, RichAlignment.Right), (_justify, RichAlignment.Justify)];
 
+        private IEnumerable<(ToolStripButton Button, RichList List)> ListButtons => [(_bullets, RichList.Bullet), (_numbers, RichList.Number)];
+
         /// <summary>Gives the buttons the colours of the theme (the paper stays white, with black text: the theme paints a Rich Text Box in its own colours, which are not those of paper).</summary>
         public void ApplyTheme(bool dark)
         {
@@ -238,6 +283,13 @@ namespace PhotoLikerUI
             {
                 var old = button.Image;
                 button.Image = AlignmentPicture(alignment, dark ? ThemeManager.DarkFore : SystemColors.ControlText);
+                old?.Dispose();
+            }
+
+            foreach (var (button, list) in ListButtons)
+            {
+                var old = button.Image;
+                button.Image = ListPicture(list, dark ? ThemeManager.DarkFore : SystemColors.ControlText);
                 old?.Dispose();
             }
 
@@ -326,11 +378,61 @@ namespace PhotoLikerUI
                 _center.Checked = alignment == RichAlignment.Center;
                 _right.Checked = alignment == RichAlignment.Right;
                 _justify.Checked = alignment == RichAlignment.Justify;
+
+                var list = GetList();
+                _bullets.Checked = list == RichList.Bullet;
+                _numbers.Checked = list == RichList.Number;
             }
             finally
             {
                 _updatingTools = false;
             }
+        }
+
+        /// <summary>The ¶ button: shows the spaces, the tabs and the ends of lines, or does not.</summary>
+        private void ToggleMarks() => ShowAllCharacters = !_box.ShowMarks;
+
+        /// <summary>
+        /// The picture of a button of a list: three dots with a line after each, or three numbers (drawn dot by dot, as they are too small for a font to make them readable) with a line after each.
+        /// </summary>
+        private static Bitmap ListPicture(RichList list, Color color)
+        {
+            var bitmap = new Bitmap(16, 16);
+            using var graphics = Graphics.FromImage(bitmap);
+            using var pen = new Pen(color, 1.5f);
+            using var brush = new SolidBrush(color);
+
+            // Each digit is 3 dots wide and 5 high ('#': a dot)
+            string[][] digits =
+            [
+                [".#.", "##.", ".#.", ".#.", "###"],
+                ["##.", "..#", ".#.", "#..", "###"],
+                ["##.", "..#", ".#.", "..#", "##."],
+            ];
+
+            for (var row = 0; row < 3; row++)
+            {
+                var top = 1 + row * 5;
+                if (list == RichList.Bullet)
+                {
+                    graphics.FillRectangle(brush, 1, top + 1, 3, 3);
+                }
+                else
+                {
+                    for (var y = 0; y < 5; y++)
+                    {
+                        for (var x = 0; x < 3; x++)
+                        {
+                            if (digits[row][y][x] == '#')
+                                bitmap.SetPixel(1 + x, top + y, color);
+                        }
+                    }
+                }
+
+                graphics.DrawLine(pen, 7, top + 2.5f, 14, top + 2.5f);
+            }
+
+            return bitmap;
         }
 
         /// <summary>The picture of a button of alignment: lines of text set left, centred, right, or filling the width.</summary>
@@ -557,7 +659,7 @@ namespace PhotoLikerUI
             _color.DropDownItems.Add(more);
         }
 
-        /// <summary>Takes the formatting off what is picked (the whole text when nothing is): the plain look, the usual size, left, no indent.</summary>
+        /// <summary>Takes the formatting off what is picked (the whole text when nothing is): the plain look, the usual size, left, no indent, not an item of a list.</summary>
         internal void ClearFormatting()
         {
             if (_box.SelectionLength == 0)
@@ -567,6 +669,7 @@ namespace PhotoLikerUI
             _box.SelectionColor = Color.Black;
             _box.SelectionIndent = 0;
             _box.SelectionHangingIndent = 0;
+            SetList(RichList.None);
             SetAlignment(RichAlignment.Left);
             _box.Focus();
             UpdateTools();
@@ -586,6 +689,17 @@ namespace PhotoLikerUI
         private const int EM_GETPARAFORMAT = 0x043D;
         private const int EM_SETPARAFORMAT = 0x0447;
         private const uint PFM_ALIGNMENT = 0x00000008;
+        private const uint PFM_STARTINDENT = 0x00000001;
+        private const uint PFM_OFFSET = 0x00000004;
+        private const uint PFM_NUMBERING = 0x00000020;
+        private const uint PFM_NUMBERINGSTYLE = 0x00002000;
+        private const uint PFM_NUMBERINGSTART = 0x00008000;
+        private const ushort PFN_BULLET = 1;
+        private const ushort PFN_ARABIC = 2;
+        private const ushort PFNS_PERIOD = 0x0200;
+
+        /// <summary>How far a list is indented, and how far its bullets and numbers hang out to the left of its text, in twips (a quarter of an inch each).</summary>
+        private const int ListIndent = 360;
         private const int EM_GETCHARFORMAT = 0x043A;
         private const int SCF_SELECTION = 0x0001;
         private const uint CFM_BOLD = 0x00000001;
@@ -673,6 +787,83 @@ namespace PhotoLikerUI
             SendMessage(_box.Handle, EM_SETPARAFORMAT, 0, ref format);
             UpdateTools();
             TextChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        // ── Lists ───────────────────────────────────────────────────────────
+
+        /// <summary>What kind of list a paragraph is an item of.</summary>
+        internal enum RichList
+        {
+            None = 0,
+            Bullet = 1,
+            Number = 2,
+        }
+
+        /// <summary>The kind of list the paragraph the pick starts in is an item of (a list of letters or roman numbers that came in a pasted text counts as numbers).</summary>
+        internal RichList GetList()
+        {
+            if (!_box.IsHandleCreated)
+                return RichList.None;
+
+            var format = NewFormat();
+            format.dwMask = PFM_NUMBERING;
+            SendMessage(_box.Handle, EM_GETPARAFORMAT, 0, ref format);
+            return format.wNumbering switch
+            {
+                0 => RichList.None,
+                PFN_BULLET => RichList.Bullet,
+                _ => RichList.Number,
+            };
+        }
+
+        /// <summary>
+        /// Makes the paragraphs of the pick items of a list of a kind, with the bullets or the numbers (1. 2. 3.) hanging to the left of the text, or takes them out of the list when the one the pick
+        /// starts in is an item of that kind already (the button that is down is pressed again). Rich Edit numbers the items itself: those that follow each other have the numbers one after the other,
+        /// and the Enter at the end of an item makes the next one.
+        /// </summary>
+        internal void SetList(RichList list)
+        {
+            _box.CreateControl();
+            var on = list != RichList.None && GetList() != list;
+
+            var format = NewFormat();
+            format.dwMask = PFM_NUMBERING | PFM_STARTINDENT | PFM_OFFSET;
+            if (on)
+            {
+                format.dwMask |= PFM_NUMBERINGSTYLE | PFM_NUMBERINGSTART;
+                format.wNumbering = list == RichList.Bullet ? PFN_BULLET : PFN_ARABIC;
+                format.wNumberingStyle = list == RichList.Number ? PFNS_PERIOD : (ushort)0;
+                format.wNumberingStart = 1;
+                format.dxStartIndent = ListIndent;
+                format.dxOffset = ListIndent;
+            }
+
+            SendMessage(_box.Handle, EM_SETPARAFORMAT, 0, ref format);
+            UpdateTools();
+            TextChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Enter in an item that has no text takes the item out of its list (the last empty item that Enter makes is the end of the list, not one more). True when it did, and the Enter is not to be
+        /// typed.
+        /// </summary>
+        private bool EndListHere()
+        {
+            if (_box.ReadOnly || _box.SelectionLength > 0 || GetList() == RichList.None)
+                return false;
+
+            var text = _box.Text;
+            var at = Math.Min(_box.SelectionStart, text.Length);
+            var start = at == 0 ? 0 : text.LastIndexOf('\n', at - 1) + 1;
+            var end = text.IndexOf('\n', at);
+            if (end < 0)
+                end = text.Length;
+
+            if (end > start)
+                return false; // there is something written in the item
+
+            SetList(RichList.None);
+            return true;
         }
 
         // ── One step of undo for many changes ───────────────────────────────

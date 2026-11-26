@@ -52,6 +52,16 @@ namespace PhotoLikerUI
         public static string ScanPageTip => T();
         public static string ScanAll => T();
         public static string ScanAllTip => T();
+        public static string RescanAll => T();
+        public static string RescanAllTip => T();
+        public static string ConfirmRescanAllFormat => T();
+        public static string ConfirmRescanAllEditedFormat => T();
+        public static string StatusRescanAllNothing => T();
+        public static string AsPhoto => T();
+        public static string AsPhotoTip => T();
+        public static string PageAsPhotoNote => T();
+        public static string StatusAsPhotoOnFormat => T();
+        public static string StatusAsPhotoOffFormat => T();
         public static string Stop => T();
         public static string StopTip => T();
         public static string ShowLines => T();
@@ -101,6 +111,7 @@ namespace PhotoLikerUI
         public static string SaveBookTitle => T();
         public static string FilterPdf => T();
         public static string FilterEpub => T();
+        public static string FilterDocx => T();
         public static string Close => T();
         public static string StatusNoText => T();
         public static string StatusMakingBook => T();
@@ -157,6 +168,12 @@ namespace PhotoLikerUI
         public static string StatusAiReadingFormat => T();
         public static string StatusAiReadFormat => T();
         public static string StatusAiReadNothingFormat => T();
+        public static string AiPlaces => T();
+        public static string HintAiPlaces => T();
+        public static string StatusAiReadPlacedFormat => T();
+        public static string StatusAiReadNoPlacesFormat => T();
+        public static string StatusAiNoPlacesFormat => T();
+        public static string StatusAiPlacesNoFinder => T();
         public static string StatusAiScanAllDoneFormat => T();
         public static string StatusAiScanFailedFormat => T();
     }

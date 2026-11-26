@@ -187,7 +187,7 @@ namespace PhotoLikerUI
 
             _formatCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _formatCombo.Width = 170;
-            _formatCombo.Items.AddRange([new Choice<BookFormat>(BookFormat.Pdf, BookStrings.FormatPdf), new Choice<BookFormat>(BookFormat.Epub, BookStrings.FormatEpub)]);
+            _formatCombo.Items.AddRange([new Choice<BookFormat>(BookFormat.Pdf, BookStrings.FormatPdf), new Choice<BookFormat>(BookFormat.Epub, BookStrings.FormatEpub), new Choice<BookFormat>(BookFormat.Docx, BookStrings.FormatDocx)]);
             _formatCombo.SelectedIndex = 0;
 
             _titleBox.Width = 240;

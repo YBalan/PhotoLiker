@@ -187,7 +187,7 @@ namespace PhotoLiker.PhotoBook
         /// <summary>The paragraphs of a description: each as a paragraph with its alignment and indent, the runs as spans that carry their look, a tab as the gap to the next column; a picture as a block.</summary>
         private static void WriteDescription(XmlWriter writer, RichDocument document, IReadOnlyDictionary<RichPicture, string> pictureNames, string description)
         {
-            foreach (var paragraph in document.WithoutTrailingBlank().Paragraphs)
+            foreach (var paragraph in document.WithoutTrailingBlank().WithMarkersInText().Paragraphs)
             {
                 if (paragraph.Picture is { } picture && pictureNames.TryGetValue(picture, out var name))
                 {

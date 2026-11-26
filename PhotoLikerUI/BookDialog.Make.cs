@@ -42,7 +42,7 @@ namespace PhotoLikerUI
             // The name ends in the extension of the format: a name with another one of the two is changed to it, a name with none gets it
             var extension = Extension(format);
             if (!name.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
-                name = name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".epub", StringComparison.OrdinalIgnoreCase) ? Path.ChangeExtension(name, extension) : name + extension;
+                name = HasBookExtension(name) ? Path.ChangeExtension(name, extension) : name + extension;
             _fileNameBox.Text = name;
 
             string path;
@@ -92,7 +92,12 @@ namespace PhotoLikerUI
                     quality,
                     path,
                     (done, total) => OnUi(() => _statusLabel.Text = string.Format(BookStrings.StatusPreparingFormat, done, total)),
-                    () => OnUi(() => _statusLabel.Text = format == BookFormat.Pdf ? BookStrings.StatusWritingPdf : BookStrings.StatusWritingEpub),
+                    () => OnUi(() => _statusLabel.Text = format switch
+                    {
+                        BookFormat.Pdf => BookStrings.StatusWritingPdf,
+                        BookFormat.Docx => BookStrings.StatusWritingDocx,
+                        _ => BookStrings.StatusWritingEpub,
+                    }),
                     percent => OnUi(() => _progress.Value = Math.Clamp(percent, 0, 100)),
                     cancellation);
 

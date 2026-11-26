@@ -29,6 +29,11 @@ namespace PhotoLikerUI
         private readonly System.Threading.Timer _timer;
         private int _writing;
 
+        // One line is written at a time, and none after the last one: a line that was begun on a thread of the pool when the show ended would otherwise be written while (or after) the closing line is,
+        // which fails for the one that comes second, or leaves the file open to whoever reads it next
+        private readonly object _gate = new();
+        private bool _disposed;
+
         /// <param name="folder">Where the file is kept (the program's data folder).</param>
         /// <param name="description">What the show is (its settings), written once at the start.</param>
         /// <param name="facts">What the show says about itself at each line (photos and videos shown so far), called on a thread of the pool.</param>
@@ -113,25 +118,40 @@ namespace PhotoLikerUI
             }
         }
 
-        private void Write(string line)
+        /// <param name="closing">The last line of the show: the only one that is written once the show is over.</param>
+        private void Write(string line, bool closing = false)
         {
-            try
+            lock (_gate)
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-                if (File.Exists(_path) && new FileInfo(_path).Length > MaxBytes)
-                    File.Move(_path, Path.ChangeExtension(_path, ".old.log"), overwrite: true);
-                File.AppendAllText(_path, line + Environment.NewLine);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // a log that can not be written is no reason to disturb the show
+                if (_disposed && !closing)
+                    return;
+
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+                    if (File.Exists(_path) && new FileInfo(_path).Length > MaxBytes)
+                        File.Move(_path, Path.ChangeExtension(_path, ".old.log"), overwrite: true);
+                    File.AppendAllText(_path, line + Environment.NewLine);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // a log that can not be written is no reason to disturb the show
+                }
             }
         }
 
         public void Dispose()
         {
             _timer.Dispose();
-            Write($"{Stamp()} slideshow ends");
+            lock (_gate)
+            {
+                if (_disposed)
+                    return;
+
+                // (a line that was being written is done by now, the lock is its own; one that comes after finds the show over)
+                Write($"{Stamp()} slideshow ends", closing: true);
+                _disposed = true;
+            }
         }
     }
 }

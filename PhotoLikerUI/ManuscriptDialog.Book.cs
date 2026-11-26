@@ -100,6 +100,22 @@ namespace PhotoLikerUI
         // ── The book ────────────────────────────────────────────────────────
 
         /// <summary>
+        /// Puts the page that is open into the book as its photo (the Page as photo button): the whole photo as it is in its file, not cut out or straightened, with no text on it, and in the book
+        /// whether or not the book has the photos. The text of the page is kept, and comes back into the book when the button is pressed again.
+        /// </summary>
+        internal void ToggleAsPhoto()
+        {
+            if (_busy || CurrentPage is not { } page)
+                return;
+
+            page.AsPhoto = page.AsPhoto == true ? null : true;
+            UpdatePageItem(_current);
+            UpdateButtons();
+            SetStatus(string.Format(page.AsPhoto == true ? ManuscriptStrings.StatusAsPhotoOnFormat : ManuscriptStrings.StatusAsPhotoOffFormat, _current + 1));
+            ScheduleSave();
+        }
+
+        /// <summary>
         /// Makes the PDF or the EPUB (the file dialog says which): the text of every page that has some (its pictures are in it, where they stand) and, when asked, the photo of the page above it.
         /// The language of the book is the one most of its pages were scanned in.
         /// </summary>
@@ -111,12 +127,15 @@ namespace PhotoLikerUI
             FlushText();
             var withPhotos = IncludePhotosCheck.Checked;
 
-            // With the photos every page that is not left out is in the book (a page with no text is just its photo); without them only the pages that have text or a picture
+            // With the photos every page that is not left out is in the book (a page with no text is just its photo); without them only the pages that have text or a picture. A page that is its photo
+            // (the Page as photo button) is in the book either way, as its whole photo and nothing else
             var entries = _pages
-                .Where(page => page.LeftOut != true && (withPhotos ? File.Exists(page.File) : ManuscriptText.HasContent(page)))
-                .Select(page => withPhotos ? new BookEntry(page.File!) { BelowRtf = page.Rtf } : new BookEntry(page.File!) { AboveRtf = page.Rtf })
+                .Where(page => page.LeftOut != true && (withPhotos || page.AsPhoto == true ? File.Exists(page.File) : ManuscriptText.HasContent(page)))
+                .Select(page => page.AsPhoto == true
+                    ? new BookEntry(page.File!) { AsPhoto = true }
+                    : withPhotos ? new BookEntry(page.File!) { BelowRtf = page.Rtf } : new BookEntry(page.File!) { AboveRtf = page.Rtf })
                 .ToList();
-            if (!_pages.Any(ManuscriptText.HasContent))
+            if (!_pages.Any(page => ManuscriptText.HasContent(page) || (page.AsPhoto == true && page.LeftOut != true && File.Exists(page.File))))
             {
                 SetStatus(ManuscriptStrings.StatusNoText);
                 return;
@@ -126,7 +145,7 @@ namespace PhotoLikerUI
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
-            var format = string.Equals(Path.GetExtension(path), ".epub", StringComparison.OrdinalIgnoreCase) ? BookFormat.Epub : BookFormat.Pdf;
+            var format = BookFormatOf(path);
             var options = new BookOptions(TitleBox.Text.Trim(), AuthorBox.Text.Trim(), ScanLanguages.Code(BookLanguage()));
 
             SetBusy(true);
@@ -136,7 +155,7 @@ namespace PhotoLikerUI
             var notCut = 0;
             try
             {
-                if (withPhotos && CutPagesCheck.Checked && entries.Count > 0)
+                if (withPhotos && CutPagesCheck.Checked && entries.Any(entry => !entry.AsPhoto))
                 {
                     if (CutterOverride is null && _ensureCutoutAsync is not null && !await _ensureCutoutAsync())
                     {
@@ -189,6 +208,14 @@ namespace PhotoLikerUI
             }
         }
 
+        /// <summary>The format the extension of the file says: an EPUB or a Word document; any other name is a PDF.</summary>
+        internal static BookFormat BookFormatOf(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".epub" => BookFormat.Epub,
+            ".docx" => BookFormat.Docx,
+            _ => BookFormat.Pdf,
+        };
+
         /// <summary>The language of the book: the one most of the pages that are in it were scanned in (the one that is picked, when none was scanned).</summary>
         private ScanLanguage BookLanguage() =>
             _pages
@@ -224,6 +251,12 @@ namespace PhotoLikerUI
                     SetStatus(string.Format(ManuscriptStrings.StatusCuttingFormat, i + 1, entries.Count));
                     progress.Value = Math.Min(100, i * 100 / entries.Count);
                     var entry = entries[i];
+                    if (entry.AsPhoto)
+                    {
+                        result.Add(entry); // a page that is its photo is the photo as it is
+                        continue;
+                    }
+
                     var target = Path.Combine(folder, $"{i:D4}.jpg");
                     var cut = await Task.Run(() =>
                     {
@@ -287,7 +320,7 @@ namespace PhotoLikerUI
             using var dialog = new SaveFileDialog
             {
                 Title = ManuscriptStrings.SaveBookTitle,
-                Filter = $"{ManuscriptStrings.FilterPdf} (*.pdf)|*.pdf|{ManuscriptStrings.FilterEpub} (*.epub)|*.epub",
+                Filter = $"{ManuscriptStrings.FilterPdf} (*.pdf)|*.pdf|{ManuscriptStrings.FilterEpub} (*.epub)|*.epub|{ManuscriptStrings.FilterDocx} (*.docx)|*.docx",
                 AddExtension = true,
                 DefaultExt = "pdf",
                 OverwritePrompt = true,
@@ -316,6 +349,7 @@ namespace PhotoLikerUI
             KindCombo.SelectedIndexChanged += (_, _) =>
             {
                 FillLanguages(Language);
+                UpdateButtons(); // the places of the lines are for the AI service
                 if (!_applyingPage)
                     ScheduleSave();
             };
@@ -326,6 +360,8 @@ namespace PhotoLikerUI
             };
             ScanPageButton.Click += async (_, _) => await ScanPageAsync();
             ScanAllButton.Click += async (_, _) => await ScanAllAsync();
+            RescanAllButton.Click += async (_, _) => await RescanAllAsync();
+            AsPhotoButton.Click += (_, _) => ToggleAsPhoto();
             StopButton.Click += (_, _) => _scan?.Cancel();
             RotateLeftButton.Click += async (_, _) => await RotateCurrentAsync(-1);
             RotateRightButton.Click += async (_, _) => await RotateCurrentAsync(1);
@@ -336,6 +372,7 @@ namespace PhotoLikerUI
             AiCombo.SelectedIndexChanged += (_, _) => OnAiPicked();
             AiServicesButton.Click += (_, _) => OpenAiServices();
             UseContextCheck.CheckedChanged += (_, _) => ScheduleSave();
+            AiPlacesCheck.CheckedChanged += (_, _) => ScheduleSave();
             SourceCombo.SelectedIndexChanged += (_, _) => OnSourcePicked();
 
             PageList.SelectedIndexChanged += OnPageListSelection;

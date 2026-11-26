@@ -54,10 +54,11 @@ public sealed class ManuscriptAiReadingTests : IDisposable
         return settings;
     }
 
-    private ManuscriptDialog Dialog(IReadOnlyList<string> photos, AiServiceSettings settings, StandInInternet? internet = null, bool pictures = false)
+    private ManuscriptDialog Dialog(IReadOnlyList<string> photos, AiServiceSettings settings, StandInInternet? internet = null, bool pictures = false, Func<Task<bool>>? ensureFinder = null)
     {
         var dialog = new ManuscriptDialog(
-            _folder.Path, photos.Take(1).ToList(), new EffectModels(Path.Combine(_folder.Path, "models")), dark: false, (_, _) => Task.FromResult(true), loadedPhotos: photos, aiServices: settings);
+            _folder.Path, photos.Take(1).ToList(), new EffectModels(Path.Combine(_folder.Path, "models")), dark: false, (_, _) => Task.FromResult(true), loadedPhotos: photos, aiServices: settings,
+            ensureFinderAsync: ensureFinder);
         dialog.AskPagePaths = () => null;
         dialog.AskRemovePage = _ => true;
         dialog.AskReplaceText = () => true;
@@ -624,6 +625,296 @@ public sealed class ManuscriptAiReadingTests : IDisposable
             Assert.Equal(ScanKind.AiService, dialog.Kind);
             await Task.CompletedTask;
         });
+    }
+
+    // ── Lines on the photo: the lines are marked on this computer, the service says what is in each box ──
+
+    /// <summary>The boxes the finder of this computer puts on the 320 x 240 photo of a test: a line each, 240 wide and 24 high, their middles at the heights given.</summary>
+    private static IReadOnlyList<TextRegion> Boxes(params int[] middles) =>
+        [.. middles.Select(y => TextRegion.FromCentre(new PointF(160, y), 240, 24, 0))];
+
+    private static void Finds(ManuscriptDialog dialog, IReadOnlyList<TextRegion> boxes) => dialog.FindLinesOverride = (_, _) => boxes;
+
+    /// <summary>What a service is asked to answer: an entry with the number of the box and its text for each box that has text in it.</summary>
+    private static string Marked(params (int Box, string Text)[] entries) =>
+        "{\"lines\":[" + string.Join(",", entries.Select(entry => "{\"box\":" + entry.Box + ",\"text\":" + Json(entry.Text) + "}")) + "]}";
+
+    /// <summary>Where a point of the 320 x 240 photo is on the view (the inverse of what the view draws).</summary>
+    private static Point PointOf(ManuscriptView view, float photoX, float photoY)
+    {
+        var scale = view.ZoomOfPhoto;
+        return new Point(
+            (int)Math.Round((view.ClientSize.Width - 320 * scale) / 2f + photoX * scale),
+            (int)Math.Round((view.ClientSize.Height - 240 * scale) / 2f + photoY * scale));
+    }
+
+    private static void Click(ManuscriptView view, Point point) =>
+        typeof(ManuscriptView).GetMethod("ClickAt", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(view, [point]);
+
+    [Fact]
+    public void ThePlacesCheckBox_IsOffUntilTurnedOn_AndOnlyForAServiceThatReadsAPhoto()
+    {
+        var a = Photo("a.jpg");
+
+        Ui.Run(() => Dialog([a], Settings()), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+
+            Assert.Equal(ManuscriptStrings.AiPlaces, dialog.AiPlacesCheck.Text);
+            Assert.Same(dialog.AiCombo.Parent, dialog.AiPlacesCheck.Parent);
+            Assert.False(dialog.AiPlacesCheck.Checked);
+            Assert.True(dialog.AiPlacesCheck.Enabled); // a service is picked and the Writing box says AI service
+
+            dialog.KindCombo.SelectedIndex = 0; // the models on this computer give boxes of their own
+            Assert.False(dialog.AiPlacesCheck.Enabled);
+
+            dialog.KindCombo.SelectedIndex = 2;
+            Assert.True(dialog.AiPlacesCheck.Enabled);
+
+            dialog.AiCombo.SelectedIndex = 0; // the language model on this computer
+            Assert.False(dialog.AiPlacesCheck.Enabled);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void WithThePlacesOn_TheLinesAreMarkedOnThePhoto_TheServiceSaysWhatIsInEachBox_AndThePageHasThoseBoxes_ThatAreKept()
+    {
+        var a = Photo("a.jpg");
+        var internet = Reads(Marked((1, "first line"), (2, "second [?] line"), (3, "third line")));
+
+        Ui.Run(() => Dialog([a], Settings(), internet), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            Assert.True(await Ui.Until(() => dialog.View.HasImage));
+            Finds(dialog, Boxes(40, 80, 120));
+            dialog.AiPlacesCheck.Checked = true;
+
+            await dialog.ScanPageAsync();
+
+            // What was sent: the instructions for boxes, how many there are, and the photo with the boxes on it
+            var request = JsonNode.Parse(Assert.Single(internet.Requests).Body)!;
+            Assert.Equal(CloudReader.SystemText(ScanLanguage.Ukrainian, marked: true), (string?)request["system"]);
+            Assert.Equal(CloudReader.UserText(null, 3), (string?)request["messages"]![0]!["content"]![1]!["text"]);
+            using (var sent = SentPhoto(internet.Requests[0].Body))
+            {
+                var edge = sent.GetPixel(160, 28); // the top edge of the first box
+                Assert.True(edge.R - edge.G > 60, $"a red box was expected there, the photo has {edge}");
+            }
+
+            // What the page is: the text of the boxes, laid out like the page, and the boxes
+            Assert.Equal("first line\nsecond [?] line\nthird line", dialog.Editor.PlainText);
+            Assert.Equal(string.Format(ManuscriptStrings.StatusAiReadPlacedFormat, 1, "Anthropic Claude", 3), dialog.StatusText);
+            var page = dialog.Pages[0];
+            Assert.Equal("AiService", page.Kind);
+            var lines = page.Lines!.Select(line => line.ToLine()!).ToList();
+            Assert.Equal(["first line", "second [?] line", "third line"], lines.Select(line => line.Text).ToArray());
+            Assert.Equal([40d, 80d, 120d], lines.Select(line => Math.Round((double)line.Box.Centre.Y)).ToArray()); // where the finder put them, not where a service guessed
+            Assert.True(lines[0].Confidence >= 0.8f, "green: the service marked nothing");
+            Assert.True(lines[1].Confidence is >= 0.5f and < 0.8f, "orange: the service marked a word with [?]");
+            Assert.Equal(3, dialog.View.Lines.Count);
+
+            // The box and its line of the text go together, both ways
+            Click(dialog.View, PointOf(dialog.View, 160, 80));
+            Assert.Equal("second [?] line", dialog.Editor.Box.SelectedText);
+            dialog.Editor.Box.Select(dialog.Editor.PlainText.IndexOf("third", StringComparison.Ordinal) + 1, 0);
+            Assert.Equal(2, dialog.View.SelectedLine);
+        });
+
+        // The boxes are kept with the page
+        var stored = ManuscriptFile.Load(_folder.Path)!;
+        Assert.True(stored.AiPlaces);
+        Assert.Equal(3, stored.Pages![0].Lines!.Count);
+    }
+
+    [Fact]
+    public void ABoxTheServiceLeavesOut_ARuledLineOrAStain_IsNotALineOfThePage()
+    {
+        var a = Photo("a.jpg");
+        var internet = Reads(Marked((1, "a"), (3, "c"), (4, "d")));
+
+        Ui.Run(() => Dialog([a], Settings(), internet), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            Finds(dialog, Boxes(40, 80, 120, 160));
+            dialog.AiPlacesCheck.Checked = true;
+
+            await dialog.ScanPageAsync();
+
+            var lines = dialog.Pages[0].Lines!.Select(line => line.ToLine()!).ToList();
+            Assert.Equal(["a", "c", "d"], lines.Select(line => line.Text).ToArray());
+            Assert.Equal([40d, 120d, 160d], lines.Select(line => Math.Round((double)line.Box.Centre.Y)).ToArray()); // the boxes of the lines that were written, not the second one
+            Assert.Equal("a\nc\nd", dialog.Editor.PlainText);
+            Assert.Equal(string.Format(ManuscriptStrings.StatusAiReadPlacedFormat, 1, "Anthropic Claude", 3), dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void TwoBoxesSideBySide_AreOneRowOfTheText_WithATab_AsInAScanOnThisComputer_AlsoWhenThePageIsOpenedAgain()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var internet = Reads(Marked((1, "left"), (2, "right"), (3, "below")));
+        IReadOnlyList<TextRegion> boxes =
+        [
+            TextRegion.FromCentre(new PointF(80, 40), 120, 24, 0),
+            TextRegion.FromCentre(new PointF(240, 40), 120, 24, 0),
+            TextRegion.FromCentre(new PointF(160, 130), 240, 24, 0),
+        ];
+
+        Ui.Run(() => Dialog([a, b], Settings(), internet), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            Assert.True(await Ui.Until(() => dialog.View.HasImage));
+            Finds(dialog, boxes);
+            dialog.AiPlacesCheck.Checked = true;
+
+            await dialog.ScanPageAsync();
+
+            Assert.Equal("left\tright\nbelow", dialog.Editor.PlainText);
+            dialog.Editor.Box.Select(dialog.Editor.PlainText.IndexOf("right", StringComparison.Ordinal) + 1, 0);
+            Assert.Equal(0, dialog.View.SelectedLine); // the first box of the row
+
+            dialog.SelectPage(1);
+            Assert.True(await Ui.Until(() => dialog.View.HasImage));
+            dialog.SelectPage(0);
+            Assert.True(await Ui.Until(() => dialog.View.Lines.Count == 3), "the boxes are shown again");
+            dialog.Editor.Box.Select(dialog.Editor.PlainText.IndexOf("below", StringComparison.Ordinal) + 1, 0);
+            Assert.Equal(2, dialog.View.SelectedLine);
+        });
+    }
+
+    [Fact]
+    public void AnAnswerThatCannotBeUsedBoxByBox_GivesTheTextAndNoBoxes_AndTheStatusSaysSo()
+    {
+        var a = Photo("a.jpg");
+        var internet = Reads("first line\nsecond line", Marked((9, "x"))); // plain text; then a number of a box that is not on the photo
+
+        Ui.Run(() => Dialog([a], Settings(), internet), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            Finds(dialog, Boxes(40, 80));
+            dialog.AiPlacesCheck.Checked = true;
+
+            await dialog.ScanPageAsync();
+
+            Assert.Equal("first line\nsecond line", dialog.Editor.PlainText);
+            Assert.Null(dialog.Pages[0].Lines);
+            Assert.Empty(dialog.View.Lines);
+            Assert.Equal(string.Format(ManuscriptStrings.StatusAiReadNoPlacesFormat, 1, "Anthropic Claude", 2), dialog.StatusText);
+
+            await dialog.ScanPageAsync();
+
+            Assert.Equal("x", dialog.Editor.PlainText);
+            Assert.Null(dialog.Pages[0].Lines);
+        });
+    }
+
+    [Fact]
+    public void WhenNoLineIsFoundOnThePhoto_ItIsReadAsAWhole_WithoutBoxesOnIt()
+    {
+        var a = Photo("a.jpg");
+        var internet = Reads("first line\nsecond line");
+
+        Ui.Run(() => Dialog([a], Settings(), internet), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            Finds(dialog, []);
+            dialog.AiPlacesCheck.Checked = true;
+
+            await dialog.ScanPageAsync();
+
+            var request = JsonNode.Parse(Assert.Single(internet.Requests).Body)!;
+            Assert.Equal(CloudReader.SystemText(ScanLanguage.Ukrainian), (string?)request["system"]); // the plain instructions: there is nothing to number
+            Assert.Equal(CloudReader.UserText(null), (string?)request["messages"]![0]!["content"]![1]!["text"]);
+            Assert.Equal("first line\nsecond line", dialog.Editor.PlainText);
+            Assert.Null(dialog.Pages[0].Lines);
+            Assert.Equal(string.Format(ManuscriptStrings.StatusAiReadNoPlacesFormat, 1, "Anthropic Claude", 2), dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void ScanAllWithPlaces_SaysHowManyPagesWereReadWithoutBoxes()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var internet = Reads(Marked((1, "one"), (2, "two")), "plain two");
+
+        Ui.Run(() => Dialog([a, b], Settings(), internet), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            Finds(dialog, Boxes(40, 80));
+            dialog.AiPlacesCheck.Checked = true;
+
+            await dialog.ScanAllAsync();
+
+            Assert.NotNull(dialog.Pages[0].Lines);
+            Assert.Null(dialog.Pages[1].Lines);
+            Assert.Equal(string.Format(ManuscriptStrings.StatusAiScanAllDoneFormat, 2, "Anthropic Claude", 0) + " " + string.Format(ManuscriptStrings.StatusAiNoPlacesFormat, 1), dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void WhenTheModelThatFindsTheLinesIsNotDownloaded_ThePagesAreReadWithoutBoxes_AndItIsAskedOncePerScan()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var internet = Reads("plain a", "plain b");
+        var asked = 0;
+
+        Ui.Run(() => Dialog([a, b], Settings(), internet, ensureFinder: () => { asked++; return Task.FromResult(false); }), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AiPlacesCheck.Checked = true;
+
+            await dialog.ScanAllAsync();
+
+            Assert.Equal(1, asked);
+            foreach (var request in internet.Requests)
+                Assert.Equal(CloudReader.SystemText(ScanLanguage.Ukrainian), (string?)JsonNode.Parse(request.Body)!["system"]);
+            Assert.Null(dialog.Pages[0].Lines);
+            Assert.EndsWith(ManuscriptStrings.StatusAiPlacesNoFinder, dialog.StatusText);
+            Assert.True(dialog.AiPlacesCheck.Checked); // the person's choice stays: the next scan asks again
+        });
+    }
+
+    [Fact]
+    public void WithThePlacesOff_NothingIsMarked_TheRequestIsThePlainOne_AndThePageHasNoBoxes()
+    {
+        var a = Photo("a.jpg");
+        var internet = Reads("first line\nsecond line");
+        var finds = 0;
+
+        Ui.Run(() => Dialog([a], Settings(), internet), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.FindLinesOverride = (_, _) => { finds++; return Boxes(40, 80); };
+
+            await dialog.ScanPageAsync();
+
+            Assert.Equal(0, finds);
+            Assert.Equal(CloudReader.SystemText(ScanLanguage.Ukrainian), (string?)JsonNode.Parse(internet.Requests[0].Body)!["system"]);
+            Assert.Null(dialog.Pages[0].Lines);
+            Assert.Equal(string.Format(ManuscriptStrings.StatusAiReadFormat, 1, "Anthropic Claude", 2), dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void ThePhotoThatIsSent_HasARedBoxAndItsNumberOnEachLine_AndWithoutBoxesItIsUntouched()
+    {
+        var photo = new Bitmap32(400, 300, Enumerable.Repeat((byte)255, 400 * 300 * 4).ToArray());
+        TextRegion[] boxes = [TextRegion.FromCentre(new PointF(200, 100), 300, 30, 0)]; // 50..350 across, 85..115 down
+
+        using var marked = new Bitmap(new MemoryStream(ManuscriptDialog.JpegForAi(photo, boxes)));
+        using var plain = new Bitmap(new MemoryStream(ManuscriptDialog.JpegForAi(photo)));
+
+        static bool Red(Color colour) => colour.R - colour.G > 100 && colour.R - colour.B > 100;
+        Assert.True(Red(marked.GetPixel(200, 85)), "the top edge of the box");
+        Assert.True(Red(marked.GetPixel(200, 115)), "the bottom edge of the box");
+        Assert.False(Red(marked.GetPixel(200, 100)), "inside the box the page is as it was");
+        var tag = Enumerable.Range(30, 22).SelectMany(x => Enumerable.Range(85, 20).Select(y => marked.GetPixel(x, y))).Count(Red);
+        Assert.True(tag > 40, $"the number of the box is on a red tag at its left ({tag} red points)");
+        Assert.All(Enumerable.Range(0, 400).Select(x => plain.GetPixel(x, 85)), colour => Assert.False(Red(colour)));
     }
 
     // ── Use context of previous pages ───────────────────────────────────────

@@ -57,7 +57,7 @@ namespace PhotoLiker.PhotoBook
         {
             var lines = new List<TextLine>();
             var scale = width / RichDocument.ReferenceWidth; // the indents and the tab stops are in points of a column of the reference width
-            foreach (var paragraph in document.WithoutTrailingBlank().Paragraphs)
+            foreach (var paragraph in document.WithoutTrailingBlank().WithMarkersInText().Paragraphs)
             {
                 if (paragraph.Picture is { } picture)
                     lines.Add(PictureLine(paragraph, picture, width, scale, maximumPictureHeight));

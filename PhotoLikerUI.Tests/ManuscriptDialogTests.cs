@@ -53,6 +53,7 @@ public sealed class ManuscriptDialogTests : IDisposable
         dialog.AskPagePaths = () => null;
         dialog.AskRemovePage = _ => false;
         dialog.AskReplaceText = () => false;
+        dialog.AskRescanAll = (_, _, _) => false;
         dialog.AskBookPath = () => null;
     }
 
@@ -333,6 +334,184 @@ public sealed class ManuscriptDialogTests : IDisposable
             await dialog.ScanAllAsync();
 
             Assert.Equal(ManuscriptStrings.StatusScanAllNothing, dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void RescanAll_ReadsEveryPageAgain_WithTheKindAndLanguagePickedNow_AndReplacesTheirText()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AddPagePaths([b]);
+            StandIn(dialog);
+            await dialog.ScanAllAsync();
+            Assert.All(dialog.Pages, page => Assert.Equal("Handwriting", page.Kind));
+
+            // The writing is changed, and the pages are read again
+            dialog.KindCombo.SelectedIndex = 1; // Printed
+            dialog.LanguageCombo.SelectedIndex = 2; // English
+            var seen = new List<(ScanKind, ScanLanguage)>();
+            dialog.ScanOverride = (_, kind, language, _, _) =>
+            {
+                seen.Add((kind, language));
+                return new ScanResult([Line("new text", 160, 40)]);
+            };
+            (int Pages, int WithText, int Edited)? asked = null;
+            dialog.AskRescanAll = (pages, withText, edited) =>
+            {
+                asked = (pages, withText, edited);
+                return true;
+            };
+
+            await dialog.RescanAllAsync();
+
+            Assert.Equal((2, 2, 0), asked); // both pages had text, and none was written by hand
+            Assert.Equal([(ScanKind.Printed, ScanLanguage.English), (ScanKind.Printed, ScanLanguage.English)], seen);
+            Assert.All(dialog.Pages, page =>
+            {
+                Assert.Equal("Printed", page.Kind);
+                Assert.Equal("English", page.Language);
+                Assert.Equal("new text", ManuscriptText.PlainOf(page.Rtf));
+                Assert.Equal(PageState.Scanned, ManuscriptText.StateOf(page));
+            });
+            Assert.Equal("new text", TextOf(dialog)); // the page that is open shows it
+            Assert.Contains("2", dialog.StatusText);
+            Assert.False(dialog.IsBusy);
+        });
+    }
+
+    [Fact]
+    public void RescanAll_AsksFirst_AndANoLeavesEveryPageAsItWas()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AddPagePaths([b]);
+            StandIn(dialog);
+            await dialog.ScanAllAsync();
+            var read = 0;
+            dialog.ScanOverride = (_, _, _, _, _) => { read++; return new ScanResult([Line("other", 160, 40)]); };
+            var asked = 0;
+            dialog.AskRescanAll = (_, _, _) => { asked++; return false; };
+
+            await dialog.RescanAllAsync();
+
+            Assert.Equal(1, asked);
+            Assert.Equal(0, read);
+            Assert.All(dialog.Pages, page => Assert.Equal("перший рядок\nдругий рядок\nтретій рядок", page.Scanned));
+            Assert.Equal("перший рядок\nдругий рядок\nтретій рядок", TextOf(dialog));
+            Assert.False(dialog.IsBusy);
+        });
+    }
+
+    [Fact]
+    public void RescanAll_TellsHowManyPagesHaveTextThePersonWroteOrChanged_ASeparateCountInTheQuestion()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var c = Photo("c.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AddPagePaths([b, c]);
+            StandIn(dialog);
+            dialog.SelectPage(0);
+            await dialog.ScanPageAsync(); // a is read; b has text of its own; c has none
+            dialog.SelectPage(1);
+            dialog.Editor.Box.Text = "my own words";
+            dialog.SelectPage(0);
+            (int Pages, int WithText, int Edited)? asked = null;
+            dialog.AskRescanAll = (pages, withText, edited) =>
+            {
+                asked = (pages, withText, edited);
+                return false;
+            };
+
+            await dialog.RescanAllAsync();
+
+            Assert.Equal((3, 2, 1), asked);
+            var plain = ManuscriptDialog.RescanAllQuestion(3, 2, 0);
+            var edited = ManuscriptDialog.RescanAllQuestion(3, 2, 1);
+            Assert.NotEqual(plain, edited);
+            Assert.Contains("1", edited);
+            Assert.DoesNotContain("wrote", plain);
+        });
+    }
+
+    [Fact]
+    public void RescanAll_OnPagesThatHaveNoText_ReadsThemAtOnce_WithoutAQuestion_AndSkipsPagesThatAreLeftOut()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var c = Photo("c.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AddPagePaths([b, c]);
+            dialog.Pages[2].LeftOut = true;
+            var read = 0;
+            dialog.ScanOverride = (_, _, _, _, _) => { read++; return Three(); };
+            dialog.AskRescanAll = (_, _, _) => throw new InvalidOperationException("nothing is replaced, so nothing is asked");
+
+            await dialog.RescanAllAsync();
+
+            Assert.Equal(2, read);
+            Assert.True(dialog.Pages[0].IsScanned);
+            Assert.True(dialog.Pages[1].IsScanned);
+            Assert.False(dialog.Pages[2].IsScanned);
+        });
+    }
+
+    [Fact]
+    public void RescanAll_WhenEveryPageIsLeftOut_SaysThereIsNothingToRead()
+    {
+        var a = Photo("a.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.Pages[0].LeftOut = true;
+            var read = 0;
+            dialog.ScanOverride = (_, _, _, _, _) => { read++; return Three(); };
+
+            await dialog.RescanAllAsync();
+
+            Assert.Equal(0, read);
+            Assert.Equal(ManuscriptStrings.StatusRescanAllNothing, dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void TheRescanAllButton_IsNextToScanAll_ReadsEveryPageWhenPressed_AndIsOffWhileTheWindowIsBusy()
+    {
+        var a = Photo("a.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            StandIn(dialog);
+            await dialog.ScanPageAsync();
+            var items = dialog.Bar.Items.Cast<ToolStripItem>().ToList();
+            Assert.Equal(items.IndexOf(dialog.ScanAllButton) + 1, items.IndexOf(dialog.RescanAllButton));
+            Assert.Equal(ManuscriptStrings.RescanAll, dialog.RescanAllButton.Text);
+            Assert.True(dialog.RescanAllButton.Enabled);
+
+            var read = 0;
+            dialog.ScanOverride = (_, _, _, _, _) => { read++; return Three(); };
+            dialog.AskRescanAll = (_, _, _) => true;
+            dialog.RescanAllButton.PerformClick();
+
+            Assert.True(await Ui.Until(() => read == 1 && !dialog.IsBusy), "the page was read again");
+            Assert.True(dialog.RescanAllButton.Enabled);
         });
     }
 
@@ -803,6 +982,75 @@ public sealed class ManuscriptDialogTests : IDisposable
     }
 
     [Fact]
+    public void SaveBook_AsADocx_MakesAWordDocumentOfTheText_WithTheTitleAndTheLanguage()
+    {
+        var a = Photo("a.jpg");
+        var path = _folder.File("book.docx");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.TitleBox.Text = "Letters";
+            dialog.KindCombo.SelectedIndex = 1;
+            dialog.LanguageCombo.SelectedIndex = 1; // Russian
+            StandIn(dialog);
+            await dialog.ScanPageAsync();
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            Assert.True(File.Exists(path), dialog.StatusText);
+            Assert.Equal(path, dialog.MadeBookPath);
+            using var zip = ZipFile.OpenRead(path);
+            Assert.DoesNotContain(zip.Entries, entry => entry.FullName.StartsWith("word/media/", StringComparison.Ordinal)); // the book is the text: no photo
+            var w = System.Xml.Linq.XNamespace.Get("http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+            var document = System.Xml.Linq.XDocument.Load(zip.GetEntry("word/document.xml")!.Open());
+            var text = string.Concat(document.Descendants(w + "t").Select(element => element.Value));
+            Assert.Contains("Letters", text);
+            Assert.Contains("перший рядок", text);
+            var styles = System.Xml.Linq.XDocument.Load(zip.GetEntry("word/styles.xml")!.Open());
+            Assert.Equal("ru-RU", (string?)styles.Descendants(w + "lang").Single().Attribute(w + "val"));
+            Assert.Contains("book.docx", dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void SaveBook_AsADocx_WithAPageThatIsItsPhoto_PutsTheWholePhotoInTheDocument()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var path = _folder.File("mixed.docx");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            StandIn(dialog);
+            dialog.SelectPage(0);
+            await dialog.ScanPageAsync();
+            dialog.SelectPage(1);
+            dialog.AsPhotoButton.PerformClick();
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            using var zip = ZipFile.OpenRead(path);
+            Assert.Equal(["word/media/photo0002.jpg"], zip.Entries.Select(entry => entry.FullName).Where(name => name.StartsWith("word/media/", StringComparison.Ordinal)).ToArray());
+        });
+    }
+
+    [Theory]
+    [InlineData("book.pdf", PhotoLiker.PhotoBook.BookFormat.Pdf)]
+    [InlineData("book.PDF", PhotoLiker.PhotoBook.BookFormat.Pdf)]
+    [InlineData("book.epub", PhotoLiker.PhotoBook.BookFormat.Epub)]
+    [InlineData("book.EPUB", PhotoLiker.PhotoBook.BookFormat.Epub)]
+    [InlineData("book.docx", PhotoLiker.PhotoBook.BookFormat.Docx)]
+    [InlineData("book.DOCX", PhotoLiker.PhotoBook.BookFormat.Docx)]
+    [InlineData("book", PhotoLiker.PhotoBook.BookFormat.Pdf)]
+    [InlineData("book.txt", PhotoLiker.PhotoBook.BookFormat.Pdf)]
+    public void TheFormatOfTheBook_IsTheOneTheExtensionOfTheFileSays_AndAPdfWhenItSaysNone(string name, PhotoLiker.PhotoBook.BookFormat expected) =>
+        Assert.Equal(expected, ManuscriptDialog.BookFormatOf(_folder.File(name)));
+
+    [Fact]
     public void SaveBook_WithThePhotosOn_PutsThePhotoOfEachPageInTheBook()
     {
         var a = Photo("a.jpg");
@@ -860,6 +1108,241 @@ public sealed class ManuscriptDialogTests : IDisposable
             using var zip = ZipFile.OpenRead(path);
             Assert.NotNull(zip.GetEntry("OEBPS/photo0001.xhtml"));
             Assert.Null(zip.GetEntry("OEBPS/photo0002.xhtml"));
+        });
+    }
+
+    // ── A page that is its photo (Page as photo) ────────────────────────────
+
+    [Fact]
+    public void ThePageAsPhotoButton_IsBesideTheButtonsOfThePages_AndMarksThePageInTheList()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            var items = dialog.Bar.Items.Cast<ToolStripItem>().ToList();
+            Assert.Equal(items.IndexOf(dialog.MoveDownButton) + 1, items.IndexOf(dialog.AsPhotoButton));
+            Assert.Equal(ManuscriptStrings.AsPhoto, dialog.AsPhotoButton.Text);
+            Assert.True(dialog.AsPhotoButton.Enabled);
+            Assert.False(dialog.AsPhotoButton.Checked);
+            Assert.DoesNotContain("▣", dialog.PageList.Items[0].Text);
+
+            dialog.AsPhotoButton.PerformClick();
+
+            Assert.True(dialog.Pages[0].AsPhoto);
+            Assert.True(dialog.AsPhotoButton.Checked);
+            Assert.StartsWith("▣", dialog.PageList.Items[0].Text);
+            Assert.Contains(ManuscriptStrings.PageAsPhotoNote, dialog.PageList.Items[0].ToolTipText);
+            Assert.DoesNotContain("▣", dialog.PageList.Items[1].Text); // the other page is as it was
+            Assert.Equal(string.Format(ManuscriptStrings.StatusAsPhotoOnFormat, 1), dialog.StatusText);
+
+            // The button follows the page that is open
+            dialog.SelectPage(1);
+            Assert.False(dialog.AsPhotoButton.Checked);
+            dialog.SelectPage(0);
+            Assert.True(dialog.AsPhotoButton.Checked);
+
+            dialog.AsPhotoButton.PerformClick();
+
+            Assert.Null(dialog.Pages[0].AsPhoto);
+            Assert.False(dialog.AsPhotoButton.Checked);
+            Assert.DoesNotContain("▣", dialog.PageList.Items[0].Text);
+            Assert.Equal(string.Format(ManuscriptStrings.StatusAsPhotoOffFormat, 1), dialog.StatusText);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ThePageAsPhotoButton_IsOffWhileTheWindowWorks_AndWithNoPage()
+    {
+        var a = Photo("a.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            var seen = true;
+            dialog.ScanOverride = (_, _, _, _, _) =>
+            {
+                seen = dialog.Invoke(() => dialog.AsPhotoButton.Enabled);
+                return Three();
+            };
+
+            await dialog.ScanPageAsync();
+
+            Assert.False(seen);
+            Assert.True(dialog.AsPhotoButton.Enabled);
+        });
+    }
+
+    [Fact]
+    public void ThePageThatIsItsPhoto_IsKeptWithTheManuscript()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.SelectPage(1);
+            dialog.AsPhotoButton.PerformClick();
+            await Task.CompletedTask;
+        });
+
+        var stored = ManuscriptFile.Load(_folder.Path)!;
+        Assert.Equal([null, true], stored.Pages!.Select(page => page.AsPhoto).ToArray());
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            Assert.True(dialog.Pages[1].AsPhoto);
+            Assert.StartsWith("▣", dialog.PageList.Items[1].Text);
+            dialog.SelectPage(1);
+            Assert.True(dialog.AsPhotoButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void SaveBook_OfTheText_PutsThePageThatIsItsPhoto_InAsTheWholePhoto_WithNoText_AndTheTextComesBackWhenItIsTurnedOff()
+    {
+        var a = Photo("a.jpg"); // 320 x 240
+        var b = Photo("b.jpg");
+        var first = _folder.File("first.epub");
+        var second = _folder.File("second.epub");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            StandIn(dialog);
+            await dialog.ScanPageAsync(); // the text of the first page
+            dialog.AsPhotoButton.PerformClick(); // ... which is its photo in the book
+            dialog.SelectPage(1);
+            dialog.AsPhotoButton.PerformClick(); // the second page has no text at all
+            dialog.AskBookPath = () => first;
+
+            await dialog.SaveBookAsync();
+
+            using (var zip = ZipFile.OpenRead(first))
+            {
+                Assert.Equal(new Size(320, 240), ImageSizeInBook(first, "OEBPS/images/photo0001.jpg")); // the photo as it is
+                Assert.NotNull(zip.GetEntry("OEBPS/images/photo0002.jpg")); // a page with no text is in the book when it is its photo, though the book is a book of text
+                using var page = new StreamReader(zip.GetEntry("OEBPS/photo0001.xhtml")!.Open());
+                Assert.DoesNotContain("перший рядок", page.ReadToEnd()); // the text of the page is kept, and is not in the book
+            }
+
+            Assert.Contains("перший рядок", ManuscriptText.PlainOf(dialog.Pages[0].Rtf));
+
+            dialog.SelectPage(0);
+            dialog.AsPhotoButton.PerformClick(); // back as its text
+            dialog.AskBookPath = () => second;
+            await dialog.SaveBookAsync();
+
+            using var again = ZipFile.OpenRead(second);
+            using var text = new StreamReader(again.GetEntry("OEBPS/photo0001.xhtml")!.Open());
+            Assert.Contains("перший рядок", text.ReadToEnd());
+            Assert.Null(again.GetEntry("OEBPS/images/photo0001.jpg"));
+            Assert.NotNull(again.GetEntry("OEBPS/images/photo0002.jpg"));
+        });
+    }
+
+    [Fact]
+    public void SaveBook_OfOnePageThatIsItsPhoto_IsMade_EvenWhenNoPageHasText()
+    {
+        var a = Photo("a.jpg");
+        var path = _folder.File("photo only.pdf");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AsPhotoButton.PerformClick();
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            Assert.True(File.Exists(path), dialog.StatusText);
+            Assert.NotEqual(ManuscriptStrings.StatusNoText, dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void SaveBook_APageThatIsItsPhoto_IsNotInTheBook_WhenItIsLeftOut()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var path = _folder.File("left out.epub");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            StandIn(dialog);
+            await dialog.ScanPageAsync();
+            dialog.SelectPage(1);
+            dialog.AsPhotoButton.PerformClick();
+            dialog.Pages[1].LeftOut = true;
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            using var zip = ZipFile.OpenRead(path);
+            Assert.NotNull(zip.GetEntry("OEBPS/photo0001.xhtml"));
+            Assert.Null(zip.GetEntry("OEBPS/photo0002.xhtml"));
+            Assert.DoesNotContain(zip.Entries, entry => entry.FullName.StartsWith("OEBPS/images/", StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public void SaveBook_WithCutPages_ThePageThatIsItsPhoto_IsNotCut_ButTheOthersAre()
+    {
+        var a = Photo("a.jpg"); // 320 x 240
+        var b = Photo("b.jpg");
+        var path = _folder.File("mixed.epub");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            StandIn(dialog);
+            await dialog.ScanPageAsync();
+            dialog.AsPhotoButton.PerformClick(); // the first page is its photo
+            dialog.IncludePhotosCheck.Checked = true;
+            dialog.CutPagesCheck.Checked = true;
+            var cuts = 0;
+            dialog.CutterOverride = () => new PageCutter(_ =>
+            {
+                cuts++;
+                return SheetMap(new PointF(30, 20), new PointF(125, 25), new PointF(120, 95), new PointF(25, 90));
+            });
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            Assert.Equal(1, cuts); // the second page only
+            Assert.Equal(new Size(320, 240), ImageSizeInBook(path, "OEBPS/images/photo0001.jpg")); // as it is
+            var cut = ImageSizeInBook(path, "OEBPS/images/photo0002.jpg");
+            Assert.InRange(cut.Width, 180, 200); // the sheet of the other page
+            Assert.DoesNotContain("had no sheet", dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void SaveBook_WithCutPages_WhenEveryPageIsItsPhoto_NoCutterIsMade_AndTheModelIsNotAskedFor()
+    {
+        var a = Photo("a.jpg");
+        var path = _folder.File("all photos.epub");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AsPhotoButton.PerformClick();
+            dialog.IncludePhotosCheck.Checked = true;
+            dialog.CutPagesCheck.Checked = true;
+            dialog.CutterOverride = () => throw new InvalidOperationException("there is nothing to cut");
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            Assert.Equal(new Size(320, 240), ImageSizeInBook(path, "OEBPS/images/photo0001.jpg"));
         });
     }
 
@@ -1053,6 +1536,7 @@ public sealed class ManuscriptDialogTests : IDisposable
 
             Assert.Equal(ManuscriptStrings.ScanPage, dialog.ScanPageButton.Text);
             Assert.Equal(ManuscriptStrings.ScanAll, dialog.ScanAllButton.Text);
+            Assert.Equal(ManuscriptStrings.RescanAll, dialog.RescanAllButton.Text);
             Assert.Equal(ManuscriptStrings.AddPages, dialog.AddPagesButton.Text);
             Assert.Equal(ManuscriptStrings.SaveBook, dialog.SaveBookButton.Text);
             Assert.Equal(ManuscriptStrings.IncludePhotos, dialog.IncludePhotosCheck.Text);

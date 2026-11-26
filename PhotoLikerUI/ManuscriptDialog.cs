@@ -25,6 +25,7 @@ namespace PhotoLikerUI
         private readonly Func<Task<bool>>? _ensureCutoutAsync;
         private readonly Func<Task<bool>>? _ensurePicturesAsync;
         private readonly Func<Task<bool>>? _ensureFixAsync;
+        private readonly Func<Task<bool>>? _ensureFinderAsync;
         private readonly Action<string, int?>? _photoChanged;
         private readonly ToolTip _toolTip = new() { AutoPopDelay = 15000, InitialDelay = 400 };
         private readonly ThumbnailCache _thumbnails = new();
@@ -53,6 +54,8 @@ namespace PhotoLikerUI
         internal readonly ToolStripComboBox LanguageCombo = new();
         internal readonly ToolStripButton ScanPageButton = new();
         internal readonly ToolStripButton ScanAllButton = new();
+        internal readonly ToolStripButton RescanAllButton = new();
+        internal readonly ToolStripButton AsPhotoButton = new();
         internal readonly ToolStripButton StopButton = new();
         internal readonly ToolStripButton FindPicturesButton = new();
         internal readonly ToolStripButton RotateLeftButton = new();
@@ -65,6 +68,7 @@ namespace PhotoLikerUI
         internal readonly ComboBox AiCombo = new();
         internal readonly Button AiServicesButton = new();
         internal readonly CheckBox UseContextCheck = new();
+        internal readonly CheckBox AiPlacesCheck = new();
         private readonly FlowLayoutPanel _aiRow = new();
 
         // The pages, the photo and the text
@@ -108,6 +112,7 @@ namespace PhotoLikerUI
         /// <param name="aiServices">The keys of the AI services (ChatGPT, Gemini, Claude) and which of them corrects the text; null: the ones the program keeps (<see cref="AiServiceSettings.DefaultPath"/>).</param>
         /// <param name="likedFolder">The folder of the liked photos: the "Photos from" box offers it, and the groups in it, besides the photos that are loaded; null or empty: the box has the loaded photos only.</param>
         /// <param name="extensions">The extensions of the photos of a folder (with the dot); null: those of <see cref="PhotoExtensions"/>.</param>
+        /// <param name="ensureFinderAsync">Makes sure the model that finds the lines (3 MB) is on this computer, for marking the lines on a photo that goes to an AI service; null: it is taken to be there.</param>
         public ManuscriptDialog(
             string folder,
             IReadOnlyList<string> startPhotos,
@@ -121,8 +126,10 @@ namespace PhotoLikerUI
             Func<Task<bool>>? ensureFixAsync = null,
             AiServiceSettings? aiServices = null,
             string? likedFolder = null,
-            IReadOnlyCollection<string>? extensions = null)
+            IReadOnlyCollection<string>? extensions = null,
+            Func<Task<bool>>? ensureFinderAsync = null)
         {
+            _ensureFinderAsync = ensureFinderAsync;
             _ai = aiServices ?? AiServiceSettings.Load();
             _likedFolder = likedFolder;
             _extensions = extensions ?? PhotoExtensions;
@@ -222,6 +229,7 @@ namespace PhotoLikerUI
             Plain(RemovePageButton, "removePageButton", ManuscriptStrings.RemovePage, ManuscriptStrings.RemovePageTip);
             Plain(MoveUpButton, "movePageUpButton", "▲", ManuscriptStrings.MovePageUpTip);
             Plain(MoveDownButton, "movePageDownButton", "▼", ManuscriptStrings.MovePageDownTip);
+            Plain(AsPhotoButton, "asPhotoButton", ManuscriptStrings.AsPhoto, ManuscriptStrings.AsPhotoTip);
             MoveUpButton.AccessibleName = ManuscriptStrings.MovePageUpTip;
             MoveDownButton.AccessibleName = ManuscriptStrings.MovePageDownTip;
 
@@ -251,6 +259,7 @@ namespace PhotoLikerUI
 
             Plain(ScanPageButton, "scanPageButton", ManuscriptStrings.ScanPage, ManuscriptStrings.ScanPageTip);
             Plain(ScanAllButton, "scanAllButton", ManuscriptStrings.ScanAll, ManuscriptStrings.ScanAllTip);
+            Plain(RescanAllButton, "rescanAllButton", ManuscriptStrings.RescanAll, ManuscriptStrings.RescanAllTip);
             Plain(StopButton, "stopScanButton", ManuscriptStrings.Stop, ManuscriptStrings.StopTip);
             Plain(FindPicturesButton, "findPicturesButton", ManuscriptStrings.FindPictures, ManuscriptStrings.FindPicturesTip);
             ScanPageButton.Font = new Font(Bar.Font, FontStyle.Bold);
@@ -268,9 +277,9 @@ namespace PhotoLikerUI
 
             Bar.Items.AddRange(
             [
-                AddPagesButton, RemovePageButton, MoveUpButton, MoveDownButton, new ToolStripSeparator(),
+                AddPagesButton, RemovePageButton, MoveUpButton, MoveDownButton, AsPhotoButton, new ToolStripSeparator(),
                 KindLabel, KindCombo, LanguageLabel, LanguageCombo, new ToolStripSeparator(),
-                ScanPageButton, ScanAllButton, StopButton, FindPicturesButton, new ToolStripSeparator(),
+                ScanPageButton, ScanAllButton, RescanAllButton, StopButton, FindPicturesButton, new ToolStripSeparator(),
                 RotateLeftButton, RotateRightButton, new ToolStripSeparator(),
                 ShowLinesButton, JoinLinesButton,
             ]);
@@ -380,6 +389,11 @@ namespace PhotoLikerUI
             UseContextCheck.AutoSize = true;
             UseContextCheck.Margin = new Padding(12, 4, 0, 0);
             _toolTip.SetToolTip(UseContextCheck, ManuscriptStrings.HintUseContext);
+            AiPlacesCheck.Name = "aiPlacesCheck";
+            AiPlacesCheck.Text = ManuscriptStrings.AiPlaces;
+            AiPlacesCheck.AutoSize = true;
+            AiPlacesCheck.Margin = new Padding(12, 4, 0, 0);
+            _toolTip.SetToolTip(AiPlacesCheck, ManuscriptStrings.HintAiPlaces);
             _aiRow.Name = "aiRow";
             _aiRow.Dock = DockStyle.Top;
             _aiRow.AutoSize = true;
@@ -387,7 +401,7 @@ namespace PhotoLikerUI
             _aiRow.FlowDirection = FlowDirection.LeftToRight;
             _aiRow.WrapContents = true;
             _aiRow.Padding = new Padding(6, 0, 6, 4);
-            _aiRow.Controls.AddRange([AiLabel, AiCombo, AiServicesButton, UseContextCheck]);
+            _aiRow.Controls.AddRange([AiLabel, AiCombo, AiServicesButton, UseContextCheck, AiPlacesCheck]);
 
             var text = new Panel { Dock = DockStyle.Fill };
             text.Controls.Add(Editor);

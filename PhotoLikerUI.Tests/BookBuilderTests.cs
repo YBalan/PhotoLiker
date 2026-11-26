@@ -30,8 +30,8 @@ public sealed class BookBuilderTests : IDisposable
     private static BookOptions Options(string title = "", BookFormat format = BookFormat.Pdf) => new(title, "", "en");
 
     private Task<BookResult> Build(IReadOnlyList<BookEntry> entries, BookFormat format, string title = "", PictureQuality quality = PictureQuality.Good, CancellationToken cancellation = default,
-        Action<int, int>? preparing = null, Action<int>? percent = null, string? output = null) =>
-        BookBuilder.BuildAsync(entries, format, Options(title), quality, _folder.File(output ?? (format == BookFormat.Pdf ? "book.pdf" : "book.epub")), preparing, null, percent, cancellation);
+        Action<int, int>? preparing = null, Action<int>? percent = null, string? output = null, bool withPhotos = true) =>
+        BookBuilder.BuildAsync(entries, format, Options(title), quality, _folder.File(output ?? (format == BookFormat.Pdf ? "book.pdf" : "book.epub")), preparing, null, percent, cancellation, withPhotos);
 
     [Fact]
     public async Task APdf_HasAPagePerPhoto_InTheOrderOfTheList()
@@ -92,6 +92,161 @@ public sealed class BookBuilderTests : IDisposable
         Assert.Equal([bad, gone], result.Unreadable);
         using var document = PdfReader.Open(result.Path, PdfDocumentOpenMode.Import);
         Assert.Equal(2, document.PageCount);
+    }
+
+    // ── A Word document ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ADocx_HasASectionPerPhoto_WithTheirTexts_AndSaysHowManyPagesTheBookHas()
+    {
+        var first = new BookEntry(Photo("a.jpg")) { AboveRtf = @"{\rtf1\ansi first\par}" };
+        var second = new BookEntry(Photo("b.jpg", 200, 320)) { BelowRtf = @"{\rtf1\ansi second\par}" };
+
+        var result = await Build([second, first], BookFormat.Docx, title: "T", output: "book.docx");
+
+        Assert.Equal(2, result.Photos);
+        Assert.Equal(3, result.Pages); // with the title
+        Assert.Empty(result.Unreadable);
+        Assert.True(result.Bytes > 1000);
+        using var zip = ZipFile.OpenRead(result.Path);
+        var document = System.Xml.Linq.XDocument.Load(zip.GetEntry("word/document.xml")!.Open());
+        var w = System.Xml.Linq.XNamespace.Get("http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+        Assert.Equal(["T", "second", "first"], document.Descendants(w + "t").Select(element => element.Value).ToArray());
+        Assert.Equal(3, document.Descendants(w + "sectPr").Count());
+        Assert.NotNull(zip.GetEntry("word/media/photo0001.jpg"));
+        Assert.NotNull(zip.GetEntry("word/media/photo0002.jpg"));
+    }
+
+    [Fact]
+    public async Task ADocxOfTextOnly_HasNoPhotoButOnesThatArePhotos_AndAPhotoThatCannotBeRead_IsNamed()
+    {
+        var bad = _folder.File("bad.jpg");
+        File.WriteAllText(bad, "this is not a picture");
+        var entries = new List<BookEntry>
+        {
+            new(Photo("a.jpg")) { AboveRtf = @"{\rtf1\ansi the text\par}" },
+            new(Photo("b.jpg", 300, 180)) { AsPhoto = true },
+            new(bad) { AsPhoto = true },
+        };
+
+        var result = await Build(entries, BookFormat.Docx, withPhotos: false, output: "text.docx");
+
+        Assert.Equal([bad], result.Unreadable);
+        Assert.Equal(2, result.Photos);
+        using var zip = ZipFile.OpenRead(result.Path);
+        Assert.Equal(["word/media/photo0002.jpg"], zip.Entries.Select(entry => entry.FullName).Where(name => name.StartsWith("word/media/", StringComparison.Ordinal)).ToArray());
+    }
+
+    [Fact]
+    public async Task ADocxOfText_ReadsNoPhotoAtAll()
+    {
+        var entries = new List<BookEntry> { new(_folder.File("gone.jpg")) { AboveRtf = @"{\rtf1\ansi only text\par}" } }; // the photo is not there: a book of text never opens it
+
+        var result = await Build(entries, BookFormat.Docx, withPhotos: false, output: "gone.docx");
+
+        Assert.Empty(result.Unreadable);
+        Assert.Equal(1, result.Photos);
+    }
+
+    // ── A page that is its photo ────────────────────────────────────────────
+
+    private static string PageOf(ZipArchive zip, string name) => new StreamReader(zip.GetEntry(name)!.Open()).ReadToEnd();
+
+    [Fact]
+    public async Task APageThatIsItsPhoto_IsInABookOfTextOnly_WithItsWholePhoto_AndNoText()
+    {
+        var text = new BookEntry(Photo("a.jpg")) { AboveRtf = @"{\rtf1\ansi the text of the first page\par}" };
+        var photo = new BookEntry(Photo("b.jpg", 300, 180)) { AboveRtf = @"{\rtf1\ansi hidden words\par}", BelowRtf = @"{\rtf1\ansi more hidden words\par}", AsPhoto = true };
+        var last = new BookEntry(Photo("c.jpg")) { AboveRtf = @"{\rtf1\ansi the text of the last page\par}" };
+
+        var result = await Build([text, photo, last], BookFormat.Epub, withPhotos: false);
+
+        Assert.Equal(3, result.Photos);
+        Assert.Empty(result.Unreadable);
+        using var zip = ZipFile.OpenRead(result.Path);
+        Assert.Contains("the text of the first page", PageOf(zip, "OEBPS/photo0001.xhtml"));
+        Assert.Contains("the text of the last page", PageOf(zip, "OEBPS/photo0003.xhtml"));
+        var middle = PageOf(zip, "OEBPS/photo0002.xhtml");
+        Assert.DoesNotContain("hidden words", middle);
+        Assert.Contains("images/photo0002.jpg", middle);
+        Assert.Equal(["OEBPS/images/photo0002.jpg"], zip.Entries.Select(entry => entry.FullName).Where(name => name.StartsWith("OEBPS/images/", StringComparison.Ordinal)).ToArray()); // only the page that is its photo has a picture
+        using var picture = Image.FromStream(new MemoryStream(ReadAll(zip.GetEntry("OEBPS/images/photo0002.jpg")!)));
+        Assert.Equal(new Size(300, 180), picture.Size); // whole, as it is
+    }
+
+    private static byte[] ReadAll(ZipArchiveEntry entry)
+    {
+        using var stream = entry.Open();
+        using var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        return memory.ToArray();
+    }
+
+    [Fact]
+    public async Task APdfOfTextOnly_HasThePhotoPageAsALandscapePage_BetweenThePagesOfText()
+    {
+        var entries = new List<BookEntry>
+        {
+            new(Photo("a.jpg")) { AboveRtf = @"{\rtf1\ansi first\par}" },
+            new(Photo("b.jpg", 320, 200)) { AsPhoto = true },
+            new(Photo("c.jpg")) { AboveRtf = @"{\rtf1\ansi third\par}" },
+        };
+
+        var result = await Build(entries, BookFormat.Pdf, withPhotos: false);
+
+        Assert.Equal(3, result.Pages);
+        using var document = PdfReader.Open(result.Path, PdfDocumentOpenMode.Import);
+        Assert.Equal(3, document.PageCount);
+        Assert.True(document.Pages[0].Width.Point < document.Pages[0].Height.Point, "text: portrait");
+        Assert.True(document.Pages[1].Width.Point > document.Pages[1].Height.Point, "the photo: as the photo is");
+    }
+
+    [Fact]
+    public async Task InABookWithThePhotos_APageThatIsItsPhoto_HasNoTextOnIt()
+    {
+        var plain = new BookEntry(Photo("a.jpg")) { BelowRtf = @"{\rtf1\ansi below the first photo\par}" };
+        var alone = new BookEntry(Photo("b.jpg")) { BelowRtf = @"{\rtf1\ansi below the second photo\par}", AsPhoto = true };
+
+        var result = await Build([plain, alone], BookFormat.Epub);
+
+        using var zip = ZipFile.OpenRead(result.Path);
+        Assert.Contains("below the first photo", PageOf(zip, "OEBPS/photo0001.xhtml"));
+        Assert.DoesNotContain("below the second photo", PageOf(zip, "OEBPS/photo0002.xhtml"));
+        Assert.NotNull(zip.GetEntry("OEBPS/images/photo0002.jpg"));
+    }
+
+    [Fact]
+    public async Task OnlyThePhotosThatAreWanted_AreReadForABookOfText_AndOneThatCannotBeRead_IsNamed()
+    {
+        var bad = _folder.File("bad.jpg");
+        File.WriteAllText(bad, "this is not a picture");
+        var entries = new List<BookEntry>
+        {
+            new(bad) { AboveRtf = @"{\rtf1\ansi text of a page whose photo is not read\par}" }, // not read: the book is text
+            new(Photo("b.jpg")) { AsPhoto = true },
+            new(bad) { AsPhoto = true }, // wanted, and cannot be read
+        };
+        var prepared = new List<(int, int)>();
+
+        var result = await Build(entries, BookFormat.Epub, withPhotos: false, preparing: (done, total) => { lock (prepared) prepared.Add((done, total)); });
+
+        Assert.Equal([bad], result.Unreadable);
+        Assert.Equal(2, result.Photos);
+        Assert.All(prepared, step => Assert.Equal(2, step.Item2)); // two photos are made into pictures, not three
+        using var zip = ZipFile.OpenRead(result.Path);
+        Assert.Contains("text of a page whose photo is not read", PageOf(zip, "OEBPS/photo0001.xhtml"));
+    }
+
+    [Fact]
+    public async Task ABookOfTextOnly_WithNoPageThatIsItsPhoto_StillReadsNoPhoto()
+    {
+        var gone = _folder.File("gone.jpg"); // not there: a book of text never opens it
+        var entries = new List<BookEntry> { new(gone) { AboveRtf = @"{\rtf1\ansi only text\par}" } };
+
+        var result = await Build(entries, BookFormat.Epub, withPhotos: false);
+
+        Assert.Empty(result.Unreadable);
+        Assert.Equal(1, result.Photos);
     }
 
     [Fact]

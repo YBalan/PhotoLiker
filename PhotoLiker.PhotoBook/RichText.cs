@@ -68,13 +68,44 @@ namespace PhotoLiker.PhotoBook
         /// <summary>The picture this paragraph is, when it is one (it has no text then).</summary>
         public RichPicture? Picture { get; init; }
 
+        /// <summary>
+        /// What stands before the text of an item of a list, as the Rich Text Box shows it: a bullet (<c>•</c>) or a number (<c>3.</c>); null for a paragraph that is not an item. It is not in
+        /// <see cref="PlainText"/> (the Rich Text Box does not have it in its text either); a PDF, an EPUB or a Word document set it before the text, see <see cref="WithMarkerInText"/>.
+        /// </summary>
+        public string? Marker { get; init; }
+
+        /// <summary>True when the marker is a number (or a letter) and not a bullet.</summary>
+        public bool IsNumbered => Marker is { } marker && marker.Any(char.IsLetterOrDigit);
+
         /// <summary>A paragraph that is only a picture.</summary>
         public static RichParagraph OfPicture(RichPicture picture, TextAlign align = TextAlign.Center) => new(align, []) { Picture = picture };
+
+        /// <summary>
+        /// The paragraph with its marker made a part of its text: the marker, a tab, then the text, the tab ending at the left indent of the paragraph (the text of a list is indented, with the
+        /// marker hanging out to its left). A marker with no text after it (an item nobody wrote anything in) is not shown. What shows the text of a book needs nothing else to show a list.
+        /// </summary>
+        public RichParagraph WithMarkerInText()
+        {
+            if (Marker is not { } marker)
+                return this;
+
+            if (IsBlank)
+                return this with { Marker = null };
+
+            // The marker looks as the start of the text does (a bold item has a bold number), but is not underlined or struck through
+            var look = Runs.Count > 0 ? Runs[0].Style with { Underline = false, Strike = false } : default;
+            var stops = TabStops;
+            if (FirstLineIndent < 0 && LeftIndent > 0 && !stops.Any(stop => Math.Abs(stop - LeftIndent) < 0.5))
+                stops = [.. stops.Append(LeftIndent).Order()];
+
+            return this with { Runs = [new RichRun(marker + "\t", look), .. Runs], TabStops = stops, Marker = null };
+        }
     }
 
     /// <summary>
     /// The description of a photo as the book has it: paragraphs of runs. It is what the Rich Text Box of the dialog holds, read from its RTF by <see cref="RtfParser"/>; nothing of the Rich Text
-    /// Box (fonts, bullets) is kept that the PDF and the EPUB could not both show. Pictures (PNG and JPEG) are kept as paragraphs of their own, indents and tab stops with the paragraph.
+    /// Box (fonts) is kept that the PDF and the EPUB could not both show. Pictures (PNG and JPEG) are kept as paragraphs of their own, indents, tab stops and the marker of an item of a list with
+    /// the paragraph.
     /// </summary>
     public sealed class RichDocument
     {
@@ -97,6 +128,12 @@ namespace PhotoLiker.PhotoBook
 
         /// <summary>The document with its pictures taken out.</summary>
         public RichDocument WithoutPictures() => HasPictures ? new RichDocument([.. Paragraphs.Where(paragraph => paragraph.Picture is null)]) : this;
+
+        /// <summary>True when a paragraph of the document is an item of a list.</summary>
+        public bool HasLists => Paragraphs.Any(paragraph => paragraph.Marker is not null);
+
+        /// <summary>The document with the marker of each item of a list set in its text (see <see cref="RichParagraph.WithMarkerInText"/>); what draws or writes the text calls it first.</summary>
+        public RichDocument WithMarkersInText() => HasLists ? new RichDocument([.. Paragraphs.Select(paragraph => paragraph.WithMarkerInText())]) : this;
 
         /// <summary>
         /// The document without the empty lines at its end: a Rich Text Box that was left with a few Enters at the end would otherwise push the photo down the page. The ones at the
@@ -124,8 +161,9 @@ namespace PhotoLiker.PhotoBook
 
     /// <summary>
     /// Reads the RTF of a Rich Text Box. It knows what that writes for the formatting the dialog offers (bold, italic, underline, strike-through, size, colour, alignment) and for text: the
-    /// characters of the languages of Windows as <c>\uN?</c>, or as <c>\'hh</c> bytes in the code page of the font, indents (<c>\li</c>, <c>\fi</c>), tab stops (<c>\tx</c>) and pictures that are PNG or
-    /// JPEG (<c>\pngblip</c>, <c>\jpegblip</c>). It skips what it does not know (the other kinds of picture, tables, fonts, styles) and never throws: RTF that is broken gives the text that could be read.
+    /// characters of the languages of Windows as <c>\uN?</c>, or as <c>\'hh</c> bytes in the code page of the font, indents (<c>\li</c>, <c>\fi</c>), tab stops (<c>\tx</c>), the bullets and the
+    /// numbers of lists (the text a Rich Text Box writes for each in <c>\pntext</c>, Word in <c>\listtext</c>) and pictures that are PNG or JPEG (<c>\pngblip</c>, <c>\jpegblip</c>). It skips what it
+    /// does not know (the other kinds of picture, tables, fonts, styles) and never throws: RTF that is broken gives the text that could be read.
     /// </summary>
     public static class RtfParser
     {
@@ -152,14 +190,21 @@ namespace PhotoLiker.PhotoBook
         /// <summary>The characters of a code page are what <c>\'hh</c> stands for; the code pages other than the ones .NET has built in come with this provider.</summary>
         static RtfParser() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-        /// <summary>The state RTF keeps per group: what the characters look like, and how many characters follow a <c>\uN</c> that stand for it for readers that do not know Unicode.</summary>
-        private sealed record State(RichStyle Style, int Font, int SkipAfterUnicode, bool Skip);
+        /// <summary>
+        /// The state RTF keeps per group: what the characters look like, and how many characters follow a <c>\uN</c> that stand for it for readers that do not know Unicode. <c>Marker</c>: the
+        /// group is the number or the bullet of an item of a list, whose characters are the marker of the paragraph and not its text.
+        /// </summary>
+        private sealed record State(RichStyle Style, int Font, int SkipAfterUnicode, bool Skip, bool Marker = false);
 
         private sealed class Reader(string text, bool readPictures)
         {
             private int _position;
             private readonly Stack<State> _stack = new();
             private State _state = new(default, 0, 1, false);
+
+            // The marker of the paragraph that is being read (the number or the bullet of a list item), and whether a font of symbols wrote it
+            private readonly StringBuilder _marker = new();
+            private bool _markerSymbol;
 
             private readonly List<RichParagraph> _paragraphs = [];
             private List<RichRun> _runs = [];
@@ -396,6 +441,11 @@ namespace PhotoLiker.PhotoBook
                             _picture = new PictureCapture(_stack.Count);
                         _state = _state with { Skip = true };
                         return;
+                    case "pntext" or "listtext":
+                        // The number or the bullet of a list item, as the program that wrote the text drew it: what is in the group is the marker of the paragraph, not its text
+                        if (!_state.Skip)
+                            _state = _state with { Marker = true };
+                        return;
                     case "stylesheet" or "info" or "object" or "header" or "footer" or "headerl" or "headerr" or "footerl" or "footerr" or "xmlnstbl" or "listtable" or "listoverridetable" or
                          "rsidtbl" or "generator" or "latentstyles" or "datastore" or "themedata" or "colorschememapping" or "revtbl" or "fldinst" or "bkmkstart" or "bkmkend" or "pntxtb" or "pntxta":
                         _state = _state with { Skip = true };
@@ -451,6 +501,10 @@ namespace PhotoLiker.PhotoBook
                 }
 
                 if (_state.Skip)
+                    return;
+
+                // Word starts the group of a marker with \pard and \plain, as if it were a paragraph of its own: what it says of paragraphs is not the paragraph's
+                if (_state.Marker && word is "pard" or "li" or "fi" or "tx" or "ql" or "qc" or "qr" or "qj" or "par" or "sect" or "page")
                     return;
 
                 switch (word)
@@ -567,6 +621,13 @@ namespace PhotoLiker.PhotoBook
                 if (_state.Skip || value.Length == 0)
                     return;
 
+                if (_state.Marker)
+                {
+                    _marker.Append(value);
+                    _markerSymbol |= CodePageOf(_state.Font) == 42; // whatever a font of symbols draws for a bullet is a bullet here
+                    return;
+                }
+
                 _afterPicture = false;
                 if (_pending.Length > 0 && _pendingStyle != _state.Style)
                     FlushRun();
@@ -592,19 +653,44 @@ namespace PhotoLiker.PhotoBook
                 if (_afterPicture && keepEmpty && _runs.Count == 0)
                 {
                     _afterPicture = false;
+                    TakeMarker();
                     return;
                 }
 
                 _afterPicture = false;
                 if (_runs.Count == 0 && !keepEmpty)
+                {
+                    TakeMarker();
                     return;
+                }
 
-                _paragraphs.Add(NewParagraph(_runs));
+                _paragraphs.Add(NewParagraph(_runs, TakeMarker()));
                 _runs = [];
             }
 
-            private RichParagraph NewParagraph(IReadOnlyList<RichRun> runs) =>
-                new(_align, runs) { LeftIndent = _leftIndent, FirstLineIndent = _firstIndent, TabStops = [.. _tabs.Order()] };
+            private RichParagraph NewParagraph(IReadOnlyList<RichRun> runs, string? marker = null) =>
+                new(_align, runs) { LeftIndent = _leftIndent, FirstLineIndent = _firstIndent, TabStops = [.. _tabs.Order()], Marker = marker };
+
+            /// <summary>The marker the paragraph that ends now has (null when it is not a list item), and the reader is ready for the next paragraph.</summary>
+            private string? TakeMarker()
+            {
+                var symbol = _markerSymbol;
+                var marker = _marker.ToString().Trim(); // (the tab that follows the number is not a part of it)
+                _marker.Clear();
+                _markerSymbol = false;
+
+                if (marker.Length == 0)
+                    return null;
+
+                // The bullet that a Rich Text Box writes is a character of its Symbol font, which another font draws as a dot in the middle of the line
+                return symbol || (marker.Length == 1 && marker[0] is MiddleDot or SymbolBullet or Bullet) ? Bullet.ToString() : marker;
+            }
+
+            // The characters that stand for a bullet: the middle dot, the bullet of the Symbol font (as the private use area of Unicode has it) and the bullet itself. They are numbers here:
+            // the first two are characters that cannot be told apart in the code.
+            private const char MiddleDot = (char)0x00B7;
+            private const char SymbolBullet = (char)0xF0B7;
+            private const char Bullet = (char)0x2022;
 
             /// <summary>The picture is done: when it is a kind that is read and its bytes are those of one, it is a paragraph of its own.</summary>
             private void EndPicture()

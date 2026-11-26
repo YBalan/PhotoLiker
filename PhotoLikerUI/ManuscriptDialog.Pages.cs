@@ -47,6 +47,7 @@ namespace PhotoLikerUI
                 CutPagesCheck.Enabled = IncludePhotosCheck.Checked;
                 ScanPicturesCheck.Checked = stored.FindPictures != false; // on, unless it was turned off
                 UseContextCheck.Checked = stored.UseContext == true; // off, unless it was turned on: the text of the pages goes to the service with it
+                AiPlacesCheck.Checked = stored.AiPlaces == true; // off, unless it was turned on: the service writes more, which costs more
             }
 
             TitleBox.Text = !string.IsNullOrWhiteSpace(stored?.Title) ? stored!.Title : _folder.Length > 0 ? new DirectoryInfo(_folder).Name : string.Empty;
@@ -157,6 +158,7 @@ namespace PhotoLikerUI
                 CutPages = CutPagesCheck.Checked,
                 FindPictures = ScanPicturesCheck.Checked,
                 UseContext = UseContextCheck.Checked,
+                AiPlaces = AiPlacesCheck.Checked,
                 RemovedPages = _removed.Count > 0 ? [.. _removed] : null,
                 OutputFolder = _work.OutputFolder,
                 OutputFileName = _work.OutputFileName,
@@ -178,7 +180,7 @@ namespace PhotoLikerUI
 
         /// <summary>Whether anything was done to the pages: a text, a scan, pictures, a page left out or taken out.</summary>
         private bool HasWorkToKeep() =>
-            _removed.Count > 0 || _pages.Any(page => page.Rtf is not null || page.Scanned is not null || page.Lines is not null || page.Pictures is not null || page.LeftOut == true);
+            _removed.Count > 0 || _pages.Any(page => page.Rtf is not null || page.Scanned is not null || page.Lines is not null || page.Pictures is not null || page.LeftOut == true || page.AsPhoto == true);
 
         // ── The list of pages ───────────────────────────────────────────────
 
@@ -320,8 +322,9 @@ namespace PhotoLikerUI
             var page = _pages[index];
             var state = ManuscriptText.StateOf(page);
             var item = PageList.Items[index];
-            item.Text = $"{StateMark(state)}{index + 1}. {Path.GetFileNameWithoutExtension(page.File)}";
-            item.ToolTipText = $"{string.Format(ManuscriptStrings.PageFormat, index + 1)}: {Path.GetFileName(page.File)} ({StateName(state)})";
+            var asPhoto = page.AsPhoto == true;
+            item.Text = $"{(asPhoto ? "▣ " : string.Empty)}{StateMark(state)}{index + 1}. {Path.GetFileNameWithoutExtension(page.File)}";
+            item.ToolTipText = $"{string.Format(ManuscriptStrings.PageFormat, index + 1)}: {Path.GetFileName(page.File)} ({StateName(state)}{(asPhoto ? ", " + ManuscriptStrings.PageAsPhotoNote : string.Empty)})";
         }
 
         private Bitmap Placeholder()
@@ -652,10 +655,13 @@ namespace PhotoLikerUI
             RemovePageButton.Enabled = idle && hasPage;
             MoveUpButton.Enabled = idle && hasPage && _current > 0;
             MoveDownButton.Enabled = idle && hasPage && _current < _pages.Count - 1;
+            AsPhotoButton.Enabled = idle && hasPage;
+            AsPhotoButton.Checked = CurrentPage?.AsPhoto == true;
             KindCombo.Enabled = idle;
             LanguageCombo.Enabled = idle;
             ScanPageButton.Enabled = idle && hasPage;
             ScanAllButton.Enabled = idle && _pages.Count > 0;
+            RescanAllButton.Enabled = idle && _pages.Count > 0;
             FindPicturesButton.Enabled = idle && hasPage;
             StopButton.Enabled = _busy && _scan is not null;
             RotateLeftButton.Enabled = idle && hasPage;
@@ -665,6 +671,7 @@ namespace PhotoLikerUI
             AiServicesButton.Enabled = idle;
             SourceCombo.Enabled = idle;
             UseContextCheck.Enabled = idle && _ai.Active is not null; // the model on this computer reads a piece at a time and is not given the pages before it
+            AiPlacesCheck.Enabled = idle && _ai.Active is not null && Kind == ScanKind.AiService; // only the reading of a photo by a service has places to ask for
             SaveBookButton.Enabled = idle && _pages.Count > 0;
         }
 
