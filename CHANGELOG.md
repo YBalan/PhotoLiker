@@ -16,6 +16,7 @@ Releases before 4.0.1, and the ones since that changed only tests, are not liste
 ## Unreleased
 
 - Added Rescan all pages to Scan manuscripts: after you change the kind of writing or the language, every page can be read again, also those that have text.
+- Added Lines on the photo to Scan manuscripts: the lines are marked on the photo before an AI service reads it, so its pages get boxes that go with the text.
 
 ## 4.6.13 - 2026-11-25
 

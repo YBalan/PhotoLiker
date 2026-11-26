@@ -162,6 +162,12 @@ namespace PhotoLikerUI
         public static string StatusAiReadingFormat => T();
         public static string StatusAiReadFormat => T();
         public static string StatusAiReadNothingFormat => T();
+        public static string AiPlaces => T();
+        public static string HintAiPlaces => T();
+        public static string StatusAiReadPlacedFormat => T();
+        public static string StatusAiReadNoPlacesFormat => T();
+        public static string StatusAiNoPlacesFormat => T();
+        public static string StatusAiPlacesNoFinder => T();
         public static string StatusAiScanAllDoneFormat => T();
         public static string StatusAiScanFailedFormat => T();
     }

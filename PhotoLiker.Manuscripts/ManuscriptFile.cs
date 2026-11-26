@@ -137,6 +137,9 @@ namespace PhotoLiker.Manuscripts
         /// <summary>Whether an AI service that corrects or reads a page is given the text of the pages before it, to go by (names, words, the way things are spelled in this manuscript).</summary>
         public bool? UseContext { get; set; }
 
+        /// <summary>Whether an AI service that reads a photo is also asked where each line is on it, so that the page has boxes (more for the service to write, so more to pay for).</summary>
+        public bool? AiPlaces { get; set; }
+
         public string? OutputFolder { get; set; }
 
         public string? OutputFileName { get; set; }

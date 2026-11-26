@@ -80,8 +80,11 @@ namespace PhotoLikerUI
             var loaded = _currentConfig.Files.Where(file => !file.IsVideo).Select(file => file.OriginalFilePath).ToList();
             return new ManuscriptDialog(
                 _currentConfig.CurrentFolder, start, _effects, _currentConfig.IsDarkTheme, EnsureManuscriptModelsAsync, FollowDrawnPhoto, EnsureManuscriptCutModelAsync, loaded, EnsureManuscriptPictureModelsAsync,
-                EnsureManuscriptFixModelAsync, likedFolder: _currentConfig.LikedFolder, extensions: _currentConfig.Extensions);
+                EnsureManuscriptFixModelAsync, likedFolder: _currentConfig.LikedFolder, extensions: _currentConfig.Extensions, ensureFinderAsync: EnsureManuscriptFinderAsync);
         }
+
+        /// <summary>The model that finds the lines (3 MB), for marking them on a photo that goes to an AI service: asked for (and downloaded) the first time the lines are wanted on the photo.</summary>
+        private Task<bool> EnsureManuscriptFinderAsync() => EnsureToolModelAsync(ToolModels.OcrFinder, ToolModelStrings.MarkLinesFeature, askAgain: true);
 
         /// <summary>The model of the AI that corrects the text: the language model, and the list of words it reads with (the person is asked once, for the first that is not there).</summary>
         private async Task<bool> EnsureManuscriptFixModelAsync()

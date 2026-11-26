@@ -47,6 +47,7 @@ namespace PhotoLikerUI
                 CutPagesCheck.Enabled = IncludePhotosCheck.Checked;
                 ScanPicturesCheck.Checked = stored.FindPictures != false; // on, unless it was turned off
                 UseContextCheck.Checked = stored.UseContext == true; // off, unless it was turned on: the text of the pages goes to the service with it
+                AiPlacesCheck.Checked = stored.AiPlaces == true; // off, unless it was turned on: the service writes more, which costs more
             }
 
             TitleBox.Text = !string.IsNullOrWhiteSpace(stored?.Title) ? stored!.Title : _folder.Length > 0 ? new DirectoryInfo(_folder).Name : string.Empty;
@@ -157,6 +158,7 @@ namespace PhotoLikerUI
                 CutPages = CutPagesCheck.Checked,
                 FindPictures = ScanPicturesCheck.Checked,
                 UseContext = UseContextCheck.Checked,
+                AiPlaces = AiPlacesCheck.Checked,
                 RemovedPages = _removed.Count > 0 ? [.. _removed] : null,
                 OutputFolder = _work.OutputFolder,
                 OutputFileName = _work.OutputFileName,
@@ -666,6 +668,7 @@ namespace PhotoLikerUI
             AiServicesButton.Enabled = idle;
             SourceCombo.Enabled = idle;
             UseContextCheck.Enabled = idle && _ai.Active is not null; // the model on this computer reads a piece at a time and is not given the pages before it
+            AiPlacesCheck.Enabled = idle && _ai.Active is not null && Kind == ScanKind.AiService; // only the reading of a photo by a service has places to ask for
             SaveBookButton.Enabled = idle && _pages.Count > 0;
         }
 

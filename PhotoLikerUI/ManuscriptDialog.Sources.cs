@@ -262,6 +262,7 @@ namespace PhotoLikerUI
             CutPagesCheck.Enabled = false;
             ScanPicturesCheck.Checked = true;
             UseContextCheck.Checked = false;
+            AiPlacesCheck.Checked = false;
         }
 
         /// <summary>A place the pages can come from: the loaded photos (no folder of its own to list), or a folder of copies. Shown in the box as its name and the number of its photos, "Liked (123)".</summary>

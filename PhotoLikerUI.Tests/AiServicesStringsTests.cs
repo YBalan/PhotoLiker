@@ -13,6 +13,8 @@ public sealed class AiServicesStringsTests
         "HintPhotosFrom", "StatusSourceOpenedFormat", "UseContext", "HintUseContext",
         "KindAi", "StatusAiScanNoService", "ConfirmSendPhotoFormat", "StatusAiScanDeclined", "StatusAiReadingFormat", "StatusAiReadFormat", "StatusAiReadNothingFormat",
         "StatusAiScanAllDoneFormat", "StatusAiScanFailedFormat",
+        "AiPlaces", "HintAiPlaces", "StatusAiReadPlacedFormat", "StatusAiReadNoPlacesFormat", "StatusAiNoPlacesFormat", "StatusAiPlacesNoFinder",
+        "RescanAll", "RescanAllTip", "ConfirmRescanAllFormat", "ConfirmRescanAllEditedFormat", "StatusRescanAllNothing",
     ];
 
     private static IEnumerable<string> Names() =>

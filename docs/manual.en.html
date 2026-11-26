@@ -1177,8 +1177,14 @@ becomes a <strong>PDF or an EPUB</strong>. It is made for what a family has in n
   <li>
     <strong>Let an AI service read the photo.</strong> The third kind in the <em>Writing</em> box, <em>AI service</em>, sends the photo of the page to the service that is picked in the <em>AI</em> box and puts the text it writes back into the page. A service that can see reads handwriting and print in any of the languages
     far better than the models of this computer do (cursive, a table of words and their translations, English handwriting). <strong>The photo leaves your computer</strong>: the program asks the first time for each service, as long as the window is open. It is sent shrunk (2,000 pixels on a side at most), and the service is told to write exactly what is on the page, line by line,
-    with a blank line where the page has more room, a tab between columns and <em>[?]</em> for a word it cannot read. <strong>A page read this way has no boxes on the photo</strong> (a service says what is written, not where); the pictures on the page are still looked for. <em>Scan page</em> and <em>Scan all pages</em> work as before;
+    with a blank line where the page has more room, a tab between columns and <em>[?]</em> for a word it cannot read. <strong>A page read this way has no boxes on the photo</strong> (a service says what is written, not where), unless you turn on <em>Lines on the photo</em>; the pictures on the page are still looked for. <em>Scan page</em> and <em>Scan all pages</em> work as before;
     a service that fails ends the scan with its words in the status line, and the pages already read stay read.
+  </li>
+  <li>
+    <strong>Lines on the photo.</strong> The check box next to the <em>AI</em> box (off until you turn it on; it works while an AI service is picked and the <em>Writing</em> box says <em>AI service</em>) gives the page a box round each line, so a click on a box
+    selects its line in the text, as with the models of this computer. A service cannot say where a line is, so <strong>the lines are found on this computer first</strong>: the small model that finds lines (3 MB, downloaded once) puts a numbered red box round each, the service is sent that photo and writes what is in each box,
+    and the text of a box goes where its box is. It costs about what the plain reading costs. <strong>What the finder gets wrong, the page gets wrong</strong>: it also boxes ruled lines and stains (the service leaves those empty), it may cut a line into pieces on squared paper, and a line it misses is not read, so look at the boxes.
+    A box is green, or orange where the service marked a word of the line with <em>[?]</em>. When no line is found, or the answer cannot be used box by box, the page is read as a whole and has no boxes, and the status line says so.
   </li>
   <li>
     <strong>Give the AI the pages before.</strong> The check box <em>Use context of previous pages</em> (next to the <em>AI</em> box; off until you turn it on, and kept with the manuscript) gives the service the end of the text of the pages before the page, up to 3 pages, to go by: the names, the words and the spelling of this manuscript.

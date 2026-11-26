@@ -316,6 +316,7 @@ namespace PhotoLikerUI
             KindCombo.SelectedIndexChanged += (_, _) =>
             {
                 FillLanguages(Language);
+                UpdateButtons(); // the places of the lines are for the AI service
                 if (!_applyingPage)
                     ScheduleSave();
             };
@@ -337,6 +338,7 @@ namespace PhotoLikerUI
             AiCombo.SelectedIndexChanged += (_, _) => OnAiPicked();
             AiServicesButton.Click += (_, _) => OpenAiServices();
             UseContextCheck.CheckedChanged += (_, _) => ScheduleSave();
+            AiPlacesCheck.CheckedChanged += (_, _) => ScheduleSave();
             SourceCombo.SelectedIndexChanged += (_, _) => OnSourcePicked();
 
             PageList.SelectedIndexChanged += OnPageListSelection;
