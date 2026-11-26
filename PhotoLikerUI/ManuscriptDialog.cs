@@ -55,6 +55,7 @@ namespace PhotoLikerUI
         internal readonly ToolStripButton ScanPageButton = new();
         internal readonly ToolStripButton ScanAllButton = new();
         internal readonly ToolStripButton RescanAllButton = new();
+        internal readonly ToolStripButton AsPhotoButton = new();
         internal readonly ToolStripButton StopButton = new();
         internal readonly ToolStripButton FindPicturesButton = new();
         internal readonly ToolStripButton RotateLeftButton = new();
@@ -228,6 +229,7 @@ namespace PhotoLikerUI
             Plain(RemovePageButton, "removePageButton", ManuscriptStrings.RemovePage, ManuscriptStrings.RemovePageTip);
             Plain(MoveUpButton, "movePageUpButton", "▲", ManuscriptStrings.MovePageUpTip);
             Plain(MoveDownButton, "movePageDownButton", "▼", ManuscriptStrings.MovePageDownTip);
+            Plain(AsPhotoButton, "asPhotoButton", ManuscriptStrings.AsPhoto, ManuscriptStrings.AsPhotoTip);
             MoveUpButton.AccessibleName = ManuscriptStrings.MovePageUpTip;
             MoveDownButton.AccessibleName = ManuscriptStrings.MovePageDownTip;
 
@@ -275,7 +277,7 @@ namespace PhotoLikerUI
 
             Bar.Items.AddRange(
             [
-                AddPagesButton, RemovePageButton, MoveUpButton, MoveDownButton, new ToolStripSeparator(),
+                AddPagesButton, RemovePageButton, MoveUpButton, MoveDownButton, AsPhotoButton, new ToolStripSeparator(),
                 KindLabel, KindCombo, LanguageLabel, LanguageCombo, new ToolStripSeparator(),
                 ScanPageButton, ScanAllButton, RescanAllButton, StopButton, FindPicturesButton, new ToolStripSeparator(),
                 RotateLeftButton, RotateRightButton, new ToolStripSeparator(),

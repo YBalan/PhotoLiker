@@ -15,6 +15,7 @@ public sealed class AiServicesStringsTests
         "StatusAiScanAllDoneFormat", "StatusAiScanFailedFormat",
         "AiPlaces", "HintAiPlaces", "StatusAiReadPlacedFormat", "StatusAiReadNoPlacesFormat", "StatusAiNoPlacesFormat", "StatusAiPlacesNoFinder",
         "RescanAll", "RescanAllTip", "ConfirmRescanAllFormat", "ConfirmRescanAllEditedFormat", "StatusRescanAllNothing",
+        "AsPhoto", "AsPhotoTip", "PageAsPhotoNote", "StatusAsPhotoOnFormat", "StatusAsPhotoOffFormat",
     ];
 
     private static IEnumerable<string> Names() =>

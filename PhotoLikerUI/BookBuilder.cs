@@ -16,7 +16,7 @@ namespace PhotoLikerUI
         /// <param name="preparing">Told, from any thread, how many photos are prepared of how many.</param>
         /// <param name="writing">Told, from any thread, when the file is being written.</param>
         /// <param name="percent">Percent of the whole work done, from any thread.</param>
-        /// <param name="withPhotos">False: the book is only the text of its pages (no photo is read or put in the file); the text of a page is what is written above its photo. The pictures in a text are in the book where they stand.</param>
+        /// <param name="withPhotos">False: the book is only the text of its pages (no photo is read or put in the file); the text of a page is what is written above its photo. The pictures in a text are in the book where they stand. A page that is its photo (<see cref="BookEntry.AsPhoto"/>) has its photo in the book either way, and no text.</param>
         public static async Task<BookResult> BuildAsync(
             IReadOnlyList<BookEntry> entries,
             BookFormat format,
@@ -30,7 +30,10 @@ namespace PhotoLikerUI
             bool withPhotos = true)
         {
             var photos = entries.Where(entry => !entry.LeftOut).ToList();
-            if (!withPhotos)
+
+            // A page has its photo in the book when the book has the photos, or when the page is its photo: a book of text can have a page that is a photo
+            bool HasPhoto(BookEntry entry) => withPhotos || entry.AsPhoto;
+            if (!photos.Any(HasPhoto))
                 return await BuildTextOnlyAsync(photos, format, options, outputPath, writing, percent, cancellation);
 
             var temp = Path.Combine(Path.GetTempPath(), "PhotoLikerBook_" + Guid.NewGuid().ToString("N"));
@@ -42,9 +45,10 @@ namespace PhotoLikerUI
                 var done = 0;
                 var maxSide = PictureQualities.MaxSide(quality);
                 var jpegQuality = PictureQualities.JpegQuality(quality);
+                var toPrepare = Enumerable.Range(0, photos.Count).Where(index => HasPhoto(photos[index])).ToList();
 
                 await Parallel.ForEachAsync(
-                    Enumerable.Range(0, photos.Count),
+                    toPrepare,
                     new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount - 1, 1, 4), CancellationToken = cancellation },
                     (index, token) =>
                     {
@@ -62,8 +66,8 @@ namespace PhotoLikerUI
                         }
 
                         var finished = Interlocked.Increment(ref done);
-                        preparing?.Invoke(finished, photos.Count);
-                        percent?.Invoke(finished * 70 / Math.Max(1, photos.Count));
+                        preparing?.Invoke(finished, toPrepare.Count);
+                        percent?.Invoke(finished * 70 / Math.Max(1, toPrepare.Count));
                         return ValueTask.CompletedTask;
                     });
 
@@ -73,19 +77,29 @@ namespace PhotoLikerUI
                 var unreadable = new List<string>();
                 for (var index = 0; index < photos.Count; index++)
                 {
+                    var name = Path.GetFileNameWithoutExtension(photos[index].Path);
+                    if (!HasPhoto(photos[index]))
+                    {
+                        // A page of text in a book that has a photo or two: the text is what is written above its photo, as in a book of text only
+                        pages.Add(BookPage.TextOnly(RtfParser.Parse(string.IsNullOrWhiteSpace(photos[index].AboveRtf) ? photos[index].BelowRtf : photos[index].AboveRtf), name));
+                        continue;
+                    }
+
                     if (prepared[index] is not { } picture || files[index] is not { } file)
                     {
                         unreadable.Add(photos[index].Path);
                         continue;
                     }
 
+                    // A page that is its photo has nothing written on it
+                    var alone = photos[index].AsPhoto;
                     pages.Add(new BookPage(
                         file,
                         picture.Width,
                         picture.Height,
-                        RtfParser.Parse(photos[index].AboveRtf),
-                        RtfParser.Parse(photos[index].BelowRtf),
-                        Path.GetFileNameWithoutExtension(photos[index].Path)));
+                        alone ? RichDocument.Empty : RtfParser.Parse(photos[index].AboveRtf),
+                        alone ? RichDocument.Empty : RtfParser.Parse(photos[index].BelowRtf),
+                        name));
                 }
 
                 writing?.Invoke();

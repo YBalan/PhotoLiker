@@ -1042,6 +1042,241 @@ public sealed class ManuscriptDialogTests : IDisposable
         });
     }
 
+    // ── A page that is its photo (Page as photo) ────────────────────────────
+
+    [Fact]
+    public void ThePageAsPhotoButton_IsBesideTheButtonsOfThePages_AndMarksThePageInTheList()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            var items = dialog.Bar.Items.Cast<ToolStripItem>().ToList();
+            Assert.Equal(items.IndexOf(dialog.MoveDownButton) + 1, items.IndexOf(dialog.AsPhotoButton));
+            Assert.Equal(ManuscriptStrings.AsPhoto, dialog.AsPhotoButton.Text);
+            Assert.True(dialog.AsPhotoButton.Enabled);
+            Assert.False(dialog.AsPhotoButton.Checked);
+            Assert.DoesNotContain("▣", dialog.PageList.Items[0].Text);
+
+            dialog.AsPhotoButton.PerformClick();
+
+            Assert.True(dialog.Pages[0].AsPhoto);
+            Assert.True(dialog.AsPhotoButton.Checked);
+            Assert.StartsWith("▣", dialog.PageList.Items[0].Text);
+            Assert.Contains(ManuscriptStrings.PageAsPhotoNote, dialog.PageList.Items[0].ToolTipText);
+            Assert.DoesNotContain("▣", dialog.PageList.Items[1].Text); // the other page is as it was
+            Assert.Equal(string.Format(ManuscriptStrings.StatusAsPhotoOnFormat, 1), dialog.StatusText);
+
+            // The button follows the page that is open
+            dialog.SelectPage(1);
+            Assert.False(dialog.AsPhotoButton.Checked);
+            dialog.SelectPage(0);
+            Assert.True(dialog.AsPhotoButton.Checked);
+
+            dialog.AsPhotoButton.PerformClick();
+
+            Assert.Null(dialog.Pages[0].AsPhoto);
+            Assert.False(dialog.AsPhotoButton.Checked);
+            Assert.DoesNotContain("▣", dialog.PageList.Items[0].Text);
+            Assert.Equal(string.Format(ManuscriptStrings.StatusAsPhotoOffFormat, 1), dialog.StatusText);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ThePageAsPhotoButton_IsOffWhileTheWindowWorks_AndWithNoPage()
+    {
+        var a = Photo("a.jpg");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            var seen = true;
+            dialog.ScanOverride = (_, _, _, _, _) =>
+            {
+                seen = dialog.Invoke(() => dialog.AsPhotoButton.Enabled);
+                return Three();
+            };
+
+            await dialog.ScanPageAsync();
+
+            Assert.False(seen);
+            Assert.True(dialog.AsPhotoButton.Enabled);
+        });
+    }
+
+    [Fact]
+    public void ThePageThatIsItsPhoto_IsKeptWithTheManuscript()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.SelectPage(1);
+            dialog.AsPhotoButton.PerformClick();
+            await Task.CompletedTask;
+        });
+
+        var stored = ManuscriptFile.Load(_folder.Path)!;
+        Assert.Equal([null, true], stored.Pages!.Select(page => page.AsPhoto).ToArray());
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            Assert.True(dialog.Pages[1].AsPhoto);
+            Assert.StartsWith("▣", dialog.PageList.Items[1].Text);
+            dialog.SelectPage(1);
+            Assert.True(dialog.AsPhotoButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void SaveBook_OfTheText_PutsThePageThatIsItsPhoto_InAsTheWholePhoto_WithNoText_AndTheTextComesBackWhenItIsTurnedOff()
+    {
+        var a = Photo("a.jpg"); // 320 x 240
+        var b = Photo("b.jpg");
+        var first = _folder.File("first.epub");
+        var second = _folder.File("second.epub");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            StandIn(dialog);
+            await dialog.ScanPageAsync(); // the text of the first page
+            dialog.AsPhotoButton.PerformClick(); // ... which is its photo in the book
+            dialog.SelectPage(1);
+            dialog.AsPhotoButton.PerformClick(); // the second page has no text at all
+            dialog.AskBookPath = () => first;
+
+            await dialog.SaveBookAsync();
+
+            using (var zip = ZipFile.OpenRead(first))
+            {
+                Assert.Equal(new Size(320, 240), ImageSizeInBook(first, "OEBPS/images/photo0001.jpg")); // the photo as it is
+                Assert.NotNull(zip.GetEntry("OEBPS/images/photo0002.jpg")); // a page with no text is in the book when it is its photo, though the book is a book of text
+                using var page = new StreamReader(zip.GetEntry("OEBPS/photo0001.xhtml")!.Open());
+                Assert.DoesNotContain("перший рядок", page.ReadToEnd()); // the text of the page is kept, and is not in the book
+            }
+
+            Assert.Contains("перший рядок", ManuscriptText.PlainOf(dialog.Pages[0].Rtf));
+
+            dialog.SelectPage(0);
+            dialog.AsPhotoButton.PerformClick(); // back as its text
+            dialog.AskBookPath = () => second;
+            await dialog.SaveBookAsync();
+
+            using var again = ZipFile.OpenRead(second);
+            using var text = new StreamReader(again.GetEntry("OEBPS/photo0001.xhtml")!.Open());
+            Assert.Contains("перший рядок", text.ReadToEnd());
+            Assert.Null(again.GetEntry("OEBPS/images/photo0001.jpg"));
+            Assert.NotNull(again.GetEntry("OEBPS/images/photo0002.jpg"));
+        });
+    }
+
+    [Fact]
+    public void SaveBook_OfOnePageThatIsItsPhoto_IsMade_EvenWhenNoPageHasText()
+    {
+        var a = Photo("a.jpg");
+        var path = _folder.File("photo only.pdf");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AsPhotoButton.PerformClick();
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            Assert.True(File.Exists(path), dialog.StatusText);
+            Assert.NotEqual(ManuscriptStrings.StatusNoText, dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void SaveBook_APageThatIsItsPhoto_IsNotInTheBook_WhenItIsLeftOut()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var path = _folder.File("left out.epub");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            StandIn(dialog);
+            await dialog.ScanPageAsync();
+            dialog.SelectPage(1);
+            dialog.AsPhotoButton.PerformClick();
+            dialog.Pages[1].LeftOut = true;
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            using var zip = ZipFile.OpenRead(path);
+            Assert.NotNull(zip.GetEntry("OEBPS/photo0001.xhtml"));
+            Assert.Null(zip.GetEntry("OEBPS/photo0002.xhtml"));
+            Assert.DoesNotContain(zip.Entries, entry => entry.FullName.StartsWith("OEBPS/images/", StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public void SaveBook_WithCutPages_ThePageThatIsItsPhoto_IsNotCut_ButTheOthersAre()
+    {
+        var a = Photo("a.jpg"); // 320 x 240
+        var b = Photo("b.jpg");
+        var path = _folder.File("mixed.epub");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            StandIn(dialog);
+            await dialog.ScanPageAsync();
+            dialog.AsPhotoButton.PerformClick(); // the first page is its photo
+            dialog.IncludePhotosCheck.Checked = true;
+            dialog.CutPagesCheck.Checked = true;
+            var cuts = 0;
+            dialog.CutterOverride = () => new PageCutter(_ =>
+            {
+                cuts++;
+                return SheetMap(new PointF(30, 20), new PointF(125, 25), new PointF(120, 95), new PointF(25, 90));
+            });
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            Assert.Equal(1, cuts); // the second page only
+            Assert.Equal(new Size(320, 240), ImageSizeInBook(path, "OEBPS/images/photo0001.jpg")); // as it is
+            var cut = ImageSizeInBook(path, "OEBPS/images/photo0002.jpg");
+            Assert.InRange(cut.Width, 180, 200); // the sheet of the other page
+            Assert.DoesNotContain("had no sheet", dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void SaveBook_WithCutPages_WhenEveryPageIsItsPhoto_NoCutterIsMade_AndTheModelIsNotAskedFor()
+    {
+        var a = Photo("a.jpg");
+        var path = _folder.File("all photos.epub");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.AsPhotoButton.PerformClick();
+            dialog.IncludePhotosCheck.Checked = true;
+            dialog.CutPagesCheck.Checked = true;
+            dialog.CutterOverride = () => throw new InvalidOperationException("there is nothing to cut");
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            Assert.Equal(new Size(320, 240), ImageSizeInBook(path, "OEBPS/images/photo0001.jpg"));
+        });
+    }
+
     // ── Cutting the pages out of their photos ───────────────────────────────
 
     /// <summary>A map (the model of the stickers gives 1024 by 1024; a test makes one of 160 by 120) that is 1 inside the polygon.</summary>

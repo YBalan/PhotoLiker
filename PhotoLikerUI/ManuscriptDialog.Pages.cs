@@ -180,7 +180,7 @@ namespace PhotoLikerUI
 
         /// <summary>Whether anything was done to the pages: a text, a scan, pictures, a page left out or taken out.</summary>
         private bool HasWorkToKeep() =>
-            _removed.Count > 0 || _pages.Any(page => page.Rtf is not null || page.Scanned is not null || page.Lines is not null || page.Pictures is not null || page.LeftOut == true);
+            _removed.Count > 0 || _pages.Any(page => page.Rtf is not null || page.Scanned is not null || page.Lines is not null || page.Pictures is not null || page.LeftOut == true || page.AsPhoto == true);
 
         // ── The list of pages ───────────────────────────────────────────────
 
@@ -322,8 +322,9 @@ namespace PhotoLikerUI
             var page = _pages[index];
             var state = ManuscriptText.StateOf(page);
             var item = PageList.Items[index];
-            item.Text = $"{StateMark(state)}{index + 1}. {Path.GetFileNameWithoutExtension(page.File)}";
-            item.ToolTipText = $"{string.Format(ManuscriptStrings.PageFormat, index + 1)}: {Path.GetFileName(page.File)} ({StateName(state)})";
+            var asPhoto = page.AsPhoto == true;
+            item.Text = $"{(asPhoto ? "▣ " : string.Empty)}{StateMark(state)}{index + 1}. {Path.GetFileNameWithoutExtension(page.File)}";
+            item.ToolTipText = $"{string.Format(ManuscriptStrings.PageFormat, index + 1)}: {Path.GetFileName(page.File)} ({StateName(state)}{(asPhoto ? ", " + ManuscriptStrings.PageAsPhotoNote : string.Empty)})";
         }
 
         private Bitmap Placeholder()
@@ -654,6 +655,8 @@ namespace PhotoLikerUI
             RemovePageButton.Enabled = idle && hasPage;
             MoveUpButton.Enabled = idle && hasPage && _current > 0;
             MoveDownButton.Enabled = idle && hasPage && _current < _pages.Count - 1;
+            AsPhotoButton.Enabled = idle && hasPage;
+            AsPhotoButton.Checked = CurrentPage?.AsPhoto == true;
             KindCombo.Enabled = idle;
             LanguageCombo.Enabled = idle;
             ScanPageButton.Enabled = idle && hasPage;

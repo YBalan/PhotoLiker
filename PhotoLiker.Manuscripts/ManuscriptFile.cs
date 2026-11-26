@@ -92,6 +92,9 @@ namespace PhotoLiker.Manuscripts
         /// <summary>The page is in the list but not in the book that is made.</summary>
         public bool? LeftOut { get; set; }
 
+        /// <summary>The page is in the book as its photo alone, whole and as it is (not cut out, with no text), whether or not the book has the photos; null: it is in as its text (and its photo, when the book has the photos).</summary>
+        public bool? AsPhoto { get; set; }
+
         /// <summary>True when the text was scanned and not changed since (what the person sees is what the scan read).</summary>
         [JsonIgnore]
         public bool IsScanned => !string.IsNullOrEmpty(Scanned);

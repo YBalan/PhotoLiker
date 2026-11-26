@@ -57,6 +57,11 @@ namespace PhotoLikerUI
         public static string ConfirmRescanAllFormat => T();
         public static string ConfirmRescanAllEditedFormat => T();
         public static string StatusRescanAllNothing => T();
+        public static string AsPhoto => T();
+        public static string AsPhotoTip => T();
+        public static string PageAsPhotoNote => T();
+        public static string StatusAsPhotoOnFormat => T();
+        public static string StatusAsPhotoOffFormat => T();
         public static string Stop => T();
         public static string StopTip => T();
         public static string ShowLines => T();

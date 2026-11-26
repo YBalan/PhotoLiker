@@ -157,6 +157,12 @@ namespace PhotoLiker.PhotoBook
         /// <summary>The photo is in the list but not in the book.</summary>
         public bool LeftOut { get; set; }
 
+        /// <summary>
+        /// The page of the book is its photo alone, as the file has it (whole, with nothing written on it): the photo is in the book when the book is a book of text only, too, and what is written
+        /// above and below it is not.
+        /// </summary>
+        public bool AsPhoto { get; set; }
+
         public bool HasText => !string.IsNullOrWhiteSpace(AboveRtf) || !string.IsNullOrWhiteSpace(BelowRtf);
     }
 }
