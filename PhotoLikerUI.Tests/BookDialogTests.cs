@@ -454,7 +454,7 @@ public sealed class BookDialogTests : IDisposable
         {
             var dialog = (BookDialog)form;
             await Loaded(dialog, 1);
-            Assert.Equal([BookStrings.FormatPdf, BookStrings.FormatEpub, BookStrings.FormatDocx], dialog.FormatCombo.Items.Cast<object>().Select(item => item.ToString()).ToArray());
+            Assert.Equal([BookStrings.FormatPdf, BookStrings.FormatEpub, BookStrings.FormatDocx], dialog.FormatCombo.Items.Cast<object>().Select(item => item.ToString() ?? string.Empty).ToArray());
 
             PickFormat(dialog, BookFormat.Docx);
             Assert.EndsWith(".docx", dialog.FileNameBox.Text);

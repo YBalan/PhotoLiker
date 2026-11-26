@@ -1002,7 +1002,7 @@ public sealed class ManuscriptDialogTests : IDisposable
             Assert.True(File.Exists(path), dialog.StatusText);
             Assert.Equal(path, dialog.MadeBookPath);
             using var zip = ZipFile.OpenRead(path);
-            Assert.Empty(zip.Entries.Where(entry => entry.FullName.StartsWith("word/media/", StringComparison.Ordinal))); // the book is the text: no photo
+            Assert.DoesNotContain(zip.Entries, entry => entry.FullName.StartsWith("word/media/", StringComparison.Ordinal)); // the book is the text: no photo
             var w = System.Xml.Linq.XNamespace.Get("http://schemas.openxmlformats.org/wordprocessingml/2006/main");
             var document = System.Xml.Linq.XDocument.Load(zip.GetEntry("word/document.xml")!.Open());
             var text = string.Concat(document.Descendants(w + "t").Select(element => element.Value));
