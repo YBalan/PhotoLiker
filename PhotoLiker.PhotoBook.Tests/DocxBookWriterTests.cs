@@ -319,6 +319,27 @@ public sealed class DocxBookWriterTests : IDisposable
     }
 
     [Fact]
+    public void AListItem_IsItsMarkerATabAndTheText_HangingFromTheIndent_WithAStopWhereTheTextStarts()
+    {
+        var scale = (210 - 30) * PageSizes.PointsPerMillimetre / RichDocument.ReferenceWidth;
+        var bullet = new RichParagraph(TextAlign.Left, [Run("first", new RichStyle(Bold: true))]) { LeftIndent = 36, FirstLineIndent = -18, Marker = "•" };
+        var number = new RichParagraph(TextAlign.Left, [Run("second")]) { LeftIndent = 36, FirstLineIndent = -18, Marker = "2." };
+        var empty = new RichParagraph(TextAlign.Left, []) { LeftIndent = 36, FirstLineIndent = -18, Marker = "3." };
+        var page = _files.Page("a", new RichDocument([bullet, number, empty, Para(Run("after"))]), RichDocument.Empty, portrait: true);
+
+        var paragraphs = TextParagraphs(Document(Write(Options(), page)));
+
+        Assert.Equal(["•<TAB>first", "2.<TAB>second", "", "after"], paragraphs.Select(paragraph => string.Concat(paragraph.Elements(W + "r").Select(Text)))); // (the runs: the stops are in the properties)
+        var properties = paragraphs[0].Element(W + "pPr")!;
+        Assert.Equal(["tabs", "ind"], properties.Elements().Select(element => element.Name.LocalName).ToArray());
+        var left = (int)properties.Element(W + "ind")!.Attribute(W + "left")!;
+        Assert.Equal((int)Math.Round(36 * scale * 20), left);
+        Assert.Equal((int)Math.Round(18 * scale * 20), (int)properties.Element(W + "ind")!.Attribute(W + "hanging")!);
+        Assert.Equal([left], properties.Element(W + "tabs")!.Elements(W + "tab").Select(tab => (int)tab.Attribute(W + "pos")!).ToArray()); // the text starts at the stop
+        Assert.True(paragraphs[0].Elements(W + "r").First().Element(W + "rPr")!.Element(W + "b") is not null); // the marker is as bold as the text
+    }
+
+    [Fact]
     public void TheElementsOfAParagraph_AreInTheOrderTheSchemaGivesThem()
     {
         var paragraph = new RichParagraph(TextAlign.Justify, [Run("x")]) { LeftIndent = 20, TabStops = [100] };

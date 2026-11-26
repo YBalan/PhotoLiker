@@ -198,6 +198,26 @@ public sealed class EpubBookWriterTests : IDisposable
     }
 
     [Fact]
+    public void AListItem_HasItsMarkerHangingOutToTheLeft_AndTheTextAtTheIndent()
+    {
+        var bullet = new RichParagraph(TextAlign.Left, [new RichRun("first", default)]) { LeftIndent = 36, FirstLineIndent = -18, Marker = "•" };
+        var number = new RichParagraph(TextAlign.Left, [new RichRun("second", default)]) { LeftIndent = 36, FirstLineIndent = -18, Marker = "2." };
+        var empty = new RichParagraph(TextAlign.Left, []) { LeftIndent = 36, FirstLineIndent = -18, Marker = "3." };
+        var path = Write(Options(), _files.Page("a", new RichDocument([bullet, number, empty, new RichParagraph(TextAlign.Left, [new RichRun("after", default)])]), RichDocument.Empty));
+
+        using var zip = ZipFile.OpenRead(path);
+        var paragraphs = Xml(zip, "OEBPS/photo0001.xhtml").Descendants(Xhtml + "p").ToList();
+
+        Assert.Equal(["•first", "2.second", "\x00A0", "after"], paragraphs.Select(paragraph => paragraph.Value)); // an item with nothing in it is a blank line, without its marker
+        var style = (string)paragraphs[0].Attribute("style")!;
+        Assert.Contains("margin-left: 8.33%", style); // 36 of 432
+        Assert.Contains("text-indent: -4.17%", style); // 18 of 432: the marker starts there
+        var cell = Assert.Single(paragraphs[0].Elements(Xhtml + "span"), span => span.Attribute("class")?.Value == "cell");
+        Assert.Equal("•", cell.Value);
+        Assert.Contains("min-width: 4.17%", (string)cell.Attribute("style")!); // from the marker to the text
+    }
+
+    [Fact]
     public void Cyrillic_AndMarkupInTheText_AreKeptAsText()
     {
         var path = Write(Options("Літо & <сонце>", "Юрій"), _files.Page("a", above: "Привіт, світе <b>not bold</b> & more", below: "Київ"));

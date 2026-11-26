@@ -740,6 +740,532 @@ public sealed class RichDescriptionEditorTests
         });
     }
 
+    // ── Lists ───────────────────────────────────────────────────────────────
+
+    private static void PickAll(RichDescriptionEditor editor) => editor.Box.SelectAll();
+
+    private static string[] Markers(RichDescriptionEditor editor) => [.. Read(editor).Paragraphs.Select(paragraph => paragraph.Marker ?? string.Empty)]; // (empty: not an item of a list)
+
+    [Fact]
+    public void TheButtonsOfTheLists_AndOfTheCharacters_AreAfterTheAlignment_AndHaveTheirTips()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            var names = Ui.Controls<ToolStrip>(editor).Single().Items.Cast<ToolStripItem>().Select(item => item.Name).ToList();
+
+            Assert.True(names.IndexOf("bulletsButton") > 0);
+            Assert.Equal(names.IndexOf("bulletsButton") + 1, names.IndexOf("numbersButton"));
+            Assert.Equal(names.IndexOf("numbersButton") + 1, names.IndexOf("showCharactersButton"));
+            Assert.Equal(BookStrings.BulletList, editor.BulletsButton.ToolTipText);
+            Assert.Equal(BookStrings.NumberedList, editor.NumbersButton.ToolTipText);
+            Assert.Equal(BookStrings.ShowCharacters, editor.ShowCharactersButton.ToolTipText);
+            Assert.NotNull(editor.BulletsButton.Image);
+            Assert.NotNull(editor.NumbersButton.Image);
+            Assert.False(editor.BulletsButton.Checked || editor.NumbersButton.Checked || editor.ShowCharactersButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheBulletsButton_MakesTheParagraphsABulletedList_WhichIsReadBackWithItsMarkers()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one\ntwo\nthree";
+            PickAll(editor);
+
+            editor.BulletsButton.PerformClick();
+
+            var document = Read(editor);
+            Assert.Equal(["•", "•", "•"], Markers(editor));
+            Assert.Equal("one\ntwo\nthree", document.PlainText); // the text of the box is the same: the bullets are not in it
+            Assert.Equal("one\ntwo\nthree", editor.PlainText);
+            Assert.All(document.Paragraphs, paragraph => Assert.Equal((36.0, -18.0), (paragraph.LeftIndent, paragraph.FirstLineIndent)));
+            Assert.True(editor.BulletsButton.Checked);
+            Assert.False(editor.NumbersButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheNumbersButton_NumbersTheItemsOneAfterTheOther()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one\ntwo\nthree";
+            PickAll(editor);
+
+            editor.NumbersButton.PerformClick();
+
+            Assert.Equal(["1.", "2.", "3."], Markers(editor));
+            Assert.All(Read(editor).Paragraphs, paragraph => Assert.True(paragraph.IsNumbered));
+            Assert.True(editor.NumbersButton.Checked);
+            Assert.False(editor.BulletsButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ThePressedButtonOfAList_TakesTheParagraphsOutOfTheList_AndTheIndentGoes()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one\ntwo";
+            PickAll(editor);
+            editor.NumbersButton.PerformClick();
+            Assert.Equal(["1.", "2."], Markers(editor));
+
+            editor.NumbersButton.PerformClick();
+
+            Assert.Equal(["", ""], Markers(editor));
+            Assert.All(Read(editor).Paragraphs, paragraph => Assert.Equal((0.0, 0.0), (paragraph.LeftIndent, paragraph.FirstLineIndent)));
+            Assert.False(editor.NumbersButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ABulletedListThatTheNumbersButtonIsPressedFor_BecomesANumberedOne()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one\ntwo";
+            PickAll(editor);
+            editor.BulletsButton.PerformClick();
+
+            editor.NumbersButton.PerformClick();
+
+            Assert.Equal(["1.", "2."], Markers(editor));
+            Assert.True(editor.NumbersButton.Checked);
+            Assert.False(editor.BulletsButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void OnlyTheParagraphsThatArePicked_AreMadeItemsOfTheList()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one\ntwo\nthree";
+            editor.Box.Select(5, 0); // in "two"
+
+            editor.BulletsButton.PerformClick();
+
+            Assert.Equal(["", "•", ""], Markers(editor));
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheButtons_ShowTheListTheCaretIsIn()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one\ntwo\nthree";
+            editor.Box.Select(5, 0);
+            editor.NumbersButton.PerformClick();
+
+            editor.Box.Select(1, 0); // in "one", which is not an item
+            Assert.False(editor.NumbersButton.Checked);
+            editor.Box.Select(6, 0); // in "two" again
+            Assert.True(editor.NumbersButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void EnterAtTheEndOfAnItem_MakesTheNextItem_WithTheNextNumber()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one";
+            PickAll(editor);
+            editor.NumbersButton.PerformClick();
+            editor.Box.Select(3, 0);
+
+            editor.Box.SelectedText = "\ntwo"; // what Enter and the typing of "two" do
+
+            Assert.Equal(["1.", "2."], Markers(editor));
+            Assert.Equal("one\ntwo", Read(editor).PlainText);
+            await Task.CompletedTask;
+        });
+    }
+
+    private static bool PressEnter(RichDescriptionEditor editor)
+    {
+        var keys = new KeyEventArgs(Keys.Enter);
+        typeof(Control).GetMethod("OnKeyDown", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(editor.Box, [keys]);
+        return keys.Handled;
+    }
+
+    [Fact]
+    public void EnterInAnItemWithNothingWrittenInIt_EndsTheList_InsteadOfMakingAnotherItem()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one";
+            PickAll(editor);
+            editor.BulletsButton.PerformClick();
+            editor.Box.Select(3, 0);
+            editor.Box.SelectedText = "\n"; // the empty item that Enter makes
+            Assert.Equal(["•", "•"], Markers(editor));
+
+            Assert.True(PressEnter(editor)); // Enter again, in the empty item
+
+            Assert.Equal(["•", ""], Markers(editor));
+            Assert.Equal("one\n", editor.PlainText); // no third line was typed: the empty item is now a paragraph that is not in the list
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void EnterInAnItemWithTextInIt_IsLeftToTheBox_AndInAParagraphThatIsNotAnItemToo()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one\ntwo";
+            editor.Box.Select(0, 0);
+            Assert.False(PressEnter(editor)); // not a list
+
+            editor.Box.Select(4, 0);
+            editor.BulletsButton.PerformClick();
+            editor.Box.Select(6, 0);
+            Assert.False(PressEnter(editor)); // an item with "two" in it
+            Assert.Equal(["", "•"], Markers(editor));
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheListOfARtfThatIsPutIn_IsAListInTheBox_AndIsGivenBackAsOne()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Rtf = RtfWriter.Write(new RichDocument([
+                new RichParagraph(TextAlign.Left, [new RichRun("intro", default)]),
+                new RichParagraph(TextAlign.Left, [new RichRun("four", default)]) { LeftIndent = 36, FirstLineIndent = -18, Marker = "4." },
+                new RichParagraph(TextAlign.Left, [new RichRun("five", default)]) { LeftIndent = 36, FirstLineIndent = -18, Marker = "5." },
+                new RichParagraph(TextAlign.Left, [new RichRun("dot", default)]) { LeftIndent = 36, FirstLineIndent = -18, Marker = "•" },
+            ]));
+
+            Assert.Equal(["", "4.", "5.", "•"], Markers(editor)); // numbering goes on from the number the item had
+            editor.Box.Select(editor.PlainText.IndexOf("five", StringComparison.Ordinal), 0);
+            Assert.True(editor.NumbersButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void ClearFormatting_TakesTheListOff_Too()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one\ntwo";
+            PickAll(editor);
+            editor.BulletsButton.PerformClick();
+
+            editor.ClearFormatting();
+
+            Assert.Equal(["", ""], Markers(editor));
+            Assert.False(editor.BulletsButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheButtonsOfTheLists_RaiseTheChangeOfTheText_AndAreTakenBackByUndo()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one";
+            editor.ClearHistory();
+            var raised = 0;
+            editor.TextChanged += (_, _) => raised++;
+
+            PickAll(editor);
+            editor.BulletsButton.PerformClick();
+
+            Assert.True(raised > 0);
+            Assert.Equal(["•"], Markers(editor));
+
+            editor.UndoButton.PerformClick();
+
+            Assert.Equal([""], Markers(editor));
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void WordsThatAreReplaced_StayInTheirItems()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one wen\ntwo";
+            PickAll(editor);
+            editor.NumbersButton.PerformClick();
+
+            editor.ApplyEdits([new PhotoLiker.Manuscripts.TextEdit(4, 3, "went")]);
+
+            Assert.Equal(["1.", "2."], Markers(editor));
+            Assert.Equal("one went\ntwo", Read(editor).PlainText);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TheButtonsOfTheLists_HavePicturesInTheColoursOfTheTheme(bool dark)
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.ApplyTheme(dark);
+
+            foreach (var button in new[] { editor.BulletsButton, editor.NumbersButton })
+            {
+                var picture = Assert.IsType<Bitmap>(button.Image);
+                var pixels = Enumerable.Range(0, picture.Width).SelectMany(x => Enumerable.Range(0, picture.Height).Select(y => picture.GetPixel(x, y))).Where(pixel => pixel.A > 128).ToList();
+                Assert.InRange(pixels.Count, 20, 140);
+                var expected = dark ? ThemeManager.DarkFore : SystemColors.ControlText;
+                Assert.All(pixels, pixel => Assert.True(Math.Abs(pixel.R - expected.R) < 40 && Math.Abs(pixel.G - expected.G) < 40 && Math.Abs(pixel.B - expected.B) < 40));
+            }
+
+            Assert.NotEqual(Convert.ToBase64String(ImageBytes(editor.BulletsButton.Image!)), Convert.ToBase64String(ImageBytes(editor.NumbersButton.Image!)));
+            await Task.CompletedTask;
+        });
+    }
+
+    private static byte[] ImageBytes(Image image)
+    {
+        using var stream = new MemoryStream();
+        image.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+        return stream.ToArray();
+    }
+
+    // ── The characters that are not seen ────────────────────────────────────
+
+    /// <summary>The picture the box makes of itself, and how many of its pixels are the colour of the marks.</summary>
+    private static (Bitmap Picture, int Marks) Photograph(RichDescriptionEditor editor)
+    {
+        var picture = new Bitmap(editor.Box.Width, editor.Box.Height);
+        editor.Box.DrawToBitmap(picture, new Rectangle(Point.Empty, editor.Box.Size));
+        var count = 0;
+        for (var x = 0; x < picture.Width; x++)
+        {
+            for (var y = 0; y < picture.Height; y++)
+            {
+                var pixel = picture.GetPixel(x, y);
+                if (pixel.B - pixel.R >= 45 && pixel.B >= 110)
+                    count++; // blue: the colour of the marks, or the edge of one; the text is black and the picture of the tests red
+            }
+        }
+
+        return (picture, count);
+    }
+
+    [Fact]
+    public void TheCharactersButton_IsDownWhileTheyAreShown_AndUpAgainWhenPressedAgain()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            Assert.False(editor.ShowAllCharacters);
+
+            editor.ShowCharactersButton.PerformClick();
+            Assert.True(editor.ShowAllCharacters);
+            Assert.True(editor.ShowCharactersButton.Checked);
+
+            editor.ShowCharactersButton.PerformClick();
+            Assert.False(editor.ShowAllCharacters);
+            Assert.False(editor.ShowCharactersButton.Checked);
+            await Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public void TheMarks_AreDrawnOverTheText_AndAreNotAPartOfIt()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = "one two\tthree\nsecond line";
+            var rtf = editor.Rtf;
+            await Task.Delay(100);
+            var without = Photograph(editor).Marks; // the colour of the marks, while they are off
+
+            editor.ShowAllCharacters = true;
+            await Task.Delay(100);
+            var (picture, marks) = Photograph(editor);
+            picture.Save(Path.Combine(Path.GetTempPath(), "marks-on.png"));
+
+            Assert.True(marks > without + 40, $"{without} pixels of the marks without them, {marks} with them");
+            Assert.Equal("one two\tthree\nsecond line", editor.PlainText); // they are only drawn
+            Assert.Equal(rtf, editor.Rtf);
+
+            editor.ShowAllCharacters = false;
+            await Task.Delay(100);
+            Assert.True(Photograph(editor).Marks <= without + 3);
+        });
+    }
+
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern bool BitBlt(IntPtr destination, int x, int y, int width, int height, IntPtr source, int fromX, int fromY, int operation);
+
+    /// <summary>What the window has on the screen right now (copied out of its own device), not what it makes when it is asked for a picture of itself: the way it paints itself is what is looked at.</summary>
+    private static Bitmap OnTheScreen(Control control)
+    {
+        var picture = new Bitmap(control.ClientSize.Width, control.ClientSize.Height);
+        using var graphics = Graphics.FromImage(picture);
+        using var window = Graphics.FromHwnd(control.Handle);
+        var from = window.GetHdc();
+        var to = graphics.GetHdc();
+        try
+        {
+            BitBlt(to, 0, 0, picture.Width, picture.Height, from, 0, 0, 0x00CC0020);
+        }
+        finally
+        {
+            graphics.ReleaseHdc(to);
+            window.ReleaseHdc(from);
+        }
+
+        return picture;
+    }
+
+    private static int BlueIn(Bitmap picture, Rectangle area)
+    {
+        var count = 0;
+        for (var x = area.Left; x < area.Right && x < picture.Width; x++)
+        {
+            for (var y = area.Top; y < area.Bottom && y < picture.Height; y++)
+            {
+                var pixel = picture.GetPixel(x, y);
+                if (pixel.B - pixel.R >= 45 && pixel.B >= 110)
+                    count++;
+            }
+        }
+
+        return count;
+    }
+
+    [Fact]
+    public void TheMarks_AreThereWhenTheWindowPaintsItself_AlsoAfterTheTextIsScrolled()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = string.Join("\n", Enumerable.Range(1, 90).Select(number => $"line {number} has a few words"));
+            editor.Box.Select(0, 0);
+            editor.ShowAllCharacters = true;
+            editor.Box.Invalidate();
+            editor.Box.Update();
+            await Task.Delay(150);
+
+            var area = new Rectangle(0, 0, editor.Box.ClientSize.Width, editor.Box.ClientSize.Height);
+            var top = new Rectangle(0, 0, area.Width, area.Height / 3);
+            var bottom = new Rectangle(0, area.Height * 2 / 3, area.Width, area.Height / 3);
+            using (var first = OnTheScreen(editor.Box))
+            {
+                Assert.True(BlueIn(first, top) > 30, "the first lines have their marks");
+                Assert.True(BlueIn(first, bottom) > 30, "so have the last lines of the first screen");
+            }
+
+            // Scrolled to the end and back to the middle: the part that moved keeps its marks, the part that was uncovered has its own, and none is drawn twice (that is a deeper blue)
+            editor.Box.Select(editor.Box.TextLength, 0);
+            editor.Box.ScrollToCaret();
+            editor.Box.Update();
+            await Task.Delay(150);
+            using (var end = OnTheScreen(editor.Box))
+            using (var fresh = Photograph(editor).Picture)
+            {
+                Assert.True(BlueIn(end, top) > 30);
+                Assert.True(BlueIn(end, bottom) > 30);
+                var onTheScreen = BlueIn(end, area);
+                var wholeAgain = BlueIn(fresh, area);
+                Assert.True(Math.Abs(onTheScreen - wholeAgain) <= wholeAgain * 0.15, $"{onTheScreen} pixels of the marks on the screen, {wholeAgain} when the window draws all of itself");
+            }
+
+            // Typing in a line paints that line again, with its marks
+            editor.Box.Select(editor.Box.TextLength, 0);
+            editor.Box.SelectedText = " more words";
+            editor.Box.Update();
+            await Task.Delay(150);
+            using var typed = OnTheScreen(editor.Box);
+            using var again = Photograph(editor).Picture;
+            var shown = BlueIn(typed, area);
+            var expected = BlueIn(again, area);
+            Assert.True(Math.Abs(shown - expected) <= expected * 0.15, $"{shown} pixels of the marks on the screen, {expected} when the window draws all of itself");
+        });
+    }
+
+    [Fact]
+    public void ABlankBox_ShowsTheMarkOfItsOneParagraph()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            await Task.Delay(100);
+            var without = Photograph(editor).Marks;
+
+            editor.ShowAllCharacters = true;
+            await Task.Delay(100);
+
+            Assert.True(Photograph(editor).Marks > without + 5);
+        });
+    }
+
+    [Fact]
+    public void TheMarksOfAListAndAPicture_AreOnTheItemsAndNotOnThePicture()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Rtf = RtfWriter.Write(new RichDocument([
+                new RichParagraph(TextAlign.Left, [new RichRun("a b", default)]),
+                RichParagraph.OfPicture(Picture()),
+                new RichParagraph(TextAlign.Left, [new RichRun("item", default)]) { LeftIndent = 36, FirstLineIndent = -18, Marker = "•" },
+            ]));
+            editor.ShowAllCharacters = true;
+            await Task.Delay(150);
+
+            var (picture, marks) = Photograph(editor);
+            picture.Save(Path.Combine(Path.GetTempPath(), "marks-list.png"));
+
+            Assert.True(marks > 20);
+        });
+    }
+
+    [Fact]
+    public void ABoxThatCannotBeEdited_DoesNotThrow_WhenItIsPaintedWithMarks()
+    {
+        RichDescriptionEditor editor = null!;
+        Ui.Run(() => Host(out editor), async form =>
+        {
+            editor.Box.Text = new string(' ', 20000); // more spaces than the painting draws
+            editor.ShowAllCharacters = true;
+            editor.SetEditable(false);
+            await Task.Delay(150);
+
+            Assert.True(Photograph(editor).Marks > 0);
+        });
+    }
+
     [Fact]
     public void TheTabsTheIndentsAndThePictures_StayWhenWordsAreReplaced()
     {

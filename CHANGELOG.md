@@ -15,6 +15,8 @@ Releases before 4.0.1, and the ones since that changed only tests, are not liste
 
 ## Unreleased
 
+- Added bulleted and numbered lists to the text editor of Scan manuscripts and Make a book; the PDF, the EPUB and the Word document show them.
+- Added a Show all characters button (¶) to the text editor: it draws the spaces, the tabs and the ends of lines over the text.
 - Added Rescan all pages to Scan manuscripts: after you change the kind of writing or the language, every page can be read again, also those that have text.
 - Added saving as a Word document (DOCX) to Scan manuscripts and Make a book, with the text, the pictures and the photos of the pages.
 - Added Page as photo to Scan manuscripts: a page can go into the PDF or EPUB as its whole photo, as it is, with no text, even in a book of text.

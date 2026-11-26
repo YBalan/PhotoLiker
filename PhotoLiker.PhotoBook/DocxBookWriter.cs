@@ -221,8 +221,8 @@ namespace PhotoLiker.PhotoBook
         /// <summary>The section of a page: the description above, the photo as large as the page leaves room for, the description below. A page that is only text is the paragraphs of its text.</summary>
         private static List<XElement> PageSection(State state, BookPage page, int number, double contentWidth, double contentHeight, ITextMeasurer measurer)
         {
-            var above = page.Above.WithoutTrailingBlank();
-            var below = page.Below.WithoutTrailingBlank();
+            var above = page.Above.WithoutTrailingBlank().WithMarkersInText();
+            var below = page.Below.WithoutTrailingBlank().WithMarkersInText();
             var content = new List<XElement>();
             foreach (var paragraph in above.Paragraphs)
                 content.Add(Paragraph(state, paragraph, contentWidth, contentHeight, page.Description));

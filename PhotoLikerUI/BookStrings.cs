@@ -109,6 +109,9 @@ namespace PhotoLikerUI
         public static string AlignCenter => T();
         public static string AlignRight => T();
         public static string AlignJustify => T();
+        public static string BulletList => T();
+        public static string NumberedList => T();
+        public static string ShowCharacters => T();
         public static string ClearFormatting => T();
         public static string DescriptionHint => T();
 
