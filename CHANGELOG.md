@@ -13,7 +13,7 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
-## Unreleased
+## 4.6.14 - 2026-11-26
 
 - Added bulleted and numbered lists to the text editor of Scan manuscripts and Make a book; the PDF, the EPUB and the Word document show them.
 - Added a Show all characters button (¶) to the text editor: it draws the spaces, the tabs and the ends of lines over the text.
