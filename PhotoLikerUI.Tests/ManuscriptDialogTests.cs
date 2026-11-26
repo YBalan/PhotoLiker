@@ -982,6 +982,75 @@ public sealed class ManuscriptDialogTests : IDisposable
     }
 
     [Fact]
+    public void SaveBook_AsADocx_MakesAWordDocumentOfTheText_WithTheTitleAndTheLanguage()
+    {
+        var a = Photo("a.jpg");
+        var path = _folder.File("book.docx");
+
+        Ui.Run(() => Dialog([a]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            dialog.TitleBox.Text = "Letters";
+            dialog.KindCombo.SelectedIndex = 1;
+            dialog.LanguageCombo.SelectedIndex = 1; // Russian
+            StandIn(dialog);
+            await dialog.ScanPageAsync();
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            Assert.True(File.Exists(path), dialog.StatusText);
+            Assert.Equal(path, dialog.MadeBookPath);
+            using var zip = ZipFile.OpenRead(path);
+            Assert.Empty(zip.Entries.Where(entry => entry.FullName.StartsWith("word/media/", StringComparison.Ordinal))); // the book is the text: no photo
+            var w = System.Xml.Linq.XNamespace.Get("http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+            var document = System.Xml.Linq.XDocument.Load(zip.GetEntry("word/document.xml")!.Open());
+            var text = string.Concat(document.Descendants(w + "t").Select(element => element.Value));
+            Assert.Contains("Letters", text);
+            Assert.Contains("перший рядок", text);
+            var styles = System.Xml.Linq.XDocument.Load(zip.GetEntry("word/styles.xml")!.Open());
+            Assert.Equal("ru-RU", (string?)styles.Descendants(w + "lang").Single().Attribute(w + "val"));
+            Assert.Contains("book.docx", dialog.StatusText);
+        });
+    }
+
+    [Fact]
+    public void SaveBook_AsADocx_WithAPageThatIsItsPhoto_PutsTheWholePhotoInTheDocument()
+    {
+        var a = Photo("a.jpg");
+        var b = Photo("b.jpg");
+        var path = _folder.File("mixed.docx");
+
+        Ui.Run(() => Dialog([a, b]), async form =>
+        {
+            var dialog = (ManuscriptDialog)form;
+            StandIn(dialog);
+            dialog.SelectPage(0);
+            await dialog.ScanPageAsync();
+            dialog.SelectPage(1);
+            dialog.AsPhotoButton.PerformClick();
+            dialog.AskBookPath = () => path;
+
+            await dialog.SaveBookAsync();
+
+            using var zip = ZipFile.OpenRead(path);
+            Assert.Equal(["word/media/photo0002.jpg"], zip.Entries.Select(entry => entry.FullName).Where(name => name.StartsWith("word/media/", StringComparison.Ordinal)).ToArray());
+        });
+    }
+
+    [Theory]
+    [InlineData("book.pdf", PhotoLiker.PhotoBook.BookFormat.Pdf)]
+    [InlineData("book.PDF", PhotoLiker.PhotoBook.BookFormat.Pdf)]
+    [InlineData("book.epub", PhotoLiker.PhotoBook.BookFormat.Epub)]
+    [InlineData("book.EPUB", PhotoLiker.PhotoBook.BookFormat.Epub)]
+    [InlineData("book.docx", PhotoLiker.PhotoBook.BookFormat.Docx)]
+    [InlineData("book.DOCX", PhotoLiker.PhotoBook.BookFormat.Docx)]
+    [InlineData("book", PhotoLiker.PhotoBook.BookFormat.Pdf)]
+    [InlineData("book.txt", PhotoLiker.PhotoBook.BookFormat.Pdf)]
+    public void TheFormatOfTheBook_IsTheOneTheExtensionOfTheFileSays_AndAPdfWhenItSaysNone(string name, PhotoLiker.PhotoBook.BookFormat expected) =>
+        Assert.Equal(expected, ManuscriptDialog.BookFormatOf(_folder.File(name)));
+
+    [Fact]
     public void SaveBook_WithThePhotosOn_PutsThePhotoOfEachPageInTheBook()
     {
         var a = Photo("a.jpg");

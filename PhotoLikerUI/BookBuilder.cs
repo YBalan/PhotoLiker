@@ -104,14 +104,7 @@ namespace PhotoLikerUI
 
                 writing?.Invoke();
                 var progress = new WritingProgress(percent);
-                var pageCount = await Task.Run(() =>
-                {
-                    if (format == BookFormat.Pdf)
-                        return PdfBookWriter.Write(outputPath, options, pages, progress, cancellation);
-
-                    EpubBookWriter.Write(outputPath, options, pages, progress, cancellation);
-                    return pages.Count + (string.IsNullOrWhiteSpace(options.Title) ? 0 : 1);
-                }, cancellation);
+                var pageCount = await Task.Run(() => WriteBook(format, outputPath, options, pages, progress, cancellation), cancellation);
 
                 return new BookResult(outputPath, pageCount, pages.Count, unreadable, new FileInfo(outputPath).Length);
             }
@@ -140,16 +133,24 @@ namespace PhotoLikerUI
 
             writing?.Invoke();
             var progress = new WritingProgress(percent, start: 0, span: 100);
-            var pageCount = await Task.Run(() =>
-            {
-                if (format == BookFormat.Pdf)
-                    return PdfBookWriter.Write(outputPath, options, pages, progress, cancellation);
-
-                EpubBookWriter.Write(outputPath, options, pages, progress, cancellation);
-                return pages.Count + (string.IsNullOrWhiteSpace(options.Title) ? 0 : 1);
-            }, cancellation);
+            var pageCount = await Task.Run(() => WriteBook(format, outputPath, options, pages, progress, cancellation), cancellation);
 
             return new BookResult(outputPath, pageCount, pages.Count, [], new FileInfo(outputPath).Length);
+        }
+
+        /// <summary>The writer of the format puts the pages in the file; returns how many pages the book has (a PDF knows; an EPUB and a Word document are set by their readers, so it is a page for each photo, and the title).</summary>
+        private static int WriteBook(BookFormat format, string outputPath, BookOptions options, IReadOnlyList<BookPage> pages, IProgress<int> progress, CancellationToken cancellation)
+        {
+            switch (format)
+            {
+                case BookFormat.Pdf:
+                    return PdfBookWriter.Write(outputPath, options, pages, progress, cancellation);
+                case BookFormat.Docx:
+                    return DocxBookWriter.Write(outputPath, options, pages, progress, cancellation);
+                default:
+                    EpubBookWriter.Write(outputPath, options, pages, progress, cancellation);
+                    return pages.Count + (string.IsNullOrWhiteSpace(options.Title) ? 0 : 1);
+            }
         }
 
         /// <summary>The writers report 0 to 100 for their part of the work, which is the last 30 percent of the whole (the whole of it for a book of text, which has no photos to prepare).</summary>

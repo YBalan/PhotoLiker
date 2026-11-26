@@ -94,6 +94,60 @@ public sealed class BookBuilderTests : IDisposable
         Assert.Equal(2, document.PageCount);
     }
 
+    // ── A Word document ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ADocx_HasASectionPerPhoto_WithTheirTexts_AndSaysHowManyPagesTheBookHas()
+    {
+        var first = new BookEntry(Photo("a.jpg")) { AboveRtf = @"{\rtf1\ansi first\par}" };
+        var second = new BookEntry(Photo("b.jpg", 200, 320)) { BelowRtf = @"{\rtf1\ansi second\par}" };
+
+        var result = await Build([second, first], BookFormat.Docx, title: "T", output: "book.docx");
+
+        Assert.Equal(2, result.Photos);
+        Assert.Equal(3, result.Pages); // with the title
+        Assert.Empty(result.Unreadable);
+        Assert.True(result.Bytes > 1000);
+        using var zip = ZipFile.OpenRead(result.Path);
+        var document = System.Xml.Linq.XDocument.Load(zip.GetEntry("word/document.xml")!.Open());
+        var w = System.Xml.Linq.XNamespace.Get("http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+        Assert.Equal(["T", "second", "first"], document.Descendants(w + "t").Select(element => element.Value).ToArray());
+        Assert.Equal(3, document.Descendants(w + "sectPr").Count());
+        Assert.NotNull(zip.GetEntry("word/media/photo0001.jpg"));
+        Assert.NotNull(zip.GetEntry("word/media/photo0002.jpg"));
+    }
+
+    [Fact]
+    public async Task ADocxOfTextOnly_HasNoPhotoButOnesThatArePhotos_AndAPhotoThatCannotBeRead_IsNamed()
+    {
+        var bad = _folder.File("bad.jpg");
+        File.WriteAllText(bad, "this is not a picture");
+        var entries = new List<BookEntry>
+        {
+            new(Photo("a.jpg")) { AboveRtf = @"{\rtf1\ansi the text\par}" },
+            new(Photo("b.jpg", 300, 180)) { AsPhoto = true },
+            new(bad) { AsPhoto = true },
+        };
+
+        var result = await Build(entries, BookFormat.Docx, withPhotos: false, output: "text.docx");
+
+        Assert.Equal([bad], result.Unreadable);
+        Assert.Equal(2, result.Photos);
+        using var zip = ZipFile.OpenRead(result.Path);
+        Assert.Equal(["word/media/photo0002.jpg"], zip.Entries.Select(entry => entry.FullName).Where(name => name.StartsWith("word/media/", StringComparison.Ordinal)).ToArray());
+    }
+
+    [Fact]
+    public async Task ADocxOfText_ReadsNoPhotoAtAll()
+    {
+        var entries = new List<BookEntry> { new(_folder.File("gone.jpg")) { AboveRtf = @"{\rtf1\ansi only text\par}" } }; // the photo is not there: a book of text never opens it
+
+        var result = await Build(entries, BookFormat.Docx, withPhotos: false, output: "gone.docx");
+
+        Assert.Empty(result.Unreadable);
+        Assert.Equal(1, result.Photos);
+    }
+
     // ── A page that is its photo ────────────────────────────────────────────
 
     private static string PageOf(ZipArchive zip, string name) => new StreamReader(zip.GetEntry(name)!.Open()).ReadToEnd();

@@ -111,6 +111,7 @@ namespace PhotoLikerUI
         public static string SaveBookTitle => T();
         public static string FilterPdf => T();
         public static string FilterEpub => T();
+        public static string FilterDocx => T();
         public static string Close => T();
         public static string StatusNoText => T();
         public static string StatusMakingBook => T();

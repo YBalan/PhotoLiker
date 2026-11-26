@@ -145,7 +145,7 @@ namespace PhotoLikerUI
             if (string.IsNullOrWhiteSpace(path))
                 return;
 
-            var format = string.Equals(Path.GetExtension(path), ".epub", StringComparison.OrdinalIgnoreCase) ? BookFormat.Epub : BookFormat.Pdf;
+            var format = BookFormatOf(path);
             var options = new BookOptions(TitleBox.Text.Trim(), AuthorBox.Text.Trim(), ScanLanguages.Code(BookLanguage()));
 
             SetBusy(true);
@@ -207,6 +207,14 @@ namespace PhotoLikerUI
                 }
             }
         }
+
+        /// <summary>The format the extension of the file says: an EPUB or a Word document; any other name is a PDF.</summary>
+        internal static BookFormat BookFormatOf(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".epub" => BookFormat.Epub,
+            ".docx" => BookFormat.Docx,
+            _ => BookFormat.Pdf,
+        };
 
         /// <summary>The language of the book: the one most of the pages that are in it were scanned in (the one that is picked, when none was scanned).</summary>
         private ScanLanguage BookLanguage() =>
@@ -312,7 +320,7 @@ namespace PhotoLikerUI
             using var dialog = new SaveFileDialog
             {
                 Title = ManuscriptStrings.SaveBookTitle,
-                Filter = $"{ManuscriptStrings.FilterPdf} (*.pdf)|*.pdf|{ManuscriptStrings.FilterEpub} (*.epub)|*.epub",
+                Filter = $"{ManuscriptStrings.FilterPdf} (*.pdf)|*.pdf|{ManuscriptStrings.FilterEpub} (*.epub)|*.epub|{ManuscriptStrings.FilterDocx} (*.docx)|*.docx",
                 AddExtension = true,
                 DefaultExt = "pdf",
                 OverwritePrompt = true,

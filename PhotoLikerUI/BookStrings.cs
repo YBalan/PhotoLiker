@@ -36,6 +36,7 @@ namespace PhotoLikerUI
         public static string LabelFormat => T();
         public static string FormatPdf => T();
         public static string FormatEpub => T();
+        public static string FormatDocx => T();
         public static string LabelTitle => T();
         public static string LabelAuthor => T();
         public static string TitleHint => T();
@@ -120,6 +121,7 @@ namespace PhotoLikerUI
         public static string StatusPreparingFormat => T();
         public static string StatusWritingPdf => T();
         public static string StatusWritingEpub => T();
+        public static string StatusWritingDocx => T();
         public static string StatusDoneFormat => T();
         public static string StatusCancelled => T();
         public static string StatusUnreadableFormat => T();

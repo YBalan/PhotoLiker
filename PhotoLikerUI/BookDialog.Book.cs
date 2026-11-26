@@ -6,7 +6,7 @@ namespace PhotoLikerUI
     internal sealed partial class BookDialog
     {
         /// <summary>The names the dialog makes itself (photobook_20261121_093015.pdf): they are not put back from the kept book, a new one is made each time.</summary>
-        private static readonly Regex AutomaticFileName = new(@"^photobook_\d{8}_\d{6}\.(pdf|epub)$", RegexOptions.IgnoreCase);
+        private static readonly Regex AutomaticFileName = new(@"^photobook_\d{8}_\d{6}\.(pdf|epub|docx)$", RegexOptions.IgnoreCase);
 
         private string _automaticOutputFolder;
         private readonly System.Windows.Forms.Timer _saveTimer = new() { Interval = 15000 };
@@ -28,7 +28,16 @@ namespace PhotoLikerUI
 
         private BookFormat SelectedFormat => ((Choice<BookFormat>)_formatCombo.SelectedItem!).Value;
 
-        private static string Extension(BookFormat format) => format == BookFormat.Epub ? ".epub" : ".pdf";
+        private static string Extension(BookFormat format) => format switch
+        {
+            BookFormat.Epub => ".epub",
+            BookFormat.Docx => ".docx",
+            _ => ".pdf",
+        };
+
+        /// <summary>Whether a name ends in the extension of one of the formats (a name that does is given the extension of the format that is picked; one that does not gets it added).</summary>
+        private static bool HasBookExtension(string name) =>
+            name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".epub", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase);
 
         private static string NewAutomaticFileName(BookFormat format) => $"photobook_{DateTime.Now:yyyyMMdd_HHmmss}{Extension(format)}";
 
@@ -413,18 +422,18 @@ namespace PhotoLikerUI
 
         // ── The format ──────────────────────────────────────────────────────
 
-        /// <summary>The paper, the font and the page numbers are for a PDF only (an EPUB is set to the screen of its reader); the extension of the name follows the format.</summary>
+        /// <summary>The paper, the font and the page numbers are for a PDF and a Word document, which are paged (an EPUB is set to the screen of its reader); the extension of the name follows the format.</summary>
         private void UpdateFormatControls()
         {
-            var pdf = SelectedFormat == BookFormat.Pdf;
+            var paged = SelectedFormat != BookFormat.Epub;
             foreach (var field in _pdfOnly)
-                field.Enabled = pdf && !_making;
+                field.Enabled = paged && !_making;
 
             var name = _fileNameBox.Text.Trim();
             var extension = Extension(SelectedFormat);
             if (AutomaticFileName.IsMatch(name))
                 _fileNameBox.Text = NewAutomaticFileName(SelectedFormat);
-            else if (name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".epub", StringComparison.OrdinalIgnoreCase))
+            else if (HasBookExtension(name))
                 _fileNameBox.Text = Path.ChangeExtension(name, extension);
         }
 

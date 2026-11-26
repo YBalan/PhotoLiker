@@ -5,6 +5,9 @@ namespace PhotoLiker.PhotoBook
     {
         Pdf,
         Epub,
+
+        /// <summary>A Word document: paged like a PDF (the paper, the margins, the font and the page numbers apply), and the person can go on editing it.</summary>
+        Docx,
     }
 
     /// <summary>The size of the pages of a PDF.</summary>
