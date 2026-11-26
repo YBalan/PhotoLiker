@@ -44,6 +44,46 @@ public sealed class SlideshowMemoryLogTests : IDisposable
     }
 
     [Fact]
+    public async Task ALineThatIsBeingMadeWhenTheShowEnds_IsNotWrittenAfterTheEnd_NorWhileTheFileIsRead()
+    {
+        // A line is made on a thread of the pool, which takes a moment (the facts of the show are asked there). Here the show ends while one is on its way: it used to be written beside the
+        // closing line, or after it, and a file that was being appended to could not be read ("used by another process": the release of 4.6.14 failed on it, on a slow machine)
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var calls = 0;
+        var log = new SlideshowMemoryLog(_folder, "show", () =>
+        {
+            if (Interlocked.Increment(ref calls) > 1) // (the first is the line of the start, made by whoever starts the log)
+            {
+                entered.Set();
+                release.Wait(10_000);
+            }
+
+            return string.Empty;
+        }, intervalMs: 1);
+
+        Assert.True(entered.Wait(10_000), "a line is on its way");
+        log.Dispose(); // the show ends meanwhile
+        release.Set(); // and the line is made
+        await Task.Delay(300); // time to write it, if it were going to be written
+
+        var lines = File.ReadAllLines(LogFile);
+        Assert.Contains("slideshow ends", lines[^1]);
+        Assert.Single(lines, line => line.Contains("slideshow ends"));
+    }
+
+    [Fact]
+    public void ALogThatIsDisposedTwice_EndsOnce()
+    {
+        var log = new SlideshowMemoryLog(_folder, "show", () => string.Empty, intervalMs: 600_000);
+
+        log.Dispose();
+        log.Dispose();
+
+        Assert.Single(File.ReadAllLines(LogFile), line => line.Contains("slideshow ends"));
+    }
+
+    [Fact]
     public void AFileThatHasGrownTooBig_BecomesTheOldOne_AndANewOneIsBegun()
     {
         Directory.CreateDirectory(_folder);
