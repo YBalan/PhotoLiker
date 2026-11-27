@@ -10,6 +10,7 @@ namespace PhotoLikerUI
         public static string TotalFiles => T();
         public static string PhotoCount => T();
         public static string VideoCount => T();
+        public static string ModelCount => T();
         public static string CurrentIndex => T();
 
         // 2. Current File
@@ -29,6 +30,8 @@ namespace PhotoLikerUI
         public static string GoThroughSubFolders => T();
         public static string Extensions => T();
         public static string SortOrder => T();
+        public static string SupportModels => T();
+        public static string ModelExtensions => T();
 
         // 5. Video Settings
         public static string SupportVideo => T();

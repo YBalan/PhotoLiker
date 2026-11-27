@@ -34,6 +34,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - [Slideshow](#slideshow)
   - [Depth parallax](#depth-parallax)
 - [Videos](#videos)
+- [3D models (STL)](#3d-models-stl)
 - [Big folders open at once](#big-folders-open-at-once)
 - [EXIF and GPS](#exif-and-gps)
 - [Aligning file dates](#aligning-file-dates)
@@ -80,6 +81,9 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
 - **Videos** next to the photos, when **SupportVideo** is on: a poster picture with a play mark in the viewer and the strip, and an
   embedded player (any format: AVI of a camera, MP4 and MOV of a phone ...) with a slider, a box to type a time to jump to, and keys to step 5 or 30 seconds.
   They are liked, grouped, copied and deleted like photos. See [Videos](#videos).
+- **3D models** next to the photos, when **SupportModels** is on: an STL file (what a CAD program writes and a slicer reads) is listed with the photos, shown as a model that is turned with the
+  mouse, zoomed with the wheel and looked at from the front, the top and the other sides, with its size, volume and number of triangles in the grid. Photo Liker can be put in Windows' list of
+  programs for `.stl` files, so that a double click on one opens its folder at it. See [3D models (STL)](#3d-models-stl).
 - **Settings grid** next to the photo, with a folder picker for the liked folder. Changing which photos are listed,
   or in what order, reloads the folder at once.
 - **EXIF and GPS** of the shown photo, GPS decoded to coordinates and a link to the map.
@@ -380,6 +384,7 @@ What is kept where:
 | <kbd>Esc</kbd> | While a video plays: back to its poster picture (the next <kbd>Esc</kbd> closes search results). |
 | <kbd>.</kbd> / <kbd>,</kbd> | On a video: go to the next / the previous place a search found in it (without a search, the next / previous moment), and play from there. |
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | On a video: save the picture it shows as a photo in the Liked folder, with the date it was recorded there. |
+| Mouse over a 3D model | Left button: turn it. Right or middle button: move it. Wheel: zoom (no <kbd>Ctrl</kbd> needed). Double click: start over. The buttons in the top right corner look at it from the front, the back, the left, the right, the top or the bottom, and **Wireframe** shows the edges of its triangles (see [3D models (STL)](#3d-models-stl)). |
 
 Keys are ignored while you type into a text box: the value you are editing in a grid, the search box. A click on the
 photo (or on a thumbnail, or on the empty space around the photo) takes the keyboard focus out of the text box, so the keys
@@ -411,6 +416,7 @@ ones are behind the arrow at the bottom of the column.
 | **Colorize** (a photo that is grey in its lower left and in colour in its upper right) | Give colours to the black and white photo that is shown (the bar over it: the colours change as you move its sliders, and **Save a copy** writes them), or to many photos at once, as copies next to them, see [Colorizing black and white photos](#colorizing-black-and-white-photos). |
 | **Refocus** (a photo with a sharp ring and soft lights) | Take the shown photo in portrait mode with a floating bar: click where the focus should be, and the sliders change the blur, the sharp zone and the haze, see [Refocusing photos](#refocusing-photos). The button opens the bar and closes it again. |
 | **Register Context Menu** | Add *Open in Photo Liker* to the right-click menu of folders (the same button removes it). |
+| **STL files** (a blue cube with a green check mark) | Put Photo Liker in Windows' list of programs for `.stl` files and open Windows' **Default apps**, where you choose it; when it is in the list already, a click asks whether to open **Default apps** again or to take it out of the list. It is lit when Windows' choice is Photo Liker. See [3D models (STL)](#3d-models-stl). |
 | **Help** (the question mark) | The *About* box: the version, the keys and the user manual, see [About box](#about-box). |
 | **Make a book** (a teal book with a photo on its cover; after Help and a separator) | Make a PDF, an EPUB or a Word (DOCX) book of the photos, with a text above and below each photo and the photos in the order you choose, see [Make a book](#make-a-book). |
 | **Trace bitmap** (an orange tile with a curve and two nodes; after Make a book) | Turn the photo that is shown into a vector drawing, an SVG or a DXF file of a size in millimetres, with the scans and the options of the Trace Bitmap of Inkscape, see [Trace bitmap](#trace-bitmap). |
@@ -955,6 +961,8 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 | **GoThroughSubFolders** | Also list the photos in the subfolders (on by default). The Liked folder itself is left out. |
 | **Extensions** | The file extensions that count as photos, separated by `;` or `,`, each with its dot: `.jpg; .png`. Case does not matter. |
 | **SortOrder** | The order of the photos: `OldestFirst` (the default) or `NewestFirst`, by the date the file was created, `ByName` by the name of the file, `Random` in a random order, or `None` for the order the disk gives (by name on most local disks). See [below](#order-of-the-photos). |
+| **SupportModels** | List the 3D models (STL files) of the folder with its photos (on by default). See [3D models (STL)](#3d-models-stl). |
+| **ModelExtensions** | The file extensions that count as 3D models when **SupportModels** is on: `.stl` (only STL files can be read). |
 
 **5. Video Settings:**
 
@@ -969,8 +977,8 @@ The rows are in six groups: **1. Progress**, **2. Current File**, **3. Common Se
 
 The group **6. Slideshow** has its own eighteen rows, **Mode**, **Monitors**, **Timeout**, **Watermark**, **PeopleFaces**, **PeopleNames**, **Effect**, **EffectRun**, **Look**, **LookFile**, **Border**, **Collage**, **UseVideo**, **MuteVideo**, **VideoPart**, **LowerOtherAudio**, **ShowCaptions** and **Gpu**; see [Slideshow](#slideshow).
 
-The rows of **Current File** (except **LikedFolder**) and **TotalFiles** are read-only, and so are **PhotoCount** and **VideoCount**, which say how many of the files in the list now are photos and how many are
-videos (together they are **TotalFiles**; there are no videos unless **SupportVideo** is on). **CurrentIndex** is the number of the shown photo, counted
+The rows of **Current File** (except **LikedFolder**) and **TotalFiles** are read-only, and so are **PhotoCount**, **VideoCount** and **ModelCount**, which say how many of the files in the list now are photos, how many are
+videos and how many are 3D models (together they are **TotalFiles**; there are no videos unless **SupportVideo** is on, and no models unless **SupportModels** is). **CurrentIndex** is the number of the shown photo, counted
 from 0: type another number into it to jump to that photo (a number outside the list goes to the nearest end).
 
 Every row has a description: select it and the pane under the grid says what it is for (drag the divider above the pane to
@@ -1531,6 +1539,44 @@ is turned on, or a video is played, the program says how big it is and where it 
 SHA-256 the program knows, and the folder is made whole or not at all. No means that videos open in the program Windows plays them with, and the question comes again when **SupportVideo** is turned off and on. When it was turning **SupportVideo** on that started the download, the folder is listed again once the player is there (as <kbd>F5</kbd> does); a download started by playing a video does not interrupt the video.
 A build from the source, and an installer made with `installer\build-installer.ps1 -BundleVlc` (for a computer with no internet), have the engine in `libvlc\win-x64` next to the program (86 MB) and download nothing.
 `installer\pack-libvlc.ps1` makes the zip for a new version of VLC (and the list of its files, `PhotoLiker.Video\libvlc-files.txt`); it is attached once to a pre-release named `libvlc-<version>`. Its licence and the place to get the source of VLC are in `libvlc\VLC-NOTICE.txt`.
+## 3D models (STL)
+
+STL is the file a CAD program writes when it saves a 3D model, and a slicer reads before it prints it. **SupportModels** is on in the [settings grid](#settings) by default (turn it off to have a
+folder look as it did before models), and the STL files of the folder are listed with its photos, in the same order, also in the subfolders if **GoThroughSubFolders** is on. Which files are
+models is the **ModelExtensions** row (`.stl`: no other 3D format is read). A folder that holds only STL files works the same. Changing either row lists the folder again at once. Binary and text
+STL files are read, also several solids in one text file; a file that is neither says so in the status line instead of showing an empty picture.
+
+**What you see.** The thumbnail in the strip and the picture in the viewer are the model, seen from the front right and a little above, light blue-grey on a dark stage (the same in the dark and
+the light theme: it is a viewport, like the player of a video). The grid under the settings has a category **0. 3D model** instead of EXIF: **Triangles**, **Size** (X × Y × Z in millimetres),
+**Volume**, **Surface area**, **Format** (binary or text), **Model name** (what the file calls it), **File size** and **File dates**, and **Skipped triangles** when the file had some that are not
+numbers or were cut off. An STL file does not say what unit its numbers are in; like the programs that print it, Photo Liker reads them as millimetres. The volume is right for a closed surface;
+for one with holes it is only what the part that is there encloses.
+
+**Turning it.** The model is drawn at the size of the viewer, and the mouse turns it as in a CAD program: the **left button** turns it about its middle (Z is up, as a CAD program writes it), the
+**right** or the **middle button** moves it, the **wheel** zooms about the point under the pointer (no <kbd>Ctrl</kbd> needed), a **double click** starts over. The buttons in the top right corner
+look at it from the front, the back, the left, the right, the top, the bottom and from the corner it is first shown from (**Iso**), and **Wireframe** draws the edges of the triangles over it (the
+ones that can be seen, not those behind the surface). The three lines under the buttons are the axes: X red, Y green, Z blue. While the mouse is moving, the model is drawn from a part of its
+triangles (at most 80,000), so that it follows the hand; when the mouse rests for a moment, it is drawn whole, with smooth edges. The check mark of a liked model, the folders of its copies, the
+group list and the date are drawn over it as over a photo.
+
+**Without a graphics card.** The drawing is done on the processor by Photo Liker's own renderer (a depth buffer, flat shading with two lights, an orthographic camera; the project
+`PhotoLiker.VectorFiles`), so there is nothing to install and nothing that depends on the card. A model of a million triangles is drawn whole in a fraction of a second. A model is held in memory with
+its triangles (36 bytes each, counted in the budget of the photo cache like the pictures of photos), and the photos next to the shown one are read ahead as usual, so a folder of very big models fills
+the cache sooner: a smaller **CacheSize** helps.
+
+**What works on a model.** It is liked (<kbd>Space</kbd>), put in groups, copied (<kbd>Ctrl</kbd>+<kbd>C</kbd> puts the file and the picture as it is shown on the clipboard), deleted and moved like a
+photo, and **Save** makes a copy of the file as it is. The tools that work on the pixels of a photo do not work on it and say so (Draw, Trace bitmap, Telegram sticker, Colorize, Refocus, Rotate, Scan
+manuscripts); the search, the slideshow, Make a book, Generate Video and the index use the photos (and videos) of the folder only.
+
+**Photo Liker for `.stl` files in Windows.** The **STL files** button of the toolbar (a blue cube with a green check mark, next to the context menu button) puts Photo Liker in the list of programs
+Windows offers for `.stl` files and opens the **Default apps** page of Windows Settings, at Photo Liker's own page. Windows keeps the choice of the default to the person (since Windows 8 a program
+cannot make itself the default: the choice is stored under a hash that only Windows' own Settings can write), so the last click is yours: pick Photo Liker for `.stl` there; or in Explorer right-click
+an STL file, **Open with**, **Choose another app**, Photo Liker, **Always**. After that a double click on an STL file starts Photo Liker on the folder of the file, at that file (also in a folder where
+**SupportModels** is off: the file you asked for is shown, and the setting is turned on). The button is lit when Windows' choice is Photo Liker; when Photo Liker is in the list already, a click asks
+whether to open **Default apps** again or to take it out of the list. Nothing needs administrator rights: everything is written under the current user (`HKCU\Software\Classes\PhotoLiker.StlFile`,
+`Applications\PhotoLikerUI.exe`, `Software\PhotoLiker\Capabilities` and an entry each in `RegisteredApplications` and `.stl\OpenWithProgids`), and the uninstaller removes all of it. Any other file Photo
+Liker is started with (a photo, a video) opens the folder it is in, at that file, in the same way, so Photo Liker can be picked in **Open with** for those too.
+
 ## Big folders open at once
 
 Listing a folder on a network share costs a round trip per subfolder, however few photos each holds: 6.6 seconds for
@@ -1943,6 +1989,8 @@ time it is saved. A liked folder outside the photo folder, for example on anothe
   "SlideshowEffect": "Fade",
   "SupportVideo": true,
   "VideoExtensions": [ ".avi", ".mp4", ".mov" ],
+  "SupportModels": true,
+  "ModelExtensions": [ ".stl" ],
   "IsDarkTheme": true,
   "WindowLeft": 30, "WindowTop": 20, "WindowWidth": 1500, "WindowHeight": 900,
   "ScreenIndex": 0,
@@ -1996,6 +2044,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.PhotoBook` | Making a book of photos as a PDF, an EPUB or a Word document, without a user interface: the description above and below each photo (the RTF of a Rich Text Box read into paragraphs and runs: `RtfParser`), the setting of text in lines (`TextLayout`: wrapping, alignment, justification), the PDF writer (PDFsharp, embedded fonts found by `PdfFonts`), the EPUB 3 writer and the DOCX writer (WordprocessingML written by hand, no library), the order of the photos and its moves (`BookOrder`), and the `photo-liker-book.json` kept with a folder. Uses Core for the photos and the texts. |
 | `PhotoLiker.TraceBitmap` | Trace Bitmap, without a user interface: cutting a picture into scans (a brightness cutoff, the edges, reduced colours; steps of brightness, colours or grays, stacked or side by side: `Binarizer`, `ColorQuantizer`), following the outlines of the black along the pixel edges (`ContourTracer`), fitting them with lines and Bezier curves (`CurveFitter`), and the **SVG** and **DXF** writers in millimetres (`SvgWriter`, `DxfWriter`), with the settings of Inkscape's window and the file the dialog keeps them in (`TraceSettings`, `TraceDialogSettings`). Its own tracer, not Potrace (GPL); it depends on no other project. |
 | `PhotoLiker.VideoToGif` | Video to GIF, without a user interface: the settings of a GIF and the file the window keeps them in (`GifSettings`), the plan of what it will be (the part of the video, the frames, the size, the arguments of ffmpeg: `GifRange`, `GifPlan`), the two ffmpeg runs (the palette, then the frames) with progress and stopping, and nothing left behind when it fails (`GifMaker`), and a reader of the blocks of a GIF file (`GifInfo`: size, frames, length, repeats, palettes). It depends on no other project. |
+| `PhotoLiker.VectorFiles` | 3D (and drawing) files that are not photos, read so that they can be looked at like photos, without a user interface: **STL**, binary or text (`StlReader`: the size of the file tells binary from text, a header that starts with `solid` does not; the triangles, their box, area and volume in `StlMesh`), and a **software renderer** (`MeshRenderer`: a depth buffer, flat shading with two lights, an orthographic camera that orbits the model, drawn in bands of rows on all the cores, optional smoothing and edges, a part of the triangles while the mouse moves) with the camera (`MeshView`, `CameraBasis`) and the colours (`RenderStyle`). No graphics card, no WPF and no package; it depends on no other project. |
 | `PhotoLiker.Stickers` | Telegram stickers, without a user interface: the subject of a photo found by IS-Net with ONNX Runtime (`SubjectDetector`), the cutout (`Cutout`: the map enlarged, drawn to the photo's edges with a guided filter, cut at the sensitivity, small parts dropped, small holes filled), the sticker (`StickerRenderer`: scaled to 512 pixels on the longer side, the outline from an exact distance transform with the notches closed, the shadow), the files (`PngWriter`, the WebP run of ffmpeg in `StickerEncoder`, `StickerFile` that reads a file's own header and checks it against Telegram's limits) and the settings (`StickerSettings`); the cut line over a photo (`ContourOverlay`). It depends on no other project. |
 | `PhotoLiker.Drawing` | Drawing on a photo and reading its text, without a user interface: the pictures as pixels (`Bitmap32`), the strokes (`Painter`: anti-aliased, round ends, a stroke that crosses itself is not darker), the notes (a mask of the letters made by the window, which has the fonts), the steps with Undo and Redo (`DrawingSession`: the photo is never changed, the steps are drawn over it again), the crop frame (`CropFrame`) and Scan text (`TextScanner`: the PP-OCR models with ONNX Runtime, the lines found in the map of the first (`LineFinder`: shapes, the smallest turned rectangle, the unclip), straightened (`Sampler`) and read by the second (`CharacterSet`: CTC)). It depends on no other project. |
 | `PhotoLiker.Manuscripts` | Reading handwritten and printed pages, without a user interface: the PyTorch checkpoint of the handwriting models read without running anything of it (`TorchCheckpoint`), turned into an ONNX file (`CrnnConverter`, `OnnxWriter`), the reader and the scanner of handwriting (`HandwritingReader`, `HandwritingScanner`: the lines found by the finder of `PhotoLiker.Drawing`, cut out straight, read by a CNN with a bidirectional LSTM and CTC), the languages and what each keeps out (`ScanLanguages`), the sheet of a manuscript found in a photo and straightened with the model of the Telegram stickers (`PageOutline`, `PagePerspective`, `PageCutter`), the pictures on a page found with the same model after the text is painted over, and cut out along their contours (`PictureFinder`, `PictureOutline`, `PictureCutter`) and where each goes in the text (`PicturePlacement`), the text laid out like the page (`ManuscriptLayout`), the work kept with the folder (`ManuscriptFile`), and the joining of lines into paragraphs (`ManuscriptText`). It depends on `PhotoLiker.Core`, `PhotoLiker.Drawing`, `PhotoLiker.PhotoBook` and `PhotoLiker.Stickers`. |
@@ -2011,6 +2060,7 @@ file formats, ids, ffmpeg workarounds, project layout or development), with the 
 | `PhotoLiker.PhotoBook.Tests` | xUnit tests of the book library: the RTF reader and writer (pictures, indents and tab stops too; also on what a real Rich Text Box writes: Cyrillic as `\uN?` and as bytes of a code page), the setting of text in lines (on a measurer of fixed widths), the moves of the order, the file kept with a folder, the PDF (pages, paper, orientation, embedded fonts, long texts) and the EPUB (the first file stored, every part well formed, the package, the contents, the look of the text). |
 | `PhotoLiker.TraceBitmap.Tests` | xUnit tests of the tracing library: the outlines of known shapes (areas that add up, holes, a chessboard corner), the fit of curves (few nodes for a circle, four sharp corners for a rectangle, no runaway handle, the traced shape filled back into pixels and compared with what was traced), every scan and option, the SVG (parsed as XML, millimetres, a point for the decimals in any language) and the DXF (group codes, closed polylines, the turned-over y, layers), the settings file. Mutation-checked. |
 | `PhotoLiker.VideoToGif.Tests` | xUnit tests of the GIF library: the plan (ranges, frames, sizes, rounding, the arguments of both ffmpeg runs), the settings file, the reader of GIF blocks (on files built byte by byte, also cut off), and real GIFs made by the ffmpeg of the repository from videos made for the test (frames, size, repeat, colours, a video that is shown turned, progress, stopping, a GIF that is kept when the new one fails). |
+| `PhotoLiker.VectorFiles.Tests` | xUnit tests of the 3D library: binary and text STL files (built byte by byte: headers that start with `solid`, a cut-off text file, numbers that are not numbers, several solids, a file that is no STL), the box, area and volume (also of a model far from the origin and of one turned inside out), and the renderer on shapes whose pictures can be told exactly (a sphere that must be round and without gaps also at 640,000 triangles, the way the axes run, what is nearer hides what is behind, both sides of a triangle lit, zoom, move, smoothing, the part of the triangles, the edges, stopping). |
 | `PhotoLiker.Stickers.Tests` | xUnit tests of the sticker library: the distance transform (against a brute-force search), the parts and holes of a mask, the guided filter, the cutout and its cuts, the sticker (the longer side exactly 512, the outline as wide as asked above, below and beside the subject, notches closed, the shadow, the moved edge, the straight alpha), the PNG writer (read back by another reader and by ffmpeg, every kind of filter), the file reader (WebP made by ffmpeg, hand-built headers) and the limits, the WebP that is written again until it fits, the settings file. The tests that need the model (`PHOTOLIKER_TEST_MODELS`) or ffmpeg do nothing where they are not there. Mutation-checked. |
 | `PhotoLiker.Drawing.Tests` | xUnit tests of the drawing library: the strokes (the edge, the round end, a highlighter that is not darker where it crosses itself, a line that runs off the picture), the notes, the steps and Undo and Redo (a replay gives the same picture as drawing it once), the crop frame (hit tests, edges, corners, the minimum), the dictionary and the CTC reading, the finder of lines (a bar, a turned band, dust, the unclip), the straightening of a line, the reading order. The tests of `PhotoLikerUI.Tests` read real text with the real models where they are in the models folder. |
 | `PhotoLiker.Manuscripts.Tests` | xUnit tests of the manuscript library: the converter against PyTorch itself (a small network of the same kind, saved by `torch.save` with its numbers for a picture, is in `Fixtures`: the ONNX file made from it must give the same numbers), the reader of the pickle, the CTC reading, the languages (all four for both kinds, the mask of English, the Latin look-alikes), the work file (round trip, relative paths, damaged files), the joining of lines, the layout of a scan (rows, indents, tabs, columns, blank lines) and where the pictures go among them, the corners of a sheet (tilted, rounded, a net of outlines, a pen beside it, no sheet, not a sheet) and its straightening, the pictures of a page (a solid blob or thin writing, a U, a diagonal bar, the border of the map, the text painted over, the cut along an outline), and the AI that corrects the text: the tokenizer of the language model (on a vocabulary small enough to see: the earliest merge first, bytes, special tokens, accents), the taking of its answer word by word (the limit on the change of a word, the marks, the numbers, the lines and tabs and picture marks that stay, a word that was added or lost, a word that was lost next to a like one) and the pieces a text is given in, with a corrector that is stood in for, mutation-checked. They need no models. |
@@ -2034,6 +2084,7 @@ dotnet test  PhotoLiker.GenerateVideo.Tests\PhotoLiker.GenerateVideo.Tests.cspro
 dotnet test  PhotoLiker.PhotoBook.Tests\PhotoLiker.PhotoBook.Tests.csproj  # run the tests of the book library
 dotnet test  PhotoLiker.TraceBitmap.Tests\PhotoLiker.TraceBitmap.Tests.csproj  # run the tests of the tracing library (the scans, the curves, the SVG and DXF files)
 dotnet test  PhotoLiker.VideoToGif.Tests\PhotoLiker.VideoToGif.Tests.csproj  # run the tests of the GIF library (the plan, the settings, the GIF reader, real GIFs made by ffmpeg)
+dotnet test  PhotoLiker.VectorFiles.Tests\PhotoLiker.VectorFiles.Tests.csproj  # run the tests of the 3D library (the STL reader and the renderer)
 dotnet test  PhotoLiker.Stickers.Tests\PhotoLiker.Stickers.Tests.csproj  # run the tests of the sticker library (the cutout, the sticker, the PNG and WebP files, the limits of Telegram)
 dotnet test  PhotoLiker.Drawing.Tests\PhotoLiker.Drawing.Tests.csproj  # run the tests of the drawing library (the strokes, the steps, the crop frame, Scan text)
 dotnet test  PhotoLiker.Manuscripts.Tests\PhotoLiker.Manuscripts.Tests.csproj  # run the tests of the manuscript library (the converter against PyTorch, the reading, the work file, the sheet of a page)

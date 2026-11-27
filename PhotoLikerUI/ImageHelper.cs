@@ -31,6 +31,8 @@ namespace PhotoLikerUI
         {
             if (MediaKinds.IsVideo(path))
                 return LoadVideoPoster(path, thumbSize);
+            if (MediaKinds.IsModel(path))
+                return LoadModel(path, thumbSize);
 
             var stream = new MemoryStream(FileReading.ReadAllBytesShared(path), writable: false);
             Image? source = null;
@@ -77,6 +79,8 @@ namespace PhotoLikerUI
         {
             if (MediaKinds.IsVideo(path))
                 return LoadVideoThumbnail(path, thumbSize);
+            if (MediaKinds.IsModel(path))
+                return LoadModelThumbnail(path, thumbSize);
 
             using var stream = new MemoryStream(FileReading.ReadAllBytesShared(path), writable: false);
             using var source = Image.FromStream(stream, useEmbeddedColorManagement: false, validateImageData: true);

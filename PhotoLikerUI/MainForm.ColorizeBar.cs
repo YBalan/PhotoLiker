@@ -109,7 +109,7 @@ namespace PhotoLikerUI
         /// </summary>
         private void ColorizeButtonClicked()
         {
-            if (pictureBox1.Tag is not string file || MediaKinds.IsVideo(file))
+            if (pictureBox1.Tag is not string file || !MediaKinds.IsImage(file))
             {
                 Colorize();
                 return;
@@ -159,7 +159,7 @@ namespace PhotoLikerUI
                 else if (_barPreview is not null)
                     return; // the same photo again, with its colours on: nothing changes
 
-                if (!_globalConfig.ColorizeBar || MediaKinds.IsVideo(file) || ColorizedCopy.IsCopy(file))
+                if (!_globalConfig.ColorizeBar || !MediaKinds.IsImage(file) || ColorizedCopy.IsCopy(file))
                 {
                     HideBar();
                     return;

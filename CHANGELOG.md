@@ -15,6 +15,8 @@ Releases before 4.0.1, and the ones since that changed only tests, are not liste
 
 ## Unreleased
 
+- Added 3D models: STL files are listed with the photos and shown as a model that you turn with the mouse, with its size, volume and triangles in the grid.
+- Added an STL files button that puts Photo Liker in the Windows list of programs for .stl files; a file opened with it shows its folder at that file.
 - Added the number of photos to each line of the group list in the corner of the photo, for example "A - Group Family (12)".
 
 ## 4.6.15 - 2026-11-27

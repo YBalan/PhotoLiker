@@ -122,6 +122,7 @@ namespace PhotoLikerUI
             _findDuplicatesButton.ToolTipText = DuplicatesStrings.ButtonTooltip;
             ApplyBookLanguage();
             ApplyTraceLanguage();
+            ApplyModelLanguage();
             ApplyVideoToGifLanguage();
             ApplyStickerLanguage();
             ApplyDrawingLanguage();

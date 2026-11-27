@@ -4,7 +4,7 @@ namespace PhotoLikerUI
 {
     /// <summary>
     /// The Save button of the toolbar is Save As: it asks where to save, and saves what is shown. For a photo that is a copy of the file under the name and in the place the person chooses, and when the
-    /// name (or the "Save as type" list) says another format (JPEG, PNG, BMP, GIF, TIFF) the photo is converted as it is saved (<see cref="PhotoConverter"/>). A video is copied as it is. Both keep the dates
+    /// name (or the "Save as type" list) says another format (JPEG, PNG, BMP, GIF, TIFF) the photo is converted as it is saved (<see cref="PhotoConverter"/>). A video, or a 3D model, is copied as it is. Both keep the dates
     /// of the file, which this program cares about. With the Colorize bar showing colours, or the Refocus bar working, it is the picture as it looks on the screen now that is saved, not the file, in
     /// the format the person chooses (a JPEG when nothing says otherwise). The photo that is shown is never changed.
     /// </summary>
@@ -104,7 +104,7 @@ namespace PhotoLikerUI
         internal static string CopyFilter(string file)
         {
             var extension = Path.GetExtension(file);
-            if (MediaKinds.IsVideo(file))
+            if (!MediaKinds.IsImage(file))
                 return extension.Length > 1 ? $"{extension.TrimStart('.').ToUpperInvariant()} (*{extension})|*{extension}|{AllFilesKind}" : AllFilesKind;
 
             var own = PhotoFormats.ForPath(file);
@@ -166,7 +166,7 @@ namespace PhotoLikerUI
         private async Task CopyFileAsAsync(string file)
         {
             var extension = Path.GetExtension(file);
-            var isPhoto = !MediaKinds.IsVideo(file);
+            var isPhoto = MediaKinds.IsImage(file);
             var chosen = AskSaveAsPath(string.Format(ToolbarStrings.SaveAsTitleFormat, Path.GetFileName(file)), CopyFilter(file), Path.GetDirectoryName(file) ?? string.Empty, Path.GetFileName(file));
             if (chosen is null)
                 return;

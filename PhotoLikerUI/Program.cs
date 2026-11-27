@@ -29,8 +29,9 @@ namespace PhotoLikerUI
                 e.SetObserved();
             };
 
-            string? folderArg = args.Length > 0 && Directory.Exists(args[0]) ? args[0] : null;
-            Application.Run(new MainForm(folderArg));
+            // A folder (the "Open in Photo Liker" entry of the context menu) opens as it is; a file (double-clicked in Explorer, or chosen in "Open with") opens the folder it is in, at that file
+            var (folderArg, fileArg) = StartTarget.Of(args);
+            Application.Run(new MainForm(folderArg, fileArg));
         }
 
         private static void ReportUiException(Exception exception)

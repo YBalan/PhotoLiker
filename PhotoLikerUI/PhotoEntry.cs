@@ -1,3 +1,5 @@
+using PhotoLiker.VectorFiles;
+
 namespace PhotoLikerUI
 {
     /// <summary>
@@ -9,6 +11,7 @@ namespace PhotoLikerUI
     {
         // Only set for animated images, which keep decoding lazily from this in-memory stream.
         private readonly Stream? _backingStream;
+        private readonly long _imageBytes;
 
         public PhotoEntry(Image full, Bitmap thumb, int thumbSize, IReadOnlyList<MetadataEntry> metadata, Stream? backingStream)
         {
@@ -16,7 +19,7 @@ namespace PhotoLikerUI
             Thumb = thumb;
             ThumbSize = thumbSize;
             Metadata = metadata;
-            Bytes = (long)full.Width * full.Height * 4;
+            _imageBytes = (long)full.Width * full.Height * 4;
             _backingStream = backingStream;
         }
 
@@ -28,8 +31,11 @@ namespace PhotoLikerUI
         public int ThumbSize { get; private set; }
         public IReadOnlyList<MetadataEntry> Metadata { get; }
 
-        /// <summary>Approximate decoded size of <see cref="Full"/>, used for the cache memory budget.</summary>
-        public long Bytes { get; }
+        /// <summary>For an entry that is a 3D model: the model itself (its triangles), which the viewer turns and draws again at its own size; <see cref="Full"/> is its first picture. Null for a photo.</summary>
+        public StlMesh? Model { get; init; }
+
+        /// <summary>Approximate decoded size of <see cref="Full"/> (and of the triangles of the model, if it is one), used for the cache memory budget.</summary>
+        public long Bytes => _imageBytes + (Model?.Bytes ?? 0);
 
         public void SetThumb(Bitmap thumb, int size)
         {

@@ -298,6 +298,8 @@ AboutStrings.ShortcutFrameInput = Ctrl+S
 AboutStrings.ShortcutFrameAction = Відео: зберегти кадр, який воно показує (або перший), як фото в теці Liked
 AboutStrings.ShortcutMomentInput = . / ,
 AboutStrings.ShortcutMomentAction = Відео: наступний / попередній момент (серед знайдених пошуком, а як їх немає — серед усіх)
+AboutStrings.ShortcutModelInput = Миша над 3D-моделлю
+AboutStrings.ShortcutModelAction = 3D-модель: ліва кнопка повертає, права пересуває, колесо змінює масштаб, подвійне клацання починає спочатку
 AboutStrings.ShortcutCloseInput = Esc
 AboutStrings.ShortcutCloseAction = Закрити результати пошуку
 AboutStrings.ShortcutSearchInput = Enter
@@ -848,9 +850,10 @@ SearchStrings.DurationMinutesFormat = {0} хв
 SearchStrings.DurationSecondsFormat = {0} с
 
 # ──────────── SettingsStrings ────────────
-SettingsStrings.TotalFiles = Скільки файлів зараз у списку: фото (і відео, якщо SupportVideo увімкнено) відкритої папки (і її підпапок, якщо GoThroughSubFolders увімкнено) або результати пошуку, поки їх показано. PhotoCount і VideoCount кажуть, скільки з них якого роду.
-SettingsStrings.PhotoCount = Скільки з файлів, що зараз у списку, є фото. PhotoCount і VideoCount разом дають TotalFiles.
-SettingsStrings.VideoCount = Скільки з файлів, що зараз у списку, є відео (їх немає, доки SupportVideo не ввімкнено). PhotoCount і VideoCount разом дають TotalFiles.
+SettingsStrings.TotalFiles = Скільки файлів зараз у списку: фото (і відео, якщо SupportVideo увімкнено, і 3D-моделі, якщо увімкнено SupportModels) відкритої папки (і її підпапок, якщо GoThroughSubFolders увімкнено) або результати пошуку, поки їх показано. PhotoCount, VideoCount і ModelCount кажуть, скільки з них якого роду.
+SettingsStrings.PhotoCount = Скільки з файлів, що зараз у списку, є фото. PhotoCount, VideoCount і ModelCount разом дають TotalFiles.
+SettingsStrings.VideoCount = Скільки з файлів, що зараз у списку, є відео (їх немає, доки SupportVideo не ввімкнено). PhotoCount, VideoCount і ModelCount разом дають TotalFiles.
+SettingsStrings.ModelCount = Скільки з файлів, що зараз у списку, є 3D-моделями (файлами STL; їх немає, доки SupportModels не ввімкнено). PhotoCount, VideoCount і ModelCount разом дають TotalFiles.
 SettingsStrings.CurrentIndex = Місце показаного фото у списку, рахуючи від 0. Впишіть інше число, щоб перейти до того фото (число поза списком веде до найближчого краю). Home і End переходять до першого й останнього фото, PageUp і PageDown — до попереднього й наступного місяця.
 SettingsStrings.CurrentFolder = Відкрита папка з фото. Іншу вибирають кнопкою «Відкрити» на панелі інструментів.
 SettingsStrings.CurrentFilePath = Повний шлях до показаного фото.
@@ -867,6 +870,8 @@ SettingsStrings.SpeechModel = Модель, що перетворює мовле
 SettingsStrings.SpeechLanguage = Мова, якою розмовляють у відео: ru, uk, en тощо, або auto, щоб модель визначала її для кожного відео (коротке відео з малою кількістю розмов іноді приймають за іншу мову: задайте її, якщо в родині говорять однією, а відео, які прочитано як іншу мову, буде прочитано знову після запитання).
 SettingsStrings.CpuCores = Скільки ядер цього комп’ютера може використовувати розпізнавання мовлення (VideoSpeech), поки йде «Оновити індекс»: від 1 до всіх ядер комп’ютера (за замовчуванням). Що більше ядер, то більше відео слухається одночасно. Це можна змінювати, поки індекс оновлюється: наступне відео, яке починається, вже візьме нове число (відео, що слухається, дослухається з тими ядрами, з якими почало). Усі ядра завантажують комп’ютер на повну, тож зніміть кілька, якщо працюєте поруч. Число стосується лише розпізнавання мовлення.
 SettingsStrings.SortOrder = Порядок фото: OldestFirst або NewestFirst — за датою створення файлу (скопійований файл створюється, коли його копіюють), ByName — за назвою файлу, як її впорядковує Провідник (IMG_2 перед IMG_10), Random — у новому випадковому порядку щоразу, коли папку перелічують, None — у порядку, який дає файлова система, зазвичай за назвою. Зміна одразу складає список папки наново. Результати пошуку теж йдуть за ним, за датою зйомки фото (None: спершу найкращий збіг).
+SettingsStrings.SupportModels = True (за замовчуванням): 3D-моделі теки (з розширеннями рядка ModelExtensions, а також у підтеках, якщо GoThroughSubFolders увімкнено) показуються в списку разом із фото. Модель показується як її зображення: потягніть лівою кнопкою, щоб повернути, правою — щоб пересунути, прокрутіть колесо для масштабу, подвійне клацання починає спочатку; кнопки в кутку дивляться на неї спереду, зверху й з інших боків або показують її ребра. Її можна вподобати, розкласти по групах і видалити як фото. Пошук, слайдшоу, повороти, малювання та інші інструменти, що працюють з пікселями фото, з нею не працюють. False: показуються лише фото (і відео). Зміна одразу перечитує теку.
+SettingsStrings.ModelExtensions = Розширення файлів, які вважаються 3D-моделями, коли SupportModels увімкнено, через ; або , кожне з крапкою: .stl. Регістр не має значення. Прочитати можна лише файли STL. Зміна одразу перечитує теку.
 SettingsStrings.CacheSize = Скільки фото з кожного боку від показаного тримається декодованими в пам’яті, щоб клавіші зі стрілками показували їх миттєво. Більше число пришвидшує перегляд по повільній мережі, але вимагає більше пам’яті.
 SettingsStrings.ThumbnailSize = Розмір мініатюр у стрічці праворуч, у пікселях. Його змінює Ctrl + колесо миші над стрічкою.
 SettingsStrings.LanguageDescription = Мова програми. Кожен файл photo-liker-<код>.txt у папці Languages поряд з програмою (або в %LocalAppData%\\PhotoLiker\\Languages) — це мова; англійська вбудована, тож без файлів вона єдина. Змінюється одразу і зберігається для всіх папок, а не у файлі налаштувань папки.
@@ -1968,3 +1973,43 @@ RecentStrings.MenuNone = Нещодавніх папок ще немає
 RecentStrings.MenuClear = Очистити список
 RecentStrings.JumpListCategory = Нещодавні папки
 RecentStrings.StatusFolderGoneFormat = «{0}» більше немає: її прибрано зі списку нещодавніх папок.
+
+# ──────────── ModelStrings ────────────
+# The viewer
+ModelStrings.StatusShownFormat = 3D-модель «{0}», трикутників: {1}. Потягніть, щоб повернути, прокрутіть колесо, щоб змінити масштаб, потягніть правою кнопкою, щоб пересунути; подвійне клацання починає спочатку.
+ModelStrings.StatusNotAPhoto = Це 3D-модель, а не фото: це працює лише з фото.
+ModelStrings.ViewIso = Ізо
+ModelStrings.ViewFront = Спереду
+ModelStrings.ViewBack = Ззаду
+ModelStrings.ViewLeft = Зліва
+ModelStrings.ViewRight = Справа
+ModelStrings.ViewTop = Зверху
+ModelStrings.ViewBottom = Знизу
+ModelStrings.ViewWireframe = Каркас
+# The rows of the grid
+ModelStrings.FormatBinary = Двійковий
+ModelStrings.FormatText = Текстовий (ASCII)
+ModelStrings.DescTriangles = З якої кількості трикутників складається поверхня моделі. Чим їх більше, тим гладкіша модель і тим більший файл.
+ModelStrings.DescSize = Розмір моделі вздовж осей X, Y і Z (коробка, що її вміщує). Файл STL не каже, в яких одиницях його числа; як і програми друку, Photo Liker читає їх як міліметри.
+ModelStrings.DescVolume = Що вміщує поверхня, у кубічних сантиметрах і кубічних міліметрах (числа файлу читаються як міліметри). Це точно для замкненої поверхні; для поверхні з дірками це лише те, що охоплює наявна частина.
+ModelStrings.DescArea = Площа всіх трикутників разом, у квадратних сантиметрах і квадратних міліметрах (числа файлу читаються як міліметри).
+ModelStrings.DescFormat = Як записано файл: двійковий (компактний, його пише більшість програм) або текстовий (ASCII, читабельний, у кілька разів більший).
+ModelStrings.DescName = Назва, яку файл дає моделі (назва після «solid» у текстовому файлі, текст заголовка у двійковому).
+ModelStrings.DescSkipped = Трикутники файлу, які пропущено: їхній кут не є числом, або файл обривається посеред останнього.
+ModelStrings.DescFileSize = Який розмір файлу на диску.
+ModelStrings.DescFileDates = Коли файл створено й востаннє змінено на цьому диску. Копія чи завантаження отримує дату копіювання, яка нічого не каже про те, коли модель зроблено.
+# Windows' list of programs for .stl files
+ModelStrings.FileTypeName = 3D-модель STL
+ModelStrings.AppDescription = Перегляд фото, відео та 3D-моделей і збереження тих, що вам сподобались.
+ModelStrings.ButtonText = Файли STL
+ModelStrings.TooltipOff = Файли STL: додати Photo Liker до списку програм Windows для файлів .stl і відкрити «Програми за замовчуванням» Windows, де його обирають типовим
+ModelStrings.TooltipRegistered = Photo Liker є в списку програм Windows для файлів .stl (у «Відкрити за допомогою»). Клацніть, щоб відкрити «Програми за замовчуванням» Windows і зробити його типовим, або щоб прибрати його зі списку
+ModelStrings.TooltipDefault = Photo Liker відкриває файли .stl. Клацніть, щоб відкрити «Програми за замовчуванням» Windows або щоб прибрати його зі списку
+ModelStrings.DialogTitle = Файли STL
+ModelStrings.QuestionRegistered = Photo Liker є в списку програм Windows для файлів .stl, але не він їх відкриває.\n\nТак: відкрити «Програми за замовчуванням» Windows, де його обирають.\nНі: прибрати Photo Liker зі списку.\nСкасувати: нічого не робити.
+ModelStrings.QuestionDefault = Windows відкриває файли .stl у Photo Liker.\n\nТак: відкрити «Програми за замовчуванням» Windows, щоб обрати іншу програму.\nНі: прибрати Photo Liker зі списку (наступного разу Windows спитає, якою програмою відкривати).\nСкасувати: нічого не робити.
+ModelStrings.StatusRegisteredOpened = Photo Liker є в списку програм Windows для файлів .stl. Вибір типової програми Windows залишає вам: оберіть Photo Liker для .stl у вікні «Програми за замовчуванням», що щойно відкрилося.
+ModelStrings.StatusRegisteredNoSettings = Photo Liker є в списку програм Windows для файлів .stl, але «Програми за замовчуванням» Windows відкрити не вдалося. Відкрийте Параметри, Програми, Програми за замовчуванням і оберіть Photo Liker для .stl.
+ModelStrings.StatusSettingsOpened = «Програми за замовчуванням» Windows відкрито: оберіть там Photo Liker для .stl.
+ModelStrings.StatusUnregistered = Photo Liker прибрано зі списку програм Windows для файлів .stl.
+ModelStrings.StatusAssociationErrorFormat = Список програм Windows для файлів .stl змінити не вдалося: {0}

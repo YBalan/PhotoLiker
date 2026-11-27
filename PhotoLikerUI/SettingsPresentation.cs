@@ -39,6 +39,8 @@ namespace PhotoLikerUI
             [nameof(Settings.GoThroughSubFoldersAlternateSpelling)] = [Hidden],
             [nameof(Settings.Extensions)]     = [Category(PhotoCategory), new TypeConverterAttribute(typeof(PhotoExtsConverter)), Describe(() => SettingsStrings.Extensions)],
             [nameof(Settings.SortOrder)]      = [Category(PhotoCategory), Describe(() => SettingsStrings.SortOrder)],
+            [nameof(Settings.SupportModels)]  = [Category(PhotoCategory), Describe(() => SettingsStrings.SupportModels)],
+            [nameof(Settings.ModelExtensions)] = [Category(PhotoCategory), new TypeConverterAttribute(typeof(PhotoExtsConverter)), Describe(() => SettingsStrings.ModelExtensions)],
 
             // 5. Video Settings: the videos, and what is said in them
             [nameof(Settings.SupportVideo)]   = [Category(VideoCategory), Describe(() => SettingsStrings.SupportVideo)],
@@ -80,6 +82,7 @@ namespace PhotoLikerUI
             [nameof(Settings.TotalFiles)]     = [Category(InfoCategory), Describe(() => SettingsStrings.TotalFiles)],
             [nameof(Settings.PhotoCount)]     = [Category(InfoCategory), Describe(() => SettingsStrings.PhotoCount)],
             [nameof(Settings.VideoCount)]     = [Category(InfoCategory), Describe(() => SettingsStrings.VideoCount)],
+            [nameof(Settings.ModelCount)]     = [Category(InfoCategory), Describe(() => SettingsStrings.ModelCount)],
             [nameof(Settings.CurrentIndex)]   = [Category(InfoCategory), Describe(() => SettingsStrings.CurrentIndex)], // editable: typing a number jumps to that photo
 
             [nameof(Settings.CurrentFileName)] = [Category(CurrentFileCategory), ReadOnly, Describe(() => SettingsStrings.CurrentFileName)],
@@ -129,7 +132,7 @@ namespace PhotoLikerUI
         // the rows named here come first, in this order, and the others follow alphabetically as the grid sorted them before
         private static readonly string[] RowOrder =
         [
-            nameof(Settings.CurrentIndex), nameof(Settings.TotalFiles), nameof(Settings.PhotoCount), nameof(Settings.VideoCount), // 1. Progress
+            nameof(Settings.CurrentIndex), nameof(Settings.TotalFiles), nameof(Settings.PhotoCount), nameof(Settings.VideoCount), nameof(Settings.ModelCount), // 1. Progress
             nameof(Settings.Language), nameof(Settings.CacheSize), nameof(Settings.ThumbnailSize),                                  // 3. Common Settings
         ];
 

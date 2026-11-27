@@ -202,6 +202,29 @@ namespace PhotoLikerUI
             g.DrawLines(check, [new PointF(10.5f, 12.7f), new PointF(11.9f, 14f), new PointF(14f, 11.2f)]);
         });
 
+        // ── 3D models (STL files) ─────────────────────────────────────────
+        // A cube seen from the corner (light top, two darker sides) + the green check of "registered"
+        public static Bitmap StlFiles() => DrawOnBitmap(g =>
+        {
+            PointF top = new(8f, 1.2f), upperRight = new(14.2f, 4.7f), lowerRight = new(14.2f, 11.6f), bottom = new(8f, 15.2f), lowerLeft = new(1.8f, 11.6f), upperLeft = new(1.8f, 4.7f), middle = new(8f, 8.2f);
+            using var topFace = new SolidBrush(Color.FromArgb(165, 205, 255));
+            using var leftFace = new SolidBrush(Color.FromArgb(75, 135, 230));
+            using var rightFace = new SolidBrush(Color.FromArgb(40, 90, 180));
+            g.FillPolygon(topFace, new[] { top, upperRight, middle, upperLeft });
+            g.FillPolygon(leftFace, new[] { upperLeft, middle, bottom, lowerLeft });
+            g.FillPolygon(rightFace, new[] { upperRight, middle, bottom, lowerRight });
+
+            using var edge = new Pen(Color.FromArgb(25, 55, 120), 0.8f) { LineJoin = LineJoin.Round };
+            g.DrawPolygon(edge, new[] { top, upperRight, lowerRight, bottom, lowerLeft, upperLeft });
+            g.DrawLines(edge, new[] { upperLeft, middle, upperRight });
+            g.DrawLine(edge, middle, bottom);
+
+            using var disc = new SolidBrush(Color.FromArgb(40, 170, 80));
+            g.FillEllipse(disc, 9.2f, 9.6f, 6f, 6f);
+            using var check = new Pen(Color.White, 1.3f) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round };
+            g.DrawLines(check, [new PointF(10.5f, 12.7f), new PointF(11.9f, 14f), new PointF(14f, 11.2f)]);
+        });
+
         // ── Register / Unregister Context Menu ────────────────────────────
         // Windows-flag quadrants + check-mark
         public static Bitmap RegisterContextMenu() => DrawOnBitmap(g =>

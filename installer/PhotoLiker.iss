@@ -64,9 +64,17 @@ Filename: "{app}\{#AppExe}"; Flags: nowait; Check: RelaunchRequested
 
 ; The app registers its own "Open in Photo Liker" folder context menu (ContextMenuRegistry); remove it on uninstall.
 ; Settings and likes in %LocalAppData%\PhotoLiker are user data and are left alone.
+; The STL files button of the app (StlAssociation) puts the program in Windows' list of programs for .stl files; remove all of that on uninstall too: the kind of file, the entry by the name
+; of the program, its capabilities (the page of Settings, Default apps), and its name in the list of registered programs and in "Open with" of .stl. The default that the person chose in
+; Settings is Windows' own (UserChoice) and is not ours to delete: Windows asks again when the program it points to is gone.
 [Registry]
 Root: HKCU; Subkey: "Software\Classes\Directory\shell\OpenInPhotoLiker"; Flags: dontcreatekey uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\OpenInPhotoLiker"; Flags: dontcreatekey uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\PhotoLiker.StlFile"; Flags: dontcreatekey uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Applications\{#AppExe}"; Flags: dontcreatekey uninsdeletekey
+Root: HKCU; Subkey: "Software\PhotoLiker\Capabilities"; Flags: dontcreatekey uninsdeletekey
+Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueType: none; ValueName: "PhotoLiker"; Flags: dontcreatekey uninsdeletevalue
+Root: HKCU; Subkey: "Software\Classes\.stl\OpenWithProgids"; ValueType: none; ValueName: "PhotoLiker.StlFile"; Flags: dontcreatekey uninsdeletevalue
 
 [Code]
 // The app is framework-dependent (keeps the installer small), so it needs the .NET 10 Desktop Runtime.

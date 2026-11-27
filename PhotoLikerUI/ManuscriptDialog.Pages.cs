@@ -96,7 +96,7 @@ namespace PhotoLikerUI
 
         /// <summary>A file that can be a page: a picture, not a video.</summary>
         private static bool IsPagePhoto(string? path) =>
-            !string.IsNullOrWhiteSpace(path) && !MediaKinds.IsVideo(path) && PhotoExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
+            !string.IsNullOrWhiteSpace(path) && MediaKinds.IsImage(path) && PhotoExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
 
         private static bool SamePath(string? a, string? b) =>
             a is not null && b is not null && string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);

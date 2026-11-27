@@ -45,6 +45,7 @@
     <li><a href="#draw">Drawing on a photo and reading its text</a></li>
     <li><a href="#manuscripts">Reading handwritten and printed pages</a></li>
     <li><a href="#videos">Videos in the folder</a></li>
+    <li><a href="#models">3D models (STL files)</a></li>
     <li><a href="#theme">Dark and light theme</a></li>
     <li><a href="#files">What PhotoLiker keeps, and where</a></li>
     <li><a href="#about">About box and this manual</a></li>
@@ -249,6 +250,7 @@ photo again.</p></div>
     <tr><td><kbd>Ctrl</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd></td><td>While a video plays: the volume up / down.</td></tr>
     <tr><td><kbd>.</kbd> / <kbd>,</kbd></td><td>On a video: the next / the previous place a search found in it (without a search, the next / previous moment), and play from there.</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>On a video: save the picture it shows as a photo in the Liked folder, with the date it was recorded there.</td></tr>
+    <tr><td>Mouse over a 3D model</td><td>Left button: turn it. Right or middle button: move it. Wheel: zoom. Double click: start over (see <a href="#models">3D models</a>).</td></tr>
     <tr><td><kbd>Esc</kbd></td><td>Close the search results; in the slideshow, go back.</td></tr>
     <tr><td><kbd>Enter</kbd> in the search box</td><td>Search.</td></tr>
     <tr><td><kbd>Shift</kbd>+drag over the photo</td><td>Mark a face the program missed (with the face icon switched on).</td></tr>
@@ -284,6 +286,7 @@ and hide them again; that is kept for the next start. If the window is too low f
   <li><strong>Colorize</strong> (a photo that is grey in one corner and coloured in the other): give colours to black and white photos, see <a href="#colorize">Colorize</a>.</li>
   <li><strong>Refocus</strong> (a photo with a sharp ring and soft lights): take the shown photo in portrait mode with a floating bar, see <a href="#refocus">Refocusing a photo</a>.</li>
   <li><strong>Register Context Menu</strong> / <strong>Unregister Context Menu</strong>: add or remove <em>Open in Photo Liker</em> in the right-click menu of folders.</li>
+  <li><strong>STL files</strong> (a blue cube with a green check mark; next to Register Context Menu): put PhotoLiker in the list of programs Windows offers for <code>.stl</code> files and open Windows' Default apps, where you choose it, see <a href="#models">3D models</a>.</li>
   <li><strong>Help</strong> (the question mark): the About box, with the keys and this manual.</li>
   <li><strong>Make a book</strong> (a teal book with a photo on its cover): make a PDF, an EPUB or a Word (DOCX) book of your photos, with a text above and below each, see <a href="#book">Making a book</a>.</li>
   <li><strong>Trace bitmap</strong> (an orange tile with a curve and two nodes; after Make a book): turn the photo that is shown into a vector drawing, an SVG or a DXF file of a size in millimetres, see <a href="#trace">Tracing a photo into a vector drawing</a>.</li>
@@ -519,6 +522,8 @@ description: select it and the pane under the table says what it is for.</p>
     <tr><td><strong>GoThroughSubFolders</strong></td><td>Also list the photos in the subfolders (on by default). The Liked folder itself is left out.</td></tr>
     <tr><td><strong>Extensions</strong></td><td>The kinds of file that count as photos, separated by <code>;</code> or <code>,</code>, each with its dot: <code>.jpg; .png</code>.</td></tr>
     <tr><td><strong>SortOrder</strong></td><td>The order of the photos, see <a href="#order">Order of the photos</a>.</td></tr>
+    <tr><td><strong>SupportModels</strong></td><td>List the 3D models (STL files) of the folder with its photos (on by default). See <a href="#models">3D models</a>.</td></tr>
+    <tr><td><strong>ModelExtensions</strong></td><td>The kinds of file that count as 3D models when <strong>SupportModels</strong> is on: <code>.stl</code> (only STL files can be read).</td></tr>
   </tbody>
 </table>
 </div>
@@ -1329,7 +1334,42 @@ the first time <strong>SupportVideo</strong> is turned on, or a video is played,
 the status bar, and it stays on your computer, in <code>%LocalAppData%\PhotoLiker\libvlc</code>; nothing else is changed. If you say no, videos open in the program Windows plays them with, and you are asked again when you turn
 <strong>SupportVideo</strong> off and on. When it was turning <strong>SupportVideo</strong> on that started the download, the folder is listed again once the player is there (as <kbd>F5</kbd> does). Its licence and the place to get its source are in the <code>libvlc</code> folder next to the program.</p>
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="theme">26. Dark and light theme</h2>
+<h2 id="models">26. 3D models (STL files)</h2>
+
+<p>STL is the file a CAD program writes when it saves a 3D model, and a slicer reads before it prints it. <strong>SupportModels</strong> is on in the settings table by default (turn it off to
+have a folder look as it did before models), and the STL files of the folder are listed with its photos, in the same order, also in the subfolders if <strong>GoThroughSubFolders</strong> is on. Which
+files are models is the <strong>ModelExtensions</strong> row (<code>.stl</code>; no other 3D format is read). Changing either row lists the folder again at once. Binary and text STL files are read; a file
+that is neither says so in the status line.</p>
+
+<h3>What you see</h3>
+<p>The thumbnail and the picture in the viewer are the model, seen from the front right and a little above, light blue-grey on a dark stage (the same in the dark and the light theme). Instead of EXIF the
+grid under the settings has a category <strong>0. 3D model</strong>: <strong>Triangles</strong>, <strong>Size</strong> (X × Y × Z in millimetres), <strong>Volume</strong>, <strong>Surface area</strong>,
+<strong>Format</strong> (binary or text), <strong>Model name</strong>, <strong>File size</strong> and <strong>File dates</strong> (and <strong>Skipped triangles</strong> when the file had some that are not numbers
+or were cut off). An STL file does not say what unit its numbers are in; like the programs that print it, PhotoLiker reads them as millimetres. The volume is right for a closed surface; for one with holes it
+is only what the part that is there encloses.</p>
+
+<h3>Turning it</h3>
+<p>The <strong>left button</strong> turns the model about its middle (Z is up, as a CAD program writes it), the <strong>right</strong> or the <strong>middle button</strong> moves it, the <strong>wheel</strong>
+zooms (no <kbd>Ctrl</kbd> needed), and a <strong>double click</strong> starts over. The buttons in the top right corner look at it from the front, the back, the left, the right, the top, the bottom, or from the
+corner it is first shown from (<strong>Iso</strong>); <strong>Wireframe</strong> draws the edges of the triangles over it. The three coloured lines under the buttons are the axes: X red, Y green, Z blue. While
+the mouse moves, the model is drawn from a part of its triangles so that it follows your hand; when the mouse rests a moment, it is drawn whole, with smooth edges. It is drawn on the processor, so nothing
+depends on the graphics card.</p>
+
+<h3>What works on a model</h3>
+<p><kbd>Space</kbd> likes it, a group key sorts it, <kbd>Delete</kbd> moves it to the <code>Deleted</code> folder, <kbd>Ctrl</kbd>+<kbd>C</kbd> copies the file and the picture, and <strong>Save</strong> makes a
+copy of the file: all as for a photo. The tools that work on the pixels of a photo (Draw, Trace bitmap, Telegram sticker, Colorize, Refocus, Rotate, Scan manuscripts) do not work on a model and say so; the
+search, the slideshow, Make a book and Generate Video use the photos (and videos) of the folder only.</p>
+
+<h3>PhotoLiker for .stl files in Windows</h3>
+<p>The <strong>STL files</strong> button of the toolbar (a blue cube with a green check mark, next to <strong>Register Context Menu</strong>) puts PhotoLiker in the list of programs Windows offers for
+<code>.stl</code> files and opens the <strong>Default apps</strong> page of Windows Settings. Windows leaves the choice of the default program to you (a program cannot make itself the default), so the last
+click is yours: pick PhotoLiker for <code>.stl</code> there; or in Explorer right-click an STL file, <strong>Open with</strong>, <strong>Choose another app</strong>, PhotoLiker, <strong>Always</strong>. After that a
+double click on an STL file starts PhotoLiker on the folder of the file, at that file. The button is lit when Windows' choice is PhotoLiker; when PhotoLiker is in the list already, a click asks whether to open
+<strong>Default apps</strong> again or to take it out of the list. No administrator rights are needed, and the uninstaller removes everything the button wrote. Any other file PhotoLiker is started with (a photo, a
+video) opens its folder at it in the same way.</p>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="theme">27. Dark and light theme</h2>
 
 <p>The theme button of the toolbar switches between the two. A folder that is opened for the first time is dark; the choice is remembered for each folder. (The language of the program is chosen in the settings table,
 see <a href="#language">Language</a>.)</p>
@@ -1340,7 +1380,7 @@ see <a href="#language">Language</a>.)</p>
 </figure>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="files">27. What PhotoLiker keeps, and where</h2>
+<h2 id="files">28. What PhotoLiker keeps, and where</h2>
 
 <ul>
   <li><strong>In each photo folder:</strong> <code>photo-liker-config.json</code>, the settings of that folder (theme, window position, file kinds, the
@@ -1355,7 +1395,7 @@ see <a href="#language">Language</a>.)</p>
 </ul>
 
 <!-- ─────────────────────────────────────────────────────────── -->
-<h2 id="about">28. About box and this manual</h2>
+<h2 id="about">29. About box and this manual</h2>
 
 <p>The <strong>Help</strong> button (the question mark) at the end of the toolbar, or the <kbd>F1</kbd> key, opens the About box: the version and build date of the program, the
 keys and mouse moves (the list in <a href="#keys">Keyboard and mouse</a>), and two buttons that open this manual, in English or in Ukrainian.

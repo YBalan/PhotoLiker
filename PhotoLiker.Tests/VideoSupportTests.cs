@@ -99,7 +99,7 @@ public class VideoSupportTests : IDisposable
     [Fact]
     public void Videos_AreOnByDefault_AndLeftOutWhenTurnedOff()
     {
-        var settings = new Settings();
+        var settings = new Settings { SupportModels = false }; // the 3D models have their own tests (ModelSupportTests)
 
         Assert.True(settings.SupportVideo);
         Assert.Contains(".mp4", settings.ListedExtensions);
@@ -112,7 +112,7 @@ public class VideoSupportTests : IDisposable
     [Fact]
     public void WithVideosOn_TheListedExtensions_AreThePhotosAndTheVideos()
     {
-        var settings = new Settings { SupportVideo = true, VideoExtensions = [".avi", ".mp4"] };
+        var settings = new Settings { SupportVideo = true, SupportModels = false, VideoExtensions = [".avi", ".mp4"] };
 
         Assert.Equal([.. settings.Extensions, ".avi", ".mp4"], settings.ListedExtensions);
         Assert.Equal(settings.Extensions, settings.Extensions); // indexing and the tools keep working on the photos only

@@ -5,6 +5,9 @@ namespace PhotoLiker.Core
     {
         /// <summary>The tag ids from here up are not EXIF tags but rows describing a video (duration, frame size ...): they are listed in the video category.</summary>
         public const int VideoTagBase = 0x10000;
+
+        /// <summary>The tag ids from here up describe a 3D model (its triangles, its size, its volume ...): they are listed in the model category.</summary>
+        public const int ModelTagBase = 0x20000;
     }
 
     /// <summary>

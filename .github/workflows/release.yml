@@ -64,6 +64,9 @@ jobs:
       - name: Test the Trace Bitmap library
         run: dotnet test PhotoLiker.TraceBitmap.Tests/PhotoLiker.TraceBitmap.Tests.csproj --configuration Release
 
+      - name: Test the 3D models (STL) library
+        run: dotnet test PhotoLiker.VectorFiles.Tests/PhotoLiker.VectorFiles.Tests.csproj --configuration Release
+
       - name: Test the Video to GIF library
         run: dotnet test PhotoLiker.VideoToGif.Tests/PhotoLiker.VideoToGif.Tests.csproj --configuration Release
 
