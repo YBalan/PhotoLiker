@@ -13,7 +13,7 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
-## Unreleased
+## 4.6.15 - 2026-11-27
 
 - Added an Effect box to Generate Video with every slideshow effect, a random one or none, kept for each folder or group; it replaces Depth parallax.
 
