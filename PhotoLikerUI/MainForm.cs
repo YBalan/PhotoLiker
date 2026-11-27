@@ -645,6 +645,7 @@ namespace PhotoLikerUI
                 var sortOrder = _currentConfig.SortOrder;
                 var likedFolder = _currentConfig.LikedFolder;
                 PrepareVideoCatalog();
+                UpdateSearchControls(); // AttachFolderSearch ran before the catalog of this folder was open: the label counted the videos of the previous folder
                 var key = new ListingKey(folder, _currentConfig.GoThroughSubFolders, _currentConfig.ListedExtensions, likedFolder);
                 SetStatus(string.Format(MainFormStrings.StatusFolderLoading, folder));
 
