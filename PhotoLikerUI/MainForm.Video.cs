@@ -32,7 +32,11 @@ namespace PhotoLikerUI
         private bool PlayerShown => _player is { Visible: true };
 
         /// <summary>Tells the rest of the program which extensions are videos in this folder (the photo cache and the thumbnails only have a path).</summary>
-        private void ApplyVideoSettings() => MediaKinds.UseVideoExtensions(_currentConfig.VideoExtensions);
+        private void ApplyVideoSettings()
+        {
+            MediaKinds.UseVideoExtensions(_currentConfig.VideoExtensions);
+            MediaKinds.UseModelExtensions(_currentConfig.ModelExtensions);
+        }
 
         /// <summary>Opens the catalog of the videos of the folder if videos are on, else closes it. Called when a folder is listed.</summary>
         private void PrepareVideoCatalog()

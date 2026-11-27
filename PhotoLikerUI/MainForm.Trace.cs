@@ -46,6 +46,9 @@ namespace PhotoLikerUI
                 return;
             }
 
+            if (RefuseModel(file))
+                return;
+
             _traceBitmapButton.Enabled = false;
             try
             {

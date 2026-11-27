@@ -159,7 +159,7 @@ namespace PhotoLikerUI
                 return;
             }
 
-            if (pictureBox1.Tag is not string file || MediaKinds.IsVideo(file))
+            if (pictureBox1.Tag is not string file || !MediaKinds.IsImage(file))
             {
                 SetStatus(RefocusStrings.StatusNoPhoto);
                 return;
@@ -211,7 +211,7 @@ namespace PhotoLikerUI
 
                 DropRefocusPreview();
                 ResetFocusBarState();
-                if (MediaKinds.IsVideo(file))
+                if (!MediaKinds.IsImage(file))
                 {
                     HideFocusBar();
                     return;

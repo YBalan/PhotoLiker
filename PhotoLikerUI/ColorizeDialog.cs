@@ -47,7 +47,7 @@ namespace PhotoLikerUI
         /// <param name="initial">The strength and the warmth the boxes start with (those of the bar over the photo, if the person has set them there); null for the colours as the model gives them.</param>
         public ColorizeDialog(IReadOnlyList<string> photos, string? current, EffectModels models, Func<Task<bool>> ensureModelAsync, bool dark, ColorTuning? initial = null)
         {
-            _photos = [.. photos.Where(path => !MediaKinds.IsVideo(path) && !ColorizedCopy.IsCopy(path))];
+            _photos = [.. photos.Where(path => MediaKinds.IsImage(path) && !ColorizedCopy.IsCopy(path))];
             _current = current;
             _models = models;
             _ensureModelAsync = ensureModelAsync;

@@ -47,6 +47,9 @@ namespace PhotoLikerUI
                 return;
             }
 
+            if (RefuseModel(file))
+                return;
+
             _stickerButton.Enabled = false;
             try
             {

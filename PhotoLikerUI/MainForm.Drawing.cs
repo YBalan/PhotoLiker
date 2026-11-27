@@ -60,6 +60,9 @@ namespace PhotoLikerUI
                 return false;
             }
 
+            if (RefuseModel(file))
+                return false;
+
             _drawButton.Enabled = false;
             try
             {

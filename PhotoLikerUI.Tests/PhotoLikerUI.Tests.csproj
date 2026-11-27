@@ -30,6 +30,8 @@
   <!-- A JPEG that is only an EXIF header, as the tests of the search library make it -->
   <ItemGroup>
     <Compile Include="..\PhotoLiker.Search.Tests\ExifJpeg.cs" Link="Shared\ExifJpeg.cs" />
+    <!-- The triangles and the STL files of the tests of the 3D library: the same boxes and balls are looked at in the window -->
+    <Compile Include="..\PhotoLiker.VectorFiles.Tests\TestMeshes.cs" Link="Shared\TestMeshes.cs" />
   </ItemGroup>
 
 </Project>

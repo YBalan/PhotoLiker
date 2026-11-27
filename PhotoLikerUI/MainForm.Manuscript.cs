@@ -74,10 +74,10 @@ namespace PhotoLikerUI
         internal ManuscriptDialog CreateManuscriptDialog()
         {
             var shown = pictureBox1.Tag as string;
-            string[] start = shown is not null && File.Exists(shown) && !MediaKinds.IsVideo(shown) ? [shown] : [];
+            string[] start = shown is not null && File.Exists(shown) && MediaKinds.IsImage(shown) ? [shown] : [];
 
             // The pages are the photos the program has loaded, as the book of the program starts with them (the ones that are not pictures are left out by the window)
-            var loaded = _currentConfig.Files.Where(file => !file.IsVideo).Select(file => file.OriginalFilePath).ToList();
+            var loaded = _currentConfig.Files.Where(file => file.IsImage).Select(file => file.OriginalFilePath).ToList();
             return new ManuscriptDialog(
                 _currentConfig.CurrentFolder, start, _effects, _currentConfig.IsDarkTheme, EnsureManuscriptModelsAsync, FollowDrawnPhoto, EnsureManuscriptCutModelAsync, loaded, EnsureManuscriptPictureModelsAsync,
                 EnsureManuscriptFixModelAsync, likedFolder: _currentConfig.LikedFolder, extensions: _currentConfig.Extensions, ensureFinderAsync: EnsureManuscriptFinderAsync);

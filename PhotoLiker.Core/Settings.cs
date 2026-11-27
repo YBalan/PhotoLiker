@@ -60,9 +60,20 @@ namespace PhotoLiker.Core
             set => _cpuCores = Math.Clamp(value, 1, MaxCpuCores);
         }
 
-        /// <summary>What the folder listing takes for files of the folder: the photos, and the videos too if <see cref="SupportVideo"/> is on. Indexing and the tools work on <see cref="Extensions"/>, photos only.</summary>
+        /// <summary>
+        /// Whether the 3D models of the folder (STL files, see <see cref="ModelExtensions"/>) are listed with its photos: each is shown as a picture of the model, which can be turned
+        /// with the mouse and looked at from every side. They are liked, sorted into groups and deleted like photos. On by default (a folder that has been opened before keeps what its file says).
+        /// </summary>
+        public bool   SupportModels  { get; set; } = true;
+
+        /// <summary>The file extensions that count as 3D models when <see cref="SupportModels"/> is on, see <see cref="MediaKinds.DefaultModelExtensions"/>.</summary>
+        public string[] ModelExtensions { get; set; } = [.. MediaKinds.DefaultModelExtensions];
+
+        /// <summary>What the folder listing takes for files of the folder: the photos, and the videos too if <see cref="SupportVideo"/> is on, and the models if <see cref="SupportModels"/> is. Indexing and the tools work on <see cref="Extensions"/>, photos only.</summary>
         [JsonIgnore]
-        public string[] ListedExtensions => SupportVideo ? [.. Extensions, .. VideoExtensions] : Extensions;
+        public string[] ListedExtensions => SupportVideo || SupportModels
+            ? [.. Extensions, .. (SupportVideo ? VideoExtensions : []), .. (SupportModels ? ModelExtensions : [])]
+            : Extensions;
 
         [JsonConverter(typeof(PhotoSortOrderConverter))]
         public PhotoSortOrder SortOrder { get; set; } = PhotoSortOrder.OldestFirst;
@@ -224,27 +235,39 @@ namespace PhotoLiker.Core
 
         /// <summary>How many of the <see cref="TotalFiles"/> are photos; for the progress rows of the settings grid.</summary>
         [JsonIgnore]
-        public int PhotoCount => Files.Count - VideoCount;
+        public int PhotoCount => Files.Count - VideoCount - ModelCount;
 
         /// <summary>
         /// How many of the <see cref="TotalFiles"/> are videos (there are some only while <see cref="SupportVideo"/> is on); for the progress rows of the settings grid.
         /// The count is remembered (the grid reads it again at every navigation) and made anew when the list or what counts as a video changes.
         /// </summary>
         [JsonIgnore]
-        public int VideoCount
+        public int VideoCount => CountKinds().Videos;
+
+        /// <summary>How many of the <see cref="TotalFiles"/> are 3D models (there are some only while <see cref="SupportModels"/> is on); remembered like <see cref="VideoCount"/>.</summary>
+        [JsonIgnore]
+        public int ModelCount => CountKinds().Models;
+
+        private (int Videos, int Models) CountKinds()
         {
-            get
+            if (_countedVideos < 0 || _countedOf != _files.Count || _countedKinds != MediaKinds.Classification)
             {
-                if (_countedVideos < 0 || _countedOf != _files.Count || _countedKinds != MediaKinds.Classification)
+                _countedVideos = 0;
+                _countedModels = 0;
+                foreach (var file in _files)
                 {
-                    _countedVideos = _files.Count(file => file.IsVideo);
-                    _countedOf = _files.Count;
-                    _countedKinds = MediaKinds.Classification;
+                    if (file.IsVideo)
+                        _countedVideos++;
+                    else if (file.IsModel)
+                        _countedModels++;
                 }
-                return _countedVideos;
+                _countedOf = _files.Count;
+                _countedKinds = MediaKinds.Classification;
             }
+            return (_countedVideos, _countedModels);
         }
         private int _countedVideos = -1;
+        private int _countedModels;
         private int _countedOf;
         private int _countedKinds;
 

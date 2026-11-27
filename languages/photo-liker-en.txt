@@ -312,6 +312,8 @@ AboutStrings.ShortcutFrameInput = Ctrl+S
 AboutStrings.ShortcutFrameAction = A video: save the picture it shows (or the first one) as a photo in the Liked folder
 AboutStrings.ShortcutMomentInput = . / ,
 AboutStrings.ShortcutMomentAction = A video: the next / previous moment (of those a search found, else of all)
+AboutStrings.ShortcutModelInput = Mouse over a 3D model
+AboutStrings.ShortcutModelAction = A 3D model: left button turns it, right button moves it, wheel zooms, double click starts over
 AboutStrings.ShortcutCloseInput = Esc
 AboutStrings.ShortcutCloseAction = Close the search results
 AboutStrings.ShortcutSearchInput = Enter
@@ -862,9 +864,10 @@ SearchStrings.DurationMinutesFormat = {0} min
 SearchStrings.DurationSecondsFormat = {0} s
 
 # ──────────── SettingsStrings ────────────
-SettingsStrings.TotalFiles = How many files are in the list now: the photos (and the videos, if SupportVideo is on) of the open folder (and of its subfolders, if GoThroughSubFolders is on), or the search results while they are shown. PhotoCount and VideoCount say how many of them are of each kind.
-SettingsStrings.PhotoCount = How many of the files in the list now are photos. PhotoCount and VideoCount together make TotalFiles.
-SettingsStrings.VideoCount = How many of the files in the list now are videos (there are none unless SupportVideo is on). PhotoCount and VideoCount together make TotalFiles.
+SettingsStrings.TotalFiles = How many files are in the list now: the photos (and the videos, if SupportVideo is on, and the 3D models, if SupportModels is on) of the open folder (and of its subfolders, if GoThroughSubFolders is on), or the search results while they are shown. PhotoCount, VideoCount and ModelCount say how many of them are of each kind.
+SettingsStrings.PhotoCount = How many of the files in the list now are photos. PhotoCount, VideoCount and ModelCount together make TotalFiles.
+SettingsStrings.VideoCount = How many of the files in the list now are videos (there are none unless SupportVideo is on). PhotoCount, VideoCount and ModelCount together make TotalFiles.
+SettingsStrings.ModelCount = How many of the files in the list now are 3D models (STL files; there are none unless SupportModels is on). PhotoCount, VideoCount and ModelCount together make TotalFiles.
 SettingsStrings.CurrentIndex = The place of the shown photo in the list, counted from 0. Type another number to jump to that photo (a number outside the list goes to the nearest end). Home and End jump to the first and the last photo, PageUp and PageDown to the previous and the next month.
 SettingsStrings.CurrentFolder = The photo folder that is open. Choose another one with the Open button of the toolbar.
 SettingsStrings.CurrentFilePath = The full path of the shown photo.
@@ -881,6 +884,8 @@ SettingsStrings.SpeechModel = The model that turns speech into text: tiny (75 MB
 SettingsStrings.SpeechLanguage = The language that is spoken in the videos: ru, uk, en and so on, or auto to let the model hear it for each video (a short video with little talk is sometimes taken for another language: set it when the family speaks one language, and the videos that were heard as another one are heard again, after asking).
 SettingsStrings.CpuCores = How many cores of this computer the speech recognition (VideoSpeech) may use while 'Update index' runs: from 1 to all the cores the computer has (the default). With more cores several videos are heard at the same time. You can change it while the index is being updated: the next video that is started follows it (a video that is being heard finishes with the cores it began with). All the cores make the computer as busy as it can be, so take a few away if you work beside it. Only the speech recognition uses it.
 SettingsStrings.SortOrder = The order of the photos: OldestFirst or NewestFirst by the date the file was created (a copied file is created when it is copied), ByName by the name of the file as Explorer lists it (IMG_2 before IMG_10), Random in a new random order each time the folder is listed, None for the order the file system gives, usually by name. Changing it lists the folder again at once. Search results follow it too, by the date the photos were taken (None: best match first).
+SettingsStrings.SupportModels = True (the default): the 3D models of the folder (the extensions of the ModelExtensions row, also in the subfolders if GoThroughSubFolders is on) are listed with its photos. A model shows as a picture of itself: drag it with the left button to turn it, with the right button to move it, scroll to zoom, double-click to start over; the buttons in the corner look at it from the front, the top and the other sides, or show its edges. It is liked, sorted into groups and deleted like a photo. The search, the slideshow, rotating, drawing and the other tools that work on the pixels of a photo do not work on it. False: only photos (and videos) are listed. Changing it lists the folder again at once.
+SettingsStrings.ModelExtensions = The file extensions that count as 3D models when SupportModels is on, separated by ; or , each with its dot: .stl. Case does not matter. Only STL files can be read. Changing it lists the folder again at once.
 SettingsStrings.CacheSize = How many photos on each side of the shown one are kept decoded in memory, so that the arrow keys show them at once. A larger number browses faster over a slow network but uses more memory.
 SettingsStrings.ThumbnailSize = The size of the thumbnails in the strip at the right, in pixels. Ctrl + mouse wheel over the strip changes it.
 SettingsStrings.LanguageDescription = The language of the program. Each file photo-liker-<code>.txt in the Languages folder next to the program (or in %LocalAppData%\\PhotoLiker\\Languages) is a language; English is built in, so without files it is the only one. It changes at once and is kept for all folders, not in the settings file of a folder.
@@ -1982,3 +1987,43 @@ RecentStrings.MenuNone = No recent folders yet
 RecentStrings.MenuClear = Clear the list
 RecentStrings.JumpListCategory = Recent folders
 RecentStrings.StatusFolderGoneFormat = {0} is not there any more: it was taken off the list of recent folders.
+
+# ──────────── ModelStrings ────────────
+# The viewer
+ModelStrings.StatusShownFormat = 3D model {0} ({1} triangles). Drag to turn it, scroll to zoom, right-drag to move it, double-click to start over.
+ModelStrings.StatusNotAPhoto = This is a 3D model, not a photo: this works on photos only.
+ModelStrings.ViewIso = Iso
+ModelStrings.ViewFront = Front
+ModelStrings.ViewBack = Back
+ModelStrings.ViewLeft = Left
+ModelStrings.ViewRight = Right
+ModelStrings.ViewTop = Top
+ModelStrings.ViewBottom = Bottom
+ModelStrings.ViewWireframe = Wireframe
+# The rows of the grid
+ModelStrings.FormatBinary = Binary
+ModelStrings.FormatText = Text (ASCII)
+ModelStrings.DescTriangles = How many triangles the surface of the model is made of. The more there are, the smoother the model looks and the bigger the file is.
+ModelStrings.DescSize = How big the model is along the X, Y and Z axes (the box that holds it). An STL file does not say what unit its numbers are in; like the programs that print it, Photo Liker reads them as millimetres.
+ModelStrings.DescVolume = What the surface holds, in cubic centimetres and cubic millimetres (the numbers of the file read as millimetres). It is right for a closed surface; for one with holes it only tells how much the part that is there encloses.
+ModelStrings.DescArea = The area of all the triangles added up, in square centimetres and square millimetres (the numbers of the file read as millimetres).
+ModelStrings.DescFormat = How the file is written: binary (compact, what most programs write) or text (ASCII, readable, several times bigger).
+ModelStrings.DescName = The name the file gives the model (the name after "solid" in a text file, the text of the header in a binary one).
+ModelStrings.DescSkipped = Triangles of the file that are left out: a corner of them is not a number, or the file stops in the middle of the last one.
+ModelStrings.DescFileSize = How big the file is on the disk.
+ModelStrings.DescFileDates = When the file was created and last changed on this disk. A copy or a download gets the date of the copy, which says nothing about when the model was made.
+# Windows' list of programs for .stl files
+ModelStrings.FileTypeName = STL 3D model
+ModelStrings.AppDescription = Browse photos, videos and 3D models, and keep the ones you like.
+ModelStrings.ButtonText = STL files
+ModelStrings.TooltipOff = STL files: put Photo Liker in Windows' list of programs for .stl files and open Windows' Default apps, where you choose it as the default
+ModelStrings.TooltipRegistered = Photo Liker is in Windows' list of programs for .stl files (in "Open with"). Click to open Windows' Default apps and make it the default, or to take it out of the list
+ModelStrings.TooltipDefault = Photo Liker opens .stl files. Click to open Windows' Default apps, or to take it out of the list
+ModelStrings.DialogTitle = STL files
+ModelStrings.QuestionRegistered = Photo Liker is in Windows' list of programs for .stl files, but it is not the one that opens them.\n\nYes: open Windows' Default apps, where you choose it.\nNo: take Photo Liker out of the list.\nCancel: do nothing.
+ModelStrings.QuestionDefault = Windows opens .stl files with Photo Liker.\n\nYes: open Windows' Default apps, to choose another program.\nNo: take Photo Liker out of the list (Windows will ask which program to use next time).\nCancel: do nothing.
+ModelStrings.StatusRegisteredOpened = Photo Liker is in Windows' list of programs for .stl files. Windows leaves the choice of the default to you: pick Photo Liker for .stl in the Default apps window that just opened.
+ModelStrings.StatusRegisteredNoSettings = Photo Liker is in Windows' list of programs for .stl files, but Windows' Default apps could not be opened. Open Settings, Apps, Default apps, and pick Photo Liker for .stl.
+ModelStrings.StatusSettingsOpened = Windows' Default apps is open: pick Photo Liker for .stl there.
+ModelStrings.StatusUnregistered = Photo Liker is out of Windows' list of programs for .stl files.
+ModelStrings.StatusAssociationErrorFormat = Windows' list of programs for .stl files could not be changed: {0}

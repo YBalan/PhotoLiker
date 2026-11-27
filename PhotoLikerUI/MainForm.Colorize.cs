@@ -52,7 +52,7 @@ namespace PhotoLikerUI
         /// <summary>The window for many photos: this photo, or the black and white photos of the list (the bar over a photo that is shown works on that one photo; its "Many photos" button opens this).</summary>
         private void Colorize()
         {
-            var photos = _currentConfig.Files.Where(file => !file.IsVideo).Select(file => file.OriginalFilePath).ToList();
+            var photos = _currentConfig.Files.Where(file => file.IsImage).Select(file => file.OriginalFilePath).ToList();
             if (photos.Count == 0)
             {
                 SetStatus(ColorizeStrings.StatusNoPhotos);
@@ -65,7 +65,7 @@ namespace PhotoLikerUI
                 return;
             }
 
-            var current = pictureBox1.Tag is string shown && !MediaKinds.IsVideo(shown) ? shown : null;
+            var current = pictureBox1.Tag is string shown && MediaKinds.IsImage(shown) ? shown : null;
             using var dialog = new ColorizeDialog(
                 photos, current, _effects, () => EnsureToolModelAsync(ToolModels.Colorizer, ToolModelStrings.ColorizeFeature, askAgain: true), _currentConfig.IsDarkTheme,
                 _bar?.Tuning ?? new ColorTuning(_globalConfig.ColorizeStrength / 100f, _globalConfig.ColorizeWarmth / (float)ColorizeBar.MaxWarmth));

@@ -148,9 +148,13 @@ namespace PhotoLikerUI
         /// The slideshow of the list that is open (the photos of the folder, or the search results while they are shown); null if it has nothing to show. The videos of the
         /// list are in it only if <paramref name="useVideo"/> says so, else they are left out.
         /// </summary>
+        /// <summary>The files of a list that the slideshow shows: the pictures, and the videos when they are wanted. The 3D models are never in it: the show is made of pictures.</summary>
+        internal static List<PhotoFile> SlideshowFiles(IEnumerable<PhotoFile> files, bool useVideo) =>
+            [.. useVideo ? files.Where(f => !f.IsModel) : files.Where(f => f.IsImage)];
+
         private SlideshowSession? CreateSlideshow(bool useVideo, bool depthTested)
         {
-            var files = (useVideo ? _currentConfig.Files : _currentConfig.Files.Where(f => !f.IsVideo)).ToList();
+            var files = SlideshowFiles(_currentConfig.Files, useVideo);
             if (files.Count == 0)
                 return null;
 

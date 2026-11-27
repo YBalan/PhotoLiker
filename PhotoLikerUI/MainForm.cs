@@ -30,7 +30,9 @@ namespace PhotoLikerUI
         private int PreviewThumbSize => _currentConfig.ThumbnailSize;
         private readonly Dictionary<string, (PictureBox Thumb, Label Label)> _thumbControls = [];
 
-        public MainForm(string? initialFolder = null)
+        /// <param name="initialFolder">The folder to open; without it, the one the program was left on.</param>
+        /// <param name="initialFile">A file of that folder to show first (the program was started by opening a file: double-clicked in Explorer, or chosen in "Open with").</param>
+        public MainForm(string? initialFolder = null, string? initialFile = null)
         {
             InitializeComponent();
             InitializeLayout();
@@ -42,6 +44,7 @@ namespace PhotoLikerUI
             InitializeSticker();
             InitializeDrawing();
             InitializeManuscript();
+            InitializeModel();
             InitializeEmptyFolders();
             InitializeDuplicates();
             InitializeColorize();
@@ -100,6 +103,8 @@ namespace PhotoLikerUI
                     _globalConfig.Save();
             }
 
+            ShowFirstFile(initialFile);
+
             RestoreWindowPosition();
             LoadFolder();
 
@@ -122,6 +127,8 @@ namespace PhotoLikerUI
                 TextRenderer.DrawText(e.Graphics, _imageMessage, Font, pictureBox1.ClientRectangle, SystemColors.GrayText,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
             }
+
+            _model.Paint(e.Graphics); // the buttons and the axes of a 3D model
 
             // Draw the check at the left corner if the file is saved anywhere: in the liked folder or in a group
             if (_savedInNames.Count > 0)
@@ -181,7 +188,7 @@ namespace PhotoLikerUI
             for (var i = 0; i < legend.Count; i++)
             {
                 var entry = legend[i];
-                var width = markWidth + TextWidth(entry.Name, entry.HasPhoto ? markedFont : font);
+                var width = markWidth + TextWidth(entry.Label, entry.HasPhoto ? markedFont : font);
                 columnWidths[i / rows] = Math.Max(columnWidths[i / rows], width);
             }
 
@@ -202,11 +209,11 @@ namespace PhotoLikerUI
                 if (entry.HasPhoto)
                 {
                     g.DrawString(AppStrings.LikedCheckmark, markedFont, markBrush, x, y, format);
-                    g.DrawString(entry.Name, markedFont, markBrush, x + markWidth, y, format);
+                    g.DrawString(entry.Label, markedFont, markBrush, x + markWidth, y, format);
                 }
                 else
                 {
-                    g.DrawString(entry.Name, font, textBrush, x + markWidth, y, format);
+                    g.DrawString(entry.Label, font, textBrush, x + markWidth, y, format);
                 }
             }
         }
@@ -239,6 +246,7 @@ namespace PhotoLikerUI
             SaveListingOnClose();
             _engineStop?.Cancel();
             _toolModelStop.Cancel();
+            _model.Dispose();
             _photoCache.Dispose();
             _player?.Dispose();
             _strip?.Dispose();
@@ -359,6 +367,14 @@ namespace PhotoLikerUI
 
         private void Panel2_MouseWheel(object? sender, MouseEventArgs e)
         {
+            // Over a 3D model the wheel is its zoom, with or without Ctrl
+            if (_model.Active)
+            {
+                if (_model.Wheel(e.Delta, pictureBox1.PointToClient(Cursor.Position)) && e is HandledMouseEventArgs handledByModel)
+                    handledByModel.Handled = true;
+                return;
+            }
+
             if (pictureBox1.Image is null) return;
 
             if ((ModifierKeys & Keys.Control) == 0)
@@ -440,7 +456,8 @@ namespace PhotoLikerUI
             }
 
             if (name != nameof(Settings.GoThroughSubFolders) && name != nameof(Settings.Extensions) && name != nameof(Settings.SortOrder)
-                && name != nameof(Settings.SupportVideo) && name != nameof(Settings.VideoExtensions))
+                && name != nameof(Settings.SupportVideo) && name != nameof(Settings.VideoExtensions)
+                && name != nameof(Settings.SupportModels) && name != nameof(Settings.ModelExtensions))
                 return;
 
             if (string.IsNullOrWhiteSpace(_currentConfig.CurrentFolder))
@@ -554,6 +571,7 @@ namespace PhotoLikerUI
             RefocusBarCleared();
             HidePlayer(); // a video that is playing belongs to the list that is being replaced
             UpdateMomentStrip(null);
+            _model.Detach(); // and so does the model that is turned
 
             // Detach images from controls BEFORE disposing cache entries so
             // GDI+ never tries to access a disposed Image (e.g. FrameDimensionsList).
@@ -627,6 +645,7 @@ namespace PhotoLikerUI
                 var sortOrder = _currentConfig.SortOrder;
                 var likedFolder = _currentConfig.LikedFolder;
                 PrepareVideoCatalog();
+                UpdateSearchControls(); // AttachFolderSearch ran before the catalog of this folder was open: the label counted the videos of the previous folder
                 var key = new ListingKey(folder, _currentConfig.GoThroughSubFolders, _currentConfig.ListedExtensions, likedFolder);
                 SetStatus(string.Format(MainFormStrings.StatusFolderLoading, folder));
 
@@ -1067,6 +1086,13 @@ namespace PhotoLikerUI
         {
             FocusViewer();
 
+            // A 3D model is turned, moved and zoomed with the mouse
+            if (_model.MouseDown(e))
+            {
+                pictureBox1.Cursor = _model.Dragging ? Cursors.SizeAll : Cursors.Default;
+                return;
+            }
+
             // A click on the poster of a video plays it
             if (e.Button == MouseButtons.Left && ShowingVideo && !PlayerShown)
             {
@@ -1092,6 +1118,9 @@ namespace PhotoLikerUI
 
         private void PictureBox1_MouseMove(object? sender, MouseEventArgs e)
         {
+            if (_model.MouseMove(e))
+                return;
+
             if (HandleFaceMouseMove(e))
                 return;
 
@@ -1108,6 +1137,12 @@ namespace PhotoLikerUI
 
         private void PictureBox1_MouseUp(object? sender, MouseEventArgs e)
         {
+            if (_model.MouseUp(e))
+            {
+                pictureBox1.Cursor = Cursors.Default;
+                return;
+            }
+
             if (HandleFaceMouseUp(e))
                 return;
 
@@ -1460,7 +1495,10 @@ namespace PhotoLikerUI
 
         private void LoadFirstPhoto(string currentFile)
         {
-            var file = _currentConfig.Files.FirstOrDefault(f => string.Equals(f.OriginalFilePath, currentFile, StringComparison.Ordinal)) ?? _currentConfig.Files.FirstOrDefault();
+            // A file the program was started with comes from Windows, which may spell its path with other letters in the case (a drive in small letters) than the listing does
+            var file = _currentConfig.Files.FirstOrDefault(f => string.Equals(f.OriginalFilePath, currentFile, StringComparison.Ordinal))
+                ?? (string.IsNullOrEmpty(currentFile) ? null : _currentConfig.Files.FirstOrDefault(f => string.Equals(f.OriginalFilePath, currentFile, StringComparison.OrdinalIgnoreCase)))
+                ?? _currentConfig.Files.FirstOrDefault();
             if (file is not null)
             {
                 LoadImage(file.OriginalFilePath);
@@ -1478,6 +1516,10 @@ namespace PhotoLikerUI
                 // Another item than the video that is playing: the player goes away
                 if (_player is { Visible: true } playing && !string.Equals(playing.CurrentFile, file, StringComparison.Ordinal))
                     HidePlayer();
+
+                // And another than the model that is turned: the model is let go of (and the picture of it with it)
+                if (_model.Active && !string.Equals(pictureBox1.Tag as string, file, StringComparison.Ordinal))
+                    _model.Detach();
 
                 // The engine takes a while to start the first time after an install: it starts while the person looks at the poster, not when Enter is pressed
                 if (MediaKinds.IsVideo(file))
@@ -1516,7 +1558,8 @@ namespace PhotoLikerUI
         private void ShowPhoto(PhotoEntry entry)
         {
             _imageMessage = string.Empty;
-            pictureBox1.Image = entry.Full;
+            if (!(_model.Active && ReferenceEquals(_model.Mesh, entry.Model)))  // the picture of the model that is being turned is the viewer's own
+                pictureBox1.Image = entry.Full;
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; // Set the size mode to zoom
             ColorizeBarPhotoShown(); // the colours that were put on this photo stay over it
             RefocusBarPhotoShown();  // and so does the refocused picture
@@ -1527,6 +1570,7 @@ namespace PhotoLikerUI
             imageMetaPropertyGrid.SelectedObject = metadataWrapper;
             ScrollPropertyGridToTop(imageMetaPropertyGrid);
             UpdateGpsLink(metadataWrapper);
+            ShowModel(entry);
         }
 
         private static void ScrollPropertyGridToTop(PropertyGrid propertyGrid)
@@ -1582,6 +1626,9 @@ namespace PhotoLikerUI
         // The cache is about to dispose the entry: let go of its images first so nothing paints a disposed Image.
         private void PhotoCache_Evicting(string file, PhotoEntry entry)
         {
+            if (_model.Active && ReferenceEquals(_model.Mesh, entry.Model))
+                _model.Detach(); // its triangles are about to go, and the picture that is drawn from them with them
+
             if (ReferenceEquals(pictureBox1.Image, entry.Full))
                 pictureBox1.Image = null;
 

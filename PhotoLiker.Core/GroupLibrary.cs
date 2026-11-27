@@ -10,8 +10,12 @@ namespace PhotoLiker.Core
         bool Added,
         IReadOnlyDictionary<string, (char Key, LikedLibrary Library)> Folders);
 
-    /// <summary>One line of the legend: a group folder and whether the current photo has a copy in it.</summary>
-    public sealed record GroupLegendEntry(char Key, string Name, bool HasPhoto);
+    /// <summary>One line of the legend: a group folder, whether the current photo has a copy in it, and how many photos the folder holds.</summary>
+    public sealed record GroupLegendEntry(char Key, string Name, bool HasPhoto, int Count = 0)
+    {
+        /// <summary>The line as drawn: the name and the number of photos in brackets, "A - Group Family (12)".</summary>
+        public string Label => $"{Name} ({Count})";
+    }
 
     /// <summary>
     /// What it takes to save many photos into a group, worked out before anything is copied (see <see cref="GroupLibrary.PlanAdd"/>).
@@ -272,11 +276,12 @@ namespace PhotoLiker.Core
 
         /// <summary>
         /// Every group folder there is, ordered by key (1-9, then A-Z), with the ones holding a copy of the photo marked.
-        /// Renamed folders appear under their new name; a group that has no folder yet isn't listed.
+        /// Renamed folders appear under their new name; a group that has no folder yet isn't listed. Each entry carries the number
+        /// of photos in its folder, from the index (it follows every copy made or taken out through this library).
         /// </summary>
         public IReadOnlyList<GroupLegendEntry> GetLegend(PhotoFile photo) =>
             OrderedFolders()
-                .Select(f => new GroupLegendEntry(f.Value.Key, NameOf(f.Key), f.Value.Library.Find(photo) is not null))
+                .Select(f => new GroupLegendEntry(f.Value.Key, NameOf(f.Key), f.Value.Library.Find(photo) is not null, f.Value.Library.Count))
                 .ToList();
 
         private IEnumerable<KeyValuePair<string, (char Key, LikedLibrary Library)>> OrderedFolders() =>

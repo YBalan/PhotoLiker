@@ -101,6 +101,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: dotnet test PhotoLiker.TraceBitmap.Tests/PhotoLiker.TraceBitmap.Tests.csproj --configuration Release
 
+      - name: Test the 3D models (STL) library
+        if: ${{ !cancelled() }}
+        run: dotnet test PhotoLiker.VectorFiles.Tests/PhotoLiker.VectorFiles.Tests.csproj --configuration Release
+
       - name: Test the Video to GIF library
         if: ${{ !cancelled() }}
         run: dotnet test PhotoLiker.VideoToGif.Tests/PhotoLiker.VideoToGif.Tests.csproj --configuration Release

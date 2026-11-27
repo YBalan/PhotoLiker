@@ -651,7 +651,7 @@ public class GroupLibraryTests : IDisposable
 
         var legend = groups.GetLegend(photo);
 
-        Assert.Equal([new GroupLegendEntry('A', "A - Group", HasPhoto: false)], legend);
+        Assert.Equal([new GroupLegendEntry('A', "A - Group", HasPhoto: false, Count: 1)], legend);
     }
 
     [Fact]
@@ -665,7 +665,7 @@ public class GroupLibraryTests : IDisposable
 
         groups.Update(result);
 
-        Assert.Equal([new GroupLegendEntry('G', "G - Group", HasPhoto: true)], groups.GetLegend(photo));
+        Assert.Equal([new GroupLegendEntry('G', "G - Group", HasPhoto: true, Count: 1)], groups.GetLegend(photo));
     }
 
     [Fact]
@@ -703,6 +703,60 @@ public class GroupLibraryTests : IDisposable
         var legend = Scan().GetLegend(photo);
 
         Assert.Equal(["A - Group Family", "A - Group Work"], legend.Select(e => e.Name));
+    }
+
+    [Fact]
+    public void GetLegend_CountsThePhotosOfEachFolder()
+    {
+        var first = MakePhoto("a.jpg");
+        var second = MakePhoto("b.jpg");
+        var third = MakePhoto("c.jpg");
+        var groups = Scan();
+        Toggle(groups, 'A', first);
+        Toggle(groups, 'A', second);
+        Toggle(groups, 'A', third);
+        Toggle(groups, 'B', second);
+        Directory.CreateDirectory(Path.Combine(_likedDir, "C - Group")); // a folder with no photo yet
+        groups = Scan();
+
+        var legend = groups.GetLegend(first);
+
+        Assert.Equal([('A', 3), ('B', 1), ('C', 0)], legend.Select(e => (e.Key, e.Count)));
+    }
+
+    [Fact]
+    public void GetLegend_CountFollowsAPhotoAddedAndTakenOut()
+    {
+        var photo = MakePhoto("a.jpg");
+        var other = MakePhoto("b.jpg");
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
+        Toggle(groups, 'A', other);
+        Assert.Equal(2, groups.GetLegend(photo).Single().Count);
+
+        Toggle(groups, 'A', other); // the same key again takes the copy out
+
+        Assert.Equal(1, groups.GetLegend(photo).Single().Count);
+    }
+
+    [Fact]
+    public void GetLegend_CountLeavesOutWindowsBookkeepingFiles()
+    {
+        var photo = MakePhoto("a.jpg");
+        var groups = Scan();
+        Toggle(groups, 'A', photo);
+        var folder = Path.Combine(_likedDir, "A - Group");
+        File.WriteAllText(Path.Combine(folder, "Thumbs.db"), "x");
+        File.WriteAllText(Path.Combine(folder, "desktop.ini"), "x");
+
+        Assert.Equal(1, Scan().GetLegend(photo).Single().Count);
+    }
+
+    [Fact]
+    public void GroupLegendEntry_Label_PutsTheCountInBrackets()
+    {
+        Assert.Equal("A - Group Family (12)", new GroupLegendEntry('A', "A - Group Family", HasPhoto: false, Count: 12).Label);
+        Assert.Equal("B - Group (0)", new GroupLegendEntry('B', "B - Group", HasPhoto: true).Label);
     }
 
     // ── GetSavedInNames / FormatFolderList ──────────────────────────────────

@@ -49,7 +49,7 @@ namespace PhotoLikerUI
             // With videos listed the dialog looks at them too (by the date recorded in them); without, as before, at the photos
             var videos = _currentConfig.SupportVideo ? VideoLibrary.Current : null;
             using var dialog = new DateAlignmentDialog(
-                folder, _currentConfig.GoThroughSubFolders, videos is null ? _currentConfig.Extensions : _currentConfig.ListedExtensions, _currentConfig.LikedFolder, index, videos,
+                folder, _currentConfig.GoThroughSubFolders, videos is null ? _currentConfig.Extensions : [.. _currentConfig.Extensions, .. _currentConfig.VideoExtensions], _currentConfig.LikedFolder, index, videos,
                 _currentConfig.IsDarkTheme);
             dialog.ShowDialog(this);
 
