@@ -21,17 +21,38 @@ namespace PhotoLiker.GenerateVideo
     public interface IVideoPictureSource
     {
         /// <summary>
-        /// Makes the picture of a file for a video of this size, that is to be shown for <paramref name="seconds"/>: reads it, and works out whatever it needs to move. <paramref name="still"/>
-        /// is a picture that does not move (the cover). Called on worker threads, several at a time, for pictures a little ahead of the one that is drawn; one that can not be made
-        /// (the file is gone or damaged) throws, and its time is black.
+        /// Makes the picture of a file for a video of this size, that is to be shown for <paramref name="seconds"/> (with the change that brings it in, if the video has changes: see
+        /// <see cref="IVideoChanges"/>): reads it, and works out whatever it needs to move. <paramref name="index"/> is its place in the <see cref="VideoSequence"/> (a file that is in it twice is two
+        /// pictures); <paramref name="still"/> is a picture that does not move (the cover). Called on worker threads, several at a time, for pictures a little ahead of the one that is drawn;
+        /// one that can not be made (the file is gone or damaged) throws, and its time is black.
         /// </summary>
-        IVideoPicture Open(string file, int width, int height, double seconds, bool still);
+        IVideoPicture Open(int index, string file, int width, int height, double seconds, bool still);
+    }
+
+    /// <summary>
+    /// How a video that is drawn frame by frame goes from one picture to the next: a dissolve, a slide, a wipe. A change takes the last frames of the picture that goes (so the video is as long as it
+    /// is without changes, and the picture that comes is whole from the moment of its own time), and in them both pictures are drawn, the one that goes as it goes on, the one that comes as it begins,
+    /// and put together by <see cref="Mix"/>. A video without changes cuts from one picture to the next.
+    /// </summary>
+    public interface IVideoChanges
+    {
+        /// <summary>
+        /// How long the change that brings in the picture <paramref name="index"/> (1 or more: the first picture is not brought in) takes, in seconds: 0 for a cut. <paramref name="pictureSeconds"/> is the
+        /// shorter of the times of the picture that goes and the one that comes. A change is never longer than the picture that goes is shown.
+        /// </summary>
+        double Seconds(int index, double pictureSeconds);
+
+        /// <summary>
+        /// Puts the change that brings in the picture <paramref name="index"/>, <paramref name="progress"/> of the way through (more than 0 and less than 1), into <paramref name="destination"/>: the whole
+        /// frames (row after row, 0xAARRGGBB, opaque) of the picture that goes and the one that comes as they are at that moment. <paramref name="destination"/> is none of the other two.
+        /// </summary>
+        void Mix(int index, double progress, uint[] outgoing, uint[] incoming, uint[] destination);
     }
 
     /// <summary>
     /// Making a video of pictures that move: ffmpeg is not given the photos as files (it would show each as it is) but the frames, one after the other, on its standard input, which are drawn
-    /// here by <see cref="IVideoPicture"/>s: the depth parallax of the photos, for one. Everything else is as it is for the video of <see cref="VideoGenerationService.GenerateAsync"/>:
-    /// the pictures, their times, the audio and what it does come from the same <see cref="VideoSequence"/>.
+    /// here by <see cref="IVideoPicture"/>s (the photos that drift, turn or move by their depth) and, between them, by the <see cref="IVideoChanges"/> (a dissolve, a wipe). Everything else is as
+    /// it is for the video of <see cref="VideoGenerationService.GenerateAsync"/>: the pictures, their times, the audio and what it does come from the same <see cref="VideoSequence"/>.
     /// </summary>
     public static class VideoFrames
     {
@@ -61,10 +82,33 @@ namespace PhotoLiker.GenerateVideo
             return frames;
         }
 
+        /// <summary>
+        /// How many frames the change that brings in each picture of a sequence takes (see <see cref="IVideoChanges"/>): none for the first picture and for every picture of a video without changes, and
+        /// never more than the picture that goes has frames, which it takes the last of. <paramref name="frames"/> are those of <see cref="PlanFrames"/>.
+        /// </summary>
+        public static int[] PlanChanges(IReadOnlyList<int> frames, IReadOnlyList<double> durations, IVideoChanges? changes)
+        {
+            var lengths = new int[frames.Count];
+            if (changes is null)
+                return lengths;
+
+            for (var i = 1; i < lengths.Length; i++)
+            {
+                var seconds = changes.Seconds(i, Math.Min(Math.Max(0, durations[i - 1]), Math.Max(0, durations[i])));
+                if (!(seconds > 0))
+                    continue; // none, or not a number
+
+                var count = (int)Math.Min(int.MaxValue, Math.Round(seconds * FramesPerSecond, MidpointRounding.AwayFromZero));
+                lengths[i] = Math.Clamp(count, 0, frames[i - 1]);
+            }
+            return lengths;
+        }
+
         /// <param name="sequence">The pictures and their times, as <see cref="VideoGenerationService.BuildSequence"/> makes them.</param>
         /// <param name="stillFiles">The files of <paramref name="sequence"/> that do not move (the cover).</param>
         /// <param name="prepareAhead">How many pictures are made ahead of the one that is drawn (each takes half a second of work to move, and the drawing goes on meanwhile).</param>
         /// <param name="ffmpegPath">The ffmpeg to run; the one that comes with the program when not given.</param>
+        /// <param name="changes">How one picture goes over into the next; null cuts (as a video of files does).</param>
         public static async Task GenerateAsync(
             VideoSequence sequence,
             string outputPath,
@@ -79,7 +123,8 @@ namespace PhotoLiker.GenerateVideo
             Action<int> reportProgress,
             CancellationToken cancellationToken = default,
             string? ffmpegPath = null,
-            int prepareAhead = 3)
+            int prepareAhead = 3,
+            IVideoChanges? changes = null)
         {
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
@@ -130,7 +175,7 @@ namespace PhotoLiker.GenerateVideo
 
             try
             {
-                await WriteFramesAsync(process.StandardInput.BaseStream, sequence, width, height, pictures, stillFiles, appendOutput, Math.Max(1, prepareAhead), cancellationToken);
+                await WriteFramesAsync(process.StandardInput.BaseStream, sequence, width, height, pictures, stillFiles, changes, appendOutput, Math.Max(1, prepareAhead), cancellationToken);
                 process.StandardInput.Close(); // that is the end of the video for ffmpeg
             }
             catch (IOException) when (process.WaitForExit(5000))
@@ -156,11 +201,18 @@ namespace PhotoLiker.GenerateVideo
         /// few frames between them (a frame of full HD is 8 MB, and ffmpeg takes what it can encode), so neither waits for the other more than it must.
         /// </summary>
         private static async Task WriteFramesAsync(
-            Stream output, VideoSequence sequence, int width, int height, IVideoPictureSource pictures, IReadOnlySet<string> stillFiles,
+            Stream output, VideoSequence sequence, int width, int height, IVideoPictureSource pictures, IReadOnlySet<string> stillFiles, IVideoChanges? changes,
             Action<string> appendOutput, int prepareAhead, CancellationToken cancellationToken)
         {
             const int buffers = 3;
             var counts = PlanFrames(sequence.Durations);
+            var leads = PlanChanges(counts, sequence.Durations, changes); // the frames of the change that brings each picture in, taken from the end of the picture before it
+
+            // The two pictures of a change are drawn on frames of their own, which the change is made of (only a video that has changes needs them)
+            var hasChanges = leads.Any(lead => lead > 0);
+            var outgoingFrame = hasChanges ? new uint[width * height] : null;
+            var incomingFrame = hasChanges ? new uint[width * height] : null;
+
             var free = Channel.CreateBounded<uint[]>(buffers);
             var filled = Channel.CreateBounded<uint[]>(buffers);
             for (var i = 0; i < buffers; i++)
@@ -193,7 +245,9 @@ namespace PhotoLiker.GenerateVideo
                 var file = sequence.Files[index];
                 try
                 {
-                    return (IVideoPicture?)pictures.Open(file, width, height, sequence.Durations[index], stillFiles.Contains(file));
+                    // A picture is on the screen for the change that brings it in as well as for its own time, and moves all that time
+                    var seconds = sequence.Durations[index] + leads[index] / (double)FramesPerSecond;
+                    return (IVideoPicture?)pictures.Open(index, file, width, height, seconds, stillFiles.Contains(file));
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException and not OutOfMemoryException)
                 {
@@ -208,27 +262,64 @@ namespace PhotoLiker.GenerateVideo
                     opening.Enqueue(Open(next++));
             }
 
+            // The picture that is drawn now (null: one that could not be made, which is black), and the one that comes after it once its change has begun
+            IVideoPicture? current = null;
+            IVideoPicture? incoming = null;
+            var haveCurrent = false; // the picture of this index was taken from the queue already, when the change that brings it in began
+
             try
             {
                 Fill();
                 for (var index = 0; index < sequence.Files.Count; index++)
                 {
-                    var picture = await opening.Dequeue();
-                    Fill();
-
-                    using (picture)
+                    if (!haveCurrent)
                     {
-                        for (var frame = 0; frame < counts[index]; frame++)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            var buffer = await free.Reader.ReadAsync(cancellationToken);
-                            if (picture is null)
-                                Array.Fill(buffer, 0xFF000000u);
-                            else
-                                picture.Render(counts[index] == 1 ? 0.5 : frame / (double)(counts[index] - 1), buffer);
+                        current = await opening.Dequeue();
+                        Fill();
+                    }
+                    haveCurrent = false;
 
-                            await filled.Writer.WriteAsync(buffer, cancellationToken);
+                    // The last frames of this picture are the change that brings in the next one: both are drawn in them, and the picture that comes moves from the first of them
+                    var change = index + 1 < sequence.Files.Count ? leads[index + 1] : 0;
+                    var firstOfChange = counts[index] - change;
+                    var length = leads[index] + counts[index]; // the frames the picture is on the screen for, those of the change that brought it in too
+                    var incomingLength = 0;
+                    var incomingTaken = false;
+
+                    for (var frame = 0; frame < counts[index]; frame++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var buffer = await free.Reader.ReadAsync(cancellationToken);
+                        if (frame < firstOfChange)
+                        {
+                            Draw(current, leads[index] + frame, length, buffer);
                         }
+                        else
+                        {
+                            if (!incomingTaken)
+                            {
+                                incoming = await opening.Dequeue();
+                                Fill();
+                                incomingTaken = true;
+                                incomingLength = leads[index + 1] + counts[index + 1];
+                            }
+
+                            var step = frame - firstOfChange;
+                            Draw(current, leads[index] + frame, length, outgoingFrame!);
+                            Draw(incoming, step, incomingLength, incomingFrame!);
+                            changes!.Mix(index + 1, (step + 1.0) / (change + 1), outgoingFrame!, incomingFrame!, buffer); // never 0 or 1: those are the two pictures themselves
+                        }
+
+                        await filled.Writer.WriteAsync(buffer, cancellationToken);
+                    }
+
+                    current?.Dispose();
+                    current = null;
+                    if (incomingTaken)
+                    {
+                        current = incoming;
+                        incoming = null;
+                        haveCurrent = true;
                     }
                 }
 
@@ -237,6 +328,8 @@ namespace PhotoLiker.GenerateVideo
             }
             catch
             {
+                current?.Dispose();
+                incoming?.Dispose();
                 filled.Writer.TryComplete();
                 Exception? writeError = null;
                 try { await writer; } catch (Exception ex) { writeError = ex; }
@@ -250,6 +343,18 @@ namespace PhotoLiker.GenerateVideo
                     System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(writeError).Throw();
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Draws one frame of a picture, the <paramref name="step"/>th of the <paramref name="length"/> it is on the screen for (a picture with one frame gets the middle of its movement, 0.5);
+        /// a picture that could not be made is black.
+        /// </summary>
+        private static void Draw(IVideoPicture? picture, int step, int length, uint[] frame)
+        {
+            if (picture is null)
+                Array.Fill(frame, 0xFF000000u);
+            else
+                picture.Render(length == 1 ? 0.5 : step / (double)(length - 1), frame);
         }
     }
 }

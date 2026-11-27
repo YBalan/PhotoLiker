@@ -448,8 +448,8 @@ for search, with the people named. How they were left when the show ended is wha
 <p>With <strong>Effect</strong> set to <code>Parallax</code>, every photo moves as if the camera went sideways across it: the near parts of the photo (a face, a flower) move against
 the far ones (the hills, the wall), as if the photo were real space. A model that runs on your computer works out how near each part is. The first time you need it PhotoLiker asks
 whether to download it (99 MB, once); until it is there the photos move the plain way (like <code>KenBurns</code>), and the <kbd>↓</kbd> / <kbd>↑</kbd> keys skip this effect.
-It takes about half a second of work for each photo, done ahead of time, so the show does not wait. <code>Random</code> never picks it. The <strong>Depth parallax</strong> box of
-<a href="#video">Making a video</a> does the same for a video.</p>
+It takes about half a second of work for each photo, done ahead of time, so the show does not wait. <code>Random</code> never picks it. The <strong>Effect</strong> box of
+<a href="#video">Making a video</a> offers it (and every other effect of the slideshow) for a video.</p>
 
 <p>With <code>KenBurns</code> (and <code>Tilt</code>, <code>Parallax</code>, <code>DollyZoom</code> and <code>Portrait</code>) the drift keeps the faces the search found in view: the photo zooms about a point on the faces and no more than they allow,
 so it never slices through a head. Photos with no known face drift at random as before.</p>
@@ -842,9 +842,10 @@ a title picture and with a song under it. Nothing else has to be installed.</p>
     tempo was taken wrong. <strong>Use random</strong> and <em>Photos: Repeat</em> are off while it is ticked.
   </li>
   <li>
-    <strong>Depth parallax (optional).</strong> Tick <strong>Depth parallax</strong> and every photo moves a little while it is shown, as in the <a href="#parallax">slideshow effect</a>; the cover
-    stays still. It is not kept: every window starts with it unticked. The first time, PhotoLiker asks to download the model that works out the depth (99 MB, once). The video is then drawn frame by frame, so it takes about as long to make as it
-    plays, and half a second more for every photo. Everything else works as before.
+    <strong>Effect (optional).</strong> Choose an effect of the slideshow for the photos of the video: <code>None</code> (the photos as they are, the default), <code>Random</code> (another one for every photo) or one of them, such as
+    <code>KenBurns</code>, <code>Wipe</code> or <a href="#parallax"><code>Parallax</code></a>. The photos move while they are shown and change into each other as in the slideshow; the cover stays still. The choice is kept with the folder of
+    the photos, so each folder and each group has its own. <code>Parallax</code>, <code>Portrait</code> and <code>DollyZoom</code> need the model that works out the depth: PhotoLiker asks to download it (99 MB, once) when you choose one.
+    With an effect the video is drawn frame by frame, so it takes longer to make: from a third of the time it plays to as long as it plays. Everything else works as before.
   </li>
   <li>
     <strong>Size and quality.</strong> <strong>Resolution</strong> is the size of the video (1920 × 1080 is Full HD; <strong>Use first image</strong> takes the size of the first photo).

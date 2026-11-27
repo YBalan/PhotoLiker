@@ -1178,14 +1178,13 @@ VideoStrings.LogBeatsNone = No clear beat in the audio: the photo times are used
 VideoStrings.LogBeatsFailedFormat = The rhythm of the audio could not be found ({0}): the photo times are used as set.
 VideoStrings.LogSettingsSavedFormat = The settings of this video are saved in {0}: the dialog starts from them the next time you pick this folder.
 VideoStrings.LogSettingsNotSavedFormat = The settings of this video could not be saved ({0}).
-VideoStrings.LabelMotion = Motion:
-VideoStrings.DepthParallax = Depth parallax
-VideoStrings.DepthParallaxHint = Every photo moves a little while it is shown, as if the camera went sideways: a model works out how near each part of the photo is (Depth Anything V2 Small, 99 MB, which the program offers to download when this is first ticked), and the near parts move against the far ones, as in the Parallax effect of the slideshow. The cover stays still. It takes about half a second of work for each photo, and the video is drawn frame by frame here instead of being cut from the photos by ffmpeg, so it takes longer to make: at full HD about 10 to 25 ms for every frame, 25 frames for every second of the video.
-VideoStrings.LogParallaxOn = Depth parallax: every photo moves by its depth.
-VideoStrings.LogParallaxOnCoverStill = Depth parallax: every photo moves by its depth; the cover stays still.
-VideoStrings.LogParallaxNoModel = The depth model is not on this computer: the video is made without the parallax.
-VideoStrings.LogParallaxModelFailedFormat = The depth model could not be had ({0}): the Depth parallax box is not ticked.
-VideoStrings.LogParallaxDepthFailedFormat = Could not work out the depth of {0} ({1}): it is shown without motion.
+VideoStrings.LabelEffect = Effect:
+VideoStrings.EffectHint = The effects of the slideshow, for the photos of the video: how a photo moves while it is shown and how it changes into the next one. None: the photos are shown as they are, which is the quick way (ffmpeg cuts the video from the files). Random: a different one of the effects that need no model for every photo, never the same twice in a row. KenBurns, Tilt, Parallax, Portrait and DollyZoom move the photo while it is shown; Fade, Slide, Zoom, PushUp, PushDown, CrossZoom, Wipe, Iris, Pixelate, Ripple, Cube, BlurDissolve, DipToBlack and DipToWhite change it into the next one (each of the effects that moves a photo dissolves into the next as well, as in the slideshow). Parallax, Portrait and DollyZoom need a model that works out how near each part of the photo is (Depth Anything V2 Small, 99 MB, which the program offers to download when one of them is chosen) and about half a second of work for each photo. With an effect the video is drawn frame by frame here instead of being cut from the photos by ffmpeg, so it takes longer to make: at full HD about 10 to 40 ms for every frame, 25 frames for every second of the video. The cover stays still. The choice is kept with the folder of the photos, for the next video.
+VideoStrings.LogEffectOnFormat = Effect {0}: the frames are drawn one by one, which takes longer than a video of the photos as they are.
+VideoStrings.LogEffectOnCoverStillFormat = Effect {0}: the frames are drawn one by one, which takes longer than a video of the photos as they are; the cover stays still.
+VideoStrings.LogEffectNoModel = The depth model is not on this computer: the video is made without the effect.
+VideoStrings.LogEffectModelFailedFormat = The depth model could not be had ({0}): the effect is not changed.
+VideoStrings.LogEffectDepthFailedFormat = Could not work out the depth of {0} ({1}): it is shown without motion.
 
 # ──────────── VideoPlayerStrings ────────────
 VideoPlayerStrings.PlayTooltip = Play / pause (Enter)

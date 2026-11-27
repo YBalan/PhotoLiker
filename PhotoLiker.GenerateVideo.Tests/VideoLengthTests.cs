@@ -152,7 +152,7 @@ public class VideoLengthTests : IDisposable
 
     private sealed class SolidSource : IVideoPictureSource
     {
-        public IVideoPicture Open(string file, int width, int height, double seconds, bool still) => new SolidPicture();
+        public IVideoPicture Open(int index, string file, int width, int height, double seconds, bool still) => new SolidPicture();
     }
 
     // ── the two ways of making the video ────────────────────────────────────

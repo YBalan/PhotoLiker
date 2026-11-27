@@ -123,13 +123,18 @@ namespace PhotoLikerUI
             }
         }
 
-        /// <summary>A video whose photos move by their depth: the frames are drawn here (see <see cref="ParallaxVideoPictures"/>) and given to ffmpeg, which encodes them with the audio as for any video. The cover does not move.</summary>
-        private Task GenerateParallaxVideoAsync(VideoGenerationOptions options, VideoSequence sequence, Action<string> appendOutput, Action<int> reportProgress)
+        /// <summary>
+        /// A video whose photos have an effect of the slideshow: the frames are drawn here (the photos by <see cref="EffectVideoPictures"/>, the changes between them by <see cref="EffectVideoChanges"/>) and given to
+        /// ffmpeg, which encodes them with the audio as for any video. The cover does not move. A random effect is chosen for every photo of the sequence now, so both know it.
+        /// </summary>
+        private Task GenerateEffectVideoAsync(VideoGenerationOptions options, VideoSequence sequence, Action<string> appendOutput, Action<int> reportProgress)
         {
             var still = options.CoverPath is null ? new HashSet<string>() : new HashSet<string>([options.CoverPath]);
+            var effects = VideoEffects.Plan(options.Effect, sequence.Files.Count);
             return VideoFrames.GenerateAsync(
                 sequence, options.OutputPath, options.WidthPixels, options.HeightPixels, options.VideoCodec, options.Crf, options.AudioPath,
-                new ParallaxVideoPictures(_effects, appendOutput), still, appendOutput, reportProgress);
+                new EffectVideoPictures(_effects, effects, appendOutput), still, appendOutput, reportProgress,
+                changes: new EffectVideoChanges(effects, options.WidthPixels, options.HeightPixels));
         }
 
         private async Task<bool> DownloadToolModelAsync(ToolModel model, string feature, bool alreadyApproved = false)
