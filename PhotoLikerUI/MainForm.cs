@@ -181,7 +181,7 @@ namespace PhotoLikerUI
             for (var i = 0; i < legend.Count; i++)
             {
                 var entry = legend[i];
-                var width = markWidth + TextWidth(entry.Name, entry.HasPhoto ? markedFont : font);
+                var width = markWidth + TextWidth(entry.Label, entry.HasPhoto ? markedFont : font);
                 columnWidths[i / rows] = Math.Max(columnWidths[i / rows], width);
             }
 
@@ -202,11 +202,11 @@ namespace PhotoLikerUI
                 if (entry.HasPhoto)
                 {
                     g.DrawString(AppStrings.LikedCheckmark, markedFont, markBrush, x, y, format);
-                    g.DrawString(entry.Name, markedFont, markBrush, x + markWidth, y, format);
+                    g.DrawString(entry.Label, markedFont, markBrush, x + markWidth, y, format);
                 }
                 else
                 {
-                    g.DrawString(entry.Name, font, textBrush, x + markWidth, y, format);
+                    g.DrawString(entry.Label, font, textBrush, x + markWidth, y, format);
                 }
             }
         }

@@ -25,6 +25,16 @@ namespace PhotoLiker.Core
 
         public string Folder { get; }
 
+        /// <summary>
+        /// How many copies the folder holds, for the legend of the groups. Windows' own bookkeeping files (Thumbs.db, desktop.ini)
+        /// that sit in a folder browsed in Explorer are not photos and are not counted.
+        /// </summary>
+        public int Count => _copies.Keys.Count(name => !IsFolderBookkeeping(name));
+
+        private static bool IsFolderBookkeeping(string fileName) =>
+            fileName.Equals("Thumbs.db", StringComparison.OrdinalIgnoreCase) ||
+            fileName.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase);
+
         /// <summary>Lists the liked folder. Doesn't touch any <see cref="PhotoFile"/>, so it can run on any thread.</summary>
         public static LikedLibrary Scan(string likedFolder)
         {
