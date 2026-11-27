@@ -13,6 +13,10 @@ Writing it (`installer\publish-release.ps1` and the tests check this):
 
 Releases before 4.0.1, and the ones since that changed only tests, are not listed; [the releases page](https://github.com/YBalan/PhotoLiker/releases) has them all.
 
+## Unreleased
+
+- Fixed the STL files button registering dotnet.exe instead of PhotoLikerUI.exe when started from an editor, so .stl files did not open.
+
 ## 4.7.15 - 2026-11-27
 
 - Added 3D models: STL files are listed with the photos and shown as a model that you turn with the mouse, with its size, volume and triangles in the grid.
