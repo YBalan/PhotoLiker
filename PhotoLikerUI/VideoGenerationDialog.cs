@@ -90,7 +90,8 @@ namespace PhotoLikerUI
         private readonly CheckBox _beatCheckBox = new();
         private string _lastCodec = VideoCodecs.Default; // the codec before the one that is selected: what the quality follows from (see CodecChanged)
 
-        private readonly CheckBox _parallaxCheckBox = new();
+        private readonly ComboBox _effectCombo = new();
+        private SlideshowEffect _lastEffect = SlideshowEffect.None; // the effect before the one that is selected: where the box goes back to when the model of the new one is not to be had
         private readonly Func<Task<bool>>? _ensureDepthModelAsync;
         private readonly Label _beatStatusLabel = new();
         private readonly Button _slowerBeatButton = new();
@@ -314,9 +315,13 @@ namespace PhotoLikerUI
             toolTip.SetToolTip(_rhythmView, VideoStrings.RhythmViewHint);
             _beatToolTip = toolTip;
 
-            _parallaxCheckBox.Text = VideoStrings.DepthParallax;
-            _parallaxCheckBox.AutoSize = true;
-            toolTip.SetToolTip(_parallaxCheckBox, VideoStrings.DepthParallaxHint);
+            // The effects of the slideshow for the photos of the video: none (the photos as they are, made by ffmpeg from the files) is the first and the one it starts on
+            _effectCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+            _effectCombo.Width = 220;
+            _effectCombo.DropDownHeight = 320;
+            _effectCombo.Items.AddRange([.. VideoEffects.Choices.Select(effect => new Choice<SlideshowEffect>(effect, effect.ToString()))]);
+            _effectCombo.SelectedIndex = 0;
+            toolTip.SetToolTip(_effectCombo, VideoStrings.EffectHint);
 
             _codecCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             _codecCombo.Items.AddRange([VideoCodecs.H264, VideoCodecs.H265]);
@@ -441,9 +446,9 @@ namespace PhotoLikerUI
             layout.Controls.Add(playPanel, 1, 11);
             layout.SetColumnSpan(playPanel, 2);
 
-            layout.Controls.Add(new Label { Text = VideoStrings.LabelMotion, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 12);
-            layout.Controls.Add(_parallaxCheckBox, 1, 12);
-            layout.SetColumnSpan(_parallaxCheckBox, 2);
+            layout.Controls.Add(new Label { Text = VideoStrings.LabelEffect, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 12);
+            layout.Controls.Add(_effectCombo, 1, 12);
+            layout.SetColumnSpan(_effectCombo, 2);
 
             layout.Controls.Add(new Label { Text = VideoStrings.LabelVideoLength, AutoSize = true, Anchor = AnchorStyles.Left }, 0, 13);
             layout.Controls.Add(_videoLengthLabel, 1, 13);
@@ -547,7 +552,7 @@ namespace PhotoLikerUI
                 _frameTimeStartNumeric,
                 _frameTimeEndNumeric,
                 _randomFrameTimesCheckBox,
-                _parallaxCheckBox,
+                _effectCombo,
                 _codecCombo,
                 _crfNumeric,
                 browseButton
@@ -595,7 +600,7 @@ namespace PhotoLikerUI
 
             // The experimental cut on the beat: ticking it finds the rhythm of the audio
             _beatCheckBox.CheckedChanged += (_, _) => StartRhythmAnalysis();
-            _parallaxCheckBox.Click += async (_, _) => await ParallaxTickedAsync(); // a click, not a change: what the saved settings put in is not asked about
+            _effectCombo.SelectionChangeCommitted += async (_, _) => await EffectChosenAsync(); // chosen by the person, not changed: what the saved settings put in is not asked about
             _slowerBeatButton.Click += (_, _) => ChangeTempo(-1);
             _fasterBeatButton.Click += (_, _) => ChangeTempo(1);
             UpdateRhythmUi();
@@ -643,7 +648,7 @@ namespace PhotoLikerUI
                     return;
 
                 FollowOutputFolder();
-                _ = LoadSettingsAsync(); // the settings the last video of this folder was made with, if there are any
+                _ = LoadSettingsAsync(sourceChanged: true); // the settings the last video of this folder was made with, if there are any
                 await ShowSourceAsync();
             };
             _ = ShowSourceAsync();
@@ -861,21 +866,21 @@ namespace PhotoLikerUI
                     AppendOutput(VideoStrings.LogCoverUnused);
                 }
 
-                // With the depth parallax the frames are drawn here from the photos themselves (read upright, of any kind), so ffmpeg is not given the photos as files and nothing is copied first
-                var parallax = options.DepthParallax;
-                if (parallax && _ensureDepthModelAsync is not null && !await _ensureDepthModelAsync())
+                // With an effect the frames are drawn here from the photos themselves (read upright, of any kind), so ffmpeg is not given the photos as files and nothing is copied first.
+                // One that needs the depth model has it checked here too (it was asked for when the effect was chosen; saved settings may have put the effect in since, or the model may be gone).
+                if (VideoEffects.NeedsDepth(options.Effect) && _ensureDepthModelAsync is not null && !await _ensureDepthModelAsync())
                 {
-                    AppendOutput(VideoStrings.LogParallaxNoModel);
-                    parallax = false;
-                    options = options with { DepthParallax = false };
+                    AppendOutput(VideoStrings.LogEffectNoModel);
+                    options = options with { Effect = SlideshowEffect.None };
                 }
+                var drawn = options.Effect != SlideshowEffect.None;
 
                 // ffmpeg is told not to turn the photos by their EXIF orientation (it gets it wrong for the photos next to a turned one),
                 // so the ones that have to be turned are copied upright first, as the app shows them (the cover goes with them, first)
                 UprightPhotos? upright = null;
-                if (parallax)
+                if (drawn)
                 {
-                    AppendOutput(cover is null ? VideoStrings.LogParallaxOn : VideoStrings.LogParallaxOnCoverStill);
+                    AppendOutput(string.Format(cover is null ? VideoStrings.LogEffectOnFormat : VideoStrings.LogEffectOnCoverStillFormat, options.Effect));
                 }
                 else
                 {
@@ -1004,7 +1009,7 @@ namespace PhotoLikerUI
                 CoverEndSeconds,
                 RepeatPhotosSelected,
                 RepeatAudioSelected,
-                _parallaxCheckBox.Checked);
+                SelectedEffect);
         }
 
         /// <summary>
@@ -1020,32 +1025,58 @@ namespace PhotoLikerUI
                 _crfNumeric.Value = crf;
         }
 
-        /// <summary>The parallax box was ticked by the person: its model has to be on this computer, so it is asked for (and downloaded) now, and the box stays unticked if it is not to be.</summary>
-        private async Task ParallaxTickedAsync()
+        /// <summary>The effect that is selected in the box.</summary>
+        private SlideshowEffect SelectedEffect => _effectCombo.SelectedItem is Choice<SlideshowEffect> choice ? choice.Value : SlideshowEffect.None;
+
+        /// <summary>Selects an effect in the box without asking for its model (what the saved settings put in is not asked about: the model is asked for when a video is made).</summary>
+        private void SelectEffect(SlideshowEffect effect)
         {
-            if (!_parallaxCheckBox.Checked || _ensureDepthModelAsync is null)
+            var index = _effectCombo.Items.Cast<Choice<SlideshowEffect>>().ToList().FindIndex(choice => choice.Value == effect);
+            if (index < 0)
                 return;
 
-            _parallaxCheckBox.Enabled = false; // while the question and the download go on
+            _effectCombo.SelectedIndex = index;
+            _lastEffect = effect;
+        }
+
+        /// <summary>
+        /// An effect was chosen by the person: if it needs the depth model, the model has to be on this computer, so it is asked for (and downloaded) now, and the box goes back to the effect it had
+        /// if the model is not to be had.
+        /// </summary>
+        private async Task EffectChosenAsync()
+        {
+            var effect = SelectedEffect;
+            if (!VideoEffects.NeedsDepth(effect) || _ensureDepthModelAsync is null)
+            {
+                _lastEffect = effect;
+                return;
+            }
+
+            _effectCombo.Enabled = false; // while the question and the download go on
+            var had = false;
             try
             {
-                if (!await _ensureDepthModelAsync())
-                    _parallaxCheckBox.Checked = false;
+                had = await _ensureDepthModelAsync();
             }
             catch (OperationCanceledException)
             {
-                _parallaxCheckBox.Checked = false; // the program is closing: nothing to say
+                // the program is closing: nothing to say
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                // This runs from a click, which has nobody to catch what is thrown out of it: the model could not be had, so the box is not ticked, and the log says why
-                _parallaxCheckBox.Checked = false;
-                AppendOutput(string.Format(VideoStrings.LogParallaxModelFailedFormat, ex.Message));
+                // This runs from a choice, which has nobody to catch what is thrown out of it: the model could not be had, so the box goes back, and the log says why
+                AppendOutput(string.Format(VideoStrings.LogEffectModelFailedFormat, ex.Message));
             }
             finally
             {
                 if (!IsDisposed)
-                    _parallaxCheckBox.Enabled = !_isGenerating;
+                {
+                    if (had)
+                        _lastEffect = effect;
+                    else
+                        SelectEffect(_lastEffect);
+                    _effectCombo.Enabled = !_isGenerating;
+                }
             }
         }
 
@@ -1496,20 +1527,31 @@ namespace PhotoLikerUI
             Crf = (int)_crfNumeric.Value,
             CutOnBeat = _beatCheckBox.Checked,
             TempoOctaves = _tempoOctaves,
-            // The depth parallax is not kept: it costs minutes of work for a video and a model of 99 MB, so every window starts with it off and it is ticked for the video that is to have it
+            Effect = SelectedEffect.ToString(),
         };
 
         /// <summary>
         /// Reads the settings the last video of the picked source's folder was made with, and puts them in the dialog. Read away from the
         /// window (the folder may be on a slow disk); only the latest folder asked for is used, and nothing is touched while a video is made.
         /// </summary>
-        private async Task LoadSettingsAsync()
+        /// <param name="sourceChanged">
+        /// The person picked another source: a folder that has no settings starts from the default effect (none), not from the one of the folder that was picked before, which may cost minutes of
+        /// work and a model. (The other values stay as they are, as they always did.)
+        /// </param>
+        private async Task LoadSettingsAsync(bool sourceChanged = false)
         {
             var generation = ++_settingsGeneration;
             var folder = SelectedSource.OutputFolder;
             var settings = await Task.Run(() => VideoSettingsFile.Load(folder));
-            if (settings is null || IsDisposed || generation != _settingsGeneration || _isGenerating)
+            if (IsDisposed || generation != _settingsGeneration || _isGenerating)
                 return;
+
+            if (settings is null)
+            {
+                if (sourceChanged)
+                    SelectEffect(SlideshowEffect.None);
+                return;
+            }
 
             ApplySettings(settings);
         }
@@ -1558,7 +1600,9 @@ namespace PhotoLikerUI
             SetNumeric(_frameTimeEndNumeric, settings.EndFrameTimeSeconds);
             if (settings.UseRandom is { } random)
                 _randomFrameTimesCheckBox.Checked = random;
-            // (settings.DepthParallax of an old file is not read: the box always starts unticked)
+            // The effect of the last video of the folder; a file that has none (one of an earlier version, which never kept it) is the default, none. Not asked about here: the depth
+            // model of an effect that needs it is asked for when the person chooses the effect, or when a video is made with it (settings.DepthParallax of an old file is not read)
+            SelectEffect(settings.GetEffect() ?? SlideshowEffect.None);
 
             if (settings.Codec is { } codec && _codecCombo.Items.Contains(codec))
                 _codecCombo.SelectedItem = codec;
@@ -1787,7 +1831,7 @@ namespace PhotoLikerUI
             [
                 VideoStrings.LabelPhotosFrom, VideoStrings.LabelSortOrder, VideoStrings.LabelOutputFolder, VideoStrings.LabelOutputFileName,
                 VideoStrings.LabelAudio, VideoStrings.LabelCover, VideoStrings.LabelResolution, VideoStrings.LabelFrameTimeRange,
-                VideoStrings.LabelRepeatOrOnce, VideoStrings.LabelVideoLength, VideoStrings.LabelCodec, VideoStrings.LabelQuality,
+                VideoStrings.LabelRepeatOrOnce, VideoStrings.LabelEffect, VideoStrings.LabelVideoLength, VideoStrings.LabelCodec, VideoStrings.LabelQuality,
                 VideoStrings.LabelRhythm, VideoStrings.LengthReading, VideoStrings.LengthUnknown, VideoStrings.FileNotFound,
             ];
             _labelColumnWidth = Math.Max(BaseLabelColumnWidth, labels.Max(Wide) + LabelColumnPadding);
@@ -2045,5 +2089,5 @@ namespace PhotoLikerUI
         double? CoverEndSeconds,
         bool RepeatToAudio,
         bool RepeatAudio,
-        bool DepthParallax = false);
+        SlideshowEffect Effect = SlideshowEffect.None);
 }

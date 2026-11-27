@@ -515,8 +515,8 @@ namespace PhotoLikerUI
                     _currentConfig.Extensions,
                     _currentConfig.SortOrder,
                     _currentConfig.IsDarkTheme,
-                    (options, sequence, appendOutput, reportProgress) => options.DepthParallax
-                        ? GenerateParallaxVideoAsync(options, sequence, appendOutput, reportProgress)
+                    (options, sequence, appendOutput, reportProgress) => options.Effect != SlideshowEffect.None
+                        ? GenerateEffectVideoAsync(options, sequence, appendOutput, reportProgress)
                         : VideoGenerationService.GenerateAsync(
                             sequence,
                             options.OutputPath,

@@ -65,14 +65,24 @@ namespace PhotoLiker.GenerateVideo
         public int? TempoOctaves { get; set; }
 
         /// <summary>
-        /// Every photo moves by its depth while it is shown (the Parallax of the slideshow): the video is drawn frame by frame. Written by an earlier version of the dialog and still read
-        /// from such a file, but the dialog no longer keeps it: the box starts unticked every time.
+        /// The effect of the Effect box, by the name of a <see cref="SlideshowEffect"/> (<c>None</c> is a video of the photos as they are; a name this version does not know is ignored). A file that has none
+        /// (one of an earlier version) puts the box on <c>None</c>.
+        /// </summary>
+        public string? Effect { get; set; }
+
+        /// <summary>
+        /// The "Depth parallax" box of the dialog before it had the Effect box. Still read from such a file, and still ignored: that box was never kept (a video of it costs minutes of work and a model of
+        /// 99 MB), so a file that has it says nothing about what the person wants now. Not written any more.
         /// </summary>
         public bool? DepthParallax { get; set; }
 
         /// <summary>The sort order, if the file has one this version knows.</summary>
         public PhotoSortOrder? GetSortOrder() =>
             Enum.TryParse<PhotoSortOrder>(SortOrder, ignoreCase: true, out var order) && Enum.IsDefined(order) ? order : null;
+
+        /// <summary>The effect, if the file has one this version knows.</summary>
+        public SlideshowEffect? GetEffect() =>
+            Enum.TryParse<SlideshowEffect>(Effect, ignoreCase: true, out var effect) && Enum.IsDefined(effect) ? effect : null;
     }
 
     /// <summary>

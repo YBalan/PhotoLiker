@@ -221,6 +221,63 @@ public sealed class VideoSettingsTests : IDisposable
         Assert.Null(loaded.GetSortOrder());
     }
 
+    // ── the effect ──────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(SlideshowEffect.None)]
+    [InlineData(SlideshowEffect.Random)]
+    [InlineData(SlideshowEffect.KenBurns)]
+    [InlineData(SlideshowEffect.Parallax)]
+    [InlineData(SlideshowEffect.DipToWhite)]
+    public void TheEffect_IsKeptWithTheFolder_ByItsName_AndComesBackTheSame(SlideshowEffect effect)
+    {
+        Assert.True(VideoSettingsFile.TrySave(_folder, new VideoSettings { Effect = effect.ToString() }, out var error), error);
+
+        Assert.Contains($"\"Effect\": \"{effect}\"", File.ReadAllText(VideoSettingsFile.GetPath(_folder))); // a name a person can read and change, not a number
+        Assert.Equal(effect, VideoSettingsFile.Load(_folder)!.GetEffect());
+    }
+
+    [Theory]
+    [InlineData("Wipe", SlideshowEffect.Wipe)]
+    [InlineData("wipe", SlideshowEffect.Wipe)]
+    [InlineData("DollyZoom", SlideshowEffect.DollyZoom)]
+    [InlineData("Sideways", null)]
+    [InlineData("99", null)]       // a number that is no effect
+    [InlineData("-1", null)]
+    [InlineData("", null)]
+    [InlineData(null, null)]
+    public void TheEffectOfAFile_IsKnownByItsName_AnythingElseIsNoEffect(string? name, SlideshowEffect? expected) =>
+        Assert.Equal(expected, new VideoSettings { Effect = name }.GetEffect());
+
+    [Fact]
+    public void AFileOfAnEarlierVersion_HasNoEffect_AndItsDepthParallaxIsReadButSaysNothingAboutTheEffect()
+    {
+        File.WriteAllText(VideoSettingsFile.GetPath(_folder), "{ \"DepthParallax\": true, \"Crf\": 31 }");
+
+        var loaded = VideoSettingsFile.Load(_folder)!;
+
+        Assert.Null(loaded.Effect);
+        Assert.Null(loaded.GetEffect());
+        Assert.Equal(true, loaded.DepthParallax); // still readable: a file with it is not a broken one
+        Assert.Equal(31, loaded.Crf);
+    }
+
+    [Fact]
+    public void SavingAFileOfAnEarlierVersion_DropsTheDepthParallaxAndKeepsTheRest()
+    {
+        File.WriteAllText(VideoSettingsFile.GetPath(_folder), "{ \"DepthParallax\": true, \"Crf\": 31 }");
+        var loaded = VideoSettingsFile.Load(_folder)!;
+        loaded.DepthParallax = null; // what the dialog does: it does not keep it
+        loaded.Effect = nameof(SlideshowEffect.Wipe);
+
+        Assert.True(VideoSettingsFile.TrySave(_folder, loaded, out _));
+
+        var text = File.ReadAllText(VideoSettingsFile.GetPath(_folder));
+        Assert.DoesNotContain("DepthParallax", text);
+        Assert.Contains("\"Crf\": 31", text);
+        Assert.Contains("\"Effect\": \"Wipe\"", text);
+    }
+
     [Fact]
     public void Load_ValuesThisVersionDoesNotKnow_AreIgnored()
     {

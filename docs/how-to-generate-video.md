@@ -78,9 +78,11 @@ Under **Audio (optional)** click **Browse...** and pick a file: mp3, m4a, wav, f
 ## 7. Resolution, codec and quality
 
 - **Resolution** is the size of the video. 1920 x 1080 is Full HD. **Use first image** takes the size of the first photo.
-- **Motion: Depth parallax** (not ticked to begin with) makes every photo move a little while it is shown: an AI model works out
-  how near each part of it is, and the near parts move against the far ones. The cover stays still. Ticking it asks to download
-  the depth model (99 MB, once). The video then takes about as long to make as it plays.
+- **Effect** (`None` to begin with) puts the effects of the slideshow on the photos: they move while they are shown (`KenBurns`,
+  `Tilt`, `Parallax`, `Portrait`, `DollyZoom`) and change into each other (`Fade`, `Slide`, `Wipe`, `Cube` and the rest), or `Random`
+  gives every photo another one. The cover stays still. `Parallax`, `Portrait` and `DollyZoom` work out how near each part of a
+  photo is, so choosing one asks to download the depth model (99 MB, once). The choice is kept with the folder of the photos. With
+  an effect the video takes longer to make: from a third of the time it plays to as long as it plays.
 - **Video codec**: `libx264` (H.264) plays everywhere; `libx265` (H.265) makes a smaller file but not every player reads it.
 - **Quality (CRF)**: lower is better and makes a bigger file. 23 is a good start.
 

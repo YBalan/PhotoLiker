@@ -3,7 +3,7 @@ using System.Diagnostics;
 namespace PhotoLiker.GenerateVideo.Tests;
 
 /// <summary>Making a video from frames that are drawn one by one and given to ffmpeg on its standard input (the depth parallax of the photos is one such picture).</summary>
-public class VideoFramesTests : IDisposable
+public partial class VideoFramesTests : IDisposable
 {
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "PLVideoFrames_" + Guid.NewGuid().ToString("N"));
 
@@ -152,15 +152,19 @@ public class VideoFramesTests : IDisposable
         private readonly object _gate = new();
         public List<(string File, double Progress, int Thread)> Renders { get; } = [];
         public List<(string File, int Width, int Height, double Seconds, bool Still)> Opened { get; } = [];
+        public List<(int Index, string File, double Seconds)> Indexes { get; } = [];
         public HashSet<string> Broken { get; } = [];
         public Dictionary<string, (byte B, byte G, byte R)> Colours { get; } = [];
         public List<TestPicture> Pictures { get; } = [];
         public int[] Active { get; } = new int[2];
 
-        public IVideoPicture Open(string file, int width, int height, double seconds, bool still)
+        public IVideoPicture Open(int index, string file, int width, int height, double seconds, bool still)
         {
             lock (_gate)
+            {
                 Opened.Add((file, width, height, seconds, still));
+                Indexes.Add((index, file, seconds));
+            }
             if (Broken.Contains(file))
                 throw new InvalidDataException("not a picture");
 
@@ -176,14 +180,15 @@ public class VideoFramesTests : IDisposable
         new([.. pictures.Select(p => p.File)], [.. pictures.Select(p => p.Seconds)], pictures.Sum(p => p.Seconds) + VideoGenerationService.LastFrameSeconds, AudioPlayback.Loop);
 
     private async Task<(string Output, List<string> Log, List<int> Progress)> Make(
-        VideoSequence sequence, TestSource source, string? audio = null, string codec = "libx264", string[]? still = null, CancellationToken cancellation = default)
+        VideoSequence sequence, TestSource source, string? audio = null, string codec = "libx264", string[]? still = null, CancellationToken cancellation = default,
+        IVideoChanges? changes = null)
     {
         var output = Path.Combine(_folder, "out", "video.mp4");
         var log = new List<string>();
         var progress = new List<int>();
         await VideoFrames.GenerateAsync(
             sequence, output, 64, 48, codec, 23, audio, source, new HashSet<string>(still ?? []),
-            line => { lock (log) log.Add(line); }, percent => { lock (progress) progress.Add(percent); }, cancellation, Ffmpeg);
+            line => { lock (log) log.Add(line); }, percent => { lock (progress) progress.Add(percent); }, cancellation, Ffmpeg, changes: changes);
         return (output, log, progress);
     }
 

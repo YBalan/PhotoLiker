@@ -70,7 +70,7 @@ photo or a letter/number key to sort it into a group. Likes are plain copies of 
   with a time for each photo, an effect between the photos (fade, slide, push, wipe, iris, cube, ripple and a dozen more, Ken Burns, tilt, depth parallax, dolly zoom or a random one) and the year or the date and time the photo was taken in the
   bottom right corner. <kbd>Right</kbd> / <kbd>Left</kbd> go to the photos next to the shown one, also in
   the random mode, and holding a key scrolls at the speed of the key repeat (see [Slideshow](#slideshow)).
-- **Depth parallax**, an effect of the slideshow and an option of Generate Video, makes every photo look like a little scene in depth: an AI model works out how near each
+- **Depth parallax**, an effect of the slideshow and of the Effect box of Generate Video (which offers every effect of the slideshow, or a random one, for the photos of a video), makes every photo look like a little scene in depth: an AI model works out how near each
   part of it is, and while the photo is shown the camera goes sideways, so the near parts move against the far ones. See [Depth parallax](#depth-parallax).
 - **Colorize** gives colours to black and white photos with an AI model that runs on this computer: a bar floats over a black and white photo that is shown, the colours are seen in the
   viewer and change as its sliders are moved, and **Save a copy** writes them next to the photo, with its date taken (or many photos at once, from a window): the photos are never changed.
@@ -464,7 +464,7 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   folder of the picked source (the Liked or group folder, or the folder of the loaded photos), and the next time you open the dialog or pick that
   folder in *Photos from* they are put back. The log says where they were saved.
   - What is kept: the sort order, the output folder and file name, the audio and its Repeat/Once, the cover with its ticks and times, the
-    resolution, *Start*, *End* and *Use random*, the codec, the quality, the cut on the beat with its ÷2/×2, and the depth parallax.
+    resolution, *Start*, *End* and *Use random*, the codec, the quality, the cut on the beat with its ÷2/×2, and the effect.
   - Paths below the folder or beside it are stored relative to it (`"AudioPath": "..\\music\\song.mp3"`), so a folder that is moved or opened from
     another machine keeps working. A file name the dialog made itself (`timelapse_<date>_<time>.mp4`) is not put back, a new one is made each time.
     The random times are not kept: they are drawn again.
@@ -525,24 +525,32 @@ at once and follows the dark theme of the window. A step by step walkthrough wit
   - **Audio: Repeat** (the default) plays an audio that is shorter than the photos over and over until they end.
   - **Audio: Once** plays it once and the rest of the video is silent (the video is as long as the photos either way).
   - An audio whose length is not known (`Length: unknown`) is not repeated for.
-- **Motion: Depth parallax** (not ticked to begin with, and not kept: every window starts with it off, whatever the last video was made with) makes every photo move a little while it is shown, as the Parallax effect does in the slideshow (see
-  [Depth parallax](#depth-parallax)): the near parts of a photo move against the far ones, and the cover stays still. Ticking it asks to download the depth model
-  (99 MB, once) if it is not on this computer. The video is then drawn frame by frame here and given to ffmpeg (25 frames for every second of the video), instead of being cut
-  from the photos by ffmpeg, so it takes about as long as the video plays and half a second more for every photo; everything else (the times, the cover, the audio and how it
-  repeats, the cut on the beat, the size, the codec) works as it does without it.
+- **Effect** (`None` to begin with) puts the effects of the slideshow on the photos of the video: how a photo moves while it is shown and how it changes into the next one. The box offers `None` (the
+  photos as they are, the quick way), `Random`, and then every effect of the slideshow: `Fade`, `Slide`, `Zoom`, `KenBurns`, `Parallax`, `Portrait`, `Tilt`, `DollyZoom`, `PushUp`, `PushDown`, `CrossZoom`, `Wipe`,
+  `Iris`, `Pixelate`, `Ripple`, `Cube`, `BlurDissolve`, `DipToBlack` and `DipToWhite` (see [Slideshow](#slideshow)). `KenBurns`, `Tilt`, `Parallax`, `Portrait` and `DollyZoom` move the photo (and
+  dissolve it into the next, as in the slideshow); the others change it into the next one and leave it still. `Random` is a different one of the effects that need no model for every photo, never the same
+  twice in a row (as in the slideshow, it never picks `Parallax`, `Portrait` or `DollyZoom`). A change takes the end of the time of the photo that goes (a share of it, at most 0.8 s), so the next photo is whole
+  from the moment of its own time and the video is as long as it is without effects. The cover stays still. The drift of `KenBurns` and `Tilt` is at random (the faces the search found are not looked for here).
+  **The choice is kept with the photos**: it is written to `photo-liker-video.json` of the picked source with the rest, so each folder and each group has its own, and a folder that has none starts on `None`
+  (a file of an earlier version, which had the *Depth parallax* box that was never kept, starts on `None` too). `Parallax`, `Portrait` and `DollyZoom` need the depth model: choosing one asks to download it
+  (99 MB, once) if it is not on this computer, and the box goes back to what it was if you say no; the model is looked for again when the video is made (an effect that a folder saved is not asked about when
+  the window opens), and a video whose model is gone is made without the effect, and the log says so. With any effect the video is drawn frame by frame here and given to ffmpeg (25 frames for every second of
+  the video), instead of being cut from the photos by ffmpeg, so it takes longer. Measured on this PC (12 cores, no graphics chip used) for a video of 18 seconds at full HD, made of six 12 megapixel photos: 5 to 10 seconds with the changes (`Wipe` 5.5, `Fade` 8, `Ripple`, `Cube`
+  and `BlurDissolve` 9 to 10), 13.5 with `KenBurns` and 18 with `Tilt` (turning a photo costs the most), and half a second more for every photo with a depth effect. Everything else (the times, the cover, the audio and how it repeats, the cut on the beat, the
+  size, the codec) works as it does without it.
 - **Video length** is how long the video will be with the settings as they are: the photos of the picked folder with the time of each, plus the
   cover (and its time at the end, if ticked; with the photos set to **Repeat** and a longer audio: the length of the audio). It follows every change at once, and, when an audio is
   chosen, says what becomes of it (cut, played over and over, played once and then silence, about as long as the video, or how many times the
   photos play). It is exact for the photos it counts: photos that have gone from the disk since they were listed are not taken off, and the video
   is a few hundredths of a second longer than the times add up to.
-  With **Depth parallax** the video is exactly that long (checked against real ffmpeg in 19 settings: covers, random times, the cut on the beat, an audio that is cut, repeated or followed
+  With an **Effect** the video is exactly that long (checked against real ffmpeg in 19 settings for the depth parallax, and for the changes by a test that counts the frames: covers, random times, the cut on the beat, an audio that is cut, repeated or followed
   by silence, photos that repeat for it). Made the usual way, one case is not: with **Photos: Repeat** and a longer audio, and no cover at the end, the video ends with the last photo that is shown
   whole, up to one photo's time before the audio ends (9.04 s for a 10 s audio and photos of 1 s). That is ffmpeg making a video of stills at the rate they come; a constant 25 frames a second
   makes this case right and every other one up to a second too long, so it is left as it is (a test keeps it from getting worse).
 
 How the photos are prepared:
 
-- With **Depth parallax** none of the following is done: the photos are read as the slideshow reads them (upright, any kind of picture), drawn into frames the size of the video
+- With an **Effect** none of the following is done: the photos are read as the slideshow reads them (upright, any kind of picture), drawn into frames the size of the video
   with black bars where the photo does not reach, and given to ffmpeg as raw frames.
 - Photos that have gone from the disk since they were listed are left out.
 - The photos come out the way the app shows them, turned upright by their EXIF orientation. ffmpeg is told not to turn them itself (ffmpeg 7.1
@@ -1289,14 +1297,14 @@ The library is Vortice.Windows (`Vortice.Direct3D11`, `Vortice.D3DCompiler`, MIT
 
 ### Depth parallax
 
-The **Parallax** effect of the slideshow, and the **Depth parallax** box of [Generate Video](#generate-video), make a photo look like a little scene in depth: while it is shown the "camera"
+The **Parallax** effect of the slideshow, and the same choice in the **Effect** box of [Generate Video](#generate-video), make a photo look like a little scene in depth: while it is shown the "camera"
 goes sideways across it, and the near parts of the photo (a face, a flower) move against the far ones (the hills, the wall), as if the photo were real space. No two photos move the same way:
 the direction, how much the camera leans up or down, and how far the photo is pushed in are drawn at random for each.
 
 - **The depth.** A model works out for every part of the photo how near it is: Depth Anything V2 Small (Apache 2.0, 25 million weights), run on this computer with ONNX Runtime. Its file
   (`model.onnx`, 99 MB, the ONNX export of the `onnx-community` repository on Hugging Face at a fixed revision, checked against its SHA-256) is downloaded to
-  `%LocalAppData%\PhotoLiker\models\depth-anything-v2-small` the first time it is needed, after asking: when a slideshow starts with **Effect** `Parallax`, or when the box of Generate Video
-  is ticked. Without it the slideshow moves the photos as Ken Burns does (the setting stays `Parallax`) and the <kbd>Down</kbd> / <kbd>Up</kbd> keys skip the effect. The float32 file is used
+  `%LocalAppData%\PhotoLiker\models\depth-anything-v2-small` the first time it is needed, after asking: when a slideshow starts with **Effect** `Parallax`, or when `Parallax` (or `Portrait` or `DollyZoom`,
+  which need the depth too) is chosen in the Effect box of Generate Video. Without it the slideshow moves the photos as Ken Burns does (the setting stays `Parallax`) and the <kbd>Down</kbd> / <kbd>Up</kbd> keys skip the effect. The float32 file is used
   although the 8 bit one is four times smaller: on a processor that one is 2.4 times slower (1.2 s against 0.5 s for a photo). On this PC (12 cores, four of them used) the depth of a photo
   takes 0.55 to 0.8 s. The slideshow works it out along with the frame, ahead of time, on its threads of the pool, so a photo is shown with its depth; choosing the effect while a show runs
   works out the depth of the photos that are ready already (the one that is shown moves like Ken Burns until the next change).
