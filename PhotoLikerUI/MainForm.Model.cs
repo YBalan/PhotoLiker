@@ -45,11 +45,12 @@ namespace PhotoLikerUI
         {
             UpdateStlButton();
 
-            // The name of the kind of file (shown by Explorer) was written in the language that was on when the program was registered
+            // The name of the kind of file (shown by Explorer) was written in the language that was on when the program was registered. Only a registration that starts this very program
+            // is touched: another copy of the program (a build that is being tried, say) must not take what the person registered for the one they use.
             try
             {
                 var association = CreateStlAssociation();
-                if (association.IsRegistered())
+                if (association.IsRegistered() && association.IsCurrent())
                     association.Register(ModelStrings.FileTypeName, ModelStrings.AppDescription);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
@@ -103,7 +104,7 @@ namespace PhotoLikerUI
         // ── Windows' list of programs for .stl files ───────────────────────
 
         /// <summary>The registration of the program for .stl files in the registry; a test gives one that writes somewhere of its own.</summary>
-        protected virtual StlAssociation CreateStlAssociation() => new(Application.ExecutablePath);
+        protected virtual StlAssociation CreateStlAssociation() => new(StlAssociation.ProgramPath(Application.ExecutablePath, AppContext.BaseDirectory));
 
         /// <summary>Opens the page of Settings where the person makes the program the default. A test answers it (it would open Settings on the desktop).</summary>
         protected virtual string? OpenDefaultAppsSettings() => StlAssociation.OpenDefaultAppsSettings();
@@ -137,7 +138,8 @@ namespace PhotoLikerUI
             try
             {
                 var association = CreateStlAssociation();
-                if (!association.IsRegistered())
+                // Not registered, or registered to start another program than this one: the press makes it this program (nothing to ask, it is what was asked for)
+                if (!association.IsRegistered() || !association.IsCurrent())
                 {
                     association.Register(ModelStrings.FileTypeName, ModelStrings.AppDescription);
                     SetStatus(OpenDefaultAppsSettings() is null ? ModelStrings.StatusRegisteredOpened : ModelStrings.StatusRegisteredNoSettings);

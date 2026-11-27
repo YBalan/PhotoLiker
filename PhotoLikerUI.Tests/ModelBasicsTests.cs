@@ -325,6 +325,66 @@ public sealed class StlAssociationTests : IDisposable
         Assert.False(Make().IsDefault());
     }
 
+    private const string DotnetExe = @"C:\Program Files\dotnet\dotnet.exe";
+
+    [Fact]
+    public void TheProgram_StartedByTheDotnetHost_IsTheExeBesideTheDll()
+    {
+        using var folder = new TempFolder();
+        var apphost = folder.File("PhotoLikerUI.exe");
+        File.WriteAllText(apphost, "x");
+
+        Assert.Equal(apphost, StlAssociation.ProgramPath(DotnetExe, folder.Path));
+        Assert.Equal(apphost, StlAssociation.ProgramPath(@"C:\Program Files\dotnet\DOTNET.EXE", folder.Path));
+    }
+
+    [Fact]
+    public void TheProgram_IsWhatRuns_WhenItIsNotTheDotnetHost_OrThereIsNoExeToStart()
+    {
+        using var folder = new TempFolder();
+
+        Assert.Equal(Exe, StlAssociation.ProgramPath(Exe, folder.Path)); // started as itself
+        Assert.Equal(DotnetExe, StlAssociation.ProgramPath(DotnetExe, folder.Path)); // dotnet, and no .exe beside the .dll: nothing better to give
+
+        File.WriteAllText(folder.File("PhotoLikerUI.exe"), "x");
+        Assert.Equal(Exe, StlAssociation.ProgramPath(Exe, folder.Path)); // an .exe beside is no reason to start another one than the running
+    }
+
+    [Fact]
+    public void ItIsCurrent_OnlyWhenTheRegistrationStartsThisProgram()
+    {
+        Assert.False(Make().IsCurrent());
+
+        Make().Register("STL 3D model", "x");
+        Assert.True(Make().IsCurrent());
+        Assert.False(new StlAssociation(@"D:\Other copy\PhotoLikerUI.exe", _root).IsCurrent());
+    }
+
+    [Fact]
+    public void Registering_AfterAnotherProgramWasRegistered_StartsThisOne_AndDropsTheEntryOfTheOtherName()
+    {
+        new StlAssociation(DotnetExe, _root).Register("STL 3D model", "x");
+        Assert.NotNull(Registry.CurrentUser.OpenSubKey($@"{_root}\Classes\Applications\dotnet.exe"));
+
+        Make().Register("STL 3D model", "x");
+
+        Assert.Equal($"\"{Exe}\" \"%1\"", Value($@"{_root}\Classes\PhotoLiker.StlFile\shell\open\command"));
+        Assert.Null(Registry.CurrentUser.OpenSubKey($@"{_root}\Classes\Applications\dotnet.exe"));
+        Assert.NotNull(Registry.CurrentUser.OpenSubKey($@"{_root}\Classes\Applications\PhotoLikerUI.exe"));
+    }
+
+    [Fact]
+    public void Registering_LeavesAnEntryOfTheOtherNameThatSomeoneElseWrote()
+    {
+        new StlAssociation(DotnetExe, _root).Register("STL 3D model", "x");
+        using (var key = Registry.CurrentUser.CreateSubKey($@"{_root}\Classes\Applications\dotnet.exe\shell\open\command"))
+            key.SetValue(null, @"""C:\Somewhere\else.exe"" ""%1""");
+
+        Make().Register("STL 3D model", "x");
+
+        Assert.Equal(@"""C:\Somewhere\else.exe"" ""%1""", Value($@"{_root}\Classes\Applications\dotnet.exe\shell\open\command"));
+    }
+
     [Fact]
     public void ItIsNotRegistered_WithOnlyHalfOfWhatItNeeds()
     {

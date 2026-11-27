@@ -457,6 +457,32 @@ public sealed class ModelViewerTests : IDisposable
     }
 
     [Fact]
+    public void TheStlButton_WhenRegisteredToStartAnotherProgram_MakesItThisOne_WithoutAsking()
+    {
+        MakeStl("bracket.stl", Old);
+        new StlAssociation(@"C:\Program Files\dotnet\dotnet.exe", _registryRoot).Register(ModelStrings.FileTypeName, ModelStrings.AppDescription); // what a run from an editor wrote
+
+        Ui.Run(() => Open(), async form =>
+        {
+            Assert.True(await Ready(form));
+            var test = (TestMainForm)form;
+            var commandKey = $@"{_registryRoot}\Classes\PhotoLiker.StlFile\shell\open\command";
+            using (var before = Registry.CurrentUser.OpenSubKey(commandKey))
+                Assert.Contains("dotnet.exe", (string)before!.GetValue(null)!); // starting up (and the language that is applied then) does not take over what another program registered
+
+            Button(form, "stlToolStripButton").PerformClick();
+
+            Assert.Empty(test.Questions);
+            Assert.Equal(1, test.SettingsOpened);
+            Assert.Equal(ModelStrings.StatusRegisteredOpened, Status(form));
+            using var command = Registry.CurrentUser.OpenSubKey($@"{_registryRoot}\Classes\PhotoLiker.StlFile\shell\open\command");
+            Assert.Equal("\"C:\\Programs\\Photo Liker\\PhotoLikerUI.exe\" \"%1\"", command!.GetValue(null));
+            Assert.Null(Registry.CurrentUser.OpenSubKey($@"{_registryRoot}\Classes\Applications\dotnet.exe"));
+            await Task.CompletedTask;
+        }, seconds: 90);
+    }
+
+    [Fact]
     public void TheStlButton_WhenRegistered_AsksWhatToDo_AndYesOpensSettingsAgain()
     {
         MakeStl("bracket.stl", Old);

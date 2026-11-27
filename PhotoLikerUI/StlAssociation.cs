@@ -35,6 +35,24 @@ namespace PhotoLikerUI
             _real = softwareKey == "Software";
         }
 
+        /// <summary>
+        /// The program Windows has to start for a file. That is the program that is running, except when it was started as "dotnet PhotoLikerUI.dll" (a build run from an editor or a
+        /// command line, not the installed program): the running program is then dotnet.exe, which cannot open a file, so it is the .exe that is beside the .dll.
+        /// </summary>
+        public static string ProgramPath(string processPath, string baseDirectory)
+        {
+            if (string.Equals(Path.GetFileNameWithoutExtension(processPath), "dotnet", StringComparison.OrdinalIgnoreCase))
+            {
+                var apphost = Path.Combine(baseDirectory, "PhotoLikerUI.exe");
+                if (File.Exists(apphost))
+                    return apphost;
+            }
+
+            return processPath;
+        }
+
+        private string Command => $"\"{_exePath}\" \"%1\"";
+
         private string ClassesKey => _software + @"\Classes";
         private string ProgIdKey => ClassesKey + @"\" + ProgId;
         private string ApplicationKey => ClassesKey + @"\Applications\" + Path.GetFileName(_exePath);
@@ -51,6 +69,13 @@ namespace PhotoLikerUI
             return progId is not null && openWith?.GetValue(ProgId) is not null;
         }
 
+        /// <summary>It is registered, and to start this very program (a registration made by another copy of the program, or by an older one, starts that one).</summary>
+        public bool IsCurrent()
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(ProgIdKey + @"\shell\open\command");
+            return string.Equals(key?.GetValue(null) as string, Command, StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>Windows opens .stl files with Photo Liker: the person's choice (in Settings, or "Always" in "Open with") is Photo Liker's.</summary>
         public bool IsDefault()
         {
@@ -62,7 +87,8 @@ namespace PhotoLikerUI
         /// <param name="description">What the program is, for the Default apps page of Settings.</param>
         public void Register(string typeName, string description)
         {
-            var command = $"\"{_exePath}\" \"%1\"";
+            var command = Command;
+            RemoveStaleApplicationKey(command);
 
             using (var key = Registry.CurrentUser.CreateSubKey(ProgIdKey))
             {
@@ -101,6 +127,37 @@ namespace PhotoLikerUI
                 key.SetValue(RegisteredName, _software + @"\" + RegisteredName + @"\Capabilities");
 
             Announce();
+        }
+
+        /// <summary>
+        /// When the program was registered before by another file (see <see cref="ProgramPath"/>), the entry that was made by that file's name is taken away, so that the "Open with" list
+        /// does not go on offering Photo Liker under the name of a program that cannot open the file. Only an entry that starts what this registered is touched.
+        /// </summary>
+        private void RemoveStaleApplicationKey(string newCommand)
+        {
+            string? old;
+            using (var key = Registry.CurrentUser.OpenSubKey(ProgIdKey + @"\shell\open\command"))
+                old = key?.GetValue(null) as string;
+
+            if (old is null || string.Equals(old, newCommand, StringComparison.OrdinalIgnoreCase) || !old.StartsWith('"'))
+                return;
+
+            var end = old.IndexOf('"', 1);
+            if (end < 2)
+                return;
+
+            var name = Path.GetFileName(old[1..end]);
+            if (name.Length == 0 || string.Equals(name, Path.GetFileName(_exePath), StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var stale = ClassesKey + @"\Applications\" + name;
+            using (var key = Registry.CurrentUser.OpenSubKey(stale + @"\shell\open\command"))
+            {
+                if (!string.Equals(key?.GetValue(null) as string, old, StringComparison.OrdinalIgnoreCase))
+                    return;
+            }
+
+            Registry.CurrentUser.DeleteSubKeyTree(stale, throwOnMissingSubKey: false);
         }
 
         /// <summary>Takes Photo Liker out of the list again. Nothing else is touched: if it was the default, Windows asks again the next time an .stl file is opened.</summary>
